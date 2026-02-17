@@ -367,21 +367,6 @@ export default function MovieDetailScreen() {
                                         <View className={`px-2 py-1 rounded ${FORMAT_COLORS[item.format] || 'bg-neutral-800'}`}>
                                             <Text className="text-white font-mono text-xs font-bold">{item.format}</Text>
                                         </View>
-                                        <Pressable
-                                            onPress={async () => {
-                                                const noteToSave = localNotes[item.id] !== undefined ? localNotes[item.id] : (item.notes || '');
-                                                await updateMutation.mutateAsync({
-                                                    itemId: item.id,
-                                                    updates: { notes: noteToSave }
-                                                });
-                                                playSound('click');
-                                                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                                                Alert.alert('Saved', 'Note updated successfully');
-                                            }}
-                                            className="ml-auto bg-amber-600/20 px-3 py-1 rounded border border-amber-600/50"
-                                        >
-                                            <Text className="text-amber-500 font-mono text-[10px] font-bold">SAVE</Text>
-                                        </Pressable>
                                     </View>
                                     <TextInput
                                         className="bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm min-h-[80px]"
@@ -391,6 +376,26 @@ export default function MovieDetailScreen() {
                                         value={localNotes[item.id] !== undefined ? localNotes[item.id] : (item.notes || '')}
                                         onChangeText={(text) => setLocalNotes(prev => ({ ...prev, [item.id]: text }))}
                                     />
+                                    <Pressable
+                                        disabled={updateMutation.isPending}
+                                        onPress={async () => {
+                                            const noteToSave = localNotes[item.id] !== undefined ? localNotes[item.id] : (item.notes || '');
+                                            await updateMutation.mutateAsync({
+                                                itemId: item.id,
+                                                updates: { notes: noteToSave }
+                                            });
+                                            playSound('click');
+                                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                                        }}
+                                        className={`mt-2 self-end px-4 py-2 rounded-lg border flex-row items-center ${updateMutation.isPending ? 'bg-neutral-800 border-neutral-700' : 'bg-amber-600/10 border-amber-600/50'}`}
+                                    >
+                                        {updateMutation.isPending ? (
+                                            <ActivityIndicator size="small" color="#f59e0b" style={{ marginRight: 8, transform: [{ scale: 0.8 }] }} />
+                                        ) : null}
+                                        <Text className="text-amber-500 font-mono text-xs font-bold">
+                                            {updateMutation.isPending ? 'SAVING...' : `SAVE ${item.format} NOTE`}
+                                        </Text>
+                                    </Pressable>
                                 </View>
                             ))}
                         </View>
