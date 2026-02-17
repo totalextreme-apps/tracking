@@ -34,8 +34,11 @@ export default function BarcodeScanner({ onScanned, barcodeTypes }: BarcodeScann
                 Html5QrcodeSupportedFormats.CODE_39,
             ];
 
-        const html5QrCode = new Html5Qrcode(elementId);
-        scannerRef.current = html5QrCode;
+        if (!scannerRef.current) {
+            const html5QrCode = new Html5Qrcode(elementId);
+            scannerRef.current = html5QrCode;
+        }
+        const html5QrCode = scannerRef.current;
 
         // iOS Optimization Round 3: 
         // 1. Disable native barcode detector (can be flaky on iOS web)
@@ -52,6 +55,7 @@ export default function BarcodeScanner({ onScanned, barcodeTypes }: BarcodeScann
                 facingMode: "environment",
                 width: { ideal: 1920 },
                 height: { ideal: 1080 },
+                // @ts-ignore - focusMode is supported by some browsers but missing in standard type definition
                 advanced: [{ focusMode: "continuous" }]
             }
         };
@@ -106,6 +110,56 @@ export default function BarcodeScanner({ onScanned, barcodeTypes }: BarcodeScann
     return (
         <View style={{ flex: 1, backgroundColor: 'black' }}>
             <div id={elementId} style={{ width: '100%', height: '100%' }} />
+
+            {/* Fallback: File Upload for "Take Photo" */}
+            <View style={{
+                position: 'absolute',
+                bottom: 40,
+                left: 0,
+                right: 0,
+                alignItems: 'center',
+                zIndex: 100
+            }}>
+                <input
+                    type="file"
+                    id="qr-input-file"
+                    accept="image/*"
+                    capture="environment"
+                    style={{ display: 'none' }}
+                    onChange={(e) => {
+                        if (e.target.files && e.target.files.length > 0) {
+                            const file = e.target.files[0];
+                            const html5QrCode = new Html5Qrcode(elementId);
+                            html5QrCode.scanFileV2(file, true)
+                                .then(decodedResult => {
+                                    onScanned({
+                                        type: 'photo',
+                                        data: decodedResult.decodedText
+                                    });
+                                })
+                                .catch(err => {
+                                    console.warn("Error scanning file", err);
+                                    alert("Could not find a barcode in this image. Please try again with a clearer photo.");
+                                });
+                        }
+                    }}
+                />
+                <button
+                    onClick={() => document.getElementById('qr-input-file')?.click()}
+                    style={{
+                        backgroundColor: 'rgba(255,255,255,0.2)',
+                        border: '1px solid rgba(255,255,255,0.5)',
+                        color: 'white',
+                        padding: '10px 20px',
+                        borderRadius: '20px',
+                        fontSize: '14px',
+                        backdropFilter: 'blur(4px)',
+                        cursor: 'pointer'
+                    }}
+                >
+                    📸 Take Photo instead
+                </button>
+            </View>
         </View>
     );
 }
