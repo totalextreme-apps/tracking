@@ -255,23 +255,9 @@ export default function AddScreen() {
         <View className="absolute inset-0 z-50 bg-black">
           <BarcodeScanner
             onScanned={handleBarCodeScanned}
+            onClose={() => setIsScanning(false)}
             barcodeTypes={["upc_a", "upc_e", "ean13", "ean8", "qr", "code128", "code39"]}
           />
-          <View className="absolute inset-0 pointer-events-none items-center justify-center">
-            <View className="items-center justify-center bg-black/40 p-4 rounded-xl">
-              <Text className="text-white font-mono text-center mb-4 text-lg">Scan Barcode</Text>
-              <Text className="text-neutral-400 font-mono text-center mb-10 text-xs px-10">
-                Point at a UPC or EAN barcode.
-              </Text>
-              <View className="w-64 h-40 border-2 border-amber-500 rounded-lg bg-transparent" />
-              <Pressable
-                onPress={() => setIsScanning(false)}
-                className="mt-20 bg-neutral-900 px-6 py-3 rounded-full border border-neutral-700 pointer-events-auto"
-              >
-                <Text className="text-white font-mono">Cancel</Text>
-              </Pressable>
-            </View>
-          </View>
         </View>
       )}
 
