@@ -239,6 +239,7 @@ export default function HomeScreen() {
                   opacity: 0.5,
                 }}
                 contentFit="cover"
+                pointerEvents="none" // Ensure background doesn't steal touches
               />
               <Text className="text-amber-500/90 font-mono text-sm font-bold tracking-widest mb-3 px-4">
                 {thriftMode ? 'GRAILS' : 'ON DISPLAY'}
