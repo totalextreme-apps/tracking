@@ -6,6 +6,8 @@ type SettingsContextType = {
     setSoundEnabled: (enabled: boolean) => void;
     staticEnabled: boolean;
     setStaticEnabled: (enabled: boolean) => void;
+    onboardingKey: number;
+    resetOnboarding: () => Promise<void>;
 };
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -20,10 +22,12 @@ export function useSettings() {
 
 const SOUND_KEY = 'settings_sound_enabled';
 const STATIC_KEY = 'settings_static_enabled';
+const ONBOARDING_KEY = 'has_seen_onboarding_v1';
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
     const [soundEnabled, setSoundEnabledState] = useState(true);
     const [staticEnabled, setStaticEnabledState] = useState(true);
+    const [onboardingKey, setOnboardingKey] = useState(0);
 
     useEffect(() => {
         loadSettings();
@@ -51,8 +55,20 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         await AsyncStorage.setItem(STATIC_KEY, String(enabled));
     };
 
+    const resetOnboarding = async () => {
+        await AsyncStorage.removeItem(ONBOARDING_KEY);
+        setOnboardingKey(prev => prev + 1);
+    };
+
     return (
-        <SettingsContext.Provider value={{ soundEnabled, setSoundEnabled, staticEnabled, setStaticEnabled }}>
+        <SettingsContext.Provider value={{
+            soundEnabled,
+            setSoundEnabled,
+            staticEnabled,
+            setStaticEnabled,
+            onboardingKey,
+            resetOnboarding
+        }}>
             {children}
         </SettingsContext.Provider>
     );

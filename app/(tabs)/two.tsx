@@ -9,7 +9,6 @@ import { exportCollection } from '@/lib/export-utils';
 import { printInventoryReceipt } from '@/lib/receipt-utils';
 import { supabase } from '@/lib/supabase';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Audio } from 'expo-av';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
@@ -34,7 +33,7 @@ export default function SettingsScreen() {
   const [isLinking, setIsLinking] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
 
-  const { soundEnabled, setSoundEnabled, staticEnabled, setStaticEnabled } = useSettings();
+  const { soundEnabled, setSoundEnabled, staticEnabled, setStaticEnabled, resetOnboarding } = useSettings();
 
   const router = useRouter();
 
@@ -83,7 +82,14 @@ export default function SettingsScreen() {
   const handleSignOut = async () => {
     Alert.alert('Sign Out?', 'Are you sure?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign Out', style: 'destructive', onPress: async () => await supabase.auth.signOut() }
+      {
+        text: 'Sign Out',
+        style: 'destructive',
+        onPress: async () => {
+          await supabase.auth.signOut();
+          router.replace('/auth');
+        }
+      }
     ]);
   };
 
@@ -379,8 +385,8 @@ export default function SettingsScreen() {
           </Pressable>
           <Pressable
             onPress={async () => {
-              await AsyncStorage.removeItem('has_seen_onboarding_v1');
-              Alert.alert('Reset', 'Tutorial will show on next app restart.');
+              await resetOnboarding();
+              Alert.alert('Reset', 'Tutorial will show immediately.');
             }}
             className="p-4 flex-row items-center justify-between active:bg-neutral-800 border-t border-neutral-800"
           >

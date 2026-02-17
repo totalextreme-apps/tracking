@@ -70,7 +70,7 @@ function RootLayoutNav() {
   const colorScheme = useColorScheme();
   const pathname = usePathname();
   const [showStatic, setShowStatic] = useState(false);
-  const { staticEnabled } = useSettings();
+  const { staticEnabled, onboardingKey } = useSettings();
 
   useEffect(() => {
     // Trigger static on route change IF enabled
@@ -98,7 +98,7 @@ function RootLayoutNav() {
                   <Stack.Screen name="movie/[id]" options={{ presentation: 'modal', headerShown: false }} />
                 </Stack>
                 <StaticOverlay visible={showStatic} />
-                <OnboardingModal />
+                <OnboardingModal key={onboardingKey} />
               </ThemeProvider>
             </GestureHandlerRootView>
           </ThriftModeProvider>
