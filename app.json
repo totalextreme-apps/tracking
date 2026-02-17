@@ -26,7 +26,7 @@
     },
     "web": {
       "bundler": "metro",
-      "output": "static",
+      "output": "server",
       "favicon": "./public/favicon.png",
       "name": "Tracking - Movie Collection",
       "description": "Track your physical media collection.",
