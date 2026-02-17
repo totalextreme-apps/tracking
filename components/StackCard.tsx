@@ -237,6 +237,9 @@ export function StackCard({
                     shadowOffset: { width: 0, height: 1 },
                     shadowOpacity: 0.3,
                     shadowRadius: 1,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 2
                   }}
                 >
                   <Text style={{ fontSize: 6, fontWeight: 'bold', color: 'white' }}>
@@ -245,12 +248,12 @@ export function StackCard({
                         item.format === 'DVD' ? 'DVD' :
                           item.format === 'VHS' ? 'VHS' : 'DIG'}
                   </Text>
+                  {item.edition && (
+                    <Text style={{ fontSize: 7, color: 'white', opacity: 0.6 }}>
+                      •
+                    </Text>
+                  )}
                 </View>
-                {item.edition && (
-                  <Text style={{ fontSize: 8, color: '#a3a3a3', marginTop: 1, fontFamily: 'SpaceMono', textAlign: 'center' }}>
-                    •
-                  </Text>
-                )}
               </View>
             ))}
           </View>
@@ -404,13 +407,13 @@ export function StackCard({
                   playSound('click');
                   setActiveId(item.id);
                 }}
-                className={`px-2 py-0.5 rounded ${FORMAT_COLORS[item.format] || 'bg-neutral-700'}`}
+                className={`px-2 py-0.5 rounded flex-row items-center gap-1 ${FORMAT_COLORS[item.format] || 'bg-neutral-700'}`}
               >
                 <Text className="text-white font-mono text-[10px] font-bold">
                   {item.format}
                 </Text>
                 {item.edition && (
-                  <Text className="text-white/60 font-mono text-[10px] text-center">
+                  <Text className="text-white/60 font-mono text-[9px]">
                     •
                   </Text>
                 )}
@@ -497,13 +500,13 @@ export function StackCard({
                 playSound('click');
                 setActiveId(item.id);
               }}
-              className={`px-2 py-0.5 rounded ${FORMAT_COLORS[item.format] || 'bg-neutral-700'}`}
+              className={`px-2 py-0.5 rounded flex-row items-center gap-1 ${FORMAT_COLORS[item.format] || 'bg-neutral-700'}`}
             >
               <Text className="text-white font-mono text-[10px] font-bold">
                 {item.format}
               </Text>
               {item.edition && (
-                <Text className="text-white/60 font-mono text-[10px] text-center">
+                <Text className="text-white/60 font-mono text-[9px]">
                   •
                 </Text>
               )}

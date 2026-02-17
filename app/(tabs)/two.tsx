@@ -295,46 +295,46 @@ export default function SettingsScreen() {
           SETTINGS
         </Text>
 
-        {/* A/V Settings */}
-        <View className="bg-neutral-900 rounded-lg overflow-hidden mb-6">
-          <View className="p-4 flex-row items-center justify-between border-b border-neutral-800">
+        {/* A/V Settings - TV GUIDE STYLE */}
+        <View className="bg-[#2B4A8C] rounded-lg overflow-hidden mb-6 border-2 border-white">
+          <View className="p-4 flex-row items-center justify-between border-b-2 border-white">
             <View className="flex-row items-center">
-              <View className="w-8 items-center"><FontAwesome name="volume-up" size={14} color="#d1d5db" /></View>
-              <Text className="text-neutral-200 font-mono text-sm">Sound Effects</Text>
+              <View className="w-8 items-center"><FontAwesome name="volume-up" size={14} color="#FFE92F" /></View>
+              <Text className="font-mono text-sm font-bold" style={{ color: '#FFE92F' }}>Sound Effects</Text>
             </View>
             <Switch
               value={soundEnabled}
               onValueChange={setSoundEnabled}
-              trackColor={{ false: '#404040', true: '#f59e0b' }}
+              trackColor={{ false: '#1a3366', true: '#FFE92F' }}
               thumbColor={soundEnabled ? '#ffffff' : '#f4f3f4'}
             />
           </View>
           <View className="p-4 flex-row items-center justify-between">
             <View className="flex-row items-center">
-              <View className="w-8 items-center"><FontAwesome name="tv" size={14} color="#d1d5db" /></View>
-              <Text className="text-neutral-200 font-mono text-sm">Static Transitions</Text>
+              <View className="w-8 items-center"><FontAwesome name="tv" size={14} color="#FFE92F" /></View>
+              <Text className="font-mono text-sm font-bold" style={{ color: '#FFE92F' }}>Static Transitions</Text>
             </View>
             <Switch
               value={staticEnabled}
               onValueChange={setStaticEnabled}
-              trackColor={{ false: '#404040', true: '#f59e0b' }}
+              trackColor={{ false: '#1a3366', true: '#FFE92F' }}
               thumbColor={staticEnabled ? '#ffffff' : '#f4f3f4'}
             />
           </View>
         </View>
 
-        <View className="bg-neutral-900 rounded-lg overflow-hidden">
+        <View className="bg-[#2B4A8C] rounded-lg overflow-hidden border-2 border-white mb-6">
 
           <Pressable
             onPress={handleExport}
             disabled={isExporting || isCollectionLoading}
-            className="p-4 flex-row items-center justify-between border-b border-neutral-800 active:bg-neutral-800"
+            className="p-4 flex-row items-center justify-between border-b-2 border-white active:bg-[#1a3366]"
           >
             <View className="flex-row items-center">
-              <View className="w-8 items-center"><FontAwesome name="download" size={14} color="#d1d5db" /></View>
-              <Text className="text-neutral-200 font-mono text-sm">Export Collection (CSV)</Text>
+              <View className="w-8 items-center"><FontAwesome name="download" size={14} color="#FFE92F" /></View>
+              <Text className="font-mono text-sm font-bold" style={{ color: '#FFE92F' }}>Export Collection (CSV)</Text>
             </View>
-            {isExporting ? <ActivityIndicator size="small" color="#f59e0b" /> : <FontAwesome name="chevron-right" size={10} color="#525252" />}
+            {isExporting ? <ActivityIndicator size="small" color="#FFE92F" /> : <FontAwesome name="chevron-right" size={10} color="white" />}
           </Pressable>
 
           {/* PRINT RECEIPT */}
@@ -359,13 +359,13 @@ export default function SettingsScreen() {
               }
             }}
             disabled={isCollectionLoading}
-            className="p-4 flex-row items-center justify-between border-b border-neutral-800 active:bg-neutral-800"
+            className="p-4 flex-row items-center justify-between border-b-2 border-white active:bg-[#1a3366]"
           >
             <View className="flex-row items-center">
-              <View className="w-8 items-center"><FontAwesome name="print" size={14} color="#d1d5db" /></View>
-              <Text className="text-neutral-200 font-mono text-sm">Print Inventory Receipt (PDF)</Text>
+              <View className="w-8 items-center"><FontAwesome name="print" size={14} color="#FFE92F" /></View>
+              <Text className="font-mono text-sm font-bold" style={{ color: '#FFE92F' }}>Print Inventory Receipt (PDF)</Text>
             </View>
-            <FontAwesome name="chevron-right" size={10} color="#525252" />
+            <FontAwesome name="chevron-right" size={10} color="white" />
           </Pressable>
 
           <Pressable
