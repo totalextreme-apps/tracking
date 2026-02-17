@@ -329,247 +329,249 @@ export default function HomeScreen() {
                   </Pressable>
                 ))}
               </ScrollView>
+            </View>
 
-              {/* Genre Filter Dropdown Trigger */}
-              <View className="px-4 mb-4 z-50">
-                <Pressable
-                  onPress={() => {
-                    setIsGenreDropdownOpen(!isGenreDropdownOpen);
-                    playSound('click');
-                  }}
-                  className={`flex-row justify-between items-center px-4 py-2 rounded-lg border ${genreFilter
-                    ? 'bg-amber-900/40 border-amber-500'
-                    : 'bg-neutral-900 border-neutral-800'
-                    }`}
-                >
-                  <Text className={`font-mono text-xs ${genreFilter ? 'text-amber-500' : 'text-neutral-400'}`}>
-                    {genreFilter || 'All Genres'}
-                  </Text>
-                  <FontAwesome name={isGenreDropdownOpen ? 'chevron-up' : 'chevron-down'} size={12} color={genreFilter ? '#f59e0b' : '#737373'} />
-                </Pressable>
+            {/* Genre Filter Dropdown Trigger */}
+            <View className="px-4 mb-4 z-50">
+              <Pressable
+                onPress={() => {
+                  setIsGenreDropdownOpen(!isGenreDropdownOpen);
+                  playSound('click');
+                }}
+                className={`flex-row justify-between items-center px-4 py-2 rounded-lg border ${genreFilter
+                  ? 'bg-amber-900/40 border-amber-500'
+                  : 'bg-neutral-900 border-neutral-800'
+                  }`}
+              >
+                <Text className={`font-mono text-xs ${genreFilter ? 'text-amber-500' : 'text-neutral-400'}`}>
+                  {genreFilter || 'All Genres'}
+                </Text>
+                <FontAwesome name={isGenreDropdownOpen ? 'chevron-up' : 'chevron-down'} size={12} color={genreFilter ? '#f59e0b' : '#737373'} />
+              </Pressable>
 
-                {/* Dropdown Menu */}
-                {isGenreDropdownOpen && (
-                  <View className="absolute top-full left-4 right-4 mt-1 bg-neutral-900 border border-neutral-800 rounded-lg overflow-hidden shadow-lg z-50" style={{ maxHeight: 200 }}>
-                    <ScrollView nestedScrollEnabled className="max-h-48">
+              {/* Dropdown Menu */}
+              {isGenreDropdownOpen && (
+                <View className="absolute top-full left-4 right-4 mt-1 bg-neutral-900 border border-neutral-800 rounded-lg overflow-hidden shadow-lg z-50" style={{ maxHeight: 200 }}>
+                  <ScrollView nestedScrollEnabled className="max-h-48">
+                    <Pressable
+                      onPress={() => {
+                        setGenreFilter(null);
+                        setIsGenreDropdownOpen(false);
+                        playSound('click');
+                      }}
+                      className="px-4 py-3 border-b border-neutral-800"
+                    >
+                      <Text className="text-neutral-400 font-mono text-xs">All Genres</Text>
+                    </Pressable>
+                    {genres.map((genre: any) => (
                       <Pressable
+                        key={genre}
                         onPress={() => {
-                          setGenreFilter(null);
+                          setGenreFilter(genre);
                           setIsGenreDropdownOpen(false);
                           playSound('click');
                         }}
-                        className="px-4 py-3 border-b border-neutral-800"
+                        className={`px-4 py-3 border-b border-neutral-800 ${genreFilter === genre ? 'bg-amber-900/20' : ''}`}
                       >
-                        <Text className="text-neutral-400 font-mono text-xs">All Genres</Text>
+                        <Text className={`font-mono text-xs ${genreFilter === genre ? 'text-amber-500 font-bold' : 'text-neutral-300'}`}>
+                          {genre}
+                        </Text>
                       </Pressable>
-                      {genres.map((genre: any) => (
-                        <Pressable
-                          key={genre}
-                          onPress={() => {
-                            setGenreFilter(genre);
-                            setIsGenreDropdownOpen(false);
-                            playSound('click');
-                          }}
-                          className={`px-4 py-3 border-b border-neutral-800 ${genreFilter === genre ? 'bg-amber-900/20' : ''}`}
-                        >
-                          <Text className={`font-mono text-xs ${genreFilter === genre ? 'text-amber-500 font-bold' : 'text-neutral-300'}`}>
-                            {genre}
-                          </Text>
-                        </Pressable>
-                      ))}
-                    </ScrollView>
-                  </View>
-                )}
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+            </View>
+
+            {/* Sort Options */}
+            <View className="h-10 mb-6">
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                className="pl-4"
+                contentContainerStyle={{ paddingRight: 16 }}
+              >
+                {[
+                  { id: 'recent', label: 'Recent' },
+                  { id: 'title', label: 'A-Z' },
+                  { id: 'release', label: 'Year' },
+                  ...(thriftMode ? [] : [{ id: 'rating', label: 'Rated' }]),
+                ].map((opt) => (
+                  <Pressable
+                    key={opt.id}
+                    onPress={() => handleSort(opt.id as any)}
+                    className={`px-3 py-1.5 mr-2 rounded-lg border flex-row items-center gap-1 ${sortBy === opt.id
+                      ? 'bg-neutral-800 border-neutral-700'
+                      : 'bg-transparent border-transparent'
+                      }`}
+                  >
+                    <Text className={`font-mono text-[10px] ${sortBy === opt.id ? 'text-amber-500 font-bold' : 'text-neutral-500'}`}>
+                      {opt.label.toUpperCase()}
+                    </Text>
+                    {sortBy === opt.id && (
+                      <FontAwesome
+                        name={sortOrder === 'asc' ? 'caret-up' : 'caret-down'}
+                        size={10}
+                        color="#f59e0b"
+                      />
+                    )}
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </View>
+
+
+
+            <View className="pb-6">
+              <View className="flex-row items-center justify-between mb-3">
+                <Text className="text-amber-500/90 font-mono text-sm font-bold tracking-widest">
+                  {thriftMode ? 'WISHLIST' : 'THE STACKS'}
+                </Text>
+
+                {/* View Mode Toggle */}
+                <View className="flex-row bg-neutral-900 rounded-lg p-1 border border-neutral-800">
+                  <Pressable
+                    onPress={() => { setViewMode('list'); playSound('click'); }}
+                    className={`p-1.5 rounded ${viewMode === 'list' ? 'bg-neutral-800' : ''}`}
+                  >
+                    <FontAwesome name="list" size={14} color={viewMode === 'list' ? '#f59e0b' : '#525252'} />
+                  </Pressable>
+                  <Pressable
+                    onPress={() => { setViewMode('grid2'); playSound('click'); }}
+                    className={`p-1.5 rounded ${viewMode === 'grid2' ? 'bg-neutral-800' : ''}`}
+                  >
+                    <FontAwesome name="th-large" size={14} color={viewMode === 'grid2' ? '#f59e0b' : '#525252'} />
+                  </Pressable>
+                  <Pressable
+                    onPress={() => { setViewMode('grid4'); playSound('click'); }}
+                    className={`p-1.5 rounded ${viewMode === 'grid4' ? 'bg-neutral-800' : ''}`}
+                  >
+                    <FontAwesome name="th" size={14} color={viewMode === 'grid4' ? '#f59e0b' : '#525252'} />
+                  </Pressable>
+                </View>
               </View>
 
-              {/* Sort Options */}
-              <View className="h-10 mb-6">
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  className="pl-4"
-                  contentContainerStyle={{ paddingRight: 16 }}
-                >
-                  {[
-                    { id: 'recent', label: 'Recent' },
-                    { id: 'title', label: 'A-Z' },
-                    { id: 'release', label: 'Year' },
-                    ...(thriftMode ? [] : [{ id: 'rating', label: 'Rated' }]),
-                  ].map((opt) => (
-                    <Pressable
-                      key={opt.id}
-                      onPress={() => handleSort(opt.id as any)}
-                      className={`px-3 py-1.5 mr-2 rounded-lg border flex-row items-center gap-1 ${sortBy === opt.id
-                        ? 'bg-neutral-800 border-neutral-700'
-                        : 'bg-transparent border-transparent'
-                        }`}
-                    >
-                      <Text className={`font-mono text-[10px] ${sortBy === opt.id ? 'text-amber-500 font-bold' : 'text-neutral-500'}`}>
-                        {opt.label.toUpperCase()}
-                      </Text>
-                      {sortBy === opt.id && (
-                        <FontAwesome
-                          name={sortOrder === 'asc' ? 'caret-up' : 'caret-down'}
-                          size={10}
-                          color="#f59e0b"
-                        />
-                      )}
-                    </Pressable>
-                  ))}
-                </ScrollView>
-
-
-
-                <View className="pb-6">
-                  <View className="flex-row items-center justify-between mb-3">
-                    <Text className="text-amber-500/90 font-mono text-sm font-bold tracking-widest">
-                      {thriftMode ? 'WISHLIST' : 'THE STACKS'}
-                    </Text>
-
-                    {/* View Mode Toggle */}
-                    <View className="flex-row bg-neutral-900 rounded-lg p-1 border border-neutral-800">
-                      <Pressable
-                        onPress={() => { setViewMode('list'); playSound('click'); }}
-                        className={`p-1.5 rounded ${viewMode === 'list' ? 'bg-neutral-800' : ''}`}
-                      >
-                        <FontAwesome name="list" size={14} color={viewMode === 'list' ? '#f59e0b' : '#525252'} />
-                      </Pressable>
-                      <Pressable
-                        onPress={() => { setViewMode('grid2'); playSound('click'); }}
-                        className={`p-1.5 rounded ${viewMode === 'grid2' ? 'bg-neutral-800' : ''}`}
-                      >
-                        <FontAwesome name="th-large" size={14} color={viewMode === 'grid2' ? '#f59e0b' : '#525252'} />
-                      </Pressable>
-                      <Pressable
-                        onPress={() => { setViewMode('grid4'); playSound('click'); }}
-                        className={`p-1.5 rounded ${viewMode === 'grid4' ? 'bg-neutral-800' : ''}`}
-                      >
-                        <FontAwesome name="th" size={14} color={viewMode === 'grid4' ? '#f59e0b' : '#525252'} />
-                      </Pressable>
-                    </View>
-                  </View>
-
-                  {/* Show Empty State if Filtering Yields No Results */}
-                  {filteredStacks.length === 0 ? (
-                    <View className="px-4">
-                      <EmptyState />
-                    </View>
-                  ) : (
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
-                      {filteredStacks.map((stack: any, idx: number) => {
-                        // Adjust width based on View Mode
-                        let itemWidth = (windowWidth - 48) / 2; // grid2 default
-
-                        if (viewMode === 'grid4') {
-                          itemWidth = (windowWidth - 64) / 4;
-                        } else if (viewMode === 'list') {
-                          itemWidth = windowWidth - 32;
-                        }
-
-
-
-                        // Fix for List Mode Height
-                        const itemHeight = viewMode === 'list'
-                          ? 100 // Fixed height for List Mode
-                          : itemWidth * 1.5;
-
-                        return (
-                          <View key={idx} style={{ width: itemWidth, marginBottom: viewMode === 'list' ? 8 : 16 }}>
-                            <StackCard
-                              stack={stack}
-                              mode={viewMode === 'list' ? 'list' : 'grid'} // Pass mode prop
-                              onAcquiredPress={thriftMode ? handleAcquiredPress : undefined}
-                              onLongPress={thriftMode ? handleAcquiredPress : undefined}
-                              onToggleFavorite={thriftMode ? handleToggleGrail : handleToggleFavorite}
-                              onPress={() => router.push(`/movie/${stack[0].movie_id}`)}
-                              width={itemWidth}
-                              height={itemHeight}
-                              // Lower offset for tighter grids
-                              stackOffset={viewMode === 'grid4' ? 2 : 4}
-                            />
-                          </View>
-                        );
-                      })}
-                    </View>
-                  )}
+              {/* Show Empty State if Filtering Yields No Results */}
+              {filteredStacks.length === 0 ? (
+                <View className="px-4">
+                  <EmptyState />
                 </View>
-              </>
+              ) : (
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+                  {filteredStacks.map((stack: any, idx: number) => {
+                    // Adjust width based on View Mode
+                    let itemWidth = (windowWidth - 48) / 2; // grid2 default
+
+                    if (viewMode === 'grid4') {
+                      itemWidth = (windowWidth - 64) / 4;
+                    } else if (viewMode === 'list') {
+                      itemWidth = windowWidth - 32;
+                    }
+
+
+
+                    // Fix for List Mode Height
+                    const itemHeight = viewMode === 'list'
+                      ? 100 // Fixed height for List Mode
+                      : itemWidth * 1.5;
+
+                    return (
+                      <View key={idx} style={{ width: itemWidth, marginBottom: viewMode === 'list' ? 8 : 16 }}>
+                        <StackCard
+                          stack={stack}
+                          mode={viewMode === 'list' ? 'list' : 'grid'} // Pass mode prop
+                          onAcquiredPress={thriftMode ? handleAcquiredPress : undefined}
+                          onLongPress={thriftMode ? handleAcquiredPress : undefined}
+                          onToggleFavorite={thriftMode ? handleToggleGrail : handleToggleFavorite}
+                          onPress={() => router.push(`/movie/${stack[0].movie_id}`)}
+                          width={itemWidth}
+                          height={itemHeight}
+                          // Lower offset for tighter grids
+                          stackOffset={viewMode === 'grid4' ? 2 : 4}
+                        />
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
+            </View>
+          </>
         )}
-            </ScrollView>
+      </ScrollView>
 
-            {/* Share Modal */}
-            <Modal
-              visible={showShareModal}
-              transparent
-              animationType="fade"
-              onRequestClose={() => setShowShareModal(false)}
-            >
-              <View className="flex-1 bg-black/90 items-center justify-center p-4">
-                <Text className="text-white font-mono text-lg mb-8">SHARE ON DISPLAY</Text>
+      {/* Share Modal */}
+      <Modal
+        visible={showShareModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowShareModal(false)}
+      >
+        <View className="flex-1 bg-black/90 items-center justify-center p-4">
+          <Text className="text-white font-mono text-lg mb-8">SHARE ON DISPLAY</Text>
 
-                {/* We capture the On Display card of the first item for now as a demo, 
+          {/* We capture the On Display card of the first item for now as a demo, 
                     or ideally we'd capture the whole shelf. 
                     Capturing the whole shelf is hard because it's in a ScrollView.
                     For now, let's share a 'Card' representation of the first On Display item.
                 */}
-                <ViewShot ref={viewShotRef} options={{ format: 'png', quality: 0.9 }}>
-                  {displayItems.length > 0 ? (
-                    <ShareableShelf
-                      items={displayItems}
-                      mode={thriftMode ? 'thrift' : 'display'}
-                    />
-                  ) : (
-                    <View className="p-4 bg-neutral-800"><Text className="text-white">Nothing to share</Text></View>
-                  )}
-                </ViewShot>
+          <ViewShot ref={viewShotRef} options={{ format: 'png', quality: 0.9 }}>
+            {displayItems.length > 0 ? (
+              <ShareableShelf
+                items={displayItems}
+                mode={thriftMode ? 'thrift' : 'display'}
+              />
+            ) : (
+              <View className="p-4 bg-neutral-800"><Text className="text-white">Nothing to share</Text></View>
+            )}
+          </ViewShot>
 
-                <View className="flex-row gap-4 mt-8">
-                  <Pressable
-                    onPress={() => setShowShareModal(false)}
-                    className="bg-neutral-800 px-6 py-3 rounded-full border border-neutral-700"
-                  >
-                    <Text className="text-white font-mono">Close</Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={async () => {
-                      if (viewShotRef.current?.capture) {
-                        try {
-                          const uri = await viewShotRef.current.capture();
-                          await Sharing.shareAsync(uri);
-                        } catch (e) {
-                          Alert.alert('Error', 'Could not share image');
-                        }
-                      }
-                    }}
-                    className="bg-amber-600 px-6 py-3 rounded-full"
-                  >
-                    <Text className="text-white font-mono font-bold">Share Image</Text>
-                  </Pressable>
-                </View>
-              </View>
-            </Modal>
+          <View className="flex-row gap-4 mt-8">
+            <Pressable
+              onPress={() => setShowShareModal(false)}
+              className="bg-neutral-800 px-6 py-3 rounded-full border border-neutral-700"
+            >
+              <Text className="text-white font-mono">Close</Text>
+            </Pressable>
+            <Pressable
+              onPress={async () => {
+                if (viewShotRef.current?.capture) {
+                  try {
+                    const uri = await viewShotRef.current.capture();
+                    await Sharing.shareAsync(uri);
+                  } catch (e) {
+                    Alert.alert('Error', 'Could not share image');
+                  }
+                }
+              }}
+              className="bg-amber-600 px-6 py-3 rounded-full"
+            >
+              <Text className="text-white font-mono font-bold">Share Image</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
 
 
-            {/* REWIND OVERLAY */}
-            {
-              showRewind && (
-                <View className="absolute inset-0 z-[100] bg-[#0000AA] items-center justify-center">
-                  {/* Scanlines */}
-                  <View className="absolute inset-0 opacity-20" style={{
-                    backgroundImage: 'linear-gradient(transparent 50%, black 50%)',
-                    backgroundSize: '100% 4px'
-                  }} />
-                  {/* Using simply repeated views for native scanlines if web gradient fails */}
-                  {/* Text */}
-                  <Text className="text-white font-mono text-4xl font-bold tracking-widest animate-pulse">
-                    {'<< REWIND'}
-                  </Text>
-                  <Text className="text-white font-mono text-xl mt-4">
-                    TRACKING...
-                  </Text>
-                </View>
-              )
-            }
-          </>
-        );
+      {/* REWIND OVERLAY */}
+      {
+        showRewind && (
+          <View className="absolute inset-0 z-[100] bg-[#0000AA] items-center justify-center">
+            {/* Scanlines */}
+            <View className="absolute inset-0 opacity-20" style={{
+              backgroundImage: 'linear-gradient(transparent 50%, black 50%)',
+              backgroundSize: '100% 4px'
+            }} />
+            {/* Using simply repeated views for native scanlines if web gradient fails */}
+            {/* Text */}
+            <Text className="text-white font-mono text-4xl font-bold tracking-widest animate-pulse">
+              {'<< REWIND'}
+            </Text>
+            <Text className="text-white font-mono text-xl mt-4">
+              TRACKING...
+            </Text>
+          </View>
+        )
+      }
+    </>
+  );
 }
