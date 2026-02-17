@@ -236,6 +236,10 @@ export default function SettingsScreen() {
               >
                 {isLinking ? <ActivityIndicator color="white" /> : <Text className="text-white font-mono font-bold">LINK EMAIL</Text>}
               </Pressable>
+
+              <Pressable onPress={() => { handleSignOut(); router.replace('/auth'); }} className="items-center mt-3">
+                <Text className="text-amber-500 font-mono text-sm underline">Already have an account? Log In</Text>
+              </Pressable>
             </View>
           </View>
         )}
