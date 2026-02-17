@@ -240,7 +240,7 @@ export default function MovieDetailScreen() {
     };
 
     const handleConfirmAddFormat = async () => {
-        if (!pendingFormat || !movie) return;
+        if (!pendingFormat || !activeMovie) return;
 
         const isDuplicate = movieItems.some(item => item.format === pendingFormat);
 
@@ -253,7 +253,14 @@ export default function MovieDetailScreen() {
         try {
             // Add the format with edition
             await addMutation.mutateAsync({
-                tmdbMovie: movie,
+                tmdbMovie: {
+                    id: activeMovie.tmdb_id,
+                    title: activeMovie.title,
+                    release_date: activeMovie.release_date ?? '',
+                    poster_path: activeMovie.poster_path,
+                    backdrop_path: activeMovie.backdrop_path,
+                    overview: (activeMovie as any).overview ?? '',
+                } as any,
                 formats: [pendingFormat as MovieFormat],
                 status: 'owned',
                 edition: editionInput.trim() || null
