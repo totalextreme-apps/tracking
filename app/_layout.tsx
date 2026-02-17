@@ -1,8 +1,10 @@
+import { asyncStoragePersister, queryClient } from '@/lib/query-client';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+
 import '../global.css';
 
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -20,8 +22,6 @@ import { usePathname } from 'expo-router';
 import { useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-const queryClient = new QueryClient();
-
 export {
   // Catch any errors thrown by the Layout component.
   ErrorBoundary
@@ -31,8 +31,6 @@ export const unstable_settings = {
   // Ensure that reloading on `/modal` keeps a back button present.
   initialRouteName: '(tabs)',
 };
-
-
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -44,7 +42,6 @@ export default function RootLayout() {
     SplashScreen.preventAutoHideAsync();
   }, []);
 
-  // Expo Router uses Error Boundaries to catch errors in the navigation tree.
   useEffect(() => {
     if (error) throw error;
   }, [error]);
@@ -84,7 +81,10 @@ function RootLayoutNav() {
   }, [pathname, staticEnabled]);
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{ persister: asyncStoragePersister }}
+    >
       <SoundProvider>
         <AuthProvider>
           <ThriftModeProvider>
@@ -104,8 +104,7 @@ function RootLayoutNav() {
           </ThriftModeProvider>
         </AuthProvider>
       </SoundProvider>
-
-    </QueryClientProvider >
+    </PersistQueryClientProvider>
   );
 }
 
