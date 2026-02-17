@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
 import { QueryClient } from '@tanstack/react-query';
-import { createAsyncStoragePersister } from '@tanstack/react-query-persist-client/async-storage-persister';
 
 // 1. Create a configured QueryClient with longer stale times for offline
 export const queryClient = new QueryClient({
