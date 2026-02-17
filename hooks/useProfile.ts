@@ -43,16 +43,24 @@ export function useProfile(userId: string | null) {
     });
 
     const uploadAvatarMutation = useMutation({
-        mutationFn: async (uri: string) => {
+        mutationFn: async ({ uri, base64 }: { uri: string; base64?: string | null }) => {
             if (!userId) throw new Error('No user');
 
-            const base64 = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' });
+            let fileData: ArrayBuffer;
             const filePath = `${userId}/${new Date().getTime()}.png`;
             const contentType = 'image/png';
 
+            if (base64) {
+                fileData = decode(base64);
+            } else {
+                // Native platform file read
+                const b64 = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' });
+                fileData = decode(b64);
+            }
+
             const { data, error } = await supabase.storage
                 .from('avatars')
-                .upload(filePath, decode(base64), { contentType, upsert: true });
+                .upload(filePath, fileData, { contentType, upsert: true });
 
             if (error) throw error;
 
@@ -72,7 +80,7 @@ export function useProfile(userId: string | null) {
     return {
         ...query,
         updateProfile: updateMutation.mutateAsync,
-        uploadAvatar: uploadAvatarMutation.mutateAsync,
+        uploadAvatar: (uri: string, base64?: string | null) => uploadAvatarMutation.mutateAsync({ uri, base64 }),
         isUpdating: updateMutation.isPending || uploadAvatarMutation.isPending,
     };
 }

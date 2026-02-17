@@ -94,10 +94,14 @@ export default function SettingsScreen() {
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.5,
+        base64: true, // Required for web upload to Supabase if URI is blob
       });
 
       if (!result.canceled) {
-        await uploadAvatar(result.assets[0].uri);
+        // On web, we might need base64 or the blob uri. 
+        // useProfile.ts needs to handle it.
+        // For now, pass the URI, but ensures clean usage.
+        await uploadAvatar(result.assets[0].uri, result.assets[0].base64);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
     } catch (e) {

@@ -79,26 +79,26 @@ export function EmptyState() {
 
             {/* VCR UI Overlay */}
             <View className="absolute top-12 left-8 z-20">
-                <Text className="text-white font-mono text-xl shadow-md">PLAY</Text>
+                <Text className="text-white font-mono text-xl">PLAY</Text>
             </View>
 
             <View className="absolute top-12 right-8 z-20">
-                <Text className="text-white font-mono text-xl shadow-md">SP</Text>
+                <Text className="text-white font-mono text-xl">SP</Text>
             </View>
 
             <View className="absolute bottom-32 left-8 z-20">
-                <Text className="text-white font-mono text-xl shadow-md">AUTO TRACKING</Text>
+                <Text className="text-white font-mono text-xl">AUTO TRACKING</Text>
             </View>
 
             <View className="absolute bottom-32 right-8 z-20">
-                <Text className="text-white font-mono text-xl shadow-md">00:00:00</Text>
+                <Text className="text-white font-mono text-xl">00:00:00</Text>
             </View>
 
             {/* Main Content */}
             <Animated.View style={animatedText} className="items-center z-30">
                 <Text
                     className="text-white font-mono text-5xl font-bold tracking-widest text-center mb-2 pt-4 pb-2 leading-relaxed"
-                    style={{ textShadowColor: 'black', textShadowOffset: { width: 4, height: 4 }, textShadowRadius: 0 }}
+                    style={{ textShadowColor: '#000', textShadowOffset: { width: 2, height: 2 }, textShadowRadius: 0 }}
                 >
                     NO SIGNAL
                 </Text>

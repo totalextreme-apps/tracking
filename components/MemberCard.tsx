@@ -96,11 +96,11 @@ export function MemberCard({ userId, profile, onEditPress, onAvatarPress }: Memb
                 </View>
 
                 {/* RIGHT COLUMN: Photo */}
-                <View className="w-[40%] justify-center items-center">
+                <View className="w-[35%] justify-center items-center">
                     <Pressable onPress={onAvatarPress} className="w-full aspect-[3/4] bg-neutral-300 p-1 rotate-1 shadow-lg" style={{ elevation: 5 }}>
                         <View className="w-full h-full bg-neutral-800 border border-neutral-400 overflow-hidden relative">
                             {profile?.avatar_url ? (
-                                <Image source={{ uri: profile.avatar_url }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                                <Image source={{ uri: profile.avatar_url }} style={{ width: '100%', height: '100%' }} contentFit="cover" transition={1000} />
                             ) : (
                                 <View className="flex-1 items-center justify-center bg-neutral-800">
                                     <FontAwesome name="user" size={40} color="#525252" />

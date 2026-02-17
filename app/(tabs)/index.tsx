@@ -194,7 +194,11 @@ export default function HomeScreen() {
 
       <ScrollView
         className="flex-1 bg-neutral-950"
-        contentContainerStyle={{ paddingBottom: 40, paddingHorizontal: isEmpty ? 0 : 16, flexGrow: 1 }}
+        contentContainerStyle={{
+          paddingBottom: 120, // INCREASED padding to clear the 100px tab bar
+          paddingHorizontal: isEmpty ? 0 : 16,
+          flexGrow: 1
+        }}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
