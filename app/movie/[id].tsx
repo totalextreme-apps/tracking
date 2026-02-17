@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { GlossyCard } from '@/components/GlossyCard';
 import { VHSCard } from '@/components/VHSCard';
@@ -178,35 +178,47 @@ export default function MovieDetailScreen() {
     };
 
     const deleteMovie = async () => {
-        Alert.alert('Delete Movie', 'Are you sure you want to remove this movie and all formats from your collection?', [
-            { text: 'Cancel', style: 'cancel' },
-            {
-                text: 'Delete',
-                style: 'destructive',
-                onPress: async () => {
-                    try {
-                        // EJECT SEQUENCE
-                        setEjecting(true);
+        const performDelete = async () => {
+            try {
+                // EJECT SEQUENCE
+                setEjecting(true);
 
-                        // Use global sound manager (web safe)
-                        playSound('eject');
+                // Use global sound manager (web safe)
+                playSound('eject');
 
-                        // Visual delay for sound/animation
-                        await new Promise(resolve => setTimeout(resolve, 2000)); // 2s eject time
+                // Visual delay for sound/animation
+                await new Promise(resolve => setTimeout(resolve, 2000)); // 2s eject time
 
-                        await Promise.all(movieItems.map(item => deleteMutation.mutateAsync(item.id)));
-                        if (refetch) refetch();
+                await Promise.all(movieItems.map(item => deleteMutation.mutateAsync(item.id)));
+                if (refetch) refetch();
 
-                        // Navigate back after eject
-                        router.back();
-                    } catch (e) {
-                        setEjecting(false);
-                        console.error('Error deleting movie:', e);
-                        Alert.alert('Error', 'Could not delete movie');
-                    }
+                // Navigate back after eject
+                router.back();
+            } catch (e) {
+                setEjecting(false);
+                console.error('Error deleting movie:', e);
+                if (Platform.OS === 'web') {
+                    window.alert('Could not delete movie');
+                } else {
+                    Alert.alert('Error', 'Could not delete movie');
+                }
+            }
+        };
+
+        if (Platform.OS === 'web') {
+            if (window.confirm('Are you sure you want to remove this movie and all formats from your collection?')) {
+                performDelete();
+            }
+        } else {
+            Alert.alert('Delete Movie', 'Are you sure you want to remove this movie and all formats from your collection?', [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: performDelete,
                 },
-            },
-        ]);
+            ]);
+        }
     };
 
     return (
