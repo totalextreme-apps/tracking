@@ -255,11 +255,14 @@ export default function AddScreen() {
             facing="back"
             onBarcodeScanned={handleBarCodeScanned}
             barcodeScannerSettings={{
-              barcodeTypes: ["upc_a", "upc_e", "ean13", "ean8"],
+              barcodeTypes: ["upc_a", "upc_e", "ean13", "ean8", "qr", "code128", "code39"],
             }}
           >
             <View className="flex-1 bg-black/50 items-center justify-center">
-              <Text className="text-white font-mono text-center mb-10 text-lg">Scan Barcode</Text>
+              <Text className="text-white font-mono text-center mb-4 text-lg">Scan Barcode</Text>
+              <Text className="text-neutral-400 font-mono text-center mb-10 text-xs px-10">
+                Point at a UPC or EAN barcode. On web, detection may vary by browser.
+              </Text>
               <View className="w-64 h-40 border-2 border-amber-500 rounded-lg bg-transparent" />
               <Pressable
                 onPress={() => setIsScanning(false)}

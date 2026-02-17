@@ -34,7 +34,15 @@
       "backgroundColor": "#0a0a0a"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Tracking to access your camera",
+          "microphonePermission": "Allow Tracking to access your microphone",
+          "recordAudioPermission": "Allow Tracking to access your microphone"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

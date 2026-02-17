@@ -48,7 +48,8 @@ export async function lookupUPC(upc: string): Promise<string | null> {
                 return title;
             }
         } catch (e) {
-            console.error('UPC Lookup error', e);
+            const errorMsg = e instanceof Error ? e.message : String(e);
+            console.error(`UPC Lookup error for ${code}: ${errorMsg}`);
         }
 
         // Add delay to avoid rate limit (especially for trial API)
