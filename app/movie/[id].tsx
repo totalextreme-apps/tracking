@@ -596,14 +596,20 @@ export default function MovieDetailScreen() {
                             <View className="gap-2">
                                 {movieItems.map(item => (
                                     <View key={item.id} className="flex-row items-center justify-between bg-neutral-900 p-3 rounded-lg border border-neutral-800">
-                                        <View className="flex-row items-center gap-2">
+                                        <Pressable
+                                            className="flex-row items-center gap-2"
+                                            onPress={() => {
+                                                setSelectedFormat(item.format);
+                                                playSound('click');
+                                            }}
+                                        >
                                             <View className={`px-2 py-1 rounded ${FORMAT_COLORS[item.format] || 'bg-neutral-800'}`}>
                                                 <Text className="text-white font-mono text-xs font-bold">{item.format}</Text>
                                             </View>
                                             {item.edition && (
                                                 <Text className="text-neutral-400 font-mono text-sm">({item.edition})</Text>
                                             )}
-                                        </View>
+                                        </Pressable>
                                         <Pressable
                                             onPress={async () => {
                                                 await deleteMutation.mutateAsync(item.id);

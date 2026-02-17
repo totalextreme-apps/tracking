@@ -1,4 +1,5 @@
 
+import { CustomCoversSection } from '@/components/CustomCoversSection';
 import { MemberCard } from '@/components/MemberCard';
 import { StatsSection } from '@/components/StatsSection';
 import { useAuth } from '@/context/AuthContext';
