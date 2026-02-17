@@ -296,8 +296,40 @@ export default function SettingsScreen() {
         </Text>
 
         {/* A/V Settings - TV GUIDE STYLE */}
-        <View className="bg-[#2B4A8C] rounded-lg overflow-hidden mb-6 border-2 border-white">
-          <View className="p-4 flex-row items-center justify-between border-b-2 border-white">
+        <View
+          className="bg-[#2B4A8C] rounded-lg overflow-hidden mb-6 border-2 border-white"
+          style={{
+            shadowColor: '#000',
+            shadowOffset: { width: 3, height: 3 },
+            shadowOpacity: 0.5,
+            shadowRadius: 0,
+            elevation: 5
+          }}
+        >
+          {/* Scanline overlay */}
+          <View
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'transparent',
+              backgroundImage: 'repeating-linear-gradient(0deg, rgba(0,0,0,0.15) 0px, rgba(0,0,0,0.15) 1px, transparent 1px, transparent 2px)',
+              pointerEvents: 'none',
+              zIndex: 1
+            }}
+          />
+
+          <View
+            className="p-4 flex-row items-center justify-between border-b-2 border-white"
+            style={{
+              shadowColor: '#1a3366',
+              shadowOffset: { width: 0, height: -2 },
+              shadowOpacity: 0.3,
+              shadowRadius: 0
+            }}
+          >
             <View className="flex-row items-center">
               <View className="w-8 items-center"><FontAwesome name="volume-up" size={14} color="#FFE92F" /></View>
               <Text className="font-mono text-sm font-bold" style={{ color: '#FFE92F' }}>Sound Effects</Text>
@@ -323,7 +355,30 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        <View className="bg-[#2B4A8C] rounded-lg overflow-hidden border-2 border-white mb-6">
+        <View
+          className="bg-[#2B4A8C] rounded-lg overflow-hidden border-2 border-white mb-6"
+          style={{
+            shadowColor: '#000',
+            shadowOffset: { width: 3, height: 3 },
+            shadowOpacity: 0.5,
+            shadowRadius: 0,
+            elevation: 5
+          }}
+        >
+          {/* Scanline overlay */}
+          <View
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'transparent',
+              backgroundImage: 'repeating-linear-gradient(0deg, rgba(0,0,0,0.15) 0px, rgba(0,0,0,0.15) 1px, transparent 1px, transparent 2px)',
+              pointerEvents: 'none',
+              zIndex: 1
+            }}
+          />
 
           <Pressable
             onPress={handleExport}
