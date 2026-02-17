@@ -42,6 +42,7 @@ export default function MovieDetailScreen() {
     const [ejecting, setEjecting] = useState(false);
     const [showShareModal, setShowShareModal] = useState(false);
     const [localNotes, setLocalNotes] = useState<Record<string, string>>({});
+    const [localEditions, setLocalEditions] = useState<Record<string, string>>({});
     const viewShotRef = useRef<ViewShot>(null);
 
     // Custom art state
@@ -510,7 +511,19 @@ export default function MovieDetailScreen() {
                                         <View className={`px-2 py-1 rounded ${FORMAT_COLORS[item.format] || 'bg-neutral-800'}`}>
                                             <Text className="text-white font-mono text-xs font-bold">{item.format}</Text>
                                         </View>
+                                        {item.edition && (
+                                            <Text className="text-neutral-500 font-mono text-xs ml-2">({item.edition})</Text>
+                                        )}
                                     </View>
+                                    <TextInput
+                                        className="bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm mb-2"
+                                        placeholder="Edition (Theatrical, Unrated, Director's Cut, etc.)"
+                                        placeholderTextColor="#525252"
+                                        value={localEditions[item.id] !== undefined ? localEditions[item.id] : (item.edition || '')}
+                                        onChangeText={(text) => setLocalEditions(prev => ({ ...prev, [item.id]: text }))}
+                                        autoCapitalize="words"
+                                        autoCorrect={false}
+                                    />
                                     <TextInput
                                         className="bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm min-h-[80px]"
                                         placeholder={`Add notes for your ${item.format} copy...`}
@@ -523,9 +536,13 @@ export default function MovieDetailScreen() {
                                         disabled={updateMutation.isPending}
                                         onPress={async () => {
                                             const noteToSave = localNotes[item.id] !== undefined ? localNotes[item.id] : (item.notes || '');
+                                            const editionToSave = localEditions[item.id] !== undefined ? localEditions[item.id] : (item.edition || '');
                                             await updateMutation.mutateAsync({
                                                 itemId: item.id,
-                                                updates: { notes: noteToSave }
+                                                updates: {
+                                                    notes: noteToSave,
+                                                    edition: editionToSave || null
+                                                }
                                             });
                                             playSound('click');
                                             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -536,7 +553,7 @@ export default function MovieDetailScreen() {
                                             <ActivityIndicator size="small" color="#f59e0b" style={{ marginRight: 8, transform: [{ scale: 0.8 }] }} />
                                         ) : null}
                                         <Text className="text-amber-500 font-mono text-xs font-bold">
-                                            {updateMutation.isPending ? 'SAVING...' : `SAVE ${item.format} NOTE`}
+                                            {updateMutation.isPending ? 'SAVING...' : `SAVE ${item.format}`}
                                         </Text>
                                     </Pressable>
                                 </View>
