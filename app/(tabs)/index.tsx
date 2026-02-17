@@ -4,7 +4,7 @@ import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, RefreshControl, ScrollView, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import { Alert, Platform, Pressable, RefreshControl, ScrollView, Text, TextInput, useWindowDimensions, View } from 'react-native';
 
 import { AcquiredModal } from '@/components/AcquiredModal'; // Restore Component
 import { EmptyState } from '@/components/EmptyState';
@@ -64,6 +64,16 @@ export default function HomeScreen() {
       setShowRewind(false);
       setRefreshing(false);
     }, 1500);
+  };
+
+  const handleScroll = (event: any) => {
+    if (Platform.OS === 'web' && !refreshing && !showRewind) {
+      const y = event.nativeEvent.contentOffset.y;
+      // If user pulls down more than 100px
+      if (y < -100) {
+        onRefresh();
+      }
+    }
   };
 
 
@@ -199,6 +209,8 @@ export default function HomeScreen() {
         }}
         showsVerticalScrollIndicator={false}
         alwaysBounceVertical={true}
+        scrollEventThrottle={16}
+        onScroll={handleScroll}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
