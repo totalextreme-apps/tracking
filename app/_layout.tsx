@@ -60,11 +60,11 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (Platform.OS === 'web') {
-      const ua = navigator.userAgent;
-      const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      const isLarge = width > 1024;
 
-      // If NOT a mobile UA AND width is broad, call it a desktop
-      if (!isMobileUA && width > 768) {
+      // If it's a large screen AND not a mobile device, block it.
+      if (!isMobile && isLarge) {
         setIsDesktop(true);
       } else {
         setIsDesktop(false);

@@ -10,27 +10,30 @@ export const DesktopBlocker = () => {
             <View style={styles.scanlines} pointerEvents="none" />
 
             <View style={styles.content}>
-                <View style={styles.header}>
-                    <Text style={styles.headerText}>[ PUBLIC ACCESS CHANNEL 01 ]</Text>
-                </View>
-
-                <View style={styles.messageBox}>
-                    <Text style={styles.title}>ACCESS RESTRICTED</Text>
-                    <Text style={styles.body}>
-                        THE TRACKING EXPERIENCE IS OPTIMIZED FOR PORTABLE HANDHELD UNITS ONLY.
-                    </Text>
-                    <Text style={styles.body}>
-                        PLEASE DISCONTINUE USE OF THIS DESKTOP TERMINAL AND RECONNECT VIA MOBILE DEVICE.
-                    </Text>
-
-                    <View style={styles.blinkContainer}>
-                        <Text style={styles.blinkText}>INSERT MOBILE DEVICE TO CONTINUE</Text>
+                <View style={styles.tvTube}>
+                    <View style={styles.header}>
+                        <Text style={styles.headerText}>SIGNAL: CHANNEL 01</Text>
+                        <Text style={styles.headerText}>[ PUBLIC ACCESS ]</Text>
                     </View>
-                </View>
 
-                <View style={styles.footer}>
-                    <Text style={styles.footerText}>© 1984 TRACKING SYSTEMS CORP.</Text>
-                    <Text style={styles.footerText}>SIGNAL STRENGTH: OPTIMAL</Text>
+                    <View style={styles.messageBox}>
+                        <Text style={styles.title}>ACCESS RESTRICTED</Text>
+                        <Text style={styles.body}>
+                            THE TRACKING INTERFACE IS OPTIMIZED FOR PORTABLE HANDHELD UNITS ONLY.
+                        </Text>
+                        <Text style={styles.body}>
+                            PLEASE TERMINATE THIS SESSION AND RECONNECT VIA A MOBILE TELECOMMUNICATIONS DEVICE.
+                        </Text>
+
+                        <View style={styles.blinkContainer}>
+                            <Text style={styles.blinkText}>INSERT MOBILE DEVICE TO CONTINUE</Text>
+                        </View>
+                    </View>
+
+                    <View style={styles.footer}>
+                        <Text style={styles.footerText}>© 1984 TRACKING SYSTEMS CORP.</Text>
+                        <Text style={styles.footerText}>MODE: HANDHELD ONLY</Text>
+                    </View>
                 </View>
             </View>
         </View>
@@ -40,34 +43,45 @@ export const DesktopBlocker = () => {
 const styles = StyleSheet.create({
     container: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: '#000022', // Deep blue/black CRT background
+        backgroundColor: '#000000',
         justifyContent: 'center',
         alignItems: 'center',
-        zIndex: 9999,
+        zIndex: 999999,
     },
     scanlines: {
         ...StyleSheet.absoluteFillObject,
-        // Creating scanlines using a repeating linear gradient
-        // In React Native Web, we can use standard CSS strings for background
         // @ts-ignore
-        backgroundImage: 'linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06))',
+        backgroundImage: 'linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.4) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.05), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.05))',
         backgroundSize: '100% 4px, 3px 100%',
-        zIndex: 10,
+        zIndex: 100,
     },
     content: {
-        width: '80%',
-        maxWidth: 600,
-        backgroundColor: '#000066', // Classic blue background
-        padding: 40,
+        width: '90%',
+        maxWidth: 800,
+        aspectRatio: 1.33, // 4:3 Ratio
+        backgroundColor: '#333333', // Outer shell
+        padding: 15,
+        borderRadius: 50,
         borderWidth: 4,
-        borderColor: '#ffffff',
-        shadowColor: '#00ffff',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.5,
-        shadowRadius: 15,
+        borderColor: '#444444',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 20 },
+        shadowOpacity: 0.8,
+        shadowRadius: 30,
+    },
+    tvTube: {
+        flex: 1,
+        backgroundColor: '#0000AA', // Classic CRT blue
+        borderRadius: 35,
+        padding: 40,
+        justifyContent: 'space-between',
+        borderWidth: 8,
+        borderColor: '#111',
+        overflow: 'hidden',
     },
     header: {
-        marginBottom: 30,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
         borderBottomWidth: 2,
         borderBottomColor: '#ffffff',
         paddingBottom: 10,
@@ -75,51 +89,55 @@ const styles = StyleSheet.create({
     headerText: {
         color: '#ffffff',
         fontFamily: 'SpaceMono',
-        fontSize: 14,
-        textAlign: 'center',
+        fontSize: 16,
+        fontWeight: 'bold',
     },
     messageBox: {
         alignItems: 'center',
     },
     title: {
-        color: '#ffff00', // Yellow for "RESTRICTED"
+        color: '#FFFF00',
         fontFamily: 'SpaceMono',
-        fontSize: 28,
+        fontSize: 42,
         fontWeight: 'bold',
-        marginBottom: 20,
+        marginBottom: 30,
         textAlign: 'center',
+        textShadowColor: 'rgba(255, 255, 0, 0.5)',
+        textShadowOffset: { width: 4, height: 4 },
+        textShadowRadius: 2,
     },
     body: {
         color: '#ffffff',
         fontFamily: 'SpaceMono',
-        fontSize: 18,
-        lineHeight: 28,
+        fontSize: 20,
+        lineHeight: 32,
         textAlign: 'center',
         marginBottom: 20,
+        textTransform: 'uppercase',
     },
     blinkContainer: {
         marginTop: 20,
-        padding: 10,
+        paddingHorizontal: 20,
+        paddingVertical: 10,
         backgroundColor: '#ffffff',
     },
     blinkText: {
-        color: '#000066',
+        color: '#0000AA',
         fontFamily: 'SpaceMono',
-        fontSize: 16,
+        fontSize: 18,
         fontWeight: 'bold',
         textAlign: 'center',
     },
     footer: {
-        marginTop: 40,
         flexDirection: 'row',
         justifyContent: 'space-between',
-        borderTopWidth: 1,
-        borderTopColor: 'rgba(255,255,255,0.3)',
+        borderTopWidth: 2,
+        borderTopColor: '#ffffff',
         paddingTop: 10,
     },
     footerText: {
-        color: 'rgba(255,255,255,0.5)',
+        color: '#ffffff',
         fontFamily: 'SpaceMono',
-        fontSize: 10,
+        fontSize: 12,
     },
 });
