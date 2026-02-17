@@ -224,7 +224,7 @@ export default function HomeScreen() {
           <EmptyState />
         ) : (
           <>
-            <View className="py-6 relative">
+            <View className="pt-10 pb-6 relative">
               <Image
                 source={thriftMode
                   ? require('@/assets/images/thrift_background.png')

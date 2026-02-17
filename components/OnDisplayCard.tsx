@@ -190,20 +190,21 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
             )
           }
 
-          <View style={{ height: 60, width: 100, marginTop: 8, alignItems: 'center', justifyContent: 'flex-start' }}>
+
+          <View style={{ height: 'auto', minHeight: 60, width: 100, marginTop: 8, alignItems: 'center', justifyContent: 'flex-start' }}>
             <Text
-              className="text-white font-mono text-xs text-center"
+              className="text-white font-mono text-xs text-center leading-3"
               numberOfLines={2}
               style={{ marginBottom: 4 }}
             >
               {movie.title}
             </Text>
-            <View className="px-3 py-1 bg-amber-900/80 rounded">
+            <View className="px-3 py-1 bg-amber-900/80 rounded mt-1">
               <Text className="text-amber-200 font-mono text-[10px]">
                 {item.format}
               </Text>
             </View>
-          </View>
+          </View >
         </View >
       );
     }

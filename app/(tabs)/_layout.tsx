@@ -38,8 +38,8 @@ export default function TabLayout() {
         tabBarStyle: {
           backgroundColor: 'transparent',
           borderTopWidth: 0,
-          height: 100, // Increased height for web safety
-          paddingBottom: 25, // More padding from bottom
+          height: 80, // Reduced from 100
+          paddingBottom: 10,
           paddingTop: 10,
           position: 'absolute',
           bottom: 0,
