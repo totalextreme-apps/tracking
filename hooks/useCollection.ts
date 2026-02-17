@@ -7,11 +7,24 @@ export function useCollection(userId: string | undefined) {
   return useQuery({
     queryKey: ['collection', userId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Create a timeout promise
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Collection fetch timed out')), 8000)
+      );
+
+      // Create the Supabase promise
+      const supabasePromise = supabase
         .from('collection_items')
         .select(`*, movies (*)`)
         .eq('user_id', userId!)
         .order('created_at', { ascending: false });
+
+      // Race them
+      // @ts-ignore
+      const { data, error } = await Promise.race([
+        supabasePromise.then(res => res),
+        timeoutPromise
+      ]);
 
       if (error) throw error;
       return data as CollectionItemWithMovie[];
