@@ -351,20 +351,6 @@ export default function SettingsScreen() {
             elevation: 5
           }}
         >
-          {/* Scanline overlay */}
-          <View
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: 'transparent',
-              backgroundImage: 'repeating-linear-gradient(0deg, rgba(0,0,0,0.15) 0px, rgba(0,0,0,0.15) 1px, transparent 1px, transparent 2px)',
-              pointerEvents: 'none',
-              zIndex: 1
-            }}
-          />
 
           <Pressable
             onPress={handleExport}
