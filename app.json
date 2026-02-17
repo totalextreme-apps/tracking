@@ -4,7 +4,7 @@
     "slug": "tracking",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/logo_tracking.png",
+    "icon": "./assets/images/icon-square.png",
     "scheme": "trackingapptemp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -27,7 +27,7 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png",
+      "favicon": "./public/favicon.png",
       "name": "Tracking - Movie Collection",
       "description": "Track your physical media collection.",
       "display": "standalone",
