@@ -1,6 +1,6 @@
 import { exportAllArt, getAllArtMetadata, importArt } from '@/lib/custom-art-storage';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Platform, Pressable, Text, View } from 'react-native';
 
 export function CustomCoversSection() {
@@ -69,11 +69,11 @@ export function CustomCoversSection() {
     };
 
     // Load stats when mounted
-    useState(() => {
+    useEffect(() => {
         if (Platform.OS === 'web') {
             loadCustomArtStats();
         }
-    });
+    }, []);
 
     if (Platform.OS !== 'web') {
         return null; // Only available on web
