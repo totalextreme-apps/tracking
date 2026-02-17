@@ -78,7 +78,7 @@ export default function AuthScreen() {
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             className="flex-1 bg-neutral-950"
         >
-            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <TouchableWithoutFeedback onPress={Platform.OS === 'web' ? undefined : Keyboard.dismiss}>
                 <View className="flex-1 justify-center px-8" style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
                     <View className="mb-8">
                         <Text className="text-white font-mono text-3xl font-bold mb-2 tracking-tighter">

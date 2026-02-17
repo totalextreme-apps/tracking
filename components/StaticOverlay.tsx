@@ -106,12 +106,13 @@ export function StaticOverlay({ visible }: StaticOverlayProps) {
                 style={StyleSheet.absoluteFill}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 0, y: 1 }}
-                locations={[0, 0.5, 1]} // Just a gradient, repeating is hard without image. 
+                locations={[0, 0.5, 1]}
+                pointerEvents="none"
             />
             {/* Adding multiple gradients to simulate bands? No, specific scanlines are hard without image repeater. 
                 But let's stick to simple flicker + sound + black background.
             */}
-            <View className="absolute inset-0 bg-black/20" />
+            <View className="absolute inset-0 bg-black/20" pointerEvents="none" />
         </View>
     );
 }
