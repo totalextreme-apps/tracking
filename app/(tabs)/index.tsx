@@ -222,7 +222,7 @@ export default function HomeScreen() {
         }
       >
         {/* Header Share Button */}
-        {!isEmpty && (
+        {!isEmpty && userId && (
           <Pressable
             onPress={() => setShowShareModal(true)}
             className="absolute top-14 right-4 z-50 bg-black/50 p-2 rounded-full border border-white/10"
@@ -231,7 +231,14 @@ export default function HomeScreen() {
           </Pressable>
         )}
 
-        {isEmpty ? (
+        {!userId ? (
+          <View className="flex-1 items-center justify-center pt-32">
+            <Text className="text-red-500 font-mono text-xl mb-4">CONNECTION FAILED</Text>
+            <Text className="text-white/60 font-mono text-sm text-center px-8">
+              Unable to verify identity. Please restart the app.
+            </Text>
+          </View>
+        ) : isEmpty ? (
           <EmptyState />
         ) : (
           <>

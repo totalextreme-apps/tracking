@@ -35,7 +35,7 @@ export function TrackingLoader() {
 
     const lineStyle = useAnimatedStyle(() => {
         return {
-            top: interpolate(progress.value, [0, 1], [0, 100]) + '%',
+            top: (interpolate(progress.value, [0, 1], [0, 100]) + '%') as any, // Cast to any to satisfy Reanimated/RN type mismatch
             opacity: interpolate(progress.value, [0, 0.1, 0.9, 1], [0, 1, 1, 0]),
         };
     });
@@ -48,7 +48,7 @@ export function TrackingLoader() {
 
     return (
         <View style={styles.container}>
-            <Animated.Text style={[styles.text, textStyle]}>AUTO TRACKING</Animated.Text>
+            <Animated.Text style={[styles.text, textStyle]}>LOADING...</Animated.Text>
             <View style={styles.lineWrapper}>
                 <Animated.View style={[styles.scanLine, lineStyle]} />
             </View>

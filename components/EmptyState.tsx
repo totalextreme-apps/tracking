@@ -87,7 +87,7 @@ export function EmptyState() {
             </View>
 
             <View className="absolute bottom-32 left-8 z-20">
-                <Text className="text-white font-mono text-xl">AUTO TRACKING</Text>
+                <Text className="text-white font-mono text-xl">NO DATA</Text>
             </View>
 
             <View className="absolute bottom-32 right-8 z-20">
