@@ -44,6 +44,11 @@ export default function MovieDetailScreen() {
     const [localNotes, setLocalNotes] = useState<Record<string, string>>({});
     const viewShotRef = useRef<ViewShot>(null);
 
+    // Custom art state
+    const [customArtUri, setCustomArtUri] = useState<string | null>(null);
+    const [cropModalVisible, setCropModalVisible] = useState(false);
+    const [pendingImageUri, setPendingImageUri] = useState<string | null>(null);
+
     // We use the main collection query and filter. 
     // In a generic app we might want a specific query for just this movie, 
     // but since we load the whole collection on home, this is cached and fast.
@@ -75,6 +80,104 @@ export default function MovieDetailScreen() {
         },
         enabled: !!activeMovie?.tmdb_id,
     });
+
+    // Load custom art from IndexedDB
+    useQuery({
+        queryKey: ['custom-art', movieItems[0]?.id],
+        queryFn: async () => {
+            if (!movieItems[0]?.id) return null;
+            const artUri = await getCustomArt(movieItems[0].id);
+            setCustomArtUri(artUri);
+            return artUri;
+        },
+        enabled: !!movieItems[0]?.id && Platform.OS === 'web',
+    });
+
+    const handleUploadCustomArt = async () => {
+        if (Platform.OS !== 'web') {
+            // For native: use expo-image-picker
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: true,
+                aspect: [2, 3],
+                quality: 0.9,
+            });
+
+            if (!result.canceled && result.assets[0]) {
+                setPendingImageUri(result.assets[0].uri);
+                setCropModalVisible(true);
+            }
+        } else {
+            // For web: use input file
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = async (e: any) => {
+                const file = e.target?.files?.[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const dataUrl = event.target?.result as string;
+                        setPendingImageUri(dataUrl);
+                        setCropModalVisible(true);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+            input.click();
+        }
+    };
+
+    const handleSaveCustomArt = async (croppedDataUrl: string) => {
+        if (!movieItems[0]?.id) return;
+
+        try {
+            // Convert data URL to Blob
+            const response = await fetch(croppedDataUrl);
+            const blob = await response.blob();
+
+            // Compress
+            const compressedBlob = await compressImage(blob, 400, 0.85);
+
+            // Save to IndexedDB
+            await saveCustomArt(movieItems[0].id, compressedBlob);
+
+            // Update UI
+            setCustomArtUri(croppedDataUrl);
+            setCropModalVisible(false);
+            setPendingImageUri(null);
+
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        } catch (e) {
+            console.error('Failed to save custom art:', e);
+            Alert.alert('Error', 'Failed to save custom cover art');
+        }
+    };
+
+    const handleRemoveCustomArt = async () => {
+        if (!movieItems[0]?.id) return;
+
+        const confirmRemove = () => {
+            deleteCustomArt(movieItems[0].id);
+            setCustomArtUri(null);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        };
+
+        if (Platform.OS === 'web') {
+            if (window.confirm('Remove custom cover art? This will restore the default TMDB poster.')) {
+                confirmRemove();
+            }
+        } else {
+            Alert.alert(
+                'Remove Custom Art',
+                'This will restore the default TMDB poster.',
+                [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Remove', style: 'destructive', onPress: confirmRemove },
+                ]
+            );
+        }
+    };
 
     if (!activeMovie || !movieId) {
         return (
@@ -257,6 +360,11 @@ export default function MovieDetailScreen() {
                         {/* Poster */}
                         <View className="w-32 h-48 rounded-lg shadow-xl relative" style={{ elevation: 10, shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 10 }}>
                             {(() => {
+                                // Use custom art if available, otherwise show format-specific preview
+                                if (customArtUri && Platform.OS === 'web') {
+                                    return <Image source={{ uri: customArtUri }} style={{ width: '100%', height: '100%', borderRadius: 8 }} contentFit="cover" />;
+                                }
+
                                 // Determine active format for preview
                                 // Prefer manually selected preview, otherwise fallback to highest quality owned, otherwise none (default image)
                                 const availableFormats = ownedFormats.length > 0 ? ownedFormats : null;
@@ -322,6 +430,29 @@ export default function MovieDetailScreen() {
                             <Ionicons name="trash-outline" size={20} color="#ef4444" />
                         </Pressable>
                     </View>
+
+                    {/* Custom Cover Art Section (Web Only) */}
+                    {Platform.OS === 'web' && movieItems.length > 0 && (
+                        <View className="mt-4 flex-row gap-2">
+                            <Pressable
+                                onPress={handleUploadCustomArt}
+                                className="flex-1 flex-row items-center justify-center p-3 rounded-lg bg-amber-600/10 border border-amber-600/50"
+                            >
+                                <Ionicons name="image-outline" size={18} color="#f59e0b" />
+                                <Text className="ml-2 font-mono text-xs font-bold text-amber-500">
+                                    {customArtUri ? 'CHANGE COVER' : 'UPLOAD COVER'}
+                                </Text>
+                            </Pressable>
+                            {customArtUri && (
+                                <Pressable
+                                    onPress={handleRemoveCustomArt}
+                                    className="flex-row items-center justify-center p-3 rounded-lg bg-neutral-900 border border-neutral-800"
+                                >
+                                    <Ionicons name="close-outline" size={18} color="#737373" />
+                                </Pressable>
+                            )}
+                        </View>
+                    )}
 
                     {/* Overview */}
                     <View className="mt-6">
@@ -503,6 +634,19 @@ export default function MovieDetailScreen() {
                         PLEASE WAIT...
                     </Text>
                 </View>
+            )}
+
+            {/* Image Crop Modal */}
+            {pendingImageUri && (
+                <ImageCropModal
+                    visible={cropModalVisible}
+                    imageUri={pendingImageUri}
+                    onClose={() => {
+                        setCropModalVisible(false);
+                        setPendingImageUri(null);
+                    }}
+                    onSave={handleSaveCustomArt}
+                />
             )}
         </View >
     );

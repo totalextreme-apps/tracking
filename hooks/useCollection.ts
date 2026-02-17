@@ -28,10 +28,12 @@ export function useAddToCollection(userId: string | undefined) {
       tmdbMovie,
       formats,
       status = 'owned',
+      edition = null,
     }: {
       tmdbMovie: TmdbMovieResult;
       formats: MovieFormat[];
       status?: 'owned' | 'wishlist';
+      edition?: string | null;
     }) => {
       if (!userId) throw new Error('Not authenticated');
 
@@ -69,6 +71,7 @@ export function useAddToCollection(userId: string | undefined) {
         movie_id: movieId,
         format,
         status,
+        edition: edition || null,
       }));
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -94,7 +97,14 @@ export function useUpdateCollectionItem(userId: string | undefined) {
       updates,
     }: {
       itemId: string;
-      updates: { status?: 'owned' | 'wishlist'; is_on_display?: boolean; is_grail?: boolean; rating?: number; notes?: string };
+      updates: {
+        status?: 'owned' | 'wishlist';
+        is_on_display?: boolean;
+        is_grail?: boolean;
+        rating?: number;
+        notes?: string;
+        edition?: string | null;
+      };
     }) => {
       if (!userId) throw new Error('Not authenticated');
 

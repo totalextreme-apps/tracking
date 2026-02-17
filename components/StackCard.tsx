@@ -215,24 +215,30 @@ export function StackCard({
           </Text>
 
           {/* Format Coins */}
-          <View className="flex-row gap-1.5 mt-1">
+          <View className="flex-row gap-1.5 mt-1 flex-wrap">
             {defaultSorted.map(item => (
-              <View
-                key={item.id}
-                className={`w-5 h-5 rounded-full items-center justify-center ${FORMAT_COLORS[item.format] || 'bg-neutral-700'}`}
-                style={{
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: 0.3,
-                  shadowRadius: 1,
-                }}
-              >
-                <Text style={{ fontSize: 6, fontWeight: 'bold', color: 'white' }}>
-                  {item.format === '4K' ? '4K' :
-                    item.format === 'BluRay' ? 'BR' :
-                      item.format === 'DVD' ? 'DVD' :
-                        item.format === 'VHS' ? 'VHS' : 'DIG'}
-                </Text>
+              <View key={item.id} className="items-center">
+                <View
+                  className={`w-5 h-5 rounded-full items-center justify-center ${FORMAT_COLORS[item.format] || 'bg-neutral-700'}`}
+                  style={{
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowOpacity: 0.3,
+                    shadowRadius: 1,
+                  }}
+                >
+                  <Text style={{ fontSize: 6, fontWeight: 'bold', color: 'white' }}>
+                    {item.format === '4K' ? '4K' :
+                      item.format === 'BluRay' ? 'BR' :
+                        item.format === 'DVD' ? 'DVD' :
+                          item.format === 'VHS' ? 'VHS' : 'DIG'}
+                  </Text>
+                </View>
+                {item.edition && (
+                  <Text style={{ fontSize: 6, color: '#a3a3a3', marginTop: 1, fontFamily: 'SpaceMono' }} numberOfLines={1}>
+                    {item.edition.substring(0, 8)}
+                  </Text>
+                )}
               </View>
             ))}
           </View>
@@ -391,6 +397,11 @@ export function StackCard({
                 <Text className="text-white font-mono text-[10px] font-bold">
                   {item.format}
                 </Text>
+                {item.edition && (
+                  <Text className="text-white/60 font-mono text-[8px]" numberOfLines={1}>
+                    {item.edition.substring(0, 12)}
+                  </Text>
+                )}
               </Pressable>
             ))}
           </View>
@@ -479,6 +490,11 @@ export function StackCard({
               <Text className="text-white font-mono text-[10px] font-bold">
                 {item.format}
               </Text>
+              {item.edition && (
+                <Text className="text-white/60 font-mono text-[8px]" numberOfLines={1}>
+                  {item.edition.substring(0, 12)}
+                </Text>
+              )}
             </Pressable>
           ))}
         </View>

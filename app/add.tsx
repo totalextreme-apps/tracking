@@ -44,6 +44,7 @@ export default function AddScreen() {
   const [selectedMovie, setSelectedMovie] = useState<TmdbMovieResult | null>(null);
   const [selectedFormats, setSelectedFormats] = useState<MovieFormat[]>(['DVD']);
   const [status, setStatus] = useState<'owned' | 'wishlist'>('owned');
+  const [edition, setEdition] = useState('');
 
   const searchQuery = useTmdbSearch(debouncedQuery);
   const addMutation = useAddToCollection(userId);
@@ -156,6 +157,7 @@ export default function AddScreen() {
         tmdbMovie: selectedMovie,
         formats: selectedFormats,
         status,
+        edition: edition.trim() || null,
       });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.back();
@@ -344,6 +346,20 @@ export default function AddScreen() {
                 );
               })}
             </View>
+
+            <Text className="text-amber-500/90 font-mono text-xs tracking-widest mb-2 mt-2">
+              EDITION (OPTIONAL)
+            </Text>
+            <TextInput
+              placeholder="Theatrical, Unrated, Director's Cut, etc."
+              placeholderTextColor="#6b7280"
+              value={edition}
+              onChangeText={setEdition}
+              className="bg-neutral-800 text-white px-3 py-2 rounded font-mono text-sm mb-4"
+              autoCapitalize="words"
+              autoCorrect={false}
+            />
+
             <Pressable
               onPress={handleAdd}
               disabled={addMutation.isPending}

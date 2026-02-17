@@ -25,6 +25,7 @@ export interface CollectionItem {
   status: ItemStatus;
   is_on_display: boolean;
   is_grail: boolean;
+  edition: string | null;
   digital_provider: string | null;
   condition: string | null;
   notes: string | null;
