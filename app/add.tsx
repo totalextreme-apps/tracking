@@ -8,6 +8,7 @@ import {
   Alert,
   FlatList,
   Keyboard,
+  Platform,
   Pressable,
   Image as RNImage,
   Text,
