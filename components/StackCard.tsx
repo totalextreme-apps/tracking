@@ -247,8 +247,8 @@ export function StackCard({
                   </Text>
                 </View>
                 {item.edition && (
-                  <Text style={{ fontSize: 6, color: '#a3a3a3', marginTop: 1, fontFamily: 'SpaceMono', textAlign: 'center' }} numberOfLines={1}>
-                    {item.edition.substring(0, 8)}
+                  <Text style={{ fontSize: 8, color: '#a3a3a3', marginTop: 1, fontFamily: 'SpaceMono', textAlign: 'center' }}>
+                    •
                   </Text>
                 )}
               </View>
@@ -410,8 +410,8 @@ export function StackCard({
                   {item.format}
                 </Text>
                 {item.edition && (
-                  <Text className="text-white/60 font-mono text-[8px] text-center" numberOfLines={1}>
-                    {item.edition.substring(0, 12)}
+                  <Text className="text-white/60 font-mono text-[10px] text-center">
+                    •
                   </Text>
                 )}
               </Pressable>
@@ -503,8 +503,8 @@ export function StackCard({
                 {item.format}
               </Text>
               {item.edition && (
-                <Text className="text-white/60 font-mono text-[8px] text-center" numberOfLines={1}>
-                  {item.edition.substring(0, 12)}
+                <Text className="text-white/60 font-mono text-[10px] text-center">
+                  •
                 </Text>
               )}
             </Pressable>
