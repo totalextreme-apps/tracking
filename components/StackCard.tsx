@@ -1,11 +1,12 @@
 import { useSound } from '@/context/SoundContext';
+import { getCustomArt } from '@/lib/custom-art-storage';
 import { getPosterUrl } from '@/lib/dummy-data';
 import type { CollectionItemWithMovie } from '@/types/database';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Platform, Pressable, Text, View } from 'react-native';
 import Animated, {
   interpolate,
   useAnimatedStyle,
