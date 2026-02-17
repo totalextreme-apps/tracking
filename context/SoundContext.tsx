@@ -2,7 +2,7 @@ import { Audio } from 'expo-av';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useSettings } from './SettingsContext';
 
-type SoundType = 'click' | 'insert' | 'static' | 'whir' | 'tv_off';
+type SoundType = 'click' | 'insert' | 'static' | 'whir' | 'tv_off' | 'rewind';
 
 type SoundContextType = {
     playSound: (type: SoundType) => Promise<void>;
@@ -27,6 +27,7 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
         static: null,
         whir: null,
         tv_off: null,
+        rewind: null,
     });
     const { soundEnabled } = useSettings();
 
@@ -67,6 +68,7 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
             // const whirSound = await load(require('@/assets/sounds/mechanical_whir.mp3'));
 
             const tvOffSound = await load(require('@/assets/sounds/tv_off.mp3'));
+            const rewindSound = await load(require('@/assets/sounds/rewind.mp3'));
 
             setSounds({
                 click: clickSound,
@@ -74,6 +76,7 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
                 static: staticSound,
                 whir: null,
                 tv_off: tvOffSound,
+                rewind: rewindSound,
             });
 
             // Configure Audio
@@ -94,6 +97,30 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
 
     const playSound = async (type: SoundType) => {
         if (!soundEnabled) return;
+
+        // Use standard Audio constructor for web for better PWA support
+        if (typeof window !== 'undefined' && (window as any).Audio) {
+            try {
+                const paths: Record<SoundType, any> = {
+                    click: require('@/assets/sounds/ui_click.mp3'),
+                    insert: require('@/assets/sounds/vhs_insert.mp3'),
+                    static: require('@/assets/sounds/static_noise.mp3'),
+                    whir: null,
+                    tv_off: require('@/assets/sounds/tv_off.mp3'),
+                    rewind: require('@/assets/sounds/rewind.mp3'),
+                };
+
+                const source = paths[type];
+                if (source) {
+                    const audio = new (window as any).Audio(source);
+                    audio.play().catch((e: any) => console.log('Web audio play blocked', e));
+                }
+                return;
+            } catch (e) {
+                console.log('Web sound error', e);
+            }
+        }
+
         const sound = sounds[type];
         if (sound) {
             try {

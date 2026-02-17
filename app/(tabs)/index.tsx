@@ -18,7 +18,6 @@ import { useCollection, useUpdateCollectionItem } from '@/hooks/useCollection';
 import { getGenres, getOnDisplayItems, getStacks } from '@/lib/collection-utils';
 import { supabase } from '@/lib/supabase'; // Restore Supabase
 import type { CollectionItemWithMovie } from '@/types/database';
-import { Audio } from 'expo-av';
 import * as Sharing from 'expo-sharing';
 import { useRef } from 'react';
 import { Modal } from 'react-native';
@@ -53,9 +52,9 @@ export default function HomeScreen() {
   const onRefresh = async () => {
     setRefreshing(true);
     setShowRewind(true);
-    // Play rewind sound
-    const { sound } = await Audio.Sound.createAsync(require('@/assets/sounds/rewind.mp3'));
-    await sound.playAsync();
+
+    // Play rewind sound using the global context (which handles web better)
+    playSound('rewind');
 
     // Haptics
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -64,7 +63,6 @@ export default function HomeScreen() {
       if (refetch) refetch();
       setShowRewind(false);
       setRefreshing(false);
-      sound.unloadAsync();
     }, 1500);
   };
 
@@ -183,7 +181,7 @@ export default function HomeScreen() {
   }
 
   return (
-    <>
+    <View style={{ flex: 1, position: 'relative' }}>
       <AcquiredModal
         visible={!!acquiredItem}
         item={acquiredItem}
@@ -554,26 +552,26 @@ export default function HomeScreen() {
       </Modal>
 
 
-      {/* REWIND OVERLAY */}
       {
         showRewind && (
           <View className="absolute inset-0 z-[100] bg-[#0000AA] items-center justify-center">
-            {/* Scanlines */}
-            <View className="absolute inset-0 opacity-20" style={{
-              backgroundImage: 'linear-gradient(transparent 50%, black 50%)',
-              backgroundSize: '100% 4px'
-            }} />
-            {/* Using simply repeated views for native scanlines if web gradient fails */}
+            {/* Scanlines Effect */}
+            <View className="absolute inset-0 opacity-10">
+              {Array.from({ length: 100 }).map((_, i) => (
+                <View key={i} className="h-[2px] w-full bg-black mb-[2px]" />
+              ))}
+            </View>
+
             {/* Text */}
-            <Text className="text-white font-mono text-4xl font-bold tracking-widest animate-pulse">
+            <Text className="text-white font-mono text-4xl font-bold tracking-[8px] italic shadow-lg">
               {'<< REWIND'}
             </Text>
-            <Text className="text-white font-mono text-xl mt-4">
+            <Text className="text-white font-mono text-xl mt-4 opacity-80 tracking-widest">
               TRACKING...
             </Text>
           </View>
         )
       }
-    </>
+    </View>
   );
 }
