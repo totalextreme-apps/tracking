@@ -36,13 +36,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     initAuth();
 
+    // Fallback: Force loading false after 5 seconds if Supabase hangs
+    const timeoutId = setTimeout(() => {
+      setIsLoading((loading) => {
+        if (loading) {
+          console.warn('Auth check timed out, forcing load completion');
+          return false;
+        }
+        return loading;
+      });
+    }, 5000);
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('Auth state changed:', event, 'User ID:', session?.user?.id);
       setUserId(session?.user?.id);
       setSession(session);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeoutId);
+    };
   }, []);
 
   return (
