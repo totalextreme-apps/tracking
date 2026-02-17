@@ -295,7 +295,7 @@ export default function SettingsScreen() {
           SETTINGS
         </Text>
 
-        {/* A/V Settings - TV GUIDE STYLE */}
+        {/* A/V Settings - TV GUIDE STYLE (Verified Clean) */}
         <View
           className="bg-[#2B4A8C] mb-6 border-2 border-white"
           style={{
