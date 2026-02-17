@@ -20,10 +20,10 @@ export function NowStreamingSticker({ visible, size = 60 }: NowStreamingStickerP
                 styles.container,
                 animatedStyle,
                 {
-                    top: -5, // Hang off the top slightly
-                    left: -5, // Hang off the left slightly
+                    top: 2, // Adjusted padding from edge
+                    left: 2,
                     zIndex: 100,
-                    transform: [{ rotate: '-15deg' }] // Fixed rotation for sticker look
+                    transform: [{ rotate: '-15deg' }, { scale: 0.7 }] // Scaled down per request
                 },
             ]}
             pointerEvents="none"

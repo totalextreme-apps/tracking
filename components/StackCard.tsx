@@ -17,7 +17,6 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { GlossyCard } from './GlossyCard';
-import { HaloEffect } from './HaloEffect';
 import { NowStreamingSticker } from './NowStreamingSticker';
 import { SaleSticker } from './SaleSticker';
 import { StickerOverlay } from './StickerOverlay';
@@ -437,7 +436,8 @@ export function StackCard({
             {movie.title}
           </Text>
           <View className="flex-row flex-wrap justify-center gap-1 mt-2">
-            {defaultSorted.map((item) => (
+            {/* Format Side-by-Side Coins (Deduplicated) */}
+            {sorted.map((item) => (
               <Pressable
                 key={item.id}
                 onPress={(e) => {
@@ -463,7 +463,7 @@ export function StackCard({
     );
   }
 
-  // Digital: single card with glowing border
+  // Digital: single card with simplified border (No Glow)
   return (
     <AnimatedPressable
       onPress={handlePress}
@@ -474,26 +474,28 @@ export function StackCard({
       style={[animatedStyle, { width: width, margin: 6 }, cardBorderStyle]}
     >
       <View className="items-center" style={{ position: 'relative' }}>
-        {/* Halo Effect for Favorited Digital Items */}
-        {isOnDisplay && !isWishlist && (
-          <HaloEffect visible={true} size={width + 20} />
-        )}
+        {/* Halo Effect REMOVED/HIDDEN per user request */}
 
         <View
           className="rounded-xl overflow-hidden relative"
           style={{
             width: width,
             height: height,
-            borderWidth: isWishlist ? 2 : 3,
+            borderWidth: isWishlist ? 2 : 1, // Reduced border, no neon
             borderStyle: isWishlist ? 'dashed' : 'solid',
-            borderColor: isWishlist ? '#6b7280' : 'rgba(0, 255, 136, 0.8)',
-            shadowColor: isWishlist ? '#000' : '#00ff88',
-            shadowOffset: { width: 0, height: 0 },
-            shadowOpacity: isWishlist ? 0.3 : 0.9,
-            shadowRadius: isWishlist ? 8 : 16,
-            elevation: 12,
+            borderColor: isWishlist ? '#6b7280' : '#404040', // Grey border
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.5,
+            shadowRadius: 4,
+            elevation: 4,
           }}
         >
+          {/* Sticker for Digital Grid */}
+          {isOnDisplay && !isWishlist && (
+            <NowStreamingSticker visible={true} size={40} />
+          )}
+
           {isWishlist && (
             <View
               className="absolute inset-0 rounded-xl z-10"
@@ -528,9 +530,9 @@ export function StackCard({
           {movie.title}
         </Text>
 
-        {/* Format Selectors for Digital too! */}
+        {/* Format Selectors for Digital (Deduplicated) */}
         <View className="flex-row flex-wrap justify-center gap-1 mt-2">
-          {defaultSorted.map((item) => (
+          {sorted.map((item) => (
             <Pressable
               key={item.id}
               onPress={(e) => {

@@ -297,32 +297,19 @@ export default function SettingsScreen() {
 
         {/* A/V Settings - TV GUIDE STYLE */}
         <View
-          className="bg-[#2B4A8C] rounded-lg overflow-hidden mb-6"
+          <View
+          className="bg-[#2B4A8C] mb-6 border-2 border-white"
           style={{
-            shadowColor: '#000',
-            shadowOffset: { width: 3, height: 3 },
-            shadowOpacity: 0.5,
-            shadowRadius: 0,
-            elevation: 5,
-            borderTopWidth: 2,
-            borderLeftWidth: 2,
-            borderTopColor: 'rgba(255,255,255,0.8)',
-            borderLeftColor: 'rgba(255,255,255,0.8)',
-            borderBottomWidth: 2,
-            borderRightWidth: 2,
-            borderBottomColor: 'rgba(0,0,0,0.6)',
-            borderRightColor: 'rgba(0,0,0,0.6)'
+            borderTopColor: '#ffffff',
+            borderLeftColor: '#ffffff',
+            borderBottomColor: '#000000',
+            borderRightColor: '#000000',
+            borderWidth: 2,
           }}
         >
 
           <View
-            className="p-4 flex-row items-center justify-between border-b-2 border-white"
-            style={{
-              shadowColor: '#1a3366',
-              shadowOffset: { width: 0, height: -2 },
-              shadowOpacity: 0.3,
-              shadowRadius: 0
-            }}
+            className="p-4 flex-row items-center justify-between border-b-2 border-white/20"
           >
             <View className="flex-row items-center">
               <View className="w-8 items-center"><FontAwesome name="volume-up" size={14} color="#FFE92F" /></View>
@@ -350,28 +337,20 @@ export default function SettingsScreen() {
         </View>
 
         <View
-          className="bg-[#2B4A8C] rounded-lg overflow-hidden mb-6"
+          className="bg-[#2B4A8C] mb-6 border-2"
           style={{
-            shadowColor: '#000',
-            shadowOffset: { width: 3, height: 3 },
-            shadowOpacity: 0.5,
-            shadowRadius: 0,
-            elevation: 5,
-            borderTopWidth: 2,
-            borderLeftWidth: 2,
-            borderTopColor: 'rgba(255,255,255,0.8)',
-            borderLeftColor: 'rgba(255,255,255,0.8)',
-            borderBottomWidth: 2,
-            borderRightWidth: 2,
-            borderBottomColor: 'rgba(0,0,0,0.6)',
-            borderRightColor: 'rgba(0,0,0,0.6)'
+            borderTopColor: '#ffffff',
+            borderLeftColor: '#ffffff',
+            borderBottomColor: '#000000',
+            borderRightColor: '#000000',
+            borderWidth: 2,
           }}
         >
 
           <Pressable
             onPress={handleExport}
             disabled={isExporting || isCollectionLoading}
-            className="p-4 flex-row items-center justify-between border-b-2 border-white active:bg-[#1a3366]"
+            className="p-4 flex-row items-center justify-between border-b-2 border-white/20 active:bg-[#1a3366]"
           >
             <View className="flex-row items-center">
               <View className="w-8 items-center"><FontAwesome name="download" size={14} color="#FFE92F" /></View>
@@ -402,7 +381,7 @@ export default function SettingsScreen() {
               }
             }}
             disabled={isCollectionLoading}
-            className="p-4 flex-row items-center justify-between border-b-2 border-white active:bg-[#1a3366]"
+            className="p-4 flex-row items-center justify-between border-b-2 border-white/20 active:bg-[#1a3366]"
           >
             <View className="flex-row items-center">
               <View className="w-8 items-center"><FontAwesome name="print" size={14} color="#FFE92F" /></View>

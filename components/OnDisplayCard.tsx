@@ -179,8 +179,8 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
             shadowOpacity: 0.7,
             shadowRadius: 20,
             elevation: 12,
-            // GRAIL BORDER logic preserved
-            borderWidth: isGrail ? 2 : 0,
+            // GRAIL BORDER logic (Physical Only)
+            borderWidth: (isGrail && isPhysical) ? 2 : 0,
             borderColor: '#ffd700',
           }}
         >
