@@ -37,23 +37,22 @@ export default function BarcodeScanner({ onScanned, barcodeTypes }: BarcodeScann
         const html5QrCode = new Html5Qrcode(elementId);
         scannerRef.current = html5QrCode;
 
-        // iOS Optimization Round 2: 
-        // 1. Explicitly request high resolution (1080p) to force correct lens usage on multi-lens iPhones
-        // 2. Request continuous focus mode
-        // 3. Fallback system if high-res fails
+        // iOS Optimization Round 3: 
+        // 1. Disable native barcode detector (can be flaky on iOS web)
+        // 2. Remove specific qrbox dimensions to allow scanning of the entire feed
+        //    (The UI overlay guides the user, but we want the scanner to be permissive)
 
         const config = {
-            fps: 15, // Increased FPS for faster scanning
-            qrbox: { width: 300, height: 300 },
-            experimentalFeatures: {
-                useBarCodeDetectorIfSupported: true
-            },
-            // Important: videoConstraints can force specific camera modes
+            fps: 15,
+            // qrbox: { width: 300, height: 300 }, // REMOVED: Scanning entire frame is safer for high-res feeds
+            // experimentalFeatures: {
+            //     useBarCodeDetectorIfSupported: true // REMOVED: specific issues reported with this on iOS 17+
+            // },
             videoConstraints: {
                 facingMode: "environment",
-                width: { ideal: 1920 }, // 1080p ideal
+                width: { ideal: 1920 },
                 height: { ideal: 1080 },
-                advanced: [{ focusMode: "continuous" }] // Suggest continuous focus
+                advanced: [{ focusMode: "continuous" }]
             }
         };
 
