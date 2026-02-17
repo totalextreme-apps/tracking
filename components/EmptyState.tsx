@@ -86,11 +86,11 @@ export function EmptyState() {
                 <Text className="text-white font-mono text-xl shadow-md">SP</Text>
             </View>
 
-            <View className="absolute bottom-12 left-8 z-20">
+            <View className="absolute bottom-32 left-8 z-20">
                 <Text className="text-white font-mono text-xl shadow-md">AUTO TRACKING</Text>
             </View>
 
-            <View className="absolute bottom-12 right-8 z-20">
+            <View className="absolute bottom-32 right-8 z-20">
                 <Text className="text-white font-mono text-xl shadow-md">00:00:00</Text>
             </View>
 
