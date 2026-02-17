@@ -32,11 +32,17 @@ export const unstable_settings = {
   initialRouteName: '(tabs)',
 };
 
+import { DesktopBlocker } from '@/components/DesktopBlocker';
+import { Platform, useWindowDimensions } from 'react-native';
+
 export default function RootLayout() {
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
     ...FontAwesome.font,
   });
+
+  const { width } = useWindowDimensions();
+  const [isDesktop, setIsDesktop] = useState(false);
 
   useEffect(() => {
     SplashScreen.preventAutoHideAsync();
@@ -52,8 +58,25 @@ export default function RootLayout() {
     }
   }, [loaded]);
 
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      // Basic detection: Width > 1024 often implies desktop
+      // Also check for touch capability to be more precise
+      const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      if (width > 1024 && !hasTouch) {
+        setIsDesktop(true);
+      } else {
+        setIsDesktop(false);
+      }
+    }
+  }, [width]);
+
   if (!loaded) {
     return null;
+  }
+
+  if (isDesktop) {
+    return <DesktopBlocker />;
   }
 
   return (
