@@ -576,10 +576,10 @@ export default function HomeScreen() {
             </View>
 
             {/* Text */}
-            <Text className="text-white font-mono text-4xl font-bold tracking-[8px] italic shadow-lg">
+            <Text className="text-white font-mono text-4xl font-bold tracking-[8px] italic">
               {'<< REWIND'}
             </Text>
-            <Text className="text-white font-mono text-xl mt-4 opacity-80 tracking-widest">
+            <Text className="text-white font-mono text-xl mt-4 opacity-80 tracking-[10px]">
               TRACKING...
             </Text>
           </View>
