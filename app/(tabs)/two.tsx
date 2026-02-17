@@ -15,7 +15,7 @@ import { Image as ExpoImage } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Image, Modal, Platform, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 
 const logoSource = Platform.OS === 'web'
   ? { uri: '/logo_tracking.png' }
@@ -314,28 +314,6 @@ export default function SettingsScreen() {
             borderRightColor: 'rgba(0,0,0,0.6)'
           }}
         >
-          {/* Scanline overlay */}
-          <View
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              pointerEvents: 'none',
-              zIndex: 1
-            }}
-          >
-            <Image
-              source={require('@/assets/images/scanlines.png')}
-              style={{
-                width: '100%',
-                height: '100%',
-                opacity: 0.4
-              }}
-              resizeMode="repeat"
-            />
-          </View>
 
           <View
             className="p-4 flex-row items-center justify-between border-b-2 border-white"
@@ -389,28 +367,6 @@ export default function SettingsScreen() {
             borderRightColor: 'rgba(0,0,0,0.6)'
           }}
         >
-          {/* Scanline overlay */}
-          <View
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              pointerEvents: 'none',
-              zIndex: 1
-            }}
-          >
-            <Image
-              source={require('@/assets/images/scanlines.png')}
-              style={{
-                width: '100%',
-                height: '100%',
-                opacity: 0.4
-              }}
-              resizeMode="repeat"
-            />
-          </View>
 
           <Pressable
             onPress={handleExport}
