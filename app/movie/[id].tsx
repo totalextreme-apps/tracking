@@ -10,15 +10,19 @@ import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, Text,
 import { GlossyCard } from '@/components/GlossyCard';
 import { VHSCard } from '@/components/VHSCard';
 
+import { ImageCropModal } from '@/components/ImageCropModal';
 import { ShareableCard } from '@/components/ShareableCard';
 import { useAuth } from '@/context/AuthContext';
 import { useSound } from '@/context/SoundContext';
 import { useThriftMode } from '@/context/ThriftModeContext';
 import { useAddToCollection, useCollection, useDeleteCollectionItem, useUpdateCollectionItem } from '@/hooks/useCollection';
+import { deleteCustomArt, getCustomArt, saveCustomArt } from '@/lib/custom-art-storage';
 import { getBackdropUrl, getPosterUrl } from '@/lib/dummy-data';
+import { compressImage } from '@/lib/image-utils';
 import { getMovieById } from '@/lib/tmdb';
 import type { MovieFormat } from '@/types/database';
 import { useQuery } from '@tanstack/react-query';
+import * as ImagePicker from 'expo-image-picker';
 import * as Sharing from 'expo-sharing';
 import ViewShot from 'react-native-view-shot';
 
