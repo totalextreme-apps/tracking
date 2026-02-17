@@ -64,5 +64,26 @@ export async function lookupUPC(upc: string): Promise<string | null> {
         // Add delay to avoid rate limit (especially for trial API)
         await new Promise(resolve => setTimeout(resolve, 1500));
     }
-    return null;
+
+    // Fallback: OpenFoodFacts (often has media items)
+    for (const code of uniqueCodes) {
+        if (code.length < 8) continue;
+        try {
+            console.log(`Checking OpenFoodFacts: ${code}`);
+            const response = await fetch(`https://world.openfoodfacts.org/api/v0/product/${code}.json`);
+            if (!response.ok) continue;
+
+            const data = await response.json();
+            if (data.status === 1 && data.product && data.product.product_name) {
+                console.log(`Found OFF title: ${data.product.product_name}`);
+                return data.product.product_name;
+            }
+        } catch (e) {
+            console.warn(`OFF Lookup error: ${e}`);
+        }
+    }
+
+    // Final Fallback: Return the code itself to allow manual search/entry
+    // The UI will see this, put it in the search bar, and user can edit it.
+    return upc;
 }
