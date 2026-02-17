@@ -297,15 +297,45 @@ export default function SettingsScreen() {
 
         {/* A/V Settings - TV GUIDE STYLE */}
         <View
-          className="bg-[#2B4A8C] rounded-lg overflow-hidden mb-6 border-2 border-white"
+          className="bg-[#2B4A8C] rounded-lg overflow-hidden mb-6"
           style={{
             shadowColor: '#000',
             shadowOffset: { width: 3, height: 3 },
             shadowOpacity: 0.5,
             shadowRadius: 0,
-            elevation: 5
+            elevation: 5,
+            borderTopWidth: 2,
+            borderLeftWidth: 2,
+            borderTopColor: 'rgba(255,255,255,0.8)',
+            borderLeftColor: 'rgba(255,255,255,0.8)',
+            borderBottomWidth: 2,
+            borderRightWidth: 2,
+            borderBottomColor: 'rgba(0,0,0,0.6)',
+            borderRightColor: 'rgba(0,0,0,0.6)'
           }}
         >
+          {/* Scanline overlay */}
+          <View
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              pointerEvents: 'none',
+              zIndex: 1
+            }}
+          >
+            <Image
+              source={require('@/assets/images/scanlines.png')}
+              style={{
+                width: '100%',
+                height: '100%',
+                opacity: 0.3
+              }}
+              resizeMode="repeat"
+            />
+          </View>
 
           <View
             className="p-4 flex-row items-center justify-between border-b-2 border-white"
@@ -342,15 +372,45 @@ export default function SettingsScreen() {
         </View>
 
         <View
-          className="bg-[#2B4A8C] rounded-lg overflow-hidden border-2 border-white mb-6"
+          className="bg-[#2B4A8C] rounded-lg overflow-hidden mb-6"
           style={{
             shadowColor: '#000',
             shadowOffset: { width: 3, height: 3 },
             shadowOpacity: 0.5,
             shadowRadius: 0,
-            elevation: 5
+            elevation: 5,
+            borderTopWidth: 2,
+            borderLeftWidth: 2,
+            borderTopColor: 'rgba(255,255,255,0.8)',
+            borderLeftColor: 'rgba(255,255,255,0.8)',
+            borderBottomWidth: 2,
+            borderRightWidth: 2,
+            borderBottomColor: 'rgba(0,0,0,0.6)',
+            borderRightColor: 'rgba(0,0,0,0.6)'
           }}
         >
+          {/* Scanline overlay */}
+          <View
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              pointerEvents: 'none',
+              zIndex: 1
+            }}
+          >
+            <Image
+              source={require('@/assets/images/scanlines.png')}
+              style={{
+                width: '100%',
+                height: '100%',
+                opacity: 0.3
+              }}
+              resizeMode="repeat"
+            />
+          </View>
 
           <Pressable
             onPress={handleExport}
@@ -397,11 +457,11 @@ export default function SettingsScreen() {
 
           <Pressable
             onPress={handleSignOut}
-            className="p-4 flex-row items-center justify-between active:bg-neutral-800"
+            className="p-4 flex-row items-center justify-between active:bg-[#1a3366]"
           >
             <View className="flex-row items-center">
-              <View className="w-8 items-center"><FontAwesome name="sign-out" size={14} color="#f87171" /></View>
-              <Text className="text-red-400 font-mono text-sm">Sign Out</Text>
+              <View className="w-8 items-center"><FontAwesome name="sign-out" size={14} color="#FFE92F" /></View>
+              <Text className="font-mono text-sm font-bold" style={{ color: '#FFE92F' }}>Sign Out</Text>
             </View>
           </Pressable>
         </View>
