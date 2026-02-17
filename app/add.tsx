@@ -8,7 +8,6 @@ import {
   Alert,
   FlatList,
   Keyboard,
-  Platform,
   Pressable,
   Image as RNImage,
   Text,
@@ -24,8 +23,9 @@ import { getPosterUrl } from '@/lib/dummy-data';
 import type { TmdbMovieResult } from '@/lib/tmdb';
 import type { MovieFormat } from '@/types/database';
 
+import BarcodeScanner from '@/components/BarcodeScanner';
 import { lookupUPC } from '@/lib/upc';
-import { CameraView, useCameraPermissions } from 'expo-camera';
+import { useCameraPermissions } from 'expo-camera';
 
 const FORMATS: MovieFormat[] = ['VHS', 'DVD', 'BluRay', '4K', 'Digital'];
 
@@ -236,7 +236,7 @@ export default function AddScreen() {
           autoCapitalize="none"
           autoCorrect={false}
         />
-        {Platform.OS !== 'web' && (
+        {true && (
           <Pressable
             onPress={startScanning}
             className="bg-neutral-900 w-12 items-center justify-center rounded-lg border border-neutral-800"
@@ -253,28 +253,25 @@ export default function AddScreen() {
       {/* Camera Modal Overlay */}
       {isScanning && (
         <View className="absolute inset-0 z-50 bg-black">
-          <CameraView
-            style={{ flex: 1 }}
-            facing="back"
-            onBarcodeScanned={handleBarCodeScanned}
-            barcodeScannerSettings={{
-              barcodeTypes: ["upc_a", "upc_e", "ean13", "ean8", "qr", "code128", "code39"],
-            }}
-          >
-            <View className="flex-1 bg-black/50 items-center justify-center">
+          <BarcodeScanner
+            onScanned={handleBarCodeScanned}
+            barcodeTypes={["upc_a", "upc_e", "ean13", "ean8", "qr", "code128", "code39"]}
+          />
+          <View className="absolute inset-0 pointer-events-none items-center justify-center">
+            <View className="items-center justify-center bg-black/40 p-4 rounded-xl">
               <Text className="text-white font-mono text-center mb-4 text-lg">Scan Barcode</Text>
               <Text className="text-neutral-400 font-mono text-center mb-10 text-xs px-10">
-                Point at a UPC or EAN barcode. On web, detection may vary by browser.
+                Point at a UPC or EAN barcode.
               </Text>
               <View className="w-64 h-40 border-2 border-amber-500 rounded-lg bg-transparent" />
               <Pressable
                 onPress={() => setIsScanning(false)}
-                className="mt-20 bg-neutral-900 px-6 py-3 rounded-full border border-neutral-700"
+                className="mt-20 bg-neutral-900 px-6 py-3 rounded-full border border-neutral-700 pointer-events-auto"
               >
                 <Text className="text-white font-mono">Cancel</Text>
               </Pressable>
             </View>
-          </CameraView>
+          </View>
         </View>
       )}
 

@@ -51,6 +51,13 @@ export default function AboutScreen() {
                         <Text className="text-neutral-500 font-mono text-[10px] mt-3 text-center leading-4">
                             Tracking uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.
                         </Text>
+                        <View className="mt-4 pt-4 border-t border-neutral-800 w-full">
+                            <AttributionItem
+                                title="html5-qrcode"
+                                author="mebjas"
+                                license="Apache 2.0"
+                            />
+                        </View>
                     </View>
                 </View>
 
