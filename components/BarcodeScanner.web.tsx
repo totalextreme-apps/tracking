@@ -111,6 +111,27 @@ export default function BarcodeScanner({ onScanned, barcodeTypes }: BarcodeScann
         <View style={{ flex: 1, backgroundColor: 'black' }}>
             <div id={elementId} style={{ width: '100%', height: '100%' }} />
 
+            {/* Round 5: Visual Target Box */}
+            <View pointerEvents="none" style={{
+                position: 'absolute',
+                top: 0, left: 0, right: 0, bottom: 0,
+                justifyContent: 'center',
+                alignItems: 'center',
+                zIndex: 10
+            }}>
+                <View style={{
+                    width: 250,
+                    height: 250,
+                    borderWidth: 2,
+                    borderColor: '#00FF00', // Green target box
+                    backgroundColor: 'transparent',
+                    borderRadius: 20
+                }} />
+                <Text style={{ color: 'white', marginTop: 20, backgroundColor: 'rgba(0,0,0,0.5)', padding: 8, borderRadius: 8 }}>
+                    Align barcode in box
+                </Text>
+            </View>
+
             {/* Fallback: File Upload for "Take Photo" */}
             <View style={{
                 position: 'absolute',
