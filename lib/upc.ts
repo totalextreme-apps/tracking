@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 export async function lookupUPC(upc: string): Promise<string | null> {
     const codesToCheck = [
         upc,
@@ -13,7 +15,14 @@ export async function lookupUPC(upc: string): Promise<string | null> {
 
         try {
             console.log(`Checking UPC: ${code}`);
-            const response = await fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${code}`);
+
+            // Web CORS Proxy
+            const baseUrl = `https://api.upcitemdb.com/prod/trial/lookup?upc=${code}`;
+            const url = Platform.OS === 'web'
+                ? `https://corsproxy.io/?${encodeURIComponent(baseUrl)}`
+                : baseUrl;
+
+            const response = await fetch(url);
             if (!response.ok) {
                 if (response.status === 429) console.warn('UPC API Rate limited');
                 continue;
