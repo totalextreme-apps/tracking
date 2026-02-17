@@ -79,13 +79,6 @@ export function MemberCard({ userId, profile, onEditPress, onAvatarPress }: Memb
                         </View>
                     </View>
 
-                    {/* Signature */}
-                    <View className="mt-2">
-                        <Text className="text-neutral-500/50 font-serif italic text-2xl" style={{ fontFamily: 'Georgia' }}>
-                            {profile?.username || 'Member'}
-                        </Text>
-                    </View>
-
                     {/* Barcode */}
                     <View className="flex-row h-8 items-end overflow-hidden mt-auto bg-white px-2 py-1 rounded-sm w-full">
                         {barcodeLines.map((line, i) => (
@@ -122,14 +115,6 @@ export function MemberCard({ userId, profile, onEditPress, onAvatarPress }: Memb
                     </Pressable>
                 </View>
             </View>
-
-            {/* Edit Profile Button (Absolute Top Right of Card? Or separate?)
-                User asked for the look. 
-                Maybe small pencil icon in top right corner of the *card*?
-            */}
-            <Pressable onPress={onEditPress} className="absolute top-4 right-4 p-2 z-10 opacity-50">
-                <FontAwesome name="pencil" size={14} color="rgba(255,255,255,0.5)" />
-            </Pressable>
 
         </View>
     );

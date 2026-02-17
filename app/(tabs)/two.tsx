@@ -153,6 +153,29 @@ export default function SettingsScreen() {
           onAvatarPress={pickImage}
         />
 
+        {/* Profile Info Below Card */}
+        {!isEditing && (
+          <View className="mt-6 px-2">
+            <View className="flex-row items-center justify-between mb-2">
+              <Text className="text-white font-bold text-3xl tracking-tight italic" style={{ fontFamily: 'sans-serif-condensed' }}>
+                {profile?.username || 'NEW MEMBER'}
+              </Text>
+              <Pressable
+                onPress={startEditing}
+                className="bg-neutral-800 p-2 rounded-full border border-neutral-700"
+              >
+                <FontAwesome name="pencil" size={14} color="#f59e0b" />
+              </Pressable>
+            </View>
+
+            {profile?.bio && (
+              <Text className="text-neutral-400 font-mono text-sm leading-4">
+                {profile.bio}
+              </Text>
+            )}
+          </View>
+        )}
+
         {/* Helper text if needed */}
         {isEditing && (
           <View className="mt-4 bg-neutral-900 p-4 rounded-lg border border-neutral-800">
