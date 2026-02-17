@@ -34,13 +34,7 @@
       "backgroundColor": "#0a0a0a"
     },
     "plugins": [
-      [
-        "expo-router",
-        {
-          "origin": "https://mediatracking.app",
-          "headOrigin": "https://mediatracking.app"
-        }
-      ],
+      "expo-router",
       [
         "expo-camera",
         {
