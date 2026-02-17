@@ -186,11 +186,6 @@ export default function HomeScreen() {
     return (
       <View className="flex-1 bg-neutral-950 items-center justify-center">
         <TrackingLoader />
-        <View className="mt-4">
-          <Text className="text-white text-xs">Auth: {authLoading ? 'Loading' : 'Done'}</Text>
-          <Text className="text-white text-xs">Collection: {collectionLoading ? 'Loading' : 'Done'}</Text>
-          <Text className="text-white text-xs">User: {userId ? 'Yes' : 'No'}</Text>
-        </View>
       </View>
     );
   }

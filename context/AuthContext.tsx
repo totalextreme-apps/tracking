@@ -16,54 +16,68 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const initAuth = async () => {
+  });
+
+  // Fallback: Force loading false after 3 seconds (reduced from 5)
+  // We use a ref to track if we've already finished to avoid race conditions
+  const isFinished = { current: false };
+
+  const timeoutId = setTimeout(() => {
+    if (!isFinished.current) {
+      console.warn('Auth check timed out, forcing load completion');
+      isFinished.current = true;
+      setIsLoading(false);
+    }
+  }, 3000);
+
+  const initAuth = async () => {
+    try {
       const { data: { session } } = await supabase.auth.getSession();
+      if (isFinished.current) return; // Don't update if timed out
+
       if (session?.user?.id) {
         setUserId(session.user.id);
         setSession(session);
       } else {
+        // ... anonymous logic
         const { data: { session: anonSession }, error } = await supabase.auth.signInAnonymously();
-        if (error) {
-          console.error('Auth Error: Anonymous sign-in failed', error);
-        }
+        if (isFinished.current) return;
+
         if (!error && anonSession?.user?.id) {
           setUserId(anonSession.user.id);
           setSession(anonSession);
         }
       }
-      setIsLoading(false);
-    };
+    } catch (e) {
+      console.error('Auth Init Error', e);
+    } finally {
+      if (!isFinished.current) {
+        isFinished.current = true;
+        setIsLoading(false);
+        clearTimeout(timeoutId);
+      }
+    }
+  };
 
-    initAuth();
+  initAuth();
 
-    // Fallback: Force loading false after 5 seconds if Supabase hangs
-    const timeoutId = setTimeout(() => {
-      setIsLoading((loading) => {
-        if (loading) {
-          console.warn('Auth check timed out, forcing load completion');
-          return false;
-        }
-        return loading;
-      });
-    }, 5000);
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    console.log('Auth state changed:', event, 'User ID:', session?.user?.id);
+    setUserId(session?.user?.id);
+    setSession(session);
+  });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('Auth state changed:', event, 'User ID:', session?.user?.id);
-      setUserId(session?.user?.id);
-      setSession(session);
-    });
+  return () => {
+    subscription.unsubscribe();
+    clearTimeout(timeoutId);
+  };
+}, []);
 
-    return () => {
-      subscription.unsubscribe();
-      clearTimeout(timeoutId);
-    };
-  }, []);
-
-  return (
-    <AuthContext.Provider value={{ userId, isLoading, session }}>
-      {children}
-    </AuthContext.Provider>
-  );
+return (
+  <AuthContext.Provider value={{ userId, isLoading, session }}>
+    {children}
+  </AuthContext.Provider>
+);
 }
 
 export function useAuth() {
