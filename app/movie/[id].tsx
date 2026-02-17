@@ -42,6 +42,7 @@ export default function MovieDetailScreen() {
     const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
     const [ejecting, setEjecting] = useState(false);
     const [showShareModal, setShowShareModal] = useState(false);
+    const [localNotes, setLocalNotes] = useState<Record<string, string>>({});
     const viewShotRef = useRef<ViewShot>(null);
 
     // We use the main collection query and filter. 
@@ -257,7 +258,7 @@ export default function MovieDetailScreen() {
                                 }
 
                                 if (activeFormat === 'VHS') return <VHSCard posterUrl={posterUrl} style={{ width: '100%', height: '100%' }} />;
-                                if (activeFormat && ['DVD', 'BluRay', '4K'].includes(activeFormat)) return <GlossyCard posterUrl={posterUrl} format={activeFormat} style={{ width: '100%', height: '100%' }} />;
+                                if (activeFormat && ['DVD', 'BluRay', '4K'].includes(activeFormat)) return <GlossyCard posterUrl={posterUrl} format={activeFormat as MovieFormat} style={{ width: '100%', height: '100%' }} />;
 
                                 return <Image source={{ uri: posterUrl ?? undefined }} style={{ width: '100%', height: '100%', borderRadius: 8 }} contentFit="cover" />;
                             })()}
@@ -362,24 +363,33 @@ export default function MovieDetailScreen() {
                             <Text className="text-white font-bold mb-2">Format Notes</Text>
                             {movieItems.map(item => (
                                 <View key={item.id} className="mb-4">
-                                    <View className={`px-2 py-1 self-start rounded mb-2 ${FORMAT_COLORS[item.format] || 'bg-neutral-800'}`}>
-                                        <Text className="text-white font-mono text-xs font-bold">{item.format}</Text>
+                                    <View className="flex-row items-center mb-2">
+                                        <View className={`px-2 py-1 rounded ${FORMAT_COLORS[item.format] || 'bg-neutral-800'}`}>
+                                            <Text className="text-white font-mono text-xs font-bold">{item.format}</Text>
+                                        </View>
+                                        <Pressable
+                                            onPress={async () => {
+                                                const noteToSave = localNotes[item.id] !== undefined ? localNotes[item.id] : (item.notes || '');
+                                                await updateMutation.mutateAsync({
+                                                    itemId: item.id,
+                                                    updates: { notes: noteToSave }
+                                                });
+                                                playSound('click');
+                                                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                                                Alert.alert('Saved', 'Note updated successfully');
+                                            }}
+                                            className="ml-auto bg-amber-600/20 px-3 py-1 rounded border border-amber-600/50"
+                                        >
+                                            <Text className="text-amber-500 font-mono text-[10px] font-bold">SAVE</Text>
+                                        </Pressable>
                                     </View>
                                     <TextInput
                                         className="bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm min-h-[80px]"
                                         placeholder={`Add notes for your ${item.format} copy...`}
                                         placeholderTextColor="#525252"
                                         multiline
-                                        defaultValue={item.notes || ''}
-                                        onEndEditing={async (e) => {
-                                            if (e.nativeEvent.text !== item.notes) {
-                                                await updateMutation.mutateAsync({
-                                                    itemId: item.id,
-                                                    updates: { notes: e.nativeEvent.text }
-                                                });
-                                                Alert.alert('Saved', 'Note updated successfully');
-                                            }
-                                        }}
+                                        value={localNotes[item.id] !== undefined ? localNotes[item.id] : (item.notes || '')}
+                                        onChangeText={(text) => setLocalNotes(prev => ({ ...prev, [item.id]: text }))}
                                     />
                                 </View>
                             ))}
