@@ -100,6 +100,29 @@ export default function AddScreen() {
     return () => clearTimeout(t);
   }, [query]);
 
+  // Magic Effect: Detect Manual Barcode Entry
+  useEffect(() => {
+    // If it looks like a UPC/EAN (12 or 13 digits)
+    if (/^\d{12,13}$/.test(debouncedQuery)) {
+      handleManualBarcode(debouncedQuery);
+    }
+  }, [debouncedQuery]);
+
+  const handleManualBarcode = async (code: string) => {
+    setIsLookingUp(true);
+    try {
+      const title = await lookupUPC(code);
+      if (title) {
+        setQuery(title);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    } catch (e) {
+      // failures silently fail, user can keep typing if it was just a year or something
+    } finally {
+      setIsLookingUp(false);
+    }
+  };
+
   const handleSelectMovie = (movie: TmdbMovieResult) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelectedMovie(movie);
@@ -203,7 +226,7 @@ export default function AddScreen() {
 
       <View className="p-4 flex-row">
         <TextInput
-          placeholder="Search movies..."
+          placeholder="Search movies or enter UPC..."
           placeholderTextColor="#6b7280"
           value={query}
           onChangeText={setQuery}
