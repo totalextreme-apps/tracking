@@ -130,6 +130,8 @@ export default function BarcodeScanner({ onScanned, barcodeTypes }: BarcodeScann
                         if (e.target.files && e.target.files.length > 0) {
                             const file = e.target.files[0];
                             const html5QrCode = new Html5Qrcode(elementId);
+
+                            // Try standard scan first
                             html5QrCode.scanFileV2(file, true)
                                 .then(decodedResult => {
                                     onScanned({
@@ -137,9 +139,77 @@ export default function BarcodeScanner({ onScanned, barcodeTypes }: BarcodeScann
                                         data: decodedResult.decodedText
                                     });
                                 })
-                                .catch(err => {
-                                    console.warn("Error scanning file", err);
-                                    alert("Could not find a barcode in this image. Please try again with a clearer photo.");
+                                .catch(async (err) => {
+                                    console.warn("Standard file scan failed, trying to preprocess...", err);
+
+                                    // Preprocess: Load image, draw to canvas, try rotations
+                                    try {
+                                        const imageUrl = URL.createObjectURL(file);
+                                        const img = new Image();
+                                        img.onload = async () => {
+                                            const canvas = document.createElement('canvas');
+                                            const ctx = canvas.getContext('2d');
+                                            if (!ctx) return;
+
+                                            // Max dimensions to avoid memory issues (1080p limit)
+                                            const MAX_DIM = 1920;
+                                            let width = img.width;
+                                            let height = img.height;
+
+                                            if (width > MAX_DIM || height > MAX_DIM) {
+                                                const ratio = Math.min(MAX_DIM / width, MAX_DIM / height);
+                                                width *= ratio;
+                                                height *= ratio;
+                                            }
+
+                                            // Attempt 1: Standard Orientation (baked in)
+                                            canvas.width = width;
+                                            canvas.height = height;
+                                            ctx.drawImage(img, 0, 0, width, height);
+
+                                            try {
+                                                const blob = await new Promise<Blob | null>(r => canvas.toBlob(r, 'image/jpeg', 0.9));
+                                                if (blob) {
+                                                    const file1 = new File([blob], "processed.jpg", { type: "image/jpeg" });
+                                                    const res = await html5QrCode.scanFileV2(file1, true);
+                                                    onScanned({ type: 'photo-processed', data: res.decodedText });
+                                                    URL.revokeObjectURL(imageUrl);
+                                                    return;
+                                                }
+                                            } catch (e) {
+                                                console.log("Attempt 1 failed");
+                                            }
+
+                                            // Attempt 2: Rotate 90 degrees
+                                            canvas.width = height;
+                                            canvas.height = width;
+                                            ctx.save();
+                                            ctx.translate(height / 2, width / 2);
+                                            ctx.rotate(90 * Math.PI / 180);
+                                            ctx.drawImage(img, -width / 2, -height / 2, width, height);
+                                            ctx.restore();
+
+                                            try {
+                                                const blob = await new Promise<Blob | null>(r => canvas.toBlob(r, 'image/jpeg', 0.9));
+                                                if (blob) {
+                                                    const file2 = new File([blob], "rotated.jpg", { type: "image/jpeg" });
+                                                    const res = await html5QrCode.scanFileV2(file2, true);
+                                                    onScanned({ type: 'photo-rotated', data: res.decodedText });
+                                                    URL.revokeObjectURL(imageUrl);
+                                                    return;
+                                                }
+                                            } catch (e) {
+                                                console.log("Attempt 2 failed");
+                                                alert("Could not find barcode even after rotation processing. Please try a clearer photo.");
+                                            }
+
+                                            URL.revokeObjectURL(imageUrl);
+                                        };
+                                        img.src = imageUrl;
+                                    } catch (preprocessErr) {
+                                        console.error("Preprocessing failed", preprocessErr);
+                                        alert("Could not process image.");
+                                    }
                                 });
                         }
                     }}
