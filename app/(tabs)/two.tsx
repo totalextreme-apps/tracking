@@ -11,11 +11,11 @@ import { supabase } from '@/lib/supabase';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Audio } from 'expo-av';
 import * as Haptics from 'expo-haptics';
-import { Image } from 'expo-image';
+import { Image as ExpoImage } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Modal, Platform, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 
 const logoSource = Platform.OS === 'web'
   ? { uri: '/logo_tracking.png' }
@@ -511,7 +511,7 @@ export default function SettingsScreen() {
       {/* App Version */}
       <View className="mt-8 mb-32 items-center">
         <View className="bg-neutral-900/50 p-4 rounded-xl border border-neutral-800 items-center">
-          <Image
+          <ExpoImage
             source={logoSource}
             style={{ width: 120, height: 40, opacity: 0.8 }}
             contentFit="contain"
@@ -520,7 +520,7 @@ export default function SettingsScreen() {
 
           {/* TMDB Attribution */}
           <View className="mt-6 items-center w-full px-4 pt-4 border-t border-neutral-800/50">
-            <Image
+            <ExpoImage
               source={require('@/assets/images/tmdb.svg')}
               style={{ width: 60, height: 24, opacity: 0.6 }}
               contentFit="contain"

@@ -258,7 +258,7 @@ export function StackCard({
 
           {/* Format Coins */}
           <View className="flex-row gap-1.5 mt-1 flex-wrap">
-            {defaultSorted.map(item => (
+            {sorted.map(item => (
               <View key={item.id} className="items-center">
                 <View
                   className={`w-5 h-5 rounded-full items-center justify-center ${FORMAT_COLORS[item.format] || 'bg-neutral-700'}`}
