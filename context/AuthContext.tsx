@@ -16,68 +16,67 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-  });
 
-  // Fallback: Force loading false after 3 seconds (reduced from 5)
-  // We use a ref to track if we've already finished to avoid race conditions
-  const isFinished = { current: false };
+    // Fallback: Force loading false after 3 seconds (reduced from 5)
+    // We use a ref to track if we've already finished to avoid race conditions
+    const isFinished = { current: false };
 
-  const timeoutId = setTimeout(() => {
-    if (!isFinished.current) {
-      console.warn('Auth check timed out, forcing load completion');
-      isFinished.current = true;
-      setIsLoading(false);
-    }
-  }, 3000);
-
-  const initAuth = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (isFinished.current) return; // Don't update if timed out
-
-      if (session?.user?.id) {
-        setUserId(session.user.id);
-        setSession(session);
-      } else {
-        // ... anonymous logic
-        const { data: { session: anonSession }, error } = await supabase.auth.signInAnonymously();
-        if (isFinished.current) return;
-
-        if (!error && anonSession?.user?.id) {
-          setUserId(anonSession.user.id);
-          setSession(anonSession);
-        }
-      }
-    } catch (e) {
-      console.error('Auth Init Error', e);
-    } finally {
+    const timeoutId = setTimeout(() => {
       if (!isFinished.current) {
+        console.warn('Auth check timed out, forcing load completion');
         isFinished.current = true;
         setIsLoading(false);
-        clearTimeout(timeoutId);
       }
-    }
-  };
+    }, 3000);
 
-  initAuth();
+    const initAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (isFinished.current) return; // Don't update if timed out
 
-  const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-    console.log('Auth state changed:', event, 'User ID:', session?.user?.id);
-    setUserId(session?.user?.id);
-    setSession(session);
-  });
+        if (session?.user?.id) {
+          setUserId(session.user.id);
+          setSession(session);
+        } else {
+          // ... anonymous logic
+          const { data: { session: anonSession }, error } = await supabase.auth.signInAnonymously();
+          if (isFinished.current) return;
 
-  return () => {
-    subscription.unsubscribe();
-    clearTimeout(timeoutId);
-  };
-}, []);
+          if (!error && anonSession?.user?.id) {
+            setUserId(anonSession.user.id);
+            setSession(anonSession);
+          }
+        }
+      } catch (e) {
+        console.error('Auth Init Error', e);
+      } finally {
+        if (!isFinished.current) {
+          isFinished.current = true;
+          setIsLoading(false);
+          clearTimeout(timeoutId);
+        }
+      }
+    };
 
-return (
-  <AuthContext.Provider value={{ userId, isLoading, session }}>
-    {children}
-  </AuthContext.Provider>
-);
+    initAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth state changed:', event, 'User ID:', session?.user?.id);
+      setUserId(session?.user?.id);
+      setSession(session);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeoutId);
+    };
+  }, []);
+
+  return (
+    <AuthContext.Provider value={{ userId, isLoading, session }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {
