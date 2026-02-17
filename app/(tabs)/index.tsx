@@ -198,6 +198,7 @@ export default function HomeScreen() {
           flexGrow: 1
         }}
         showsVerticalScrollIndicator={false}
+        alwaysBounceVertical={true}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
