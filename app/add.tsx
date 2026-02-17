@@ -8,7 +8,6 @@ import {
   Alert,
   FlatList,
   Keyboard,
-  Platform,
   Pressable,
   Image as RNImage,
   Text,
@@ -237,7 +236,7 @@ export default function AddScreen() {
           autoCapitalize="none"
           autoCorrect={false}
         />
-        {Platform.OS !== 'web' && (
+        {true && (
           <Pressable
             onPress={startScanning}
             className="bg-neutral-900 w-12 items-center justify-center rounded-lg border border-neutral-800"
