@@ -49,6 +49,9 @@ export default function MovieDetailScreen() {
     const [customArtUri, setCustomArtUri] = useState<string | null>(null);
     const [cropModalVisible, setCropModalVisible] = useState(false);
     const [pendingImageUri, setPendingImageUri] = useState<string | null>(null);
+    const [showEditionModal, setShowEditionModal] = useState(false);
+    const [pendingFormat, setPendingFormat] = useState<string | null>(null);
+    const [editionInput, setEditionInput] = useState('');
 
     // We use the main collection query and filter. 
     // In a generic app we might want a specific query for just this movie, 
@@ -229,30 +232,48 @@ export default function MovieDetailScreen() {
 
     // Play sound when toggling format
     const handleFormatPress = async (fmt: MovieFormat) => {
-        const wasOwned = ownedFormats.includes(fmt);
+        // Show edition modal for adding format
+        setPendingFormat(fmt);
+        setEditionInput('');
+        setShowEditionModal(true);
+        playSound('click');
+    };
 
-        if (!wasOwned) {
-            // Adding item
-            if (fmt === 'VHS') {
+    const handleConfirmAddFormat = async () => {
+        if (!pendingFormat) return;
+
+        const isDuplicate = movieItems.some(item => item.format === pendingFormat);
+
+        // Validate: Edition required if duplicate
+        if (isDuplicate && !editionInput.trim()) {
+            Alert.alert('Edition Required', 'Please enter an edition name for this duplicate format.');
+            return;
+        }
+
+        try {
+            // Add the format with edition
+            await addMutation.mutateAsync({
+                tmdbMovie: movie,
+                formats: [pendingFormat],
+                status: 'owned',
+                edition: editionInput.trim() || null
+            });
+
+            // Play sound
+            if (pendingFormat === 'VHS') {
                 playSound('insert');
             } else {
                 playSound('click');
             }
-        } else {
-            // Removing item
-            playSound('click');
-        }
 
-        await toggleFormat(fmt);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-        // Only set preview if we're adding the format, not removing it
-        if (!wasOwned) {
-            setSelectedFormat(fmt);
-        } else {
-            // If we just deleted the current preview format, clear it
-            if (selectedFormat === fmt) {
-                setSelectedFormat(null);
-            }
+            // Close modal and reset
+            setShowEditionModal(false);
+            setPendingFormat(null);
+            setEditionInput('');
+        } catch (e) {
+            Alert.alert('Error', 'Failed to add format');
         }
     };
 
@@ -561,29 +582,52 @@ export default function MovieDetailScreen() {
                         </View>
                     )}
 
-                    {/* Formats */}
-                    <View className="mt-8">
-                        <View className="flex-row justify-between items-center mb-3">
-                            <Text className="text-white font-bold">Formats</Text>
+                    {/* Owned Formats Section */}
+                    {movieItems.length > 0 && (
+                        <View className="mt-8">
+                            <Text className="text-white font-bold mb-3">Owned Formats</Text>
+                            <View className="gap-2">
+                                {movieItems.map(item => (
+                                    <View key={item.id} className="flex-row items-center justify-between bg-neutral-900 p-3 rounded-lg border border-neutral-800">
+                                        <View className="flex-row items-center gap-2">
+                                            <View className={`px-2 py-1 rounded ${FORMAT_COLORS[item.format] || 'bg-neutral-800'}`}>
+                                                <Text className="text-white font-mono text-xs font-bold">{item.format}</Text>
+                                            </View>
+                                            {item.edition && (
+                                                <Text className="text-neutral-400 font-mono text-sm">({item.edition})</Text>
+                                            )}
+                                        </View>
+                                        <Pressable
+                                            onPress={async () => {
+                                                await deleteMutation.mutateAsync(item.id);
+                                                playSound('click');
+                                                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                                            }}
+                                            className="bg-red-900/20 px-3 py-1 rounded border border-red-900/50"
+                                        >
+                                            <Text className="text-red-400 font-mono text-xs">Remove</Text>
+                                        </Pressable>
+                                    </View>
+                                ))}
+                            </View>
                         </View>
+                    )}
+
+                    {/* Add Format Section */}
+                    <View className="mt-8">
+                        <Text className="text-white font-bold mb-3">Add Format</Text>
                         <View className="flex-row flex-wrap gap-2">
                             {FORMATS.map(fmt => {
                                 const isOwned = ownedFormats.includes(fmt);
-                                const isSelected = selectedFormat === fmt;
                                 const baseColor = FORMAT_COLORS[fmt] || 'bg-neutral-800';
 
                                 return (
                                     <Pressable
                                         key={fmt}
-                                        onPress={() => handleFormatToggle(fmt)}
-                                        onLongPress={() => handleFormatLongPress(fmt)}
-                                        className={`px-4 py-2 border mr-2 rounded-full ${isSelected
-                                            ? 'bg-amber-500 border-amber-500'
-                                            : isOwned ? 'bg-neutral-800 border-neutral-700' : 'bg-transparent border-neutral-800'
-                                            }`}
-                                        style={isSelected ? { transform: [{ scale: 1.05 }] } : {}}
+                                        onPress={() => handleFormatPress(fmt)}
+                                        className={`px-4 py-2 border rounded-full ${baseColor} border-neutral-700`}
                                     >
-                                        <Text className={`font-mono font-bold ${isOwned ? 'text-white' : 'text-neutral-500'}`}>
+                                        <Text className="text-white font-mono font-bold">
                                             {fmt}
                                         </Text>
                                     </Pressable>
@@ -652,6 +696,57 @@ export default function MovieDetailScreen() {
                     </Text>
                 </View>
             )}
+
+            {/* Edition Input Modal */}
+            <Modal
+                visible={showEditionModal}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setShowEditionModal(false)}
+            >
+                <View className="flex-1 bg-black/80 items-center justify-center p-4">
+                    <View className="bg-neutral-900 rounded-lg p-6 w-full max-w-md border border-neutral-800">
+                        <Text className="text-white font-bold text-lg mb-2">
+                            Add {pendingFormat}
+                        </Text>
+                        <Text className="text-neutral-400 font-mono text-xs mb-4">
+                            {movieItems.some(i => i.format === pendingFormat)
+                                ? '⚠️ Edition required (duplicate format)'
+                                : 'Edition optional (e.g., Theatrical, Unrated, Box Set)'}
+                        </Text>
+
+                        <TextInput
+                            className="bg-neutral-800 text-white p-3 rounded-lg border border-neutral-700 font-mono text-sm mb-4"
+                            placeholder="Edition (e.g., Theatrical, Unrated)"
+                            placeholderTextColor="#525252"
+                            value={editionInput}
+                            onChangeText={setEditionInput}
+                            autoCapitalize="words"
+                            autoCorrect={false}
+                            autoFocus
+                        />
+
+                        <View className="flex-row gap-2">
+                            <Pressable
+                                onPress={() => {
+                                    setShowEditionModal(false);
+                                    setPendingFormat(null);
+                                    setEditionInput('');
+                                }}
+                                className="flex-1 bg-neutral-800 py-3 rounded-lg items-center"
+                            >
+                                <Text className="text-neutral-400 font-mono text-sm font-bold">CANCEL</Text>
+                            </Pressable>
+                            <Pressable
+                                onPress={handleConfirmAddFormat}
+                                className="flex-1 bg-amber-600 py-3 rounded-lg items-center"
+                            >
+                                <Text className="text-white font-mono text-sm font-bold">ADD</Text>
+                            </Pressable>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
 
             {/* Image Crop Modal */}
             {pendingImageUri && (
