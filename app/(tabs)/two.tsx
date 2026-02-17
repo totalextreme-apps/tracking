@@ -1,5 +1,4 @@
 
-import { CustomCoversSection } from '@/components/CustomCoversSection';
 import { MemberCard } from '@/components/MemberCard';
 import { StatsSection } from '@/components/StatsSection';
 import { useAuth } from '@/context/AuthContext';
@@ -381,7 +380,8 @@ export default function SettingsScreen() {
         </View>
 
         {/* Custom Covers Section (Web Only) */}
-        <CustomCoversSection />
+        {/* Custom Covers Section - TEMPORARILY DISABLED */}
+        {/* <CustomCoversSection /> */}
 
         {/* INFO / ABOUT */}
         <View className="bg-neutral-900 rounded-lg overflow-hidden mt-6">
