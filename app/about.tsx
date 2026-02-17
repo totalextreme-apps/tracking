@@ -1,10 +1,13 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Image } from 'expo-image';
 import { Stack, useRouter } from 'expo-router';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
 
 export default function AboutScreen() {
     const router = useRouter();
+    const logoSource = Platform.OS === 'web'
+        ? { uri: '/logo_tracking.png' }
+        : require('@/assets/images/logo_tracking.png');
 
     return (
         <>
@@ -27,7 +30,7 @@ export default function AboutScreen() {
                 {/* App Intro */}
                 <View className="items-center mb-10">
                     <Image
-                        source={require('@/assets/images/logo_tracking.png')}
+                        source={logoSource}
                         style={{ width: 200, height: 60, opacity: 0.9 }}
                         contentFit="contain"
                     />

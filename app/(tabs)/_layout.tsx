@@ -1,12 +1,16 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { router, Tabs } from 'expo-router';
 import React from 'react';
-import { Image, Pressable, Switch, Text, View } from 'react-native';
+import { Image, Platform, Pressable, Switch, Text, View } from 'react-native';
 
 import { useColorScheme } from '@/components/useColorScheme';
 import { useSound } from '@/context/SoundContext';
 import { useThriftMode } from '@/context/ThriftModeContext';
 import { LinearGradient } from 'expo-linear-gradient';
+
+const logoSource = Platform.OS === 'web'
+  ? { uri: '/logo_tracking.png' }
+  : require('@/assets/images/logo_tracking.png');
 
 function TabBarIcon(props: {
   name: React.ComponentProps<typeof FontAwesome>['name'];
@@ -79,7 +83,7 @@ export default function TabLayout() {
           headerTitleAlign: 'left',
           headerTitle: () => (
             <Image
-              source={require('@/assets/images/logo_tracking.png')}
+              source={logoSource}
               style={{ width: 140, height: 40, resizeMode: 'contain' }}
             />
           ),

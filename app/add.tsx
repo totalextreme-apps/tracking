@@ -8,6 +8,7 @@ import {
   Alert,
   FlatList,
   Keyboard,
+  Platform,
   Pressable,
   Image as RNImage,
   Text,
@@ -26,6 +27,12 @@ import type { MovieFormat } from '@/types/database';
 import BarcodeScanner from '@/components/BarcodeScanner';
 import { lookupUPC } from '@/lib/upc';
 import { useCameraPermissions } from 'expo-camera';
+
+
+
+const logoSource = Platform.OS === 'web'
+  ? { uri: '/logo_tracking.png' }
+  : require('@/assets/images/logo_tracking.png');
 
 const FORMATS: MovieFormat[] = ['VHS', 'DVD', 'BluRay', '4K', 'Digital'];
 
@@ -211,7 +218,7 @@ export default function AddScreen() {
           <Text className="text-neutral-400 font-mono text-xs">CANCEL</Text>
         </Pressable>
         <RNImage
-          source={require('@/assets/images/logo_tracking.png')}
+          source={logoSource}
           style={{ width: 140, height: 24, resizeMode: 'contain' }}
         />
         <View className="w-16" />

@@ -15,7 +15,11 @@ import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
+
+const logoSource = Platform.OS === 'web'
+  ? { uri: '/logo_tracking.png' }
+  : require('@/assets/images/logo_tracking.png');
 
 export default function SettingsScreen() {
   const { userId, session } = useAuth();
@@ -413,7 +417,7 @@ export default function SettingsScreen() {
       <View className="mt-8 mb-32 items-center">
         <View className="bg-neutral-900/50 p-4 rounded-xl border border-neutral-800 items-center">
           <Image
-            source={require('@/assets/images/logo_tracking.png')}
+            source={logoSource}
             style={{ width: 120, height: 40, opacity: 0.8 }}
             contentFit="contain"
           />
