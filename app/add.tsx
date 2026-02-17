@@ -236,7 +236,7 @@ export default function AddScreen() {
           autoCapitalize="none"
           autoCorrect={false}
         />
-        {true && (
+        {Platform.OS !== 'web' && (
           <Pressable
             onPress={startScanning}
             className="bg-neutral-900 w-12 items-center justify-center rounded-lg border border-neutral-800"
