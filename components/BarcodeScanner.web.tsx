@@ -1,117 +1,130 @@
-import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
-import React, { useEffect, useRef } from 'react';
-import { View } from 'react-native';
+import { BarcodeDetectorPolyfill } from "barcode-detector-polyfill";
+import * as Haptics from 'expo-haptics';
+import React, { useEffect, useRef, useState } from 'react';
+import { Text, TouchableOpacity, View } from 'react-native';
 
-interface BarcodeScannerProps {
-    onScanned: (result: { type: string; data: string }) => void;
-    barcodeTypes?: string[];
-}
+// Use native BarcodeDetector if available, otherwise use polyfill
+const BarcodeDetector = (typeof window !== 'undefined' && (window as any).BarcodeDetector) || BarcodeDetectorPolyfill;
 
-const formatMap: Record<string, number> = {
-    'upc_a': Html5QrcodeSupportedFormats.UPC_A,
-    'upc_e': Html5QrcodeSupportedFormats.UPC_E,
-    'ean13': Html5QrcodeSupportedFormats.EAN_13,
-    'ean8': Html5QrcodeSupportedFormats.EAN_8,
-    'qr': Html5QrcodeSupportedFormats.QR_CODE,
-    'code128': Html5QrcodeSupportedFormats.CODE_128,
-    'code39': Html5QrcodeSupportedFormats.CODE_39,
-};
+export default function BarcodeScanner({ onScanned, onClose }: { onScanned: (data: { type: string, data: string }) => void, onClose: () => void }) {
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [hasCameraError, setHasCameraError] = useState(false);
+    const [isScanning, setIsScanning] = useState(true);
+    const streamRef = useRef<MediaStream | null>(null);
 
-export default function BarcodeScanner({ onScanned, barcodeTypes }: BarcodeScannerProps) {
-    const scannerRef = useRef<Html5Qrcode | null>(null);
-    const elementId = 'html5-qrcode-scanner';
-
+    // Initialize Camera
     useEffect(() => {
-        const formats = barcodeTypes
-            ? barcodeTypes.map(t => formatMap[t]).filter(f => f !== undefined)
-            : [
-                Html5QrcodeSupportedFormats.UPC_A,
-                Html5QrcodeSupportedFormats.UPC_E,
-                Html5QrcodeSupportedFormats.EAN_13,
-                Html5QrcodeSupportedFormats.EAN_8,
-                Html5QrcodeSupportedFormats.QR_CODE,
-                Html5QrcodeSupportedFormats.CODE_128,
-                Html5QrcodeSupportedFormats.CODE_39,
-            ];
-
-        if (!scannerRef.current) {
-            const html5QrCode = new Html5Qrcode(elementId);
-            scannerRef.current = html5QrCode;
-        }
-        const html5QrCode = scannerRef.current;
-
-        // iOS Optimization Round 3: 
-        // 1. Disable native barcode detector (can be flaky on iOS web)
-        // 2. Remove specific qrbox dimensions to allow scanning of the entire feed
-        //    (The UI overlay guides the user, but we want the scanner to be permissive)
-
-        const config = {
-            fps: 15,
-            // qrbox: { width: 300, height: 300 }, // REMOVED: Scanning entire frame is safer for high-res feeds
-            // experimentalFeatures: {
-            //     useBarCodeDetectorIfSupported: true // REMOVED: specific issues reported with this on iOS 17+
-            // },
-            videoConstraints: {
-                facingMode: "environment",
-                width: { ideal: 1920 },
-                height: { ideal: 1080 },
-                // @ts-ignore - focusMode is supported by some browsers but missing in standard type definition
-                advanced: [{ focusMode: "continuous" }]
-            }
-        };
-
-        const startScanning = async () => {
+        const startCamera = async () => {
             try {
-                // First try with advanced constraints (High Res + Focus)
-                await html5QrCode.start(
-                    { facingMode: "environment" },
-                    config,
-                    (decodedText, decodedResult) => {
-                        onScanned({
-                            type: decodedResult.result.format?.formatName || 'unknown',
-                            data: decodedText
-                        });
-                    },
-                    (errorMessage) => {
-                        // console.log(errorMessage);
+                // Request back camera
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: "environment",
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 },
+                        // @ts-ignore
+                        advanced: [{ focusMode: "continuous" }]
                     }
-                );
-            } catch (err) {
-                console.warn("High-res scan start failed, retrying with basic config...", err);
-
-                // Fallback: Basic config without advanced constraints
-                try {
-                    await html5QrCode.start(
-                        { facingMode: "environment" },
-                        { fps: 10, qrbox: 250 },
-                        (decodedText, decodedResult) => {
-                            onScanned({
-                                type: decodedResult.result.format?.formatName || 'unknown',
-                                data: decodedText
-                            });
-                        },
-                        () => { }
-                    );
-                } catch (retryErr) {
-                    console.error("Failed to start scanner (fallback)", retryErr);
+                });
+                streamRef.current = stream;
+                if (videoRef.current) {
+                    videoRef.current.srcObject = stream;
+                    videoRef.current.play();
+                    // Start scanning loop
+                    scanFrame();
                 }
+            } catch (err) {
+                console.error("Camera access error:", err);
+                setHasCameraError(true);
             }
         };
 
-        startScanning();
+        if (isScanning) {
+            startCamera();
+        }
 
         return () => {
-            if (scannerRef.current?.isScanning) {
-                scannerRef.current.stop().catch(err => console.error("Failed to stop scanner", err));
-            }
+            stopCamera();
         };
-    }, []);
+    }, [isScanning]);
+
+    const stopCamera = () => {
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach(track => track.stop());
+            streamRef.current = null;
+        }
+    };
+
+    const scanFrame = async () => {
+        if (!videoRef.current || !isScanning) return;
+
+        try {
+            // Check if detector is ready
+            if (BarcodeDetector && typeof BarcodeDetector.getSupportedFormats === 'function') {
+                // Create detector (ideally reuse, but cheap enough to init)
+                const detector = new BarcodeDetector({
+                    formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'qr_code', 'code_128']
+                });
+
+                const barcodes = await detector.detect(videoRef.current);
+                if (barcodes.length > 0) {
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                    onScanned({ type: barcodes[0].format, data: barcodes[0].rawValue });
+                    setIsScanning(false); // Stop scanning on success
+                    stopCamera();
+                    return;
+                }
+            }
+        } catch (e) {
+            // Ignore frame errors, just retry
+        }
+
+        if (isScanning) {
+            requestAnimationFrame(scanFrame);
+        }
+    };
+
+    const handleFileSelect = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        try {
+            const detector = new BarcodeDetector({
+                formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'qr_code', 'code_128']
+            });
+            const bitmap = await createImageBitmap(file);
+            const barcodes = await detector.detect(bitmap);
+
+            if (barcodes.length > 0) {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                onScanned({ type: barcodes[0].format, data: barcodes[0].rawValue });
+            } else {
+                alert("No barcode found in image.");
+            }
+        } catch (e) {
+            console.error("File scan error", e);
+            alert("Error scanning file.");
+        }
+    };
 
     return (
         <View style={{ flex: 1, backgroundColor: 'black' }}>
-            <div id={elementId} style={{ width: '100%', height: '100%' }} />
+            {/* Native Video Element */}
+            <div style={{ width: '100%', height: '100%', overflow: 'hidden', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                <video
+                    ref={videoRef}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    muted
+                    playsInline
+                />
+            </div>
 
-            {/* Round 5: Visual Target Box */}
+            {/* Visual Target Box Overlay */}
             <View pointerEvents="none" style={{
                 position: 'absolute',
                 top: 0, left: 0, right: 0, bottom: 0,
@@ -123,8 +136,7 @@ export default function BarcodeScanner({ onScanned, barcodeTypes }: BarcodeScann
                     width: 250,
                     height: 250,
                     borderWidth: 2,
-                    borderColor: '#00FF00', // Green target box
-                    backgroundColor: 'transparent',
+                    borderColor: '#00FF00',
                     borderRadius: 20
                 }} />
                 <Text style={{ color: 'white', marginTop: 20, backgroundColor: 'rgba(0,0,0,0.5)', padding: 8, borderRadius: 8 }}>
@@ -139,118 +151,45 @@ export default function BarcodeScanner({ onScanned, barcodeTypes }: BarcodeScann
                 left: 0,
                 right: 0,
                 alignItems: 'center',
-                zIndex: 100
+                zIndex: 20
             }}>
+                <TouchableOpacity
+                    onPress={handleFileSelect}
+                    style={{
+                        backgroundColor: 'rgba(255,255,255,0.2)',
+                        paddingVertical: 12,
+                        paddingHorizontal: 24,
+                        borderRadius: 30,
+                        borderWidth: 1,
+                        borderColor: 'white',
+                    }}
+                >
+                    <Text style={{ color: 'white', fontWeight: 'bold' }}>Take Photo instead</Text>
+                </TouchableOpacity>
                 <input
                     type="file"
-                    id="qr-input-file"
+                    ref={fileInputRef}
                     accept="image/*"
                     capture="environment"
                     style={{ display: 'none' }}
-                    onChange={(e) => {
-                        if (e.target.files && e.target.files.length > 0) {
-                            const file = e.target.files[0];
-                            const html5QrCode = new Html5Qrcode(elementId);
-
-                            // Try standard scan first
-                            html5QrCode.scanFileV2(file, true)
-                                .then(decodedResult => {
-                                    onScanned({
-                                        type: 'photo',
-                                        data: decodedResult.decodedText
-                                    });
-                                })
-                                .catch(async (err) => {
-                                    console.warn("Standard file scan failed, trying to preprocess...", err);
-
-                                    // Preprocess: Load image, draw to canvas, try rotations
-                                    try {
-                                        const imageUrl = URL.createObjectURL(file);
-                                        const img = new Image();
-                                        img.onload = async () => {
-                                            const canvas = document.createElement('canvas');
-                                            const ctx = canvas.getContext('2d');
-                                            if (!ctx) return;
-
-                                            // Max dimensions to avoid memory issues (1080p limit)
-                                            const MAX_DIM = 1920;
-                                            let width = img.width;
-                                            let height = img.height;
-
-                                            if (width > MAX_DIM || height > MAX_DIM) {
-                                                const ratio = Math.min(MAX_DIM / width, MAX_DIM / height);
-                                                width *= ratio;
-                                                height *= ratio;
-                                            }
-
-                                            // Attempt 1: Standard Orientation (baked in)
-                                            canvas.width = width;
-                                            canvas.height = height;
-                                            ctx.drawImage(img, 0, 0, width, height);
-
-                                            try {
-                                                const blob = await new Promise<Blob | null>(r => canvas.toBlob(r, 'image/jpeg', 0.9));
-                                                if (blob) {
-                                                    const file1 = new File([blob], "processed.jpg", { type: "image/jpeg" });
-                                                    const res = await html5QrCode.scanFileV2(file1, true);
-                                                    onScanned({ type: 'photo-processed', data: res.decodedText });
-                                                    URL.revokeObjectURL(imageUrl);
-                                                    return;
-                                                }
-                                            } catch (e) {
-                                                console.log("Attempt 1 failed");
-                                            }
-
-                                            // Attempt 2: Rotate 90 degrees
-                                            canvas.width = height;
-                                            canvas.height = width;
-                                            ctx.save();
-                                            ctx.translate(height / 2, width / 2);
-                                            ctx.rotate(90 * Math.PI / 180);
-                                            ctx.drawImage(img, -width / 2, -height / 2, width, height);
-                                            ctx.restore();
-
-                                            try {
-                                                const blob = await new Promise<Blob | null>(r => canvas.toBlob(r, 'image/jpeg', 0.9));
-                                                if (blob) {
-                                                    const file2 = new File([blob], "rotated.jpg", { type: "image/jpeg" });
-                                                    const res = await html5QrCode.scanFileV2(file2, true);
-                                                    onScanned({ type: 'photo-rotated', data: res.decodedText });
-                                                    URL.revokeObjectURL(imageUrl);
-                                                    return;
-                                                }
-                                            } catch (e) {
-                                                console.log("Attempt 2 failed");
-                                                alert("Could not find barcode even after rotation processing. Please try a clearer photo.");
-                                            }
-
-                                            URL.revokeObjectURL(imageUrl);
-                                        };
-                                        img.src = imageUrl;
-                                    } catch (preprocessErr) {
-                                        console.error("Preprocessing failed", preprocessErr);
-                                        alert("Could not process image.");
-                                    }
-                                });
-                        }
-                    }}
+                    onChange={handleFileChange}
                 />
-                <button
-                    onClick={() => document.getElementById('qr-input-file')?.click()}
-                    style={{
-                        backgroundColor: 'rgba(255,255,255,0.2)',
-                        border: '1px solid rgba(255,255,255,0.5)',
-                        color: 'white',
-                        padding: '10px 20px',
-                        borderRadius: '20px',
-                        fontSize: '14px',
-                        backdropFilter: 'blur(4px)',
-                        cursor: 'pointer'
-                    }}
-                >
-                    📸 Take Photo instead
-                </button>
             </View>
+
+            <TouchableOpacity
+                onPress={onClose}
+                style={{
+                    position: 'absolute',
+                    top: 40,
+                    right: 20,
+                    backgroundColor: 'rgba(0,0,0,0.5)',
+                    padding: 8,
+                    borderRadius: 20,
+                    zIndex: 20
+                }}
+            >
+                <Text style={{ color: 'white', fontSize: 16, fontWeight: 'bold' }}>✕</Text>
+            </TouchableOpacity>
         </View>
     );
 }
