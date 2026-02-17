@@ -53,9 +53,14 @@ export default function AboutScreen() {
                         </Text>
                         <View className="mt-4 pt-4 border-t border-neutral-800 w-full">
                             <AttributionItem
-                                title="html5-qrcode"
-                                author="mebjas"
-                                license="Apache 2.0"
+                                title="Barcode Detection Polyfill"
+                                author="georapbox / WICG"
+                                license="MIT"
+                            />
+                            <AttributionItem
+                                title="Barcode Scanner PWA"
+                                author="georapbox (Inspiration)"
+                                license="MIT"
                             />
                         </View>
                     </View>

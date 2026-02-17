@@ -1,4 +1,4 @@
-import { BarcodeDetectorPolyfill } from "barcode-detector-polyfill";
+import BarcodeDetectorPolyfill from "barcode-detector-polyfill";
 import * as Haptics from 'expo-haptics';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
