@@ -102,6 +102,8 @@ export default function MovieDetailScreen() {
     });
 
     const handleUploadCustomArt = async () => {
+        console.log('Upload custom art clicked', Platform.OS);
+
         if (Platform.OS !== 'web') {
             // For native: use expo-image-picker
             const result = await ImagePicker.launchImageLibraryAsync({
@@ -117,22 +119,35 @@ export default function MovieDetailScreen() {
             }
         } else {
             // For web: use input file
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = 'image/*';
-            input.onchange = async (e: any) => {
-                const file = e.target?.files?.[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                        const dataUrl = event.target?.result as string;
-                        setPendingImageUri(dataUrl);
-                        setCropModalVisible(true);
-                    };
-                    reader.readAsDataURL(file);
-                }
-            };
-            input.click();
+            try {
+                console.log('Creating file input for web');
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'image/*';
+                input.onchange = async (e: any) => {
+                    console.log('File selected', e.target?.files?.[0]);
+                    const file = e.target?.files?.[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            const dataUrl = event.target?.result as string;
+                            console.log('Image loaded, opening crop modal');
+                            setPendingImageUri(dataUrl);
+                            setCropModalVisible(true);
+                        };
+                        reader.onerror = (error) => {
+                            console.error('FileReader error:', error);
+                            Alert.alert('Error', 'Failed to read image file');
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                };
+                input.click();
+                console.log('File input clicked');
+            } catch (error) {
+                console.error('Upload error:', error);
+                Alert.alert('Error', 'Failed to open file picker');
+            }
         }
     };
 
