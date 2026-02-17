@@ -1,6 +1,6 @@
-import type { CollectionItemWithMovie } from '@/types/database';
 import * as Print from 'expo-print';
 import { shareAsync } from 'expo-sharing';
+import { Platform } from 'react-native';
 
 export async function printInventoryReceipt(items: CollectionItemWithMovie[]) {
     // 1. Sort items alphabetically
@@ -14,11 +14,14 @@ export async function printInventoryReceipt(items: CollectionItemWithMovie[]) {
     // 3. Play Sound (Optional - can be passed in or handled here if we assume assets)
     // We'll let the UI handle sound to avoid asset loading issues here, or load a default.
 
-    // 4. Generate PDF
-    const { uri } = await Print.printToFileAsync({ html });
-
-    // 5. Share
-    await shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
+    // 4. Print / Generate PDF
+    if (Platform.OS === 'web') {
+        // On web, printAsync triggers the browser print dialog which can Save as PDF
+        await Print.printAsync({ html });
+    } else {
+        const { uri } = await Print.printToFileAsync({ html });
+        await shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
+    }
 }
 
 function generateReceiptHtml(items: CollectionItemWithMovie[]) {

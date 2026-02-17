@@ -2,6 +2,7 @@
 import type { CollectionItemWithMovie } from '@/types/database';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import { Platform } from 'react-native';
 
 export function generateCsv(items: CollectionItemWithMovie[]): string {
   const headers = [
@@ -43,6 +44,19 @@ export async function exportCollection(items: CollectionItemWithMovie[]) {
 
   const csvContent = generateCsv(items);
   const filename = `tracking_export_${new Date().toISOString().split('T')[0]}.csv`;
+  if (Platform.OS === 'web') {
+    // Web: Create a Blob and trigger download via anchor tag
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    return;
+  }
+
   const fileUri = FileSystem.documentDirectory + filename;
 
   await FileSystem.writeAsStringAsync(fileUri, csvContent, {
