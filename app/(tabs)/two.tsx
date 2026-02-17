@@ -36,6 +36,10 @@ export default function SettingsScreen() {
   const [password, setPassword] = useState('');
   const [isLinking, setIsLinking] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
+  const [customArtCount, setCustomArtCount] = useState(0);
+  const [customArtSize, setCustomArtSize] = useState(0);
+  const [isExportingArt, setIsExportingArt] = useState(false);
+  const [isImportingArt, setIsImportingArt] = useState(false);
 
   const { soundEnabled, setSoundEnabled, staticEnabled, setStaticEnabled, resetOnboarding } = useSettings();
 
@@ -374,6 +378,9 @@ export default function SettingsScreen() {
             </View>
           </Pressable>
         </View>
+
+        {/* Custom Covers Section (Web Only) */}
+        <CustomCoversSection />
 
         {/* INFO / ABOUT */}
         <View className="bg-neutral-900 rounded-lg overflow-hidden mt-6">

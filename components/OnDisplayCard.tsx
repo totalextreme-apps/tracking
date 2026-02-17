@@ -1,9 +1,10 @@
+import { getCustomArt } from '@/lib/custom-art-storage';
 import { getBackdropUrl, getPosterUrl } from '@/lib/dummy-data';
 import type { CollectionItemWithMovie } from '@/types/database';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
-import { useEffect, useRef } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Platform, Pressable, Text, View } from 'react-native';
 import Animated, {
   interpolate,
   useAnimatedStyle,
@@ -29,8 +30,19 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
   const isPhysical = item.format !== 'Digital';
   const isWishlist = item.status === 'wishlist';
   const isGrail = item.is_grail;
-  const posterUrl = getPosterUrl(movie.poster_path);
+  const tmdbPosterUrl = getPosterUrl(movie.poster_path);
   const backdropUrl = getBackdropUrl(movie.backdrop_path);
+  const [customArtUri, setCustomArtUri] = useState<string | null>(null);
+  const posterUrl = customArtUri || tmdbPosterUrl;
+
+  // Load custom art (web only)
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !item?.id) return;
+
+    getCustomArt(item.id)
+      .then((uri: string | null) => setCustomArtUri(uri))
+      .catch(() => setCustomArtUri(null));
+  }, [item.id]);
 
   const tiltX = useSharedValue(0);
   const tiltY = useSharedValue(0);

@@ -76,6 +76,7 @@ export function StackCard({
   const [activeId, setActiveId] = useState<string | null>(null);
   const lastTapRef = useRef<number>(0);
   const { playSound } = useSound();
+  const [customArtUri, setCustomArtUri] = useState<string | null>(null);
 
   const sorted = useMemo(() => {
     if (!activeId) return defaultSorted;
@@ -90,7 +91,17 @@ export function StackCard({
   const isWishlist = topItem.status === 'wishlist';
   const isGrail = topItem.is_grail;
   const isOnDisplay = topItem.is_on_display;
-  const posterUrl = getPosterUrl(movie.poster_path);
+  const tmdbPosterUrl = getPosterUrl(movie.poster_path);
+  const posterUrl = customArtUri || tmdbPosterUrl;
+
+  // Load custom art for top item (web only)
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !topItem) return;
+
+    getCustomArt(topItem.id)
+      .then((uri: string | null) => setCustomArtUri(uri))
+      .catch(() => setCustomArtUri(null));
+  }, [topItem.id]);
 
   const tiltX = useSharedValue(0);
   const tiltY = useSharedValue(0);
