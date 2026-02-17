@@ -331,7 +331,7 @@ export default function SettingsScreen() {
               style={{
                 width: '100%',
                 height: '100%',
-                opacity: 0.3
+                opacity: 0.4
               }}
               resizeMode="repeat"
             />
@@ -406,7 +406,7 @@ export default function SettingsScreen() {
               style={{
                 width: '100%',
                 height: '100%',
-                opacity: 0.3
+                opacity: 0.4
               }}
               resizeMode="repeat"
             />
