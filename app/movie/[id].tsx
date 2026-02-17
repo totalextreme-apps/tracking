@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Audio } from 'expo-av';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -188,8 +187,9 @@ export default function MovieDetailScreen() {
                     try {
                         // EJECT SEQUENCE
                         setEjecting(true);
-                        const { sound } = await Audio.Sound.createAsync(require('@/assets/sounds/vcr_eject.mp3'));
-                        await sound.playAsync();
+
+                        // Use global sound manager (web safe)
+                        playSound('eject');
 
                         // Visual delay for sound/animation
                         await new Promise(resolve => setTimeout(resolve, 2000)); // 2s eject time
@@ -472,6 +472,26 @@ export default function MovieDetailScreen() {
                     </View>
                 </View>
             </Modal>
+
+            {/* EJECTING OVERLAY */}
+            {ejecting && (
+                <View className="absolute inset-0 z-[100] bg-[#0000AA] items-center justify-center">
+                    {/* Scanlines Effect */}
+                    <View className="absolute inset-0 opacity-10">
+                        {Array.from({ length: 100 }).map((_, i) => (
+                            <View key={i} className="h-[2px] w-full bg-black mb-[2px]" />
+                        ))}
+                    </View>
+
+                    {/* Text */}
+                    <Text className="text-white font-mono text-4xl font-bold tracking-[8px] italic shadow-lg">
+                        {'EJECTING >>'}
+                    </Text>
+                    <Text className="text-white font-mono text-xl mt-4 opacity-80 tracking-widest">
+                        PLEASE WAIT...
+                    </Text>
+                </View>
+            )}
         </View >
     );
 }
