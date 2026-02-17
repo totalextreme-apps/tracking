@@ -22,7 +22,11 @@ export async function lookupUPC(upc: string): Promise<string | null> {
                 ? `https://api.allorigins.win/raw?url=${encodeURIComponent(baseUrl)}`
                 : baseUrl;
 
-            const response = await fetch(url);
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
+
+            const response = await fetch(url, { signal: controller.signal });
+            clearTimeout(timeoutId);
             if (!response.ok) {
                 if (response.status === 429) console.warn('UPC API Rate limited');
                 continue;
@@ -70,7 +74,10 @@ export async function lookupUPC(upc: string): Promise<string | null> {
         if (code.length < 8) continue;
         try {
             console.log(`Checking OpenFoodFacts: ${code}`);
-            const response = await fetch(`https://world.openfoodfacts.org/api/v0/product/${code}.json`);
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            const response = await fetch(`https://world.openfoodfacts.org/api/v0/product/${code}.json`, { signal: controller.signal });
+            clearTimeout(timeoutId);
             if (!response.ok) continue;
 
             const data = await response.json();
