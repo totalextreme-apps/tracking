@@ -19,7 +19,7 @@ export async function lookupUPC(upc: string): Promise<string | null> {
             // Web CORS Proxy
             const baseUrl = `https://api.upcitemdb.com/prod/trial/lookup?upc=${code}`;
             const url = Platform.OS === 'web'
-                ? `https://corsproxy.io/?${encodeURIComponent(baseUrl)}`
+                ? `https://api.allorigins.win/raw?url=${encodeURIComponent(baseUrl)}`
                 : baseUrl;
 
             const response = await fetch(url);
