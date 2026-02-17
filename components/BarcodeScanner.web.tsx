@@ -37,26 +37,31 @@ export default function BarcodeScanner({ onScanned, barcodeTypes }: BarcodeScann
         const html5QrCode = new Html5Qrcode(elementId);
         scannerRef.current = html5QrCode;
 
-        // iOS Optimization: 
-        // 1. Remove fixed aspectRatio (causes drift/crop issues on some iOS devices)
-        // 2. Use videoConstraints to request environment camera explicitly with preference for higher res
-        // 3. Adjust qrbox to be responsive
+        // iOS Optimization Round 2: 
+        // 1. Explicitly request high resolution (1080p) to force correct lens usage on multi-lens iPhones
+        // 2. Request continuous focus mode
+        // 3. Fallback system if high-res fails
 
         const config = {
-            fps: 10,
-            qrbox: { width: 300, height: 300 }, // Larger scanning area
-            // aspectRatio: 1.0, // REMOVED: potentially breaks iOS
+            fps: 15, // Increased FPS for faster scanning
+            qrbox: { width: 300, height: 300 },
             experimentalFeatures: {
                 useBarCodeDetectorIfSupported: true
+            },
+            // Important: videoConstraints can force specific camera modes
+            videoConstraints: {
+                facingMode: "environment",
+                width: { ideal: 1920 }, // 1080p ideal
+                height: { ideal: 1080 },
+                advanced: [{ focusMode: "continuous" }] // Suggest continuous focus
             }
         };
 
         const startScanning = async () => {
             try {
+                // First try with advanced constraints (High Res + Focus)
                 await html5QrCode.start(
-                    {
-                        facingMode: "environment"
-                    },
+                    { facingMode: "environment" },
                     config,
                     (decodedText, decodedResult) => {
                         onScanned({
@@ -69,8 +74,24 @@ export default function BarcodeScanner({ onScanned, barcodeTypes }: BarcodeScann
                     }
                 );
             } catch (err) {
-                console.error("Failed to start scanner", err);
-                // Fallback: try without experimental features or different constraints if needed
+                console.warn("High-res scan start failed, retrying with basic config...", err);
+
+                // Fallback: Basic config without advanced constraints
+                try {
+                    await html5QrCode.start(
+                        { facingMode: "environment" },
+                        { fps: 10, qrbox: 250 },
+                        (decodedText, decodedResult) => {
+                            onScanned({
+                                type: decodedResult.result.format?.formatName || 'unknown',
+                                data: decodedText
+                            });
+                        },
+                        () => { }
+                    );
+                } catch (retryErr) {
+                    console.error("Failed to start scanner (fallback)", retryErr);
+                }
             }
         };
 
