@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "tracking-app-temp",
-    "slug": "tracking-app-temp",
+    "name": "Tracking",
+    "slug": "tracking",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -27,7 +27,11 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "name": "Tracking - Movie Collection",
+      "description": "Track your physical media collection.",
+      "display": "standalone",
+      "backgroundColor": "#0a0a0a"
     },
     "plugins": [
       "expo-router"
