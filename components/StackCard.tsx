@@ -432,6 +432,26 @@ export function StackCard({
         >
           {movie.title}
         </Text>
+
+        {/* Format Selectors for Digital too! */}
+        <View className="flex-row flex-wrap justify-center gap-1 mt-2">
+          {defaultSorted.map((item) => (
+            <Pressable
+              key={item.id}
+              onPress={(e) => {
+                e.stopPropagation();
+                playSound('click');
+                setActiveId(item.id);
+              }}
+              className={`px-2 py-0.5 rounded ${FORMAT_COLORS[item.format] || 'bg-neutral-700'}`}
+            >
+              <Text className="text-white font-mono text-[10px] font-bold">
+                {item.format}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
         <View className="mt-1 px-2 py-0.5 bg-emerald-900/80 rounded">
           <Text className="text-emerald-200 font-mono text-[10px]">
             {topItem.digital_provider ?? 'Digital'}
