@@ -1,6 +1,7 @@
 import { useSound } from '@/context/SoundContext';
 import { getPosterUrl } from '@/lib/dummy-data';
 import type { CollectionItemWithMovie } from '@/types/database';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -167,11 +168,22 @@ export function StackCard({
         onPress={handlePress}
         onLongPress={() => onLongPress?.(topItem)}
         delayLongPress={500}
-        style={[{ width: width, height: height, marginBottom: 8 }, isWishlist ? { opacity: 0.6 } : {}]}
-        className={`bg-neutral-900 rounded-lg overflow-hidden flex-row items-center border ${isWishlist ? 'border-dashed border-neutral-700' : 'border-neutral-800'}`}
+        style={[{
+          width: width,
+          height: height,
+          marginBottom: 8,
+          flexDirection: 'row',
+          alignItems: 'center',
+          backgroundColor: '#171717',
+          borderRadius: 8,
+          overflow: 'hidden',
+          borderWidth: 1,
+          borderColor: isWishlist ? '#404040' : '#262626',
+          borderStyle: isWishlist ? 'dashed' : 'solid',
+        }, isWishlist ? { opacity: 0.6 } : {}]}
       >
-        {/* Thumbnail */}
-        <View className="h-full aspect-[2/3] bg-neutral-800 relative">
+        {/* Thumbnail Section */}
+        <View style={{ height: '100%', aspectRatio: 2 / 3, backgroundColor: '#262626' }}>
           {posterUrl ? (
             <Image
               source={{ uri: posterUrl }}
@@ -180,39 +192,58 @@ export function StackCard({
             />
           ) : (
             <View className="flex-1 items-center justify-center">
-              <Text className="text-neutral-600 text-[10px] font-mono p-1 text-center">{movie.title.substring(0, 4)}</Text>
+              <Text className="text-neutral-600 text-[10px] font-mono p-1 text-center">
+                {movie.title.substring(0, 4)}
+              </Text>
             </View>
           )}
+
           {isGrail && (
-            <View className="absolute top-0 right-0 p-0.5 bg-amber-500 rounded-bl-lg">
-              <Text className="text-[8px] text-black font-bold">GRAIL</Text>
+            <View className="absolute top-0 right-0 p-1 bg-amber-500 rounded-bl">
+              <FontAwesome name="star" size={8} color="black" />
             </View>
           )}
         </View>
 
-        {/* Info */}
-        <View className="flex-1 px-3 py-2 justify-center">
-          <Text className="text-white font-bold text-base leading-5 mb-0.5" numberOfLines={1}>
-            {movie.title}
+        {/* Info Section */}
+        <View className="flex-1 px-3 py-1 justify-center">
+          <Text className="text-white font-bold text-sm leading-4" numberOfLines={1}>
+            {movie.title.toUpperCase()}
           </Text>
-          <Text className="text-neutral-500 font-mono text-xs mb-2">
+          <Text className="text-neutral-500 font-mono text-[10px] my-0.5">
             {movie.release_date?.substring(0, 4) || '????'}
           </Text>
 
-          {/* Format Chips */}
-          <View className="flex-row gap-1.5 flex-wrap">
+          {/* Format Coins */}
+          <View className="flex-row gap-1.5 mt-1">
             {defaultSorted.map(item => (
               <View
                 key={item.id}
-                className={`px-2 py-0.5 rounded-full ${FORMAT_COLORS[item.format] || 'bg-neutral-700'}`}
+                className={`w-5 h-5 rounded-full items-center justify-center ${FORMAT_COLORS[item.format] || 'bg-neutral-700'}`}
+                style={{
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 1,
+                }}
               >
-                <Text className="text-white text-[10px] font-bold">
-                  {item.format}
+                <Text style={{ fontSize: 6, fontWeight: 'bold', color: 'white' }}>
+                  {item.format === '4K' ? '4K' :
+                    item.format === 'BluRay' ? 'BR' :
+                      item.format === 'DVD' ? 'DVD' :
+                        item.format === 'VHS' ? 'VHS' : 'DIG'}
                 </Text>
               </View>
             ))}
           </View>
         </View>
+
+        {/* Favorite Icon */}
+        {isOnDisplay && (
+          <View className="pr-4">
+            <FontAwesome name="thumb-tack" size={12} color="#f59e0b" style={{ transform: [{ rotate: '45deg' }] }} />
+          </View>
+        )}
       </AnimatedPressable>
     );
   }

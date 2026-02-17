@@ -474,7 +474,7 @@ export default function HomeScreen() {
 
                     // Fix for List Mode Height
                     const itemHeight = viewMode === 'list'
-                      ? 100 // Fixed height for List Mode
+                      ? 76 // Slender height for List Mode
                       : itemWidth * 1.5;
 
                     return (
