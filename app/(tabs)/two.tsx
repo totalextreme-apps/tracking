@@ -297,7 +297,6 @@ export default function SettingsScreen() {
 
         {/* A/V Settings - TV GUIDE STYLE */}
         <View
-          <View
           className="bg-[#2B4A8C] mb-6 border-2 border-white"
           style={{
             borderTopColor: '#ffffff',
