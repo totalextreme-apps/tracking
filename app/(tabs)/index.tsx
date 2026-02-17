@@ -251,6 +251,7 @@ export default function HomeScreen() {
                 contentContainerStyle={{
                   paddingHorizontal: 16,
                   alignItems: 'flex-end',
+                  flexGrow: 1, // Ensure it can grow to scroll content
                 }}
               >
                 {displayItems.map((item: any) => (

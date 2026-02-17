@@ -1,5 +1,4 @@
 import { Audio } from 'expo-av';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 
@@ -50,31 +49,32 @@ export function StaticOverlay({ visible }: StaticOverlayProps) {
     }, [visible]);
 
     useEffect(() => {
+        let soundObject: Audio.Sound | null = null;
+
         async function playStatic() {
             if (visible) {
                 try {
-                    const { sound: newSound } = await Audio.Sound.createAsync(
+                    const { sound } = await Audio.Sound.createAsync(
                         require('@/assets/sounds/static_noise.mp3'),
-                        { shouldPlay: true, isLooping: true, volume: 0.5 }
+                        { shouldPlay: true, isLooping: true, volume: 0.3 } // Reduced volume
                     );
-                    setSound(newSound);
+                    soundObject = sound;
+                    setSound(sound);
                 } catch (e) {
                     console.error("Failed to load static sound", e);
                 }
             } else {
-                if (sound) {
-                    await sound.stopAsync();
-                    await sound.unloadAsync();
-                    setSound(null);
-                }
+                // Should not happen if unmount cleans up, but for safety
             }
         }
 
         playStatic();
 
         return () => {
-            if (sound) {
-                sound.unloadAsync();
+            if (soundObject) {
+                soundObject.stopAsync().then(() => {
+                    soundObject?.unloadAsync();
+                }).catch((e) => console.log("Error unloading sound", e));
             }
         };
     }, [visible]);
@@ -82,7 +82,7 @@ export function StaticOverlay({ visible }: StaticOverlayProps) {
     if (!visible) return null;
 
     return (
-        <View style={StyleSheet.absoluteFill} pointerEvents="none" className="z-[9999] bg-transparent">
+        <View style={StyleSheet.absoluteFill} pointerEvents="none" className="z-[9999]">
             {/* Noise Layer with Jitter */}
             <Animated.Image
                 source={require('@/assets/images/static_noise.png')}
@@ -91,7 +91,7 @@ export function StaticOverlay({ visible }: StaticOverlayProps) {
                     {
                         opacity: opacityAnim,
                         transform: [{ translateX }, { translateY }],
-                        width: '110%', // Make slightly larger to cover jitter edges
+                        width: '110%',
                         height: '110%',
                         left: '-5%',
                         top: '-5%'
@@ -99,20 +99,7 @@ export function StaticOverlay({ visible }: StaticOverlayProps) {
                 ]}
                 resizeMode="cover"
             />
-
-            {/* Scanlines Effect */}
-            <LinearGradient
-                colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.5)', 'rgba(0,0,0,0)']}
-                style={StyleSheet.absoluteFill}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 0, y: 1 }}
-                locations={[0, 0.5, 1]}
-                pointerEvents="none"
-            />
-            {/* Adding multiple gradients to simulate bands? No, specific scanlines are hard without image repeater. 
-                But let's stick to simple flicker + sound + black background.
-            */}
-            <View className="absolute inset-0 bg-black/20" pointerEvents="none" />
+            <View className="absolute inset-0 bg-black/20" />
         </View>
     );
 }
