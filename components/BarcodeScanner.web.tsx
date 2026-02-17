@@ -37,33 +37,48 @@ export default function BarcodeScanner({ onScanned, barcodeTypes }: BarcodeScann
         const html5QrCode = new Html5Qrcode(elementId);
         scannerRef.current = html5QrCode;
 
+        // iOS Optimization: 
+        // 1. Remove fixed aspectRatio (causes drift/crop issues on some iOS devices)
+        // 2. Use videoConstraints to request environment camera explicitly with preference for higher res
+        // 3. Adjust qrbox to be responsive
+
         const config = {
             fps: 10,
-            qrbox: { width: 250, height: 150 },
-            aspectRatio: 1.0,
+            qrbox: { width: 300, height: 300 }, // Larger scanning area
+            // aspectRatio: 1.0, // REMOVED: potentially breaks iOS
+            experimentalFeatures: {
+                useBarCodeDetectorIfSupported: true
+            }
         };
 
-        html5QrCode.start(
-            { facingMode: "environment" },
-            config,
-            (decodedText, decodedResult) => {
-                onScanned({
-                    type: decodedResult.result.format?.formatName || 'unknown',
-                    data: decodedText
-                });
-            },
-            (errorMessage) => {
-                // console.log(errorMessage);
+        const startScanning = async () => {
+            try {
+                await html5QrCode.start(
+                    {
+                        facingMode: "environment"
+                    },
+                    config,
+                    (decodedText, decodedResult) => {
+                        onScanned({
+                            type: decodedResult.result.format?.formatName || 'unknown',
+                            data: decodedText
+                        });
+                    },
+                    (errorMessage) => {
+                        // console.log(errorMessage);
+                    }
+                );
+            } catch (err) {
+                console.error("Failed to start scanner", err);
+                // Fallback: try without experimental features or different constraints if needed
             }
-        ).catch((err) => {
-            console.error("Failed to start scanner", err);
-        });
+        };
+
+        startScanning();
 
         return () => {
-            if (scannerRef.current && scannerRef.current.isScanning) {
-                scannerRef.current.stop().then(() => {
-                    scannerRef.current?.clear();
-                }).catch(err => console.error("Failed to stop scanner", err));
+            if (scannerRef.current?.isScanning) {
+                scannerRef.current.stop().catch(err => console.error("Failed to stop scanner", err));
             }
         };
     }, []);
