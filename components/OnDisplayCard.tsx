@@ -180,8 +180,8 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
             shadowRadius: 20,
             elevation: 12,
             // GRAIL BORDER logic preserved
-            borderWidth: isGrail ? 2 : (isPhysical ? 0 : 2), // Digital keeps green border
-            borderColor: isGrail ? '#ffd700' : 'rgba(0, 255, 136, 0.8)', // Green for digital
+            borderWidth: isGrail ? 2 : 0,
+            borderColor: '#ffd700',
           }}
         >
           {/* Sticker Logic */}
@@ -243,7 +243,7 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
           >
             {movie.title}
           </Text>
-          <View className={`px-3 py-1 rounded mt-1 ${isPhysical ? 'bg-amber-900/80' : 'bg-emerald-900/80'}`}>
+          <View className={`px-2 py-1 rounded mt-1 ${isPhysical ? 'bg-amber-900/80' : 'bg-emerald-900/80'}`}>
             <Text className={`font-mono text-[10px] ${isPhysical ? 'text-amber-200' : 'text-emerald-200'}`}>
               {item.digital_provider || item.format}
             </Text>

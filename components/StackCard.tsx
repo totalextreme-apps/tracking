@@ -18,6 +18,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { GlossyCard } from './GlossyCard';
 import { HaloEffect } from './HaloEffect';
+import { NowStreamingSticker } from './NowStreamingSticker';
 import { SaleSticker } from './SaleSticker';
 import { StickerOverlay } from './StickerOverlay';
 import { VHSCard } from './VHSCard';
@@ -100,7 +101,7 @@ export function StackCard({
     const result = [];
 
     for (const item of items) {
-      if (item.format === 'Digital') {
+      if (item.format.trim() === 'Digital') {
         if (!seenDigital.has('Digital')) {
           seenDigital.add('Digital');
           result.push(item);
@@ -246,6 +247,13 @@ export function StackCard({
             </View>
           )}
         </View>
+
+        {/* Sticker for Digital On Display */}
+        {isOnDisplay && !isPhysical && (
+          <View style={{ position: 'absolute', top: 0, left: 0 }}>
+            <NowStreamingSticker visible={true} size={40} />
+          </View>
+        )}
 
         {/* Info Section */}
         <View className="flex-1 px-3 py-1 justify-center">
