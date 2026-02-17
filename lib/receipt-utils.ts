@@ -15,9 +15,19 @@ export async function printInventoryReceipt(items: CollectionItemWithMovie[]) {
     // We'll let the UI handle sound to avoid asset loading issues here, or load a default.
 
     // 4. Print / Generate PDF
+    // 4. Print / Generate PDF
     if (Platform.OS === 'web') {
-        // On web, printAsync triggers the browser print dialog which can Save as PDF
-        await Print.printAsync({ html });
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        document.body.appendChild(iframe);
+        iframe.contentDocument!.open();
+        iframe.contentDocument!.write(html);
+        iframe.contentDocument!.close();
+        iframe.contentWindow!.focus();
+        iframe.contentWindow!.print();
+        setTimeout(() => {
+            document.body.removeChild(iframe);
+        }, 1000);
     } else {
         const { uri } = await Print.printToFileAsync({ html });
         await shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
