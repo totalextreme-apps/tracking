@@ -16,6 +16,11 @@ export function GlossyCard({ posterUrl, format, style }: GlossyCardProps) {
             format === 'BluRay' ? require('@/assets/images/overlays/bluray-wrap.png') :
                 format === '4K' ? require('@/assets/images/overlays/4k-wrap.png') : null;
 
+    const logoSource =
+        format === 'DVD' ? require('@/assets/images/overlays/formats/DVD.png') :
+            format === 'BluRay' ? require('@/assets/images/overlays/formats/BluRay.png') :
+                format === '4K' ? require('@/assets/images/overlays/formats/4K Ultra.png') : null;
+
     // Use specific format logos if needed, or rely on the wrap text? 
     // The wraps usually have logos. The previous code had specific logo overlays.
     // I'll keep the previous logo logic as a fallback or addition if the wrap doesn't have it?
@@ -81,6 +86,15 @@ export function GlossyCard({ posterUrl, format, style }: GlossyCardProps) {
                         style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: 10 }}
                     />
                 </>
+            )}
+
+            {/* Layer 4: Format Logo Overlay */}
+            {logoSource && (
+                <Image
+                    source={logoSource}
+                    style={{ position: 'absolute', bottom: 6, right: 6, width: 40, height: 25, opacity: 0.9, zIndex: 20 }}
+                    contentFit="contain"
+                />
             )}
 
         </View>

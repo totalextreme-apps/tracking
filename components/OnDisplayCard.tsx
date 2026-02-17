@@ -142,6 +142,17 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
   };
 
   const CardContent = () => {
+    // Format Logo mapping for physical cards
+    const getPhysicalLogo = (format: string) => {
+      switch (format) {
+        case 'VHS': return require('@/assets/images/overlays/formats/VHS.png');
+        case 'DVD': return require('@/assets/images/overlays/formats/DVD.png');
+        case 'BluRay': return require('@/assets/images/overlays/formats/BluRay.png');
+        case '4K': return require('@/assets/images/overlays/formats/4K Ultra.png');
+        default: return null;
+      }
+    };
+
     if (isPhysical) {
       return (
         <View className="items-center" style={{ overflow: 'visible', width: 100 }}>
@@ -181,6 +192,15 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
                   {movie.title}
                 </Text>
               </View>
+            )}
+
+            {/* Format Logo Overlay for Physical */}
+            {getPhysicalLogo(item.format) && (
+              <Image
+                source={getPhysicalLogo(item.format)}
+                style={{ position: 'absolute', bottom: 6, right: 6, width: 30, height: 18, opacity: 0.9, zIndex: 40 }}
+                contentFit="contain"
+              />
             )}
           </View>
 

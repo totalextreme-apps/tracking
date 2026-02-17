@@ -224,7 +224,7 @@ export default function HomeScreen() {
           <EmptyState />
         ) : (
           <>
-            <View className="pt-10 pb-6 relative">
+            <View className="pt-12 pb-10 relative">
               <Image
                 source={thriftMode
                   ? require('@/assets/images/thrift_background.png')
@@ -251,7 +251,9 @@ export default function HomeScreen() {
                 style={{ zIndex: 10 }}
                 contentContainerStyle={{
                   paddingHorizontal: 16,
-                  alignItems: 'center', // Changed from flex-end to center to avoid layout issues
+                  // alignItems: 'center', // Removed to prevent vertical clipping of scaled items
+                  paddingTop: 10, // Additional internal padding
+                  paddingBottom: 20 // Additional internal padding
                 }}
               >
                 {displayItems.map((item: any) => (
