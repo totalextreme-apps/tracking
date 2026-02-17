@@ -60,10 +60,11 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (Platform.OS === 'web') {
-      // Basic detection: Width > 1024 often implies desktop
-      // Also check for touch capability to be more precise
-      const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-      if (width > 1024 && !hasTouch) {
+      const ua = navigator.userAgent;
+      const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+
+      // If NOT a mobile UA AND width is broad, call it a desktop
+      if (!isMobileUA && width > 768) {
         setIsDesktop(true);
       } else {
         setIsDesktop(false);
