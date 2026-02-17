@@ -12,7 +12,7 @@ import Animated, {
   withSequence,
   withSpring
 } from 'react-native-reanimated';
-import { HaloEffect } from './HaloEffect';
+import { NowStreamingSticker } from './NowStreamingSticker';
 import { SaleSticker } from './SaleSticker';
 import { StickerOverlay } from './StickerOverlay';
 
@@ -165,132 +165,90 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
       }
     };
 
-    if (isPhysical) {
-      return (
-        <View className="items-center" style={{ overflow: 'visible', width: 100 }}>
-          {/* Poster Image */}
-          <View
-            className="bg-neutral-900 rounded-lg overflow-hidden relative"
-            style={{
-              width: 100,
-              height: 150,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 8 },
-              shadowOpacity: 0.7,
-              shadowRadius: 20,
-              elevation: 12,
-              // GRAIL BORDER HERE
-              borderWidth: isGrail ? 2 : 0,
-              borderColor: '#ffd700',
-            }}
-          >
-            {/* Staff Pick Sticker (Standard Mode) - Smaller Size */}
-            {item.is_on_display && !isWishlist && <StickerOverlay visible={true} size={40} />}
-            {isWishlist && (
-              <View
-                className="absolute inset-0 rounded-lg z-10"
-                style={{ backgroundColor: 'rgba(100,100,100,0.35)' }}
-              />
-            )}
-            {posterUrl ? (
-              <Image
-                source={{ uri: posterUrl }}
-                style={{ width: '100%', height: '100%' }}
-                contentFit="cover"
-              />
-            ) : (
-              <View className="flex-1 items-center justify-center bg-neutral-800">
-                <Text className="text-neutral-500 font-mono text-xs text-center px-2">
-                  {movie.title}
-                </Text>
-              </View>
-            )}
-
-            {/* Format Logo Overlay for Physical */}
-            {getPhysicalLogo(item.format) && (
-              <Image
-                source={getPhysicalLogo(item.format)}
-                style={{ position: 'absolute', bottom: 6, right: 6, width: 30, height: 18, opacity: 0.9, zIndex: 40 }}
-                contentFit="contain"
-              />
-            )}
-          </View>
-
-          {
-            isGrail && isWishlist && (
-              <SaleSticker visible={true} size={40} />
-            )
-          }
-
-
-          <View style={{ height: 'auto', minHeight: 60, width: 100, marginTop: 8, alignItems: 'center', justifyContent: 'flex-start' }}>
-            <Text
-              className="text-white font-mono text-xs text-center leading-3"
-              numberOfLines={2}
-              style={{ marginBottom: 4 }}
-            >
-              {movie.title}
-            </Text>
-            <View className="px-3 py-1 bg-amber-900/80 rounded mt-1">
-              <Text className="text-amber-200 font-mono text-[10px]">
-                {item.format}
-              </Text>
-            </View>
-          </View >
-        </View >
-      );
-    }
-
-    // Digital Content
+    // Unified Layout for both Physical and Digital
     return (
-      <View style={{ position: 'relative', width: baseWidth }}>
-        {item.is_on_display && !isWishlist && (
-          <HaloEffect visible={true} size={baseWidth * scale + 30} />
-        )}
-
-        <View className="rounded-xl overflow-hidden relative"
+      <View className="items-center" style={{ overflow: 'visible', width: 100 }}>
+        {/* Poster Image */}
+        <View
+          className="bg-neutral-900 rounded-lg overflow-hidden relative"
           style={{
-            width: baseWidth,
-            height: 100,
+            width: 100,
+            height: 150,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 8 },
+            shadowOpacity: 0.7,
+            shadowRadius: 20,
             elevation: 12,
-            // GRAIL BORDER HERE
-            borderWidth: isGrail ? 3 : (isWishlist ? 2 : 3), // Keep original border logic for others, but override for Grail? 
-            // Actually, original logic was:
-            // borderWidth: isWishlist ? 2 : 3,
-            // borderColor: isWishlist ? '#6b7280' : 'rgba(0, 255, 136, 0.8)',
-            // If Grail, we want Gold.
-            borderColor: isGrail ? '#ffd700' : (isWishlist ? '#6b7280' : 'rgba(0, 255, 136, 0.8)'),
-            borderStyle: isWishlist && !isGrail ? 'dashed' : 'solid',
+            // GRAIL BORDER logic preserved
+            borderWidth: isGrail ? 2 : (isPhysical ? 0 : 2), // Digital keeps green border
+            borderColor: isGrail ? '#ffd700' : 'rgba(0, 255, 136, 0.8)', // Green for digital
           }}
         >
+          {/* Sticker Logic */}
+          {/* Physical: Staff Pick */}
+          {item.is_on_display && isPhysical && !isWishlist && <StickerOverlay visible={true} size={40} />}
+          {/* Digital: Now Streaming */}
+          {item.is_on_display && !isPhysical && !isWishlist && <NowStreamingSticker visible={true} size={40} />}
+
           {isWishlist && (
             <View
-              className="absolute inset-0 rounded-xl z-10"
+              className="absolute inset-0 rounded-lg z-10"
               style={{ backgroundColor: 'rgba(100,100,100,0.35)' }}
             />
           )}
-          {backdropUrl ? (
+
+          {posterUrl ? (
             <Image
-              source={{ uri: backdropUrl }}
+              source={{ uri: posterUrl }}
               style={{ width: '100%', height: '100%' }}
               contentFit="cover"
             />
           ) : (
-            <View className="flex-1 bg-neutral-800" />
+            <View className="flex-1 items-center justify-center bg-neutral-800">
+              <Text className="text-neutral-500 font-mono text-xs text-center px-2">
+                {movie.title}
+              </Text>
+            </View>
           )}
-          <View
-            className="absolute bottom-0 left-0 right-0 h-16"
-            style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}
-          />
-          <View className="absolute bottom-0 left-0 right-0 p-3">
-            <Text className="text-white text-lg font-semibold" numberOfLines={1}>
-              {movie.title}
-            </Text>
-            <Text className="text-emerald-400/90 text-xs mt-0.5">
-              {item.digital_provider ?? 'Digital'}
+
+          {/* Format Logo Overlay for Physical */}
+          {isPhysical && getPhysicalLogo(item.format) && (
+            <Image
+              source={getPhysicalLogo(item.format)}
+              style={{ position: 'absolute', bottom: 6, right: 6, width: 30, height: 18, opacity: 0.9, zIndex: 40 }}
+              contentFit="contain"
+            />
+          )}
+
+          {/* Digital Gradient Overlay */}
+          {!isPhysical && (
+            <View
+              className="absolute bottom-0 left-0 right-0 h-12"
+              style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
+            />
+          )}
+        </View>
+
+        {
+          isGrail && isWishlist && (
+            <SaleSticker visible={true} size={40} />
+          )
+        }
+
+        <View style={{ height: 'auto', minHeight: 60, width: 100, marginTop: 8, alignItems: 'center', justifyContent: 'flex-start' }}>
+          <Text
+            className="text-white font-mono text-xs text-center leading-3"
+            numberOfLines={2}
+            style={{ marginBottom: 4 }}
+          >
+            {movie.title}
+          </Text>
+          <View className={`px-3 py-1 rounded mt-1 ${isPhysical ? 'bg-amber-900/80' : 'bg-emerald-900/80'}`}>
+            <Text className={`font-mono text-[10px] ${isPhysical ? 'text-amber-200' : 'text-emerald-200'}`}>
+              {item.digital_provider || item.format}
             </Text>
           </View>
-        </View>
+        </View >
       </View >
     );
   };

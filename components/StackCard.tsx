@@ -80,10 +80,37 @@ export function StackCard({
   const [customArtUri, setCustomArtUri] = useState<string | null>(null);
 
   const sorted = useMemo(() => {
-    if (!activeId) return defaultSorted;
-    const activeItem = defaultSorted.find((i) => i.id === activeId);
-    if (!activeItem) return defaultSorted;
-    return [activeItem, ...defaultSorted.filter((i) => i.id !== activeId)];
+    // Deduplicate "Digital" formats - only keep the first one
+    const uniqueItems: CollectionItemWithMovie[] = [];
+    const hasDigital = false;
+
+    // First, get the sorted list as usual
+    let items = [...defaultSorted];
+
+    // If activeId is set, move it to front
+    if (activeId) {
+      const activeItem = items.find((i) => i.id === activeId);
+      if (activeItem) {
+        items = [activeItem, ...items.filter((i) => i.id !== activeId)];
+      }
+    }
+
+    // Now filter duplicates
+    const seenDigital = new Set();
+    const result = [];
+
+    for (const item of items) {
+      if (item.format === 'Digital') {
+        if (!seenDigital.has('Digital')) {
+          seenDigital.add('Digital');
+          result.push(item);
+        }
+      } else {
+        result.push(item);
+      }
+    }
+
+    return result;
   }, [defaultSorted, activeId]);
 
   const topItem = sorted[0];
@@ -144,6 +171,9 @@ export function StackCard({
   };
 
   const onPressIn = () => {
+    // Disable bounce effect for Digital items
+    if (!isPhysical) return;
+
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     tiltX.value = withSpring(6);
     tiltY.value = withSpring(-4);
