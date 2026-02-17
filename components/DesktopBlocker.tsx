@@ -1,6 +1,7 @@
 import React from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 
+// Desktop Blocker - V3 (Force Render Fix)
 export const DesktopBlocker = () => {
     if (Platform.OS !== 'web') return null;
 

@@ -7,8 +7,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "build": "npx expo export -p web && cp -rn dist/client/* dist/ || true",
-    "vercel-build": "npx expo export -p web && cp -rn dist/client/* dist/ || true"
+    "build": "rm -rf dist && npx expo export -p web && cp -rn dist/client/* dist/ || true",
+    "vercel-build": "rm -rf dist && npx expo export -p web && cp -rn dist/client/* dist/ || true"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
