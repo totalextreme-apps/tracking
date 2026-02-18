@@ -488,15 +488,6 @@ export function StackCard({
         animatedStyle,
         { width: width, margin: 6 },
         cardBorderStyle,
-        // NEON GLOW RESTORED (Stacks Only) - Applied to OUTER container
-        !isPhysical && !isWishlist && {
-          shadowColor: '#00ff88',
-          shadowOffset: { width: 0, height: 0 },
-          shadowOpacity: 0.8,
-          shadowRadius: 10,
-          elevation: 8,
-          backgroundColor: 'transparent'
-        }
       ]}
     >
       <View className="items-center" style={{ position: 'relative' }}>
@@ -510,7 +501,14 @@ export function StackCard({
             borderWidth: isWishlist ? 2 : 2, // Thicker border
             borderStyle: isWishlist ? 'dashed' : 'solid',
             borderColor: isWishlist ? '#6b7280' : '#00ff88', // Green Neon Border
-            // Inner shadow removed to prevent clipping
+            // Neon glow effect - only around poster image
+            ...(!isWishlist && {
+              shadowColor: '#00ff88',
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: 0.8,
+              shadowRadius: 10,
+              elevation: 8,
+            })
           }}
         >
           {/* Sticker for Digital Grid */}
