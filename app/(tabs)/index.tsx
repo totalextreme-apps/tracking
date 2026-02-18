@@ -186,7 +186,7 @@ export default function HomeScreen() {
     }
   };
 
-  if (authLoading || (userId && collectionLoading && !thriftMode)) {
+  if (authLoading || (userId && collectionLoading)) {
     return (
       <View className="flex-1 bg-neutral-950 items-center justify-center">
         <TrackingLoader />
