@@ -6,6 +6,7 @@ type SoundType = 'click' | 'insert' | 'static' | 'whir' | 'tv_off' | 'rewind' | 
 
 type SoundContextType = {
     playSound: (type: SoundType) => Promise<void>;
+    stopSound: (type: SoundType) => Promise<void>;
     isMuted: boolean;
     setIsMuted: (muted: boolean) => void;
 };
@@ -30,6 +31,8 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
         rewind: null,
         eject: null,
     });
+    // Track active web audio objects to allow stopping them
+    const activeWebSounds = React.useRef<Record<string, HTMLAudioElement>>({});
     const { soundEnabled } = useSettings();
 
     useEffect(() => {
@@ -51,17 +54,6 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
                     return null;
                 }
             };
-
-            // These require-s might fail at BUNDLE time if files don't exist. 
-            // User needs to provide them. If they don't exist, this file will cause a bundle error.
-            // To prevent crashing if files are missing, we'd theoretically need conditional requires, 
-            // but Metro bundler resolves these statically.
-            // Assuming user HAS put files there or I need to placeholders.
-            // I will use a try-catch block for the requires if possible? No, 'require' is static.
-            // I will assume the user has added them or I will add dummy files if I can?
-            // I cannot create binary files.
-            // I will proceed with the requires, hoping the user followed instructions. 
-            // If not, I'll need to ask them to add the files.
 
             const clickSound = await load(require('@/assets/sounds/ui_click.mp3'));
             const insertSound = await load(require('@/assets/sounds/vhs_insert.mp3'));
@@ -96,6 +88,8 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
         Object.values(sounds).forEach(async (sound) => {
             if (sound) await sound.unloadAsync();
         });
+        // Clear web sounds
+        activeWebSounds.current = {};
     };
 
     const playSound = async (type: SoundType) => {
@@ -117,6 +111,11 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
                 const source = paths[type];
                 if (source) {
                     const audio = new (window as any).Audio(source);
+                    // Store reference to allow stopping
+                    activeWebSounds.current[type] = audio;
+                    audio.onended = () => {
+                        delete activeWebSounds.current[type];
+                    };
                     audio.play().catch((e: any) => console.log('Web audio play blocked', e));
                 }
                 return;
@@ -135,8 +134,33 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
+    const stopSound = async (type: SoundType) => {
+        // Stop web audio
+        if (typeof window !== 'undefined' && activeWebSounds.current[type]) {
+            const audio = activeWebSounds.current[type];
+            audio.pause();
+            audio.currentTime = 0;
+            delete activeWebSounds.current[type];
+        }
+
+        // Stop native audio
+        const sound = sounds[type];
+        if (sound) {
+            try {
+                await sound.stopAsync();
+            } catch (e) {
+                console.log('Error stopping sound', e);
+            }
+        }
+    };
+
     return (
-        <SoundContext.Provider value={{ playSound, isMuted: !soundEnabled, setIsMuted: () => { } }}>
+        <SoundContext.Provider value={{
+            playSound,
+            stopSound,
+            isMuted: !soundEnabled,
+            setIsMuted: () => { }
+        }}>
             {children}
         </SoundContext.Provider>
     );

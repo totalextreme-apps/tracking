@@ -7,7 +7,7 @@ interface StaticOverlayProps {
 }
 
 export function StaticOverlay({ visible }: StaticOverlayProps) {
-    const { playSound } = useSound();
+    const { playSound, stopSound } = useSound();
     const opacityAnim = useRef(new Animated.Value(0)).current;
 
     // Jitter animations
@@ -48,6 +48,8 @@ export function StaticOverlay({ visible }: StaticOverlayProps) {
             opacityAnim.setValue(0);
             translateX.setValue(0);
             translateY.setValue(0);
+            // Ensure sound stops
+            stopSound('static');
         }
     }, [visible]);
 
@@ -71,7 +73,7 @@ export function StaticOverlay({ visible }: StaticOverlayProps) {
                 ]}
                 resizeMode="cover"
             />
-            <View className="absolute inset-0 bg-black/20" />
+            <View className="absolute inset-0 bg-black/20" pointerEvents="none" />
         </View>
     );
 }

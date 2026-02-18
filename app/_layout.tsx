@@ -103,6 +103,9 @@ function RootLayoutNav() {
         setShowStatic(false);
       }, 400); // 400ms static burst
       return () => clearTimeout(timer);
+    } else {
+      // Force it off if static is disabled (handles toggle during effect)
+      setShowStatic(false);
     }
   }, [pathname, staticEnabled]);
 
