@@ -576,11 +576,14 @@ export function StackCard({
           ))}
         </View>
 
-        <View className="mt-1 px-2 py-0.5 bg-emerald-900/80 rounded">
-          <Text className="text-emerald-200 font-mono text-[10px]">
-            {topItem.digital_provider ?? 'Digital'}
-          </Text>
-        </View>
+        {/* Digital Provider Badge - ONLY show if exists and is not just "Digital" */}
+        {topItem.digital_provider && topItem.digital_provider !== 'Digital' && (
+          <View className="mt-1 px-2 py-0.5 bg-emerald-900/80 rounded">
+            <Text className="text-emerald-200 font-mono text-[10px]">
+              {topItem.digital_provider}
+            </Text>
+          </View>
+        )}
       </View>
     </AnimatedPressable>
   );
