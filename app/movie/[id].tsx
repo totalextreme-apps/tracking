@@ -502,6 +502,38 @@ export default function MovieDetailScreen() {
                         </View>
                     )} */}
 
+                    {/* Cast Section */}
+                    {activeMovie.cast && activeMovie.cast.length > 0 && (
+                        <View className="mt-8 mb-2">
+                            <Text className="text-white font-bold text-lg mb-3 font-mono">STARRING</Text>
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                                {activeMovie.cast.map((member: any) => (
+                                    <View key={member.id} className="mr-4 items-center w-20">
+                                        <View className="w-16 h-16 rounded-full overflow-hidden bg-neutral-800 mb-2 border border-neutral-700">
+                                            {member.profile_path ? (
+                                                <Image
+                                                    source={{ uri: `https://image.tmdb.org/t/p/w185${member.profile_path}` }}
+                                                    style={{ width: '100%', height: '100%' }}
+                                                    contentFit="cover"
+                                                />
+                                            ) : (
+                                                <View className="flex-1 items-center justify-center">
+                                                    <Ionicons name="person" size={24} color="#525252" />
+                                                </View>
+                                            )}
+                                        </View>
+                                        <Text className="text-white text-[10px] text-center font-bold leading-3 mb-0.5" numberOfLines={2}>
+                                            {member.name}
+                                        </Text>
+                                        <Text className="text-neutral-500 text-[9px] text-center leading-3" numberOfLines={2}>
+                                            {member.character}
+                                        </Text>
+                                    </View>
+                                ))}
+                            </ScrollView>
+                        </View>
+                    )}
+
                     {/* Overview */}
                     <View className="mt-6">
                         <Text className="text-white font-bold mb-2">Overview</Text>
@@ -650,6 +682,7 @@ export default function MovieDetailScreen() {
                             </View>
                         )
                     }
+
 
                     {/* Add Format Section */}
                     <View className="mt-8">

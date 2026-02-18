@@ -102,7 +102,11 @@ export default function HomeScreen() {
         if (!movie) return false;
 
         if (searchQuery) {
-          if (!movie.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+          const query = searchQuery.toLowerCase();
+          const matchesTitle = movie.title.toLowerCase().includes(query);
+          const matchesCast = movie.cast?.some((c: any) => c.name.toLowerCase().includes(query));
+
+          if (!matchesTitle && !matchesCast) return false;
         }
         if (formatFilter) {
           if (!stack.some((i: any) => i.format === formatFilter)) return false;

@@ -15,6 +15,14 @@ export interface Movie {
   release_date: string | null;
   primary_color: string | null;
   genres: { id: number; name: string }[] | null;
+  cast: CastMember[] | null;
+}
+
+export interface CastMember {
+  id: number;
+  name: string;
+  character: string;
+  profile_path: string | null;
 }
 
 export interface CollectionItem {

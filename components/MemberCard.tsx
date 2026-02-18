@@ -45,7 +45,7 @@ export function MemberCard({ userId, profile, onEditPress, onAvatarPress }: Memb
             <View className="absolute bottom-[18px] left-0 right-0 h-0.5 bg-black/50" />
 
             {/* Content Container */}
-            <View className="flex-1 flex-row p-5 pt-8">
+            <View className="flex-1 flex-row px-5 py-4 pt-8">
 
                 {/* LEFT COLUMN */}
                 <View className="flex-1 pr-4 justify-between">

@@ -35,6 +35,6 @@ export async function searchMovies(query: string, page = 1): Promise<TmdbSearchR
   return tmdbFetch<TmdbSearchResponse>(`/search/movie?query=${encoded}&page=${page}`);
 }
 
-export async function getMovieById(tmdbId: number): Promise<TmdbMovieResult> {
-  return tmdbFetch<TmdbMovieResult>(`/movie/${tmdbId}`);
+export async function getMovieById(tmdbId: number): Promise<TmdbMovieResult & { credits?: { cast: any[] } }> {
+  return tmdbFetch<TmdbMovieResult & { credits?: { cast: any[] } }>(`/movie/${tmdbId}?append_to_response=credits`);
 }

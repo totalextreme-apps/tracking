@@ -48,7 +48,7 @@ export function TrackingLoader() {
 
     return (
         <View style={styles.container}>
-            <Animated.Text style={[styles.text, textStyle]}>LOADING... (v1.0.1)</Animated.Text>
+            <Animated.Text style={[styles.text, textStyle]}>AUTO TRACKING</Animated.Text>
             <View style={styles.lineWrapper}>
                 <Animated.View style={[styles.scanLine, lineStyle]} />
             </View>

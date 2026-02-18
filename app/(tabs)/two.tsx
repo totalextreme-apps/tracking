@@ -3,7 +3,8 @@ import { MemberCard } from '@/components/MemberCard';
 import { StatsSection } from '@/components/StatsSection';
 import { useAuth } from '@/context/AuthContext';
 import { useSettings } from '@/context/SettingsContext';
-import { useCollection } from '@/hooks/useCollection';
+import { useSound } from '@/context/SoundContext';
+import { useCollection, useRefreshLibrary } from '@/hooks/useCollection';
 import { useProfile } from '@/hooks/useProfile';
 import { exportCollection } from '@/lib/export-utils';
 import { printInventoryReceipt } from '@/lib/receipt-utils';
@@ -22,8 +23,10 @@ const logoSource = Platform.OS === 'web'
   : require('@/assets/images/logo_tracking.png');
 
 export default function SettingsScreen() {
+  const { playSound } = useSound();
   const { userId, session } = useAuth();
   const { data: collection, isLoading: isCollectionLoading } = useCollection(userId);
+  const refreshLibrary = useRefreshLibrary(userId);
   const { data: profile, isLoading: isProfileLoading, updateProfile, uploadAvatar, isUpdating } = useProfile(userId ?? null);
 
   const [isExporting, setIsExporting] = useState(false);
@@ -301,8 +304,8 @@ export default function SettingsScreen() {
           style={{
             borderTopColor: '#ffffff',
             borderLeftColor: '#ffffff',
-            borderBottomColor: '#000000',
-            borderRightColor: '#000000',
+            borderBottomColor: '#525252',
+            borderRightColor: '#525252',
             borderWidth: 2,
           }}
         >
@@ -340,8 +343,8 @@ export default function SettingsScreen() {
           style={{
             borderTopColor: '#ffffff',
             borderLeftColor: '#ffffff',
-            borderBottomColor: '#000000',
-            borderRightColor: '#000000',
+            borderBottomColor: '#525252',
+            borderRightColor: '#525252',
             borderWidth: 2,
           }}
         >
@@ -398,6 +401,50 @@ export default function SettingsScreen() {
               <Text className="font-mono text-sm font-bold" style={{ color: '#FFE92F' }}>Sign Out</Text>
             </View>
           </Pressable>
+        </View>
+
+        {/* MAINTENANCE SECTION */}
+        <View className="mb-8">
+          <Text className="text-amber-500/90 font-mono text-xs font-bold tracking-widest mb-2 opacity-50">
+            MAINTENANCE
+          </Text>
+          <View
+            className="bg-[#2B4A8C] mb-6 border-2"
+            style={{
+              borderTopColor: '#ffffff',
+              borderLeftColor: '#ffffff',
+              borderBottomColor: '#525252',
+              borderRightColor: '#525252',
+              borderWidth: 2,
+            }}
+          >
+            <Pressable
+              onPress={() => refreshLibrary.mutate()}
+              disabled={refreshLibrary.isPending}
+              className="p-4 flex-row items-center justify-between border-b-2 border-white/20 active:bg-[#1a3366]"
+            >
+              <View className="flex-row items-center">
+                <View className="w-8 items-center">
+                  {refreshLibrary.isPending ? (
+                    <ActivityIndicator size="small" color="#FFE92F" />
+                  ) : (
+                    <FontAwesome name="refresh" size={14} color="#FFE92F" />
+                  )}
+                </View>
+                <View>
+                  <Text className="font-mono text-sm font-bold" style={{ color: '#FFE92F' }}>
+                    Refresh Library Metadata
+                  </Text>
+                  {refreshLibrary.isPending && (
+                    <Text className="text-white/50 text-xs font-mono">
+                      Updating {refreshLibrary.progress.current} / {refreshLibrary.progress.total}
+                    </Text>
+                  )}
+                </View>
+              </View>
+              {!refreshLibrary.isPending && <FontAwesome name="chevron-right" size={10} color="white" />}
+            </Pressable>
+          </View>
         </View>
 
         {/* Custom Covers Section (Web Only) */}
