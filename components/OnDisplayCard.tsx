@@ -221,13 +221,7 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
             />
           )}
 
-          {/* Digital Gradient Overlay */}
-          {!isPhysical && (
-            <View
-              className="absolute bottom-0 left-0 right-0 h-12"
-              style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
-            />
-          )}
+          {/* Formats Overlay Logic... */}
         </View>
 
         {
@@ -245,16 +239,16 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
             {movie.title}
           </Text>
           <View className={`px-2 py-1 rounded mt-1 ${isPhysical
-              ? 'bg-amber-900/80'
-              : (item.digital_provider && item.digital_provider !== 'Digital')
-                ? 'bg-emerald-900/80' // Dark green for specific providers (iTunes, etc)
-                : 'bg-green-500'      // Light green for generic "Digital"
+            ? 'bg-amber-900/80'
+            : (item.digital_provider && item.digital_provider !== 'Digital')
+              ? 'bg-emerald-900/80' // Dark green for specific providers (iTunes, etc)
+              : 'bg-green-500'      // Light green for generic "Digital"
             }`}>
             <Text className={`font-mono text-[10px] ${isPhysical
-                ? 'text-amber-200'
-                : (item.digital_provider && item.digital_provider !== 'Digital')
-                  ? 'text-emerald-200'
-                  : 'text-white font-bold' // White text on light green
+              ? 'text-amber-200'
+              : (item.digital_provider && item.digital_provider !== 'Digital')
+                ? 'text-emerald-200'
+                : 'text-white font-bold' // White text on light green
               }`}>
               {item.digital_provider || 'Digital'}
             </Text>

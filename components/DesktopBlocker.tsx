@@ -27,7 +27,7 @@ export const DesktopBlocker = () => {
                         </Text>
 
                         <View style={styles.blinkContainer}>
-                            <Text style={styles.blinkText}>INSERT MOBILE DEVICE TO CONTINUE</Text>
+                            <Text style={styles.blinkText}>SWITCH TO YOUR MOBILE DEVICE TO CONTINUE</Text>
                         </View>
                     </View>
 
