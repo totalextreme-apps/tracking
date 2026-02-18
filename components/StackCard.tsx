@@ -95,19 +95,30 @@ export function StackCard({
       }
     }
 
-    // Aggressive deduplication: One coin per unique format string
-    const seenFormats = new Set();
+    // Aggressive deduplication: One coin per unique "Format + Edition" combo
+    const seenKeys = new Set();
     const result: CollectionItemWithMovie[] = [];
 
-    for (const item of items) {
+    for (const originalItem of items) {
+      // Clone to avoid mutating original data
+      const item = { ...originalItem };
+
       let fmt = item.format.trim();
-      // Normalize all digital formats (case-insensitive) to just "Digital"
+
+      // Normalize ANY string containing "digital" to exactly "Digital"
+      // This works for "Digital 4K", "Digital HD", "Digital Copy", etc.
+      // FORCE the format to 'Digital' so it gets generic Green color lookup
       if (fmt.toLowerCase().includes('digital')) {
         fmt = 'Digital';
+        item.format = 'Digital';
       }
 
-      if (!seenFormats.has(fmt)) {
-        seenFormats.add(fmt);
+      // Key off Normalized Format + Edition
+      const edition = (item.edition || '').trim().toLowerCase();
+      const key = `${fmt}|${edition}`;
+
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key);
         result.push(item);
       }
     }
