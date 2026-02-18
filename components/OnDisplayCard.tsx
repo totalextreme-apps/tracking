@@ -139,7 +139,8 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
     ? [{ borderWidth: 2, borderStyle: 'dashed' as const, borderColor: '#6b7280', borderRadius: 12 }]
     : [];
 
-  const baseWidth = isPhysical ? 100 : 180;
+  // Unified Width: 100 for proper spacing (Digital was too wide at 180)
+  const baseWidth = 100;
   const layoutWidth = baseWidth * scale + 16;
   const contentHeight = isPhysical ? 230 : 160;
 
@@ -179,9 +180,9 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
             shadowOpacity: 0.7,
             shadowRadius: 20,
             elevation: 12,
-            // GRAIL BORDER logic (Physical Only)
-            borderWidth: (isGrail && isPhysical) ? 2 : 0,
-            borderColor: '#ffd700',
+            // GRAIL BORDER logic (Physical Only) + Digital Green Border
+            borderWidth: (isGrail && isPhysical) ? 2 : (!isPhysical && !isWishlist) ? 2 : 0,
+            borderColor: (isGrail && isPhysical) ? '#ffd700' : '#00ff88', // Gold for Grail, Green for Digital
           }}
         >
           {/* Sticker Logic */}
@@ -248,8 +249,8 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
               {item.digital_provider || item.format}
             </Text>
           </View>
-        </View >
-      </View >
+        </View>
+      </View>
     );
   };
 

@@ -1,18 +1,24 @@
-import BarcodeDetectorPolyfill from "barcode-detector-polyfill";
 import * as Haptics from 'expo-haptics';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-// Polyfill explicit handling
+// Safe access to BarcodeDetector for SSR
+let BarcodeDetector: any;
 try {
-    if (!('BarcodeDetector' in window)) {
-        (window as any).BarcodeDetector = BarcodeDetectorPolyfill;
+    if (typeof window !== 'undefined') {
+        // Lazy load the polyfill to avoid "window is not defined" on import
+        const BarcodeDetectorPolyfill = require('barcode-detector-polyfill').default || require('barcode-detector-polyfill');
+
+        if (!('BarcodeDetector' in window)) {
+            // @ts-ignore
+            (window as any).BarcodeDetector = BarcodeDetectorPolyfill;
+        }
+        BarcodeDetector = (window as any).BarcodeDetector;
     }
 } catch (e) {
     console.warn("Failed to init BarcodeDetector polyfill", e);
 }
 
-const BarcodeDetector = (window as any).BarcodeDetector;
 
 export default function BarcodeScanner({ onScanned, onClose }: { onScanned: (data: { type: string, data: string }) => void, onClose: () => void }) {
     const videoRef = useRef<HTMLVideoElement>(null);

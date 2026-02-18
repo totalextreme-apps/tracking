@@ -95,17 +95,19 @@ export function StackCard({
       }
     }
 
-    // Now filter duplicates
-    const seenDigital = new Set();
-    const result = [];
+    // Aggressive deduplication: One coin per unique format string
+    const seenFormats = new Set();
+    const result: CollectionItemWithMovie[] = [];
 
     for (const item of items) {
-      if (item.format.trim() === 'Digital') {
-        if (!seenDigital.has('Digital')) {
-          seenDigital.add('Digital');
-          result.push(item);
-        }
-      } else {
+      let fmt = item.format.trim();
+      // Normalize all digital formats (case-insensitive) to just "Digital"
+      if (fmt.toLowerCase().includes('digital')) {
+        fmt = 'Digital';
+      }
+
+      if (!seenFormats.has(fmt)) {
+        seenFormats.add(fmt);
         result.push(item);
       }
     }
@@ -471,7 +473,20 @@ export function StackCard({
       delayLongPress={500}
       onPressIn={isWishlist ? undefined : onPressIn}
       onPressOut={isWishlist ? undefined : onPressOut}
-      style={[animatedStyle, { width: width, margin: 6 }, cardBorderStyle]}
+      style={[
+        animatedStyle,
+        { width: width, margin: 6 },
+        cardBorderStyle,
+        // NEON GLOW RESTORED (Stacks Only) - Applied to OUTER container
+        !isPhysical && !isWishlist && {
+          shadowColor: '#00ff88',
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 0.8,
+          shadowRadius: 10,
+          elevation: 8,
+          backgroundColor: 'transparent'
+        }
+      ]}
     >
       <View className="items-center" style={{ position: 'relative' }}>
         {/* Halo Effect REMOVED/HIDDEN per user request */}
@@ -481,14 +496,10 @@ export function StackCard({
           style={{
             width: width,
             height: height,
-            borderWidth: isWishlist ? 2 : 1, // Reduced border, no neon
+            borderWidth: isWishlist ? 2 : 2, // Thicker border
             borderStyle: isWishlist ? 'dashed' : 'solid',
-            borderColor: isWishlist ? '#6b7280' : '#404040', // Grey border
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.5,
-            shadowRadius: 4,
-            elevation: 4,
+            borderColor: isWishlist ? '#6b7280' : '#00ff88', // Green Neon Border
+            // Inner shadow removed to prevent clipping
           }}
         >
           {/* Sticker for Digital Grid */}
