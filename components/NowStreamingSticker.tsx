@@ -23,7 +23,7 @@ export function NowStreamingSticker({ visible, size = 60 }: NowStreamingStickerP
                     top: 2, // Adjusted padding from edge
                     left: 2,
                     zIndex: 100,
-                    transform: [{ rotate: '-15deg' }, { scale: 0.7 }] // Scaled down per request
+                    transform: [{ rotate: '-15deg' }, { scale: 0.55 }] // Scaled down per request
                 },
             ]}
             pointerEvents="none"
