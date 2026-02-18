@@ -189,7 +189,7 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
           {/* Physical: Staff Pick */}
           {item.is_on_display && isPhysical && !isWishlist && <StickerOverlay visible={true} size={40} />}
           {/* Digital: Now Streaming */}
-          {item.is_on_display && !isPhysical && !isWishlist && <NowStreamingSticker visible={true} size={40} />}
+          {item.is_on_display && !isPhysical && !isWishlist && <NowStreamingSticker visible={true} size={32} />}
 
           {isWishlist && (
             <View
