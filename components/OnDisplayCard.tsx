@@ -250,7 +250,7 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
                 ? 'text-emerald-200'
                 : 'text-white font-bold' // White text on light green
               }`}>
-              {item.digital_provider || 'Digital'}
+              {isPhysical ? item.format : (item.digital_provider || 'Digital')}
             </Text>
           </View>
         </View>
