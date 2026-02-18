@@ -260,12 +260,7 @@ export function StackCard({
           )}
         </View>
 
-        {/* Sticker for Digital On Display */}
-        {isOnDisplay && !isPhysical && (
-          <View style={{ position: 'absolute', top: 0, left: 0 }}>
-            <NowStreamingSticker visible={true} size={40} />
-          </View>
-        )}
+        {/* Sticker for Digital On Display - hidden in list mode */}
 
         {/* Info Section */}
         <View className="flex-1 px-3 py-1 justify-center">

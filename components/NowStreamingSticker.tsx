@@ -4,9 +4,10 @@ import Animated, { useAnimatedStyle, withSpring } from 'react-native-reanimated'
 type NowStreamingStickerProps = {
     visible: boolean;
     size?: number;
+    scale?: number;
 };
 
-export function NowStreamingSticker({ visible, size = 60 }: NowStreamingStickerProps) {
+export function NowStreamingSticker({ visible, size = 60, scale = 0.7 }: NowStreamingStickerProps) {
     const animatedStyle = useAnimatedStyle(() => ({
         transform: [
             { scale: withSpring(visible ? 1 : 0, { damping: 12, stiffness: 200 }) },
@@ -23,7 +24,7 @@ export function NowStreamingSticker({ visible, size = 60 }: NowStreamingStickerP
                     top: 2, // Adjusted padding from edge
                     left: 2,
                     zIndex: 100,
-                    transform: [{ rotate: '-15deg' }, { scale: 0.55 }] // Scaled down per request
+                    transform: [{ rotate: '-15deg' }, { scale: scale }] // Scale controlled by prop
                 },
             ]}
             pointerEvents="none"
