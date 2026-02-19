@@ -19,7 +19,7 @@ import { supabase } from '@/lib/supabase';
 
 export default function AuthScreen() {
     const insets = useSafeAreaInsets();
-    useAuth();
+    const { requestCaptcha } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
@@ -34,43 +34,52 @@ export default function AuthScreen() {
         setLoading(true);
         Keyboard.dismiss();
 
-        try {
-            if (mode === 'signup') {
-                const { data, error } = await supabase.auth.signUp({
-                    email,
-                    password,
-                });
-                if (error) throw error;
-                if (data.session) {
-                    if (router.canGoBack()) {
-                        router.back();
+        requestCaptcha(async (captchaToken) => {
+            console.log(`Proceeding with ${mode} using token length:`, captchaToken.length);
+
+            try {
+                // Development Bypass handling for Supabase calls
+                const options = (captchaToken === 'manual-bypass-token' || captchaToken === 'dev-manual-bypass')
+                    ? {} // Skip token if it's a bypass (Supabase might still fail if strict, but this matches our anon logic)
+                    : { captchaToken };
+
+                if (mode === 'signup') {
+                    const { data, error } = await supabase.auth.signUp({
+                        email,
+                        password,
+                        options,
+                    });
+                    if (error) throw error;
+                    if (data.session) {
+                        if (router.canGoBack()) {
+                            router.back();
+                        } else {
+                            router.replace('/');
+                        }
                     } else {
-                        router.replace('/');
+                        Alert.alert('Check your email', 'Please check your inbox for email verification!');
                     }
                 } else {
-                    Alert.alert('Check your email', 'Please check your inbox for email verification!');
-                }
-            } else {
-                const { data, error } = await supabase.auth.signInWithPassword({
-                    email,
-                    password,
-                });
-                if (error) throw error;
-                if (data.session) {
-                    if (router.canGoBack()) {
-                        router.back();
-                    } else {
-                        router.replace('/');
+                    const { data, error } = await supabase.auth.signInWithPassword({
+                        email,
+                        password,
+                        options,
+                    });
+                    if (error) throw error;
+                    if (data.session) {
+                        if (router.canGoBack()) {
+                            router.back();
+                        } else {
+                            router.replace('/');
+                        }
                     }
                 }
+            } catch (error: any) {
+                Alert.alert(mode === 'signup' ? 'Sign Up Failed' : 'Sign In Failed', error.message || 'An error occurred');
+            } finally {
+                setLoading(false);
             }
-        } catch (error) {
-            if (error instanceof Error) {
-                Alert.alert(mode === 'signup' ? 'Sign Up Failed' : 'Sign In Failed', error.message);
-            }
-        } finally {
-            setLoading(false);
-        }
+        });
     }
 
     return (

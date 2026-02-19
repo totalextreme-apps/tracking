@@ -10,6 +10,7 @@ type AuthContextType = {
   showCaptcha: boolean;
   setShowCaptcha: (show: boolean) => void;
   onCaptchaSuccess: (token: string) => Promise<void>;
+  requestCaptcha: (callback: (token: string) => void) => void;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -19,6 +20,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showCaptcha, setShowCaptcha] = useState(false);
+  const [pendingCaptchaCallback, setPendingCaptchaCallback] = useState<((token: string) => void) | null>(null);
 
   useEffect(() => {
     console.log('AuthProvider State:', { userId, session: !!session, showCaptcha, isLoading });
@@ -44,7 +46,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUserId(session.user.id);
           setSession(session);
         } else {
-          // If no session, show CAPTCHA before signing in
+          // If no session, show CAPTCHA before signing in (Initial anonymous load)
           setShowCaptcha(true);
         }
       } catch (e) {
@@ -72,6 +74,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const handleCaptchaSuccess = async (token: string) => {
     console.log('Captcha Success, token received. Length:', token.length);
 
+    // 1. Check for pending callbacks (e.g. from Sign In or Sign Up screen)
+    if (pendingCaptchaCallback) {
+      console.log('Executing pending CAPTCHA callback');
+      pendingCaptchaCallback(token);
+      setPendingCaptchaCallback(null);
+      setShowCaptcha(false);
+      return;
+    }
+
+    // 2. Default behavior (Initial Anonymous Sign-in)
     // Development Bypass Logic
     if (__DEV__ && (token === 'manual-bypass-token' || token === 'dev-manual-bypass')) {
       console.warn('Handling Manual CAPTCHA Bypass (DEV MODE)');
@@ -120,14 +132,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const requestCaptcha = (callback: (token: string) => void) => {
+    setPendingCaptchaCallback(() => callback);
+    setShowCaptcha(true);
+  };
+
   return (
-    <AuthContext.Provider value={{ userId, isLoading, session, showCaptcha, setShowCaptcha, onCaptchaSuccess: handleCaptchaSuccess }}>
+    <AuthContext.Provider value={{
+      userId,
+      isLoading,
+      session,
+      showCaptcha,
+      setShowCaptcha,
+      onCaptchaSuccess: handleCaptchaSuccess,
+      requestCaptcha
+    }}>
       {children}
       <CaptchaModal
         visible={showCaptcha}
         onSuccess={handleCaptchaSuccess}
         onCancel={() => {
           setShowCaptcha(false);
+          setPendingCaptchaCallback(null);
           console.warn('Captcha cancelled');
         }}
       />
