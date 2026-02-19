@@ -54,13 +54,13 @@ export default function HomeScreen() {
   const loadingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    const isActuallyLoading = authLoading || (userId && collectionLoading && !collectionError);
+    const isActuallyLoading = authLoading || (userId && collectionLoading && !collectionError) || (!userId && showCaptcha);
 
     if (isActuallyLoading) {
       if (!loadingTimerRef.current) {
         loadingTimerRef.current = setTimeout(() => {
           setShowRetryFallback(true);
-        }, 6000) as any; // Cast to any to handle NodeJS.Timeout vs number difference
+        }, 6000) as any;
       }
     } else {
       if (loadingTimerRef.current) {
@@ -252,6 +252,31 @@ export default function HomeScreen() {
   // 2. Auth Required / Captcha State
   if (!userId) {
     if (showCaptcha) {
+      if (showRetryFallback) {
+        return (
+          <View className="flex-1 bg-neutral-950 items-center justify-center p-6">
+            <TrackingLoader />
+            <Text className="text-amber-500 font-mono text-xl mt-8">STILL VERIFYING?</Text>
+            <Text className="text-white/40 font-mono text-xs text-center px-8 mt-4 mb-12 uppercase">
+              Identity verification is taking longer than usual. Please check your connection or restart the signal.
+            </Text>
+            <Pressable
+              onPress={() => {
+                playSound('click');
+                setShowRetryFallback(false);
+                setShowCaptcha(true);
+                // Restart timer
+                if (loadingTimerRef.current) clearTimeout(loadingTimerRef.current);
+                loadingTimerRef.current = setTimeout(() => setShowRetryFallback(true), 6000) as any;
+              }}
+              className="bg-neutral-900 border border-neutral-800 rounded-full py-4 px-10"
+            >
+              <Text className="text-amber-500 font-mono font-bold text-lg">RETRY VERIFICATION</Text>
+            </Pressable>
+          </View>
+        );
+      }
+
       return (
         <View className="flex-1 bg-neutral-950 items-center justify-center p-6">
           <TrackingLoader />

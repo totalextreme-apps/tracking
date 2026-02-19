@@ -42,7 +42,20 @@ export default function RootLayout() {
   });
 
   const { width } = useWindowDimensions();
-  const [isDesktop, setIsDesktop] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(() => {
+    // Immediate check on mount for web
+    if (Platform.OS === 'web') {
+      const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+      const isMobileUA = /iPhone|iPad|iPod|Android|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+      const isDesktopOS = /Macintosh|Windows|Linux/i.test(ua);
+
+      // Get initial width synchronously
+      const { width: windowWidth } = Dimensions.get('window');
+
+      return (isDesktopOS && !isMobileUA) || (windowWidth > 768 && !isMobileUA);
+    }
+    return false;
+  });
 
   useEffect(() => {
     SplashScreen.preventAutoHideAsync();
@@ -68,10 +81,7 @@ export default function RootLayout() {
       const isDesktopOS = /Macintosh|Windows|Linux/i.test(ua);
 
       // Check if it's likely a desktop (Mac/Win/Linux and NOT a mobile browser)
-      if (isDesktopOS && !isMobileUA) {
-        setIsDesktop(true);
-      } else if (windowWidth > 768 && !isMobileUA) {
-        // Fallback for large screens that don't report OS clearly (e.g. tablet mimics)
+      if ((isDesktopOS && !isMobileUA) || (windowWidth > 768 && !isMobileUA)) {
         setIsDesktop(true);
       } else {
         setIsDesktop(false);
