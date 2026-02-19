@@ -1,3 +1,4 @@
+import { ScrambledChannel } from '@/components/ScrambledChannel';
 import { TrackingLoader } from '@/components/TrackingLoader';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
@@ -273,46 +274,13 @@ export default function HomeScreen() {
     }
 
     return (
-      <View className="flex-1 bg-neutral-950 items-center justify-center p-6">
-        <Text className="text-red-500 font-mono text-xl mb-4">CONNECTION FAILED</Text>
-        <Text className="text-white/60 font-mono text-sm text-center px-8 mb-8">
-          Unable to verify identity. Please restart the app or try again.
-        </Text>
-        {Platform.OS === 'web' ? (
-          <button
-            onClick={() => {
-              console.log('RETRY Button Clicked (Web)');
-              playSound('click');
-              setShowCaptcha(true);
-            }}
-            style={{
-              backgroundColor: '#0a0a0a',
-              color: '#f59e0b',
-              border: '1px solid #262626',
-              borderRadius: '9999px',
-              padding: '16px 40px',
-              cursor: 'pointer',
-              marginTop: '32px',
-              fontFamily: 'monospace',
-              fontWeight: 'bold',
-              fontSize: '18px'
-            }}
-          >
-            RETRY VERIFICATION
-          </button>
-        ) : (
-          <Pressable
-            onPress={() => {
-              console.log('RETRY Button Clicked (Mobile)');
-              playSound('click');
-              setShowCaptcha(true);
-            }}
-            className="bg-neutral-900 border border-neutral-800 rounded-full py-4 px-10 mt-8"
-          >
-            <Text className="text-amber-500 font-mono font-bold text-lg">RETRY VERIFICATION</Text>
-          </Pressable>
-        )}
-      </View>
+      <ScrambledChannel
+        onRetry={() => {
+          console.log('RE-SYNC Button Clicked');
+          playSound('click');
+          setShowCaptcha(true);
+        }}
+      />
     );
   }
 
