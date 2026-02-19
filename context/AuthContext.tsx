@@ -1,3 +1,4 @@
+import { CaptchaModal } from '@/components/CaptchaModal';
 import { supabase } from '@/lib/supabase';
 import { Session } from '@supabase/supabase-js';
 import React, { createContext, useContext, useEffect, useState } from 'react';
@@ -6,6 +7,9 @@ type AuthContextType = {
   userId: string | undefined;
   isLoading: boolean;
   session: Session | null;
+  showCaptcha: boolean;
+  setShowCaptcha: (show: boolean) => void;
+  onCaptchaSuccess: (token: string) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -14,11 +18,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userId, setUserId] = useState<string | undefined>();
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showCaptcha, setShowCaptcha] = useState(false);
 
   useEffect(() => {
+    console.log('AuthProvider State:', { userId, session: !!session, showCaptcha, isLoading });
+  }, [userId, session, showCaptcha, isLoading]);
 
-    // Fallback: Force loading false after 3 seconds (reduced from 5)
-    // We use a ref to track if we've already finished to avoid race conditions
+  useEffect(() => {
     const isFinished = { current: false };
 
     const timeoutId = setTimeout(() => {
@@ -32,29 +38,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const initAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        if (isFinished.current) return; // Don't update if timed out
+        if (isFinished.current) return;
 
         if (session?.user?.id) {
           setUserId(session.user.id);
           setSession(session);
         } else {
-          // ... anonymous logic
-          const { data: { session: anonSession }, error } = await supabase.auth.signInAnonymously();
-          if (isFinished.current) return;
-
-          if (!error && anonSession?.user?.id) {
-            setUserId(anonSession.user.id);
-            setSession(anonSession);
-          }
+          // If no session, show CAPTCHA before signing in
+          setShowCaptcha(true);
         }
       } catch (e) {
         console.error('Auth Init Error', e);
       } finally {
-        if (!isFinished.current) {
-          isFinished.current = true;
-          setIsLoading(false);
-          clearTimeout(timeoutId);
-        }
+        setIsLoading(false);
+        clearTimeout(timeoutId);
       }
     };
 
@@ -72,9 +69,68 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  const handleCaptchaSuccess = async (token: string) => {
+    console.log('Captcha Success, token received. Length:', token.length);
+
+    // Development Bypass Logic
+    if (__DEV__ && (token === 'manual-bypass-token' || token === 'dev-manual-bypass')) {
+      console.warn('Handling Manual CAPTCHA Bypass (DEV MODE)');
+      try {
+        const { data: { session: anonSession }, error } = await supabase.auth.signInAnonymously();
+
+        if (!error && anonSession?.user?.id) {
+          setUserId(anonSession.user.id);
+          setSession(anonSession);
+          setShowCaptcha(false);
+          setIsLoading(false);
+          return;
+        }
+
+        console.warn('Anonymous sign-in without token failed, falling back to mock session for UI testing');
+        // Fallback: MOCK session for UI testing if backend enforces CAPTCHA
+        setUserId('dev-mock-user-id');
+        setSession({ user: { id: 'dev-mock-user-id', is_anonymous: true } } as any);
+        setShowCaptcha(false);
+        setIsLoading(false);
+        return;
+      } catch (e) {
+        console.error('Bypass error', e);
+      }
+    }
+
+    try {
+      const { data: { session: anonSession }, error } = await supabase.auth.signInAnonymously({
+        options: {
+          captchaToken: token,
+        },
+      });
+
+      if (!error && anonSession?.user?.id) {
+        setUserId(anonSession.user.id);
+        setSession(anonSession);
+        setShowCaptcha(false);
+        setIsLoading(false);
+      } else if (error) {
+        console.error('Anonymous Sign-in Error:', error.message);
+        setShowCaptcha(false); // Close modal so user can see the error screen
+        setIsLoading(false);
+      }
+    } catch (e) {
+      console.error('handleCaptchaSuccess Error', e);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ userId, isLoading, session }}>
+    <AuthContext.Provider value={{ userId, isLoading, session, showCaptcha, setShowCaptcha, onCaptchaSuccess: handleCaptchaSuccess }}>
       {children}
+      <CaptchaModal
+        visible={showCaptcha}
+        onSuccess={handleCaptchaSuccess}
+        onCancel={() => {
+          setShowCaptcha(false);
+          console.warn('Captcha cancelled');
+        }}
+      />
     </AuthContext.Provider>
   );
 }

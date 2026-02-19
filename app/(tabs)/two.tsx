@@ -250,39 +250,38 @@ export default function SettingsScreen() {
 
         {/* ACCOUNT UPGRADE (If Anonymous) */}
         {session?.user?.is_anonymous && (
-          <View className="mt-8 bg-neutral-900 p-4 rounded-lg border border-amber-500/30">
-            <Text className="text-amber-500 font-bold mb-2 font-mono">SECURE YOUR ACCOUNT</Text>
-            <Text className="text-neutral-400 text-xs mb-4">
-              You are using a temporary account. Link an email to prevent data loss if you switch devices.
+          <View className="mt-8 bg-[#2B4A8C] p-5 rounded-lg border-2 border-white shadow-xl">
+            <View className="flex-row items-center mb-3">
+              <FontAwesome name="shield" size={18} color="#FFE92F" />
+              <Text className="text-[#FFE92F] font-bold ml-2 font-mono text-base uppercase">Secure Your Collection</Text>
+            </View>
+            <Text className="text-white/80 text-xs mb-5 font-mono leading-4">
+              You are currently using a temporary profile. Link an email to ensure your tracking data is never lost.
             </Text>
             <View className="gap-3">
               <TextInput
                 value={email}
                 onChangeText={setEmail}
-                className="bg-neutral-800 text-white p-3 rounded text-sm font-mono border border-neutral-700"
+                className="bg-[#1a3366] text-white p-3 rounded text-sm font-mono border border-white/20"
                 placeholder="Email"
-                placeholderTextColor="#525252"
+                placeholderTextColor="#ffffff60"
                 autoCapitalize="none"
                 keyboardType="email-address"
               />
               <TextInput
                 value={password}
                 onChangeText={setPassword}
-                className="bg-neutral-800 text-white p-3 rounded text-sm font-mono border border-neutral-700"
+                className="bg-[#1a3366] text-white p-3 rounded text-sm font-mono border border-white/20"
                 placeholder="Password"
-                placeholderTextColor="#525252"
+                placeholderTextColor="#ffffff60"
                 secureTextEntry
               />
               <Pressable
                 onPress={handleLinkAccount}
                 disabled={isLinking}
-                className="bg-amber-600 p-3 rounded-lg items-center mt-2 active:bg-amber-700"
+                className="bg-[#FFE92F] p-4 rounded-lg items-center mt-2 shadow-md active:bg-[#e6d22a]"
               >
-                {isLinking ? <ActivityIndicator color="white" /> : <Text className="text-white font-mono font-bold">LINK EMAIL</Text>}
-              </Pressable>
-
-              <Pressable onPress={() => { handleSignOut(); router.replace('/auth'); }} className="items-center mt-3">
-                <Text className="text-amber-500 font-mono text-sm underline">Already have an account? Log In</Text>
+                {isLinking ? <ActivityIndicator color="#2B4A8C" /> : <Text className="text-[#2B4A8C] font-mono font-bold text-base">LINK EMAIL ACCOUNT</Text>}
               </Pressable>
             </View>
           </View>
@@ -402,6 +401,21 @@ export default function SettingsScreen() {
             </View>
           </Pressable>
         </View>
+
+        {/* LOG IN OPTION (If Anonymous - More Prominent) */}
+        {session?.user?.is_anonymous && (
+          <Pressable
+            onPress={() => {
+              supabase.auth.signOut().then(() => {
+                router.replace('/auth');
+              });
+            }}
+            className="mt-6 flex-row items-center justify-center p-4 bg-neutral-900 border border-neutral-800 rounded-lg active:bg-neutral-800"
+          >
+            <FontAwesome name="user-circle" size={16} color="#FFE92F" />
+            <Text className="ml-2 text-[#FFE92F] font-mono font-bold">Already have an account? SIGN IN</Text>
+          </Pressable>
+        )}
 
         {/* MAINTENANCE SECTION */}
         <View className="mb-8">

@@ -24,7 +24,7 @@ import { Modal } from 'react-native';
 import ViewShot from 'react-native-view-shot';
 
 export default function HomeScreen() {
-  const { userId, isLoading: authLoading } = useAuth();
+  const { userId, isLoading: authLoading, showCaptcha, setShowCaptcha, onCaptchaSuccess } = useAuth();
   const { thriftMode } = useThriftMode();
   const { playSound } = useSound();
   // Ensure refetch is destructured
@@ -194,6 +194,73 @@ export default function HomeScreen() {
     );
   }
 
+  if (!userId) {
+    if (showCaptcha) {
+      return (
+        <View className="flex-1 bg-neutral-950 items-center justify-center p-6">
+          <TrackingLoader />
+          <Text className="text-amber-500 font-mono text-xl mt-8">VERIFYING IDENTITY...</Text>
+          <Text className="text-white/40 font-mono text-xs text-center px-8 mt-4">
+            CHECKING FOR ROBOTS. PLEASE BE PATIENT.
+          </Text>
+          {__DEV__ && (
+            <Pressable
+              onPress={() => onCaptchaSuccess('dev-manual-bypass')}
+              className="mt-12 py-4 px-8 bg-neutral-900/50 rounded-lg"
+            >
+              <Text className="text-white/60 font-mono text-[12px] italic underline">
+                [DEV] BYPASS VERIFICATION
+              </Text>
+            </Pressable>
+          )}
+        </View>
+      );
+    }
+
+    return (
+      <View className="flex-1 bg-neutral-950 items-center justify-center p-6">
+        <Text className="text-red-500 font-mono text-xl mb-4">CONNECTION FAILED</Text>
+        <Text className="text-white/60 font-mono text-sm text-center px-8 mb-8">
+          Unable to verify identity. Please restart the app or try again.
+        </Text>
+        {Platform.OS === 'web' ? (
+          <button
+            onClick={() => {
+              console.log('RETRY Button Clicked (Web)');
+              playSound('click');
+              setShowCaptcha(true);
+            }}
+            style={{
+              backgroundColor: '#0a0a0a',
+              color: '#f59e0b',
+              border: '1px solid #262626',
+              borderRadius: '9999px',
+              padding: '16px 40px',
+              cursor: 'pointer',
+              marginTop: '32px',
+              fontFamily: 'monospace',
+              fontWeight: 'bold',
+              fontSize: '18px'
+            }}
+          >
+            RETRY VERIFICATION
+          </button>
+        ) : (
+          <Pressable
+            onPress={() => {
+              console.log('RETRY Button Clicked (Mobile)');
+              playSound('click');
+              setShowCaptcha(true);
+            }}
+            className="bg-neutral-900 border border-neutral-800 rounded-full py-4 px-10 mt-8"
+          >
+            <Text className="text-amber-500 font-mono font-bold text-lg">RETRY VERIFICATION</Text>
+          </Pressable>
+        )}
+      </View>
+    );
+  }
+
   return (
     <View style={{ flex: 1, position: 'relative' }}>
       <AcquiredModal
@@ -226,7 +293,7 @@ export default function HomeScreen() {
         }
       >
         {/* Header Share Button */}
-        {!isEmpty && userId && (
+        {!isEmpty && (
           <Pressable
             onPress={() => setShowShareModal(true)}
             className="absolute top-14 right-4 z-50 bg-black/50 p-2 rounded-full border border-white/10"
@@ -234,15 +301,7 @@ export default function HomeScreen() {
             <FontAwesome name="share-square-o" size={18} color="white" />
           </Pressable>
         )}
-
-        {!userId ? (
-          <View className="flex-1 items-center justify-center pt-32">
-            <Text className="text-red-500 font-mono text-xl mb-4">CONNECTION FAILED</Text>
-            <Text className="text-white/60 font-mono text-sm text-center px-8">
-              Unable to verify identity. Please restart the app.
-            </Text>
-          </View>
-        ) : isEmpty ? (
+        {isEmpty ? (
           <EmptyState />
         ) : (
           <>

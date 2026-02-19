@@ -147,7 +147,13 @@ export default function AuthScreen() {
 
                     <Pressable
                         className="mt-12 items-center"
-                        onPress={() => router.back()}
+                        onPress={() => {
+                            if (router.canGoBack()) {
+                                router.back();
+                            } else {
+                                router.replace('/');
+                            }
+                        }}
                     >
                         <Text className="text-neutral-500 font-mono text-xs">CANCEL</Text>
                     </Pressable>
