@@ -11,8 +11,8 @@ interface DeveloperAboutProps {
 }
 
 const devPhotoSource = Platform.OS === 'web'
-    ? { uri: '/josh_bio.png' }
-    : require('../assets/images/josh_bio.png');
+    ? { uri: '/photo_josh.png' }
+    : require('../assets/images/photo_josh.png');
 
 export const DeveloperAbout: React.FC<DeveloperAboutProps> = ({ isVisible, onClose }) => {
     const { playSound } = useSound();
