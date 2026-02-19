@@ -43,18 +43,12 @@ export default function RootLayout() {
 
   const { width } = useWindowDimensions();
   const [isDesktop, setIsDesktop] = useState(() => {
-    // Immediate check on mount for web
-    if (Platform.OS === 'web') {
-      const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
-      const isMobileUA = /iPhone|iPad|iPod|Android|BlackBerry|IEMobile|Opera Mini/i.test(ua);
-      const isDesktopOS = /Macintosh|Windows|Linux/i.test(ua);
-
-      // Get initial width synchronously
-      const { width: windowWidth } = Dimensions.get('window');
-
-      return (isDesktopOS && !isMobileUA) || (windowWidth > 768 && !isMobileUA);
-    }
-    return false;
+    if (Platform.OS !== 'web') return false;
+    const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+    // Use a very simple and strict check: if it's not a mobile UA, or if it's very wide, it's desktop.
+    const isMobileUA = /iPhone|iPad|iPod|Android|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+    const windowWidth = typeof window !== 'undefined' ? window.innerWidth : 1024;
+    return !isMobileUA || windowWidth > 900;
   });
 
   useEffect(() => {
@@ -73,19 +67,10 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (Platform.OS === 'web') {
-      const { width: windowWidth } = Dimensions.get('window');
       const ua = navigator.userAgent;
-
-      // More robust check: Desktop OS + No Mobile UA strings OR Large screen + No Mobile UA
       const isMobileUA = /iPhone|iPad|iPod|Android|BlackBerry|IEMobile|Opera Mini/i.test(ua);
-      const isDesktopOS = /Macintosh|Windows|Linux/i.test(ua);
-
-      // Check if it's likely a desktop (Mac/Win/Linux and NOT a mobile browser)
-      if ((isDesktopOS && !isMobileUA) || (windowWidth > 768 && !isMobileUA)) {
-        setIsDesktop(true);
-      } else {
-        setIsDesktop(false);
-      }
+      const windowWidth = Dimensions.get('window').width;
+      setIsDesktop(!isMobileUA || windowWidth > 900);
     }
   }, [width]);
 
