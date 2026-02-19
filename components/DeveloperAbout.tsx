@@ -1,13 +1,18 @@
 import { useSound } from '@/context/SoundContext';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { BlurView } from 'expo-blur';
+import { Image as ExpoImage } from 'expo-image';
 import React from 'react';
-import { Image, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 interface DeveloperAboutProps {
     isVisible: boolean;
     onClose: () => void;
 }
+
+const devPhotoSource = Platform.OS === 'web'
+    ? { uri: '/josh_bio.png' }
+    : require('../assets/images/josh_bio.png');
 
 export const DeveloperAbout: React.FC<DeveloperAboutProps> = ({ isVisible, onClose }) => {
     const { playSound } = useSound();
@@ -51,10 +56,11 @@ export const DeveloperAbout: React.FC<DeveloperAboutProps> = ({ isVisible, onClo
                         {/* Bio Header */}
                         <View style={styles.bioHeader}>
                             <View style={styles.imageContainer}>
-                                <Image
-                                    source={require('../assets/images/josh_bio.png')}
+                                <ExpoImage
+                                    source={devPhotoSource}
                                     style={styles.devImage}
-                                    resizeMode="cover"
+                                    contentFit="cover"
+                                    transition={200}
                                 />
                             </View>
                             <View style={styles.nameContainer}>
@@ -97,9 +103,10 @@ export const DeveloperAbout: React.FC<DeveloperAboutProps> = ({ isVisible, onClo
                             onPress={handleKofiPress}
                             style={styles.kofiButton}
                         >
-                            <Image
+                            <ExpoImage
                                 source={{ uri: 'https://storage.ko-fi.com/cdn/cup-border.png' }}
                                 style={styles.kofiIcon}
+                                contentFit="contain"
                             />
                             <Text style={styles.kofiButtonText}>Support me on Ko-fi</Text>
                         </Pressable>

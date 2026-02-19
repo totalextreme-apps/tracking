@@ -152,18 +152,19 @@ const styles = StyleSheet.create({
         zIndex: 10,
     },
     content: {
-        width: '85%',
+        width: '88%',
         maxWidth: 400,
-        aspectRatio: Platform.OS === 'web' ? 1.33 : undefined,
         backgroundColor: '#222',
-        padding: 10,
+        padding: 8,
         borderRadius: 40,
         borderWidth: 4,
         borderColor: '#333',
         zIndex: 20,
+        // Remove fixed aspectRatio to prevent squashing on mobile web
     },
     tvTube: {
-        flex: 1,
+        width: '100%',
+        minHeight: 280, // Ensure minimum readable height
         backgroundColor: 'rgba(0,0,0,0.95)',
         borderRadius: 30,
         padding: 20,
