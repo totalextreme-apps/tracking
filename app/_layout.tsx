@@ -44,11 +44,16 @@ export default function RootLayout() {
   const { width } = useWindowDimensions();
   const [isDesktop, setIsDesktop] = useState(() => {
     if (Platform.OS !== 'web') return false;
-    const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
-    // Use a very simple and strict check: if it's not a mobile UA, or if it's very wide, it's desktop.
+    if (typeof window === 'undefined') return false;
+    const ua = navigator.userAgent;
     const isMobileUA = /iPhone|iPad|iPod|Android|BlackBerry|IEMobile|Opera Mini/i.test(ua);
-    const windowWidth = typeof window !== 'undefined' ? window.innerWidth : 1024;
-    return !isMobileUA || windowWidth > 900;
+    const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+    // If it's a mobile UA or a touch device, it's definitely not a desktop blocker target
+    if (isMobileUA || isTouch) return false;
+
+    // Otherwise, if it's a wide screen, it's desktop
+    return window.innerWidth > 900;
   });
 
   useEffect(() => {
@@ -69,8 +74,14 @@ export default function RootLayout() {
     if (Platform.OS === 'web') {
       const ua = navigator.userAgent;
       const isMobileUA = /iPhone|iPad|iPod|Android|BlackBerry|IEMobile|Opera Mini/i.test(ua);
-      const windowWidth = Dimensions.get('window').width;
-      setIsDesktop(!isMobileUA || windowWidth > 900);
+      const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      const { width: windowWidth } = Dimensions.get('window');
+
+      if (isMobileUA || isTouch) {
+        setIsDesktop(false);
+      } else {
+        setIsDesktop(windowWidth > 900);
+      }
     }
   }, [width]);
 
