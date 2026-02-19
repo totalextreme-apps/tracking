@@ -35,7 +35,7 @@ export function useCollection(userId: string | undefined) {
 
       // 2. Real Supabase Fetch with Timeout
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Collection fetch timed out')), 8000)
+        setTimeout(() => reject(new Error('Collection fetch timed out')), 6000)
       );
 
       const supabasePromise = supabase

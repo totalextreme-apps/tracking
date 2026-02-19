@@ -3,7 +3,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, Platform, Pressable, RefreshControl, ScrollView, Text, TextInput, useWindowDimensions, View } from 'react-native';
 
 import { AcquiredModal } from '@/components/AcquiredModal'; // Restore Component
@@ -19,7 +19,6 @@ import { getGenres, getOnDisplayItems, getStacks } from '@/lib/collection-utils'
 import { supabase } from '@/lib/supabase'; // Restore Supabase
 import type { CollectionItemWithMovie } from '@/types/database';
 import * as Sharing from 'expo-sharing';
-import { useRef } from 'react';
 import { Modal } from 'react-native';
 import ViewShot from 'react-native-view-shot';
 
@@ -48,6 +47,35 @@ export default function HomeScreen() {
   // Rewind State
   const [refreshing, setRefreshing] = useState(false);
   const [showRewind, setShowRewind] = useState(false);
+
+  // Loading Fail-safe
+  const [showRetryFallback, setShowRetryFallback] = useState(false);
+  const loadingTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    const isActuallyLoading = authLoading || (userId && collectionLoading && !collectionError);
+
+    if (isActuallyLoading) {
+      if (!loadingTimerRef.current) {
+        loadingTimerRef.current = setTimeout(() => {
+          setShowRetryFallback(true);
+        }, 6000) as any; // Cast to any to handle NodeJS.Timeout vs number difference
+      }
+    } else {
+      if (loadingTimerRef.current) {
+        clearTimeout(loadingTimerRef.current);
+        loadingTimerRef.current = null;
+      }
+      setShowRetryFallback(false);
+    }
+
+    return () => {
+      if (loadingTimerRef.current) {
+        clearTimeout(loadingTimerRef.current);
+        loadingTimerRef.current = null;
+      }
+    };
+  }, [authLoading, userId, collectionLoading, collectionError]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -188,6 +216,31 @@ export default function HomeScreen() {
 
   // 1. Loading State (Auth or Collection)
   if (authLoading || (userId && collectionLoading && !collectionError)) {
+    if (showRetryFallback) {
+      return (
+        <View className="flex-1 bg-neutral-950 items-center justify-center p-6">
+          <TrackingLoader />
+          <Text className="text-amber-500 font-mono text-xl mt-8">STILL LOADING?</Text>
+          <Text className="text-white/40 font-mono text-xs text-center px-8 mt-4 mb-12">
+            CONNECTION SEEMS SLOW. PLEASE CHECK YOUR SIGNAL.
+          </Text>
+          <Pressable
+            onPress={() => {
+              playSound('click');
+              if (refetch) refetch();
+              setShowRetryFallback(false);
+              // Restart timer
+              if (loadingTimerRef.current) clearTimeout(loadingTimerRef.current);
+              loadingTimerRef.current = setTimeout(() => setShowRetryFallback(true), 6000) as any;
+            }}
+            className="bg-neutral-900 border border-neutral-800 rounded-full py-4 px-10"
+          >
+            <Text className="text-amber-500 font-mono font-bold text-lg">RETRY CONNECTION</Text>
+          </Pressable>
+        </View>
+      );
+    }
+
     return (
       <View className="flex-1 bg-neutral-950 items-center justify-center">
         <TrackingLoader />

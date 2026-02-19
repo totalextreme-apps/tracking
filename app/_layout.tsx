@@ -33,7 +33,7 @@ export const unstable_settings = {
 };
 
 import { DesktopBlocker } from '@/components/DesktopBlocker';
-import { Platform, useWindowDimensions } from 'react-native';
+import { Dimensions, Platform, useWindowDimensions } from 'react-native';
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -60,13 +60,18 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (Platform.OS === 'web') {
+      const { width: windowWidth } = Dimensions.get('window');
       const ua = navigator.userAgent;
-      const isMobile = /iPhone|iPad|iPod|Android|BlackBerry|IEMobile|Opera Mini/i.test(ua);
-      const isDesktopOS = /Macintosh|Windows|Linux/i.test(ua);
-      const isLarge = width > 768;
 
-      // If it's a desktop OS OR a broad screen AND not mobile UA, block it.
-      if ((isDesktopOS || isLarge) && !isMobile) {
+      // More robust check: Desktop OS + No Mobile UA strings OR Large screen + No Mobile UA
+      const isMobileUA = /iPhone|iPad|iPod|Android|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+      const isDesktopOS = /Macintosh|Windows|Linux/i.test(ua);
+
+      // Check if it's likely a desktop (Mac/Win/Linux and NOT a mobile browser)
+      if (isDesktopOS && !isMobileUA) {
+        setIsDesktop(true);
+      } else if (windowWidth > 768 && !isMobileUA) {
+        // Fallback for large screens that don't report OS clearly (e.g. tablet mimics)
         setIsDesktop(true);
       } else {
         setIsDesktop(false);
