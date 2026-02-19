@@ -54,7 +54,8 @@ export default function HomeScreen() {
   const loadingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    const isActuallyLoading = authLoading || (userId && collectionLoading && !collectionError) || (!userId && showCaptcha);
+    // Only show loader during initial auth check or when a logged-in user's collection is loading
+    const isActuallyLoading = authLoading || (userId && collectionLoading && !collectionError);
 
     if (isActuallyLoading) {
       if (!loadingTimerRef.current) {
