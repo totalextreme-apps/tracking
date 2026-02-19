@@ -1,4 +1,5 @@
 
+import { DeveloperAbout } from '@/components/DeveloperAbout';
 import { MemberCard } from '@/components/MemberCard';
 import { StatsSection } from '@/components/StatsSection';
 import { useAuth } from '@/context/AuthContext';
@@ -45,6 +46,7 @@ export default function SettingsScreen() {
   const [isImportingArt, setIsImportingArt] = useState(false);
 
   const { soundEnabled, setSoundEnabled, staticEnabled, setStaticEnabled, resetOnboarding } = useSettings();
+  const [showAbout, setShowAbout] = useState(false);
 
   const router = useRouter();
 
@@ -123,7 +125,7 @@ export default function SettingsScreen() {
       });
 
       if (!result.canceled) {
-        // On web, we might need base64 or the blob uri. 
+        // On web, we might need the base64 or the blob uri.
         // useProfile.ts needs to handle it.
         // For now, pass the URI, but ensures clean usage.
         await uploadAvatar(result.assets[0].uri, result.assets[0].base64);
@@ -507,6 +509,16 @@ export default function SettingsScreen() {
             </View>
             <FontAwesome name="chevron-right" size={10} color="#525252" />
           </Pressable>
+          <Pressable
+            onPress={() => setShowAbout(true)}
+            className="p-4 flex-row items-center justify-between active:bg-neutral-800 border-t border-neutral-800"
+          >
+            <View className="flex-row items-center">
+              <View className="w-8 items-center"><FontAwesome name="code" size={14} color="#d1d5db" /></View>
+              <Text className="text-neutral-200 font-mono text-sm">About the Developer</Text>
+            </View>
+            <FontAwesome name="chevron-right" size={10} color="#525252" />
+          </Pressable>
         </View>
       </View>
 
@@ -567,6 +579,8 @@ export default function SettingsScreen() {
           </ScrollView>
         </View>
       </Modal>
-    </ScrollView >
+
+      <DeveloperAbout isVisible={showAbout} onClose={() => setShowAbout(false)} />
+    </ScrollView>
   );
 }
