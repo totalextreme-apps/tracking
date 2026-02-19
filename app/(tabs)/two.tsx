@@ -50,9 +50,9 @@ export default function SettingsScreen() {
 
   // Stats Logic
   const totalMovies = collection?.length || 0;
-  const totalGrails = collection?.filter(i => i.is_grail).length || 0;
+  const totalGrails = collection?.filter((i: any) => i.is_grail).length || 0;
   // Unique formats count?
-  const uniqueFormats = new Set(collection?.map(i => i.format)).size || 0;
+  const uniqueFormats = new Set(collection?.map((i: any) => i.format)).size || 0;
 
   const handleExport = async () => {
     // ... export logic (keep existing)
@@ -91,17 +91,25 @@ export default function SettingsScreen() {
   };
 
   const handleSignOut = async () => {
-    Alert.alert('Sign Out?', 'Are you sure?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Sign Out',
-        style: 'destructive',
-        onPress: async () => {
-          await supabase.auth.signOut();
-          router.replace('/auth');
-        }
+    const performSignOut = async () => {
+      await supabase.auth.signOut();
+      router.replace('/auth');
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm('Are you sure you want to sign out?')) {
+        await performSignOut();
       }
-    ]);
+    } else {
+      Alert.alert('Sign Out?', 'Are you sure?', [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: performSignOut
+        }
+      ]);
+    }
   };
 
   const pickImage = async () => {
@@ -283,6 +291,20 @@ export default function SettingsScreen() {
               >
                 {isLinking ? <ActivityIndicator color="#2B4A8C" /> : <Text className="text-[#2B4A8C] font-mono font-bold text-base">LINK EMAIL ACCOUNT</Text>}
               </Pressable>
+
+              {/* Already have an account? Log In (Secondary) */}
+              <Pressable
+                onPress={() => {
+                  supabase.auth.signOut().then(() => {
+                    router.replace('/auth');
+                  });
+                }}
+                className="mt-2 py-2 items-center"
+              >
+                <Text className="text-white/60 font-mono text-[10px] underline">
+                  ALREADY HAVE AN ACCOUNT? LOG IN
+                </Text>
+              </Pressable>
             </View>
           </View>
         )}
@@ -365,7 +387,7 @@ export default function SettingsScreen() {
             onPress={async () => {
               try {
                 // Filter for "The Stacks" only (Owned items)
-                const inventoryItems = collection?.filter(i => i.status === 'owned') || [];
+                const inventoryItems = collection?.filter((i: any) => i.status === 'owned') || [];
 
                 if (inventoryItems.length === 0) {
                   Alert.alert('No Items', 'No owned items in The Stacks to print.');
@@ -401,21 +423,6 @@ export default function SettingsScreen() {
             </View>
           </Pressable>
         </View>
-
-        {/* LOG IN OPTION (If Anonymous - More Prominent) */}
-        {session?.user?.is_anonymous && (
-          <Pressable
-            onPress={() => {
-              supabase.auth.signOut().then(() => {
-                router.replace('/auth');
-              });
-            }}
-            className="mt-6 flex-row items-center justify-center p-4 bg-neutral-900 border border-neutral-800 rounded-lg active:bg-neutral-800"
-          >
-            <FontAwesome name="user-circle" size={16} color="#FFE92F" />
-            <Text className="ml-2 text-[#FFE92F] font-mono font-bold">Already have an account? SIGN IN</Text>
-          </Pressable>
-        )}
 
         {/* MAINTENANCE SECTION */}
         <View className="mb-8">
