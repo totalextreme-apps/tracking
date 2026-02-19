@@ -78,7 +78,7 @@ export default function RootLayout() {
     return null;
   }
 
-  if (isDesktop && !__DEV__) {
+  if (isDesktop) {
     return <DesktopBlocker />;
   }
 

@@ -29,7 +29,7 @@ export default function HomeScreen() {
   const { playSound } = useSound();
   // Ensure refetch is destructured
   // Using 'any' cast for useCollection result to prevent strict typing issues with refetch if definitions mismatch
-  const { data: collection, isLoading: collectionLoading, refetch } = useCollection(userId) as any;
+  const { data: collection, isLoading: collectionLoading, isError: collectionError, refetch } = useCollection(userId) as any;
   const updateMutation = useUpdateCollectionItem(userId);
   const [acquiredItem, setAcquiredItem] = useState<CollectionItemWithMovie | null>(null);
   const router = useRouter();
@@ -186,7 +186,8 @@ export default function HomeScreen() {
     }
   };
 
-  if (authLoading || (userId && collectionLoading)) {
+  // 1. Loading State (Auth or Collection)
+  if (authLoading || (userId && collectionLoading && !collectionError)) {
     return (
       <View className="flex-1 bg-neutral-950 items-center justify-center">
         <TrackingLoader />
@@ -194,6 +195,7 @@ export default function HomeScreen() {
     );
   }
 
+  // 2. Auth Required / Captcha State
   if (!userId) {
     if (showCaptcha) {
       return (
@@ -257,6 +259,27 @@ export default function HomeScreen() {
             <Text className="text-amber-500 font-mono font-bold text-lg">RETRY VERIFICATION</Text>
           </Pressable>
         )}
+      </View>
+    );
+  }
+
+  // 3. Collection Load Error State
+  if (collectionError) {
+    return (
+      <View className="flex-1 bg-neutral-950 items-center justify-center p-6">
+        <Text className="text-red-500 font-mono text-xl mb-4">COLLECTION ERROR</Text>
+        <Text className="text-white/60 font-mono text-sm text-center px-8 mb-8">
+          We couldn't retrieve your collection. Check your connection.
+        </Text>
+        <Pressable
+          onPress={() => {
+            playSound('click');
+            if (refetch) refetch();
+          }}
+          className="bg-neutral-900 border border-neutral-800 rounded-full py-4 px-10"
+        >
+          <Text className="text-amber-500 font-mono font-bold text-lg">RETRY FETCH</Text>
+        </Pressable>
       </View>
     );
   }

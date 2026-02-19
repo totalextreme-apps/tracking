@@ -8,29 +8,52 @@ export function useCollection(userId: string | undefined) {
   return useQuery({
     queryKey: ['collection', userId],
     queryFn: async () => {
-      // Create a timeout promise
+      // 1. Handle Mock User (Instant Return)
+      if (userId === 'dev-mock-user-id') {
+        console.log('Returning MOCK COLLECTION for dev user');
+        return [
+          {
+            id: 'mock-1',
+            user_id: 'dev-mock-user-id',
+            movie_id: 'mock-movie-1',
+            format: 'VHS',
+            status: 'owned',
+            is_on_display: true,
+            is_grail: true,
+            created_at: new Date().toISOString(),
+            movies: {
+              id: 'mock-movie-1',
+              title: '[DEV] ROBOT JOCK (MOCK)',
+              poster_path: '/poster.jpg',
+              backdrop_path: '/backdrop.jpg',
+              release_date: '1989-01-01',
+              genres: [{ id: 1, name: 'Sci-Fi' }]
+            }
+          }
+        ] as any;
+      }
+
+      // 2. Real Supabase Fetch with Timeout
       const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Collection fetch timed out')), 8000)
       );
 
-      // Create the Supabase promise
       const supabasePromise = supabase
         .from('collection_items')
         .select(`*, movies (*)`)
         .eq('user_id', userId!)
         .order('created_at', { ascending: false });
 
-      // Race them
-      // @ts-ignore
       const { data, error } = await Promise.race([
         supabasePromise.then(res => res),
         timeoutPromise
-      ]);
+      ]) as any;
 
       if (error) throw error;
       return data as CollectionItemWithMovie[];
     },
     enabled: !!userId,
+    retry: false, // Don't hang in a retry loop if network is flaky
   });
 }
 
