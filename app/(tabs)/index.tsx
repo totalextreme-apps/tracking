@@ -24,7 +24,7 @@ import { Modal } from 'react-native';
 import ViewShot from 'react-native-view-shot';
 
 export default function HomeScreen() {
-  const { userId, isLoading: authLoading, showCaptcha, setShowCaptcha, onCaptchaSuccess } = useAuth();
+  const { userId, isLoading: authLoading, authPhase, showCaptcha, setShowCaptcha, onCaptchaSuccess } = useAuth();
   const { thriftMode } = useThriftMode();
   const { playSound } = useSound();
   // Ensure refetch is destructured
@@ -243,7 +243,7 @@ export default function HomeScreen() {
       );
     }
 
-    const loadingLabel = authLoading ? "AUTH SYNC" : "LOADING STACKS";
+    const loadingLabel = authLoading ? `AUTH SYNC (${authPhase})` : "LOADING STACKS";
 
     return (
       <View className="flex-1 bg-neutral-950 items-center justify-center">

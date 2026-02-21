@@ -6,6 +6,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 type AuthContextType = {
   userId: string | undefined;
   isLoading: boolean;
+  authPhase: string;
   session: Session | null;
   showCaptcha: boolean;
   setShowCaptcha: (show: boolean) => void;
@@ -19,6 +20,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userId, setUserId] = useState<string | undefined>();
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [authPhase, setAuthPhase] = useState('INIT');
   const [showCaptcha, setShowCaptcha] = useState(false);
   const [pendingCaptchaCallback, setPendingCaptchaCallback] = useState<((token: string) => void) | null>(null);
 
@@ -32,28 +34,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const timeoutId = setTimeout(() => {
       if (!isFinished.current) {
         console.warn('Auth check timed out, forcing load completion');
+        setAuthPhase('TIMED_OUT');
         isFinished.current = true;
         setIsLoading(false);
       }
-    }, 3000);
+    }, 5000); // 5 seconds for slow web sessions
 
     const initAuth = async () => {
+      setAuthPhase('GET_SESSION');
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (isFinished.current) return;
 
+        setAuthPhase('SESSION_RECEIVED');
         if (session?.user?.id) {
           setUserId(session.user.id);
           setSession(session);
+          setAuthPhase('AUTHENTICATED');
         } else {
           // If no session, show CAPTCHA before signing in (Initial anonymous load)
+          setAuthPhase('REQUIRE_CAPTCHA');
           setShowCaptcha(true);
         }
       } catch (e) {
         console.error('Auth Init Error', e);
+        setAuthPhase('ERROR');
       } finally {
-        setIsLoading(false);
-        clearTimeout(timeoutId);
+        if (!isFinished.current) {
+          isFinished.current = true;
+          setIsLoading(false);
+          clearTimeout(timeoutId);
+        }
       }
     };
 
@@ -141,6 +152,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     <AuthContext.Provider value={{
       userId,
       isLoading,
+      authPhase,
       session,
       showCaptcha,
       setShowCaptcha,
