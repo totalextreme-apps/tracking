@@ -6,11 +6,13 @@ import '../global.css';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
+import { Platform, View, useWindowDimensions } from 'react-native';
 import 'react-native-reanimated';
 
+import { DesktopBlocker } from '@/components/DesktopBlocker';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { StaticOverlay } from '@/components/StaticOverlay';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -18,7 +20,6 @@ import { AuthProvider } from '@/context/AuthContext';
 import { SettingsProvider, useSettings } from '@/context/SettingsContext';
 import { SoundProvider } from '@/context/SoundContext';
 import { ThriftModeProvider } from '@/context/ThriftModeContext';
-import { usePathname } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 export {
@@ -31,61 +32,27 @@ export const unstable_settings = {
   initialRouteName: '(tabs)',
 };
 
-import { DesktopBlocker } from '@/components/DesktopBlocker';
-import { Platform, useWindowDimensions } from 'react-native';
-
 export default function RootLayout() {
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
     ...FontAwesome.font,
   });
 
-  const { width } = useWindowDimensions();
-  const [isDesktop, setIsDesktop] = useState(false);
-  const [hasHydrated, setHasHydrated] = useState(false);
-
-  const checkIsDesktop = (currentWidth: number) => {
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      const ua = navigator.userAgent;
-      const isMobileUA = /iPhone|iPad|iPod|Android|BlackBerry|IEMobile|Opera Mini/i.test(ua);
-      const isIPad = /iPad/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-      return !isMobileUA && !isIPad && currentWidth > 900;
+  useEffect(() => {
+    if (error) {
+      console.error('Font Load Error:', error);
     }
-    return false;
-  };
-
-  useEffect(() => {
-    setHasHydrated(true);
-    if (typeof window !== 'undefined') {
-      setIsDesktop(checkIsDesktop(window.innerWidth));
-    }
-  }, []);
-
-  useEffect(() => {
-    SplashScreen.preventAutoHideAsync();
-  }, []);
-
-  useEffect(() => {
-    if (error) throw error;
   }, [error]);
 
   useEffect(() => {
-    if (loaded && hasHydrated) {
-      SplashScreen.hideAsync();
+    if (loaded) {
+      SplashScreen.hideAsync().catch(() => { });
     }
-  }, [loaded, hasHydrated]);
+  }, [loaded]);
 
-  useEffect(() => {
-    if (!hasHydrated || Platform.OS !== 'web') return;
-    setIsDesktop(checkIsDesktop(width));
-  }, [width, hasHydrated]);
-
-  if (!loaded || !hasHydrated) {
-    return null;
-  }
-
-  if (isDesktop) {
-    return <DesktopBlocker />;
+  if (!loaded) {
+    // Return a black screen during font loading to avoid white flash
+    return <View style={{ flex: 1, backgroundColor: '#000' }} />;
   }
 
   return (
@@ -100,6 +67,23 @@ function RootLayoutNav() {
   const pathname = usePathname();
   const [showStatic, setShowStatic] = useState(false);
   const { staticEnabled, onboardingKey } = useSettings();
+  const { width } = useWindowDimensions();
+  const [isDesktop, setIsDesktop] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+
+    const checkIsDesktop = () => {
+      if (Platform.OS !== 'web') return false;
+      const ua = navigator.userAgent;
+      const isMobileUA = /iPhone|iPad|iPod|Android|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+      const isIPad = /iPad/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      return !isMobileUA && !isIPad && window.innerWidth > 900;
+    };
+
+    setIsDesktop(checkIsDesktop());
+  }, [width]);
 
   useEffect(() => {
     // Trigger static on route change IF enabled
@@ -110,10 +94,14 @@ function RootLayoutNav() {
       }, 400); // 400ms static burst
       return () => clearTimeout(timer);
     } else {
-      // Force it off if static is disabled (handles toggle during effect)
       setShowStatic(false);
     }
   }, [pathname, staticEnabled]);
+
+  // If we are on desktop web, show the blocker
+  if (Platform.OS === 'web' && isMounted && isDesktop) {
+    return <DesktopBlocker />;
+  }
 
   return (
     <PersistQueryClientProvider
