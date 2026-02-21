@@ -1,7 +1,7 @@
 import { CaptchaModal } from '@/components/CaptchaModal';
 import { supabase } from '@/lib/supabase';
 import { Session } from '@supabase/supabase-js';
-import React, { createContext, useContext, useEffect, useLayoutEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 
 type AuthContextType = {
   userId: string | undefined;
@@ -20,20 +20,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userId, setUserId] = useState<string | undefined>();
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [authPhase, setAuthPhase] = useState('BOOTING');
+  const [authPhase, setAuthPhase] = useState('INITIALIZING');
   const [showCaptcha, setShowCaptcha] = useState(false);
   const [pendingCaptchaCallback, setPendingCaptchaCallback] = useState<((token: string) => void) | null>(null);
 
   useEffect(() => {
     console.log('AuthProvider State:', { userId, session: !!session, showCaptcha, isLoading });
   }, [userId, session, showCaptcha, isLoading]);
-
-  useLayoutEffect(() => {
-    // Immediate phase update to ensure we move past BOOTING even before useEffect fires
-    if (authPhase === 'BOOTING') {
-      setAuthPhase('INITIALIZING');
-    }
-  }, []);
 
   useEffect(() => {
     console.log('[DEBUG] AuthProvider Mounting...');

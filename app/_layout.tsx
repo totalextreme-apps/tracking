@@ -44,8 +44,21 @@ export default function RootLayout() {
   const [isDesktop, setIsDesktop] = useState(false);
   const [hasHydrated, setHasHydrated] = useState(false);
 
+  const checkIsDesktop = (currentWidth: number) => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const ua = navigator.userAgent;
+      const isMobileUA = /iPhone|iPad|iPod|Android|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+      const isIPad = /iPad/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      return !isMobileUA && !isIPad && currentWidth > 900;
+    }
+    return false;
+  };
+
   useEffect(() => {
     setHasHydrated(true);
+    if (typeof window !== 'undefined') {
+      setIsDesktop(checkIsDesktop(window.innerWidth));
+    }
   }, []);
 
   useEffect(() => {
@@ -57,35 +70,21 @@ export default function RootLayout() {
   }, [error]);
 
   useEffect(() => {
-    if (loaded) {
+    if (loaded && hasHydrated) {
       SplashScreen.hideAsync();
     }
-  }, [loaded]);
+  }, [loaded, hasHydrated]);
 
   useEffect(() => {
-    if (__DEV__) {
-      setIsDesktop(false);
-      return;
-    }
+    if (!hasHydrated || Platform.OS !== 'web') return;
+    setIsDesktop(checkIsDesktop(width));
+  }, [width, hasHydrated]);
 
-    if (Platform.OS === 'web') {
-      const ua = navigator.userAgent;
-      const isMobileUA = /iPhone|iPad|iPod|Android|BlackBerry|IEMobile|Opera Mini/i.test(ua);
-      const isIPad = /iPad/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-
-      if (isMobileUA || isIPad) {
-        setIsDesktop(false);
-      } else {
-        setIsDesktop(width > 900);
-      }
-    }
-  }, [width]);
-
-  if (!loaded) {
+  if (!loaded || !hasHydrated) {
     return null;
   }
 
-  if (hasHydrated && isDesktop) {
+  if (isDesktop) {
     return <DesktopBlocker />;
   }
 
@@ -143,4 +142,3 @@ function RootLayoutNav() {
     </PersistQueryClientProvider>
   );
 }
-
