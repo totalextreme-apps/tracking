@@ -43,6 +43,7 @@ export default function RootLayout() {
 
   const { width } = useWindowDimensions();
   const [isDesktop, setIsDesktop] = useState(() => {
+    if (__DEV__) return false; // Always allow in dev mode
     if (Platform.OS !== 'web') return false;
     if (typeof window === 'undefined') return false;
     const ua = navigator.userAgent;
@@ -71,6 +72,11 @@ export default function RootLayout() {
   }, [loaded]);
 
   useEffect(() => {
+    if (__DEV__) {
+      setIsDesktop(false);
+      return;
+    }
+
     if (Platform.OS === 'web') {
       const ua = navigator.userAgent;
       const isMobileUA = /iPhone|iPad|iPod|Android|BlackBerry|IEMobile|Opera Mini/i.test(ua);

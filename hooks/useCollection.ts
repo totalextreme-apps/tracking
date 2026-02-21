@@ -8,32 +8,9 @@ export function useCollection(userId: string | undefined) {
   return useQuery({
     queryKey: ['collection', userId],
     queryFn: async () => {
-      // 1. Handle Mock User (Instant Return)
-      if (userId === 'dev-mock-user-id') {
-        console.log('Returning MOCK COLLECTION for dev user');
-        return [
-          {
-            id: 'mock-1',
-            user_id: 'dev-mock-user-id',
-            movie_id: 'mock-movie-1',
-            format: 'VHS',
-            status: 'owned',
-            is_on_display: true,
-            is_grail: true,
-            created_at: new Date().toISOString(),
-            movies: {
-              id: 'mock-movie-1',
-              title: '[DEV] ROBOT JOCK (MOCK)',
-              poster_path: '/poster.jpg',
-              backdrop_path: '/backdrop.jpg',
-              release_date: '1989-01-01',
-              genres: [{ id: 1, name: 'Sci-Fi' }]
-            }
-          }
-        ] as any;
-      }
+      if (!userId) return [];
 
-      // 2. Real Supabase Fetch with Timeout
+      // Try Real Supabase Fetch with Timeout
       const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Collection fetch timed out')), 6000)
       );
@@ -41,19 +18,56 @@ export function useCollection(userId: string | undefined) {
       const supabasePromise = supabase
         .from('collection_items')
         .select(`*, movies (*)`)
-        .eq('user_id', userId!)
+        .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
-      const { data, error } = await Promise.race([
-        supabasePromise.then(res => res),
-        timeoutPromise
-      ]) as any;
+      try {
+        const { data, error } = await Promise.race([
+          supabasePromise,
+          timeoutPromise
+        ]) as any;
 
-      if (error) throw error;
-      return data as CollectionItemWithMovie[];
+        if (error) throw error;
+
+        // If we have real data, return it
+        if (data && data.length > 0) return data as CollectionItemWithMovie[];
+
+        // Fallback to Mock User (if it's the mock ID and DB is empty)
+        if (userId === '00000000-0000-0000-0000-000000000000') {
+          console.log('Returning MOCK COLLECTION for empty dev user');
+          return [
+            {
+              id: 'mock-1',
+              user_id: '00000000-0000-0000-0000-000000000000',
+              movie_id: 'mock-movie-1',
+              format: 'VHS',
+              status: 'owned',
+              is_on_display: true,
+              is_grail: true,
+              created_at: new Date().toISOString(),
+              movies: {
+                id: 'mock-movie-1',
+                title: '[DEV] ROBOT JOCK (MOCK)',
+                poster_path: '/poster.jpg',
+                backdrop_path: '/backdrop.jpg',
+                release_date: '1989-01-01',
+                genres: [{ id: 1, name: 'Sci-Fi' }]
+              }
+            }
+          ] as any;
+        }
+
+        return [] as CollectionItemWithMovie[];
+      } catch (e) {
+        console.error('Fetch error:', e);
+        // Fallback for mock user if network is dead
+        if (userId === '00000000-0000-0000-0000-000000000000') {
+          return [{ id: 'mock-offline', movies: { title: 'OFFLINE MOCK' } }] as any;
+        }
+        throw e;
+      }
     },
     enabled: !!userId,
-    retry: false, // Don't hang in a retry loop if network is flaky
   });
 }
 
@@ -72,26 +86,30 @@ export function useAddToCollection(userId: string | undefined) {
       status?: 'owned' | 'wishlist';
       edition?: string | null;
     }) => {
-      if (!userId) throw new Error('Not authenticated');
+      if (!userId) {
+        console.error('useAddToCollection: No userId provided');
+        throw new Error('Not authenticated');
+      }
+
+      console.log('useAddToCollection: Starting for user', userId);
 
       let movieData = tmdbMovie;
       if (!movieData.genres) {
         try {
           movieData = await getMovieById(tmdbMovie.id);
         } catch (e) {
-          console.log('Failed to fetch full movie details', e);
+          console.warn('Failed to fetch full movie details', e);
         }
       }
 
-      const moviePayload = {
+      const moviePayload: any = {
         tmdb_id: movieData.id,
         title: movieData.title,
         poster_path: movieData.poster_path,
         backdrop_path: movieData.backdrop_path,
         release_date: movieData.release_date,
-        primary_color: null,
         genres: movieData.genres ?? null,
-        cast: (movieData as any).credits?.cast?.slice(0, 10).map((c: any) => ({
+        movie_cast: (movieData as any).credits?.cast?.slice(0, 10).map((c: any) => ({
           id: c.id,
           name: c.name,
           character: c.character,
@@ -99,16 +117,15 @@ export function useAddToCollection(userId: string | undefined) {
         })) ?? null,
       };
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: movieRow, error: movieError } = await (supabase as any)
+      const { data: movieRow, error: movieError } = await supabase
         .from('movies')
         .upsert(moviePayload, { onConflict: 'tmdb_id' })
         .select('id')
         .single();
 
       if (movieError) throw movieError;
-      const movieId = movieRow.id;
 
+      const movieId = (movieRow as any).id;
       const itemsToInsert = formats.map((format) => ({
         user_id: userId,
         movie_id: movieId,
@@ -117,12 +134,17 @@ export function useAddToCollection(userId: string | undefined) {
         edition: edition || null,
       }));
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error: itemError } = await (supabase as any)
+      console.log('useAddToCollection: Inserting collection items:', itemsToInsert.length);
+      const { error: itemError } = await supabase
         .from('collection_items')
-        .insert(itemsToInsert);
+        .insert(itemsToInsert as any);
 
-      if (itemError) throw itemError;
+      if (itemError) {
+        console.error('useAddToCollection: Item insert error:', itemError);
+        throw itemError;
+      }
+
+      console.log('useAddToCollection: All steps successful!');
       return { movieId };
     },
     onSuccess: () => {
@@ -147,6 +169,7 @@ export function useUpdateCollectionItem(userId: string | undefined) {
         rating?: number;
         notes?: string;
         edition?: string | null;
+        custom_poster_url?: string | null;
       };
     }) => {
       if (!userId) throw new Error('Not authenticated');
@@ -224,7 +247,7 @@ export function useRefreshLibrary(userId: string | undefined) {
           // Fetch from TMDB with credits
           const movieData = await getMovieById(tmdbId);
 
-          const cast = (movieData as any).credits?.cast?.slice(0, 10).map((c: any) => ({
+          const movie_cast = (movieData as any).credits?.cast?.slice(0, 10).map((c: any) => ({
             id: c.id,
             name: c.name,
             character: c.character,
@@ -235,7 +258,7 @@ export function useRefreshLibrary(userId: string | undefined) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           await (supabase as any)
             .from('movies')
-            .update({ cast })
+            .update({ movie_cast })
             .eq('tmdb_id', tmdbId);
 
         } catch (e) {

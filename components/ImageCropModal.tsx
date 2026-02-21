@@ -13,10 +13,12 @@ interface ImageCropModalProps {
     imageUri: string;
     onClose: () => void;
     onSave: (croppedDataUrl: string) => void;
+    targetRatio?: number; // width / height
 }
 
-export function ImageCropModal({ visible, imageUri, onClose, onSave }: ImageCropModalProps) {
+export function ImageCropModal({ visible, imageUri, onClose, onSave, targetRatio = 2 / 3 }: ImageCropModalProps) {
     const [loading, setLoading] = useState(false);
+    const previewHeight = PREVIEW_WIDTH / targetRatio;
 
     const handleSave = async () => {
         if (Platform.OS !== 'web') {
@@ -30,11 +32,11 @@ export function ImageCropModal({ visible, imageUri, onClose, onSave }: ImageCrop
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
         try {
-            const croppedUri = await cropToRatio(imageUri, 2 / 3);
-            onSave(croppedUri);
+            const croppedUri = await cropToRatio(imageUri, targetRatio);
+            await onSave(croppedUri);
         } catch (e) {
             console.error('Failed to crop image:', e);
-            onSave(imageUri); // Fall back to original
+            await onSave(imageUri); // Fall back to original
         } finally {
             setLoading(false);
         }
@@ -55,7 +57,7 @@ export function ImageCropModal({ visible, imageUri, onClose, onSave }: ImageCrop
 
                     <View
                         className="bg-neutral-800 rounded-lg overflow-hidden mb-4 self-center"
-                        style={{ width: PREVIEW_WIDTH, height: PREVIEW_HEIGHT }}
+                        style={{ width: PREVIEW_WIDTH, height: previewHeight }}
                     >
                         <Image
                             source={{ uri: imageUri }}
@@ -65,7 +67,7 @@ export function ImageCropModal({ visible, imageUri, onClose, onSave }: ImageCrop
                     </View>
 
                     <Text className="text-neutral-500 font-mono text-xs text-center mb-4">
-                        Image will be cropped to 2:3 poster ratio
+                        Image will be cropped to match active format ratio
                     </Text>
 
                     <View className="flex-row gap-3">

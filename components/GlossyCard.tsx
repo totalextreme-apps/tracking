@@ -7,9 +7,10 @@ type GlossyCardProps = {
     posterUrl: string | null;
     format: MovieFormat;
     style?: any;
+    isCustom?: boolean;
 };
 
-export function GlossyCard({ posterUrl, format, style }: GlossyCardProps) {
+export function GlossyCard({ posterUrl, format, style, isCustom = false }: GlossyCardProps) {
     // Overlays for specific formats
     const overlaySource =
         format === 'DVD' ? require('@/assets/images/overlays/dvd-wrap.png') :
@@ -33,10 +34,22 @@ export function GlossyCard({ posterUrl, format, style }: GlossyCardProps) {
     // But let's keep it if format is Digital? GlossyCard is for physical.
     // Digital uses StackCard's digital view.
 
+    const isBluRay = format === 'BluRay' || format === '4K';
+    const aspectRatio = isCustom ? (isBluRay ? 0.78 : 0.71) : 2 / 3;
+
     return (
         <View
-            className="relative aspect-[2/3] rounded-sm overflow-hidden shadow-lg bg-neutral-900"
-            style={[{ shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 3 }, style]}
+            className="relative rounded-sm overflow-hidden shadow-lg bg-neutral-900"
+            style={[
+                {
+                    aspectRatio,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.3,
+                    shadowRadius: 3
+                },
+                style
+            ]}
         >
             {/* Layer 1: Poster */}
             {/* If overlay exists, we might need to inset the poster slightly to fit inside the case? 

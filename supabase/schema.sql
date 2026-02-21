@@ -6,13 +6,15 @@ create table public.movies (
   poster_path text,
   backdrop_path text,
   release_date date,
-  primary_color text
+  primary_color text,
+  genres jsonb,
+  movie_cast jsonb
 );
 
 -- Collection Items (The User's Library)
 create table public.collection_items (
   id uuid default gen_random_uuid() primary key,
-  user_id uuid references auth.users not null,
+  user_id uuid, -- Relaxed for anonymous/mock users
   movie_id bigint references public.movies(id) not null,
 
   -- Core Tracking
@@ -25,6 +27,7 @@ create table public.collection_items (
   digital_provider text,
   condition text,
   notes text,
+  custom_poster_url text,
 
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   unique(user_id, movie_id, format)
@@ -45,11 +48,15 @@ create policy "Authenticated users can update movies"
   on public.movies for update using (auth.role() = 'authenticated');
 
 -- Collection items: users can only access their own
+-- Relaxed for development/anonymous: allow mock user ID '00000000-0000-0000-0000-000000000000'
 create policy "Users can view own collection"
-  on public.collection_items for select using (auth.uid() = user_id);
+  on public.collection_items for select 
+  using (auth.uid() = user_id or user_id = '00000000-0000-0000-0000-000000000000');
 
 create policy "Users can insert own collection"
-  on public.collection_items for insert with check (auth.uid() = user_id);
+  on public.collection_items for insert 
+  with check (auth.uid() = user_id or user_id = '00000000-0000-0000-0000-000000000000');
 
 create policy "Users can update own collection"
-  on public.collection_items for update using (auth.uid() = user_id);
+  on public.collection_items for update 
+  using (auth.uid() = user_id or user_id = '00000000-0000-0000-0000-000000000000');

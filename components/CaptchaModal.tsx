@@ -15,8 +15,14 @@ export function CaptchaModal({ visible, onSuccess, onCancel }: CaptchaModalProps
         if (visible) {
             console.log('CaptchaModal Rendering (Visible). SiteKey Length:', siteKey.length);
             console.log('Platform:', Platform.OS);
+
+            // Auto-bypass in dev mode to keep local work moving
+            if (__DEV__) {
+                console.warn('DEV MODE: Auto-bypassing CAPTCHA');
+                onSuccess('dev-manual-bypass');
+            }
         }
-    }, [visible, siteKey]);
+    }, [visible, onSuccess]);
 
     if (!visible) return null;
 

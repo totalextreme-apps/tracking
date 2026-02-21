@@ -100,8 +100,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         console.warn('Anonymous sign-in without token failed, falling back to mock session for UI testing');
         // Fallback: MOCK session for UI testing if backend enforces CAPTCHA
-        setUserId('dev-mock-user-id');
-        setSession({ user: { id: 'dev-mock-user-id', is_anonymous: true } } as any);
+        setUserId('00000000-0000-0000-0000-000000000000');
+        setSession({ user: { id: '00000000-0000-0000-0000-000000000000', is_anonymous: true } } as any);
         setShowCaptcha(false);
         setIsLoading(false);
         return;

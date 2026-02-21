@@ -139,19 +139,25 @@ export default function AddScreen() {
 
   const handleAdd = async () => {
     if (!selectedMovie) return;
+    console.log('handleAdd called with:', selectedMovie.title);
+
     if (!userId) {
+      console.log('No userId found');
       Alert.alert(
         'Not signed in',
         'Anonymous sign-in is required. Enable it in Supabase Dashboard → Auth → Providers.'
       );
       return;
     }
+
     if (selectedFormats.length === 0) {
+      console.log('No formats selected');
       Alert.alert('No format selected', 'Please select at least one format (DVD, VHS, etc).');
       return;
     }
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    console.log('Invoking addMutation...');
     try {
       await addMutation.mutateAsync({
         tmdbMovie: selectedMovie,
@@ -159,10 +165,12 @@ export default function AddScreen() {
         status,
         edition: edition.trim() || null,
       });
+      console.log('Add success!');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.back();
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
+    } catch (e: any) {
+      console.error('Add individual/bulk error:', e);
+      const msg = e.message || String(e);
       // Check for uniqueness violation (Supabase error 23505)
       if (msg.includes('duplicate key') || msg.includes('unique constraint')) {
         Alert.alert('Already in collection', `You might already have ${selectedMovie.title} on one of these formats.`);

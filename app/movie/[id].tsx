@@ -16,7 +16,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useSound } from '@/context/SoundContext';
 import { useThriftMode } from '@/context/ThriftModeContext';
 import { useAddToCollection, useCollection, useDeleteCollectionItem, useUpdateCollectionItem } from '@/hooks/useCollection';
-import { deleteCustomArt, getCustomArt, saveCustomArt } from '@/lib/custom-art-storage';
+import { uploadToCloudinary } from '@/lib/cloudinary';
 import { getBackdropUrl, getPosterUrl } from '@/lib/dummy-data';
 import { compressImage } from '@/lib/image-utils';
 import { getMovieById } from '@/lib/tmdb';
@@ -67,10 +67,10 @@ export default function MovieDetailScreen() {
 
     const movieId = typeof id === 'string' ? parseInt(id, 10) : undefined;
 
-    const movieItems = collection?.filter(item => item.movie_id === movieId) ?? [];
+    const movieItems = collection?.filter((item: any) => item.movie_id === movieId) ?? [];
     const movie = movieItems[0]?.movies;
 
-    console.log('Movie items count:', movieItems.length, 'Formats:', movieItems.map(i => i.format));
+    console.log('Movie items count:', movieItems.length, 'Formats:', movieItems.map((i: any) => i.format));
 
     const [persistedMovie, setPersistedMovie] = useState<any>(null);
 
@@ -89,17 +89,8 @@ export default function MovieDetailScreen() {
         enabled: !!activeMovie?.tmdb_id,
     });
 
-    // Load custom art from IndexedDB
-    useQuery({
-        queryKey: ['custom-art', movieItems[0]?.id],
-        queryFn: async () => {
-            if (!movieItems[0]?.id) return null;
-            const artUri = await getCustomArt(movieItems[0].id);
-            setCustomArtUri(artUri);
-            return artUri;
-        },
-        enabled: !!movieItems[0]?.id && Platform.OS === 'web',
-    });
+    // Load custom art from ANY collection item for this movie
+    const customArtUrl = movieItems.find((i: any) => i.custom_poster_url)?.custom_poster_url;
 
     const handleUploadCustomArt = async () => {
         console.log('Upload custom art clicked', Platform.OS);
@@ -152,37 +143,54 @@ export default function MovieDetailScreen() {
     };
 
     const handleSaveCustomArt = async (croppedDataUrl: string) => {
-        if (!movieItems[0]?.id) return;
+        if (!movieItems[0]?.id) {
+            Alert.alert('Error', 'No collection item found to attach this cover to.');
+            return;
+        }
+        console.log('Starting custom art save process...');
 
         try {
             // Convert data URL to Blob
+            console.log('Converting data URL to blob...');
             const response = await fetch(croppedDataUrl);
             const blob = await response.blob();
 
             // Compress
-            const compressedBlob = await compressImage(blob, 400, 0.85);
+            console.log('Compressing image...');
+            const compressedBlob = await compressImage(blob, 1000, 0.8);
 
-            // Save to IndexedDB
-            await saveCustomArt(movieItems[0].id, compressedBlob);
+            // Upload to Cloudinary
+            console.log('Uploading to Cloudinary...');
+            const uploadUrl = await uploadToCloudinary(compressedBlob);
+            console.log('Cloudinary upload success:', uploadUrl);
+
+            // Save to Supabase
+            console.log('Saving URL to Supabase...');
+            await updateMutation.mutateAsync({
+                itemId: movieItems[0].id,
+                updates: { custom_poster_url: uploadUrl }
+            });
 
             // Update UI
-            setCustomArtUri(croppedDataUrl);
             setCropModalVisible(false);
             setPendingImageUri(null);
 
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        } catch (e) {
+            console.log('Custom art save complete!');
+        } catch (e: any) {
             console.error('Failed to save custom art:', e);
-            Alert.alert('Error', 'Failed to save custom cover art');
+            Alert.alert('Error', `Failed to save custom cover art: ${e.message || 'Unknown error'}`);
         }
     };
 
     const handleRemoveCustomArt = async () => {
         if (!movieItems[0]?.id) return;
 
-        const confirmRemove = () => {
-            deleteCustomArt(movieItems[0].id);
-            setCustomArtUri(null);
+        const confirmRemove = async () => {
+            await updateMutation.mutateAsync({
+                itemId: movieItems[0].id,
+                updates: { custom_poster_url: null }
+            });
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         };
 
@@ -216,19 +224,19 @@ export default function MovieDetailScreen() {
     const backdropUrl = getBackdropUrl(displayMovie.backdrop_path);
     const posterUrl = getPosterUrl(displayMovie.poster_path);
 
-    const ownedFormats = movieItems.map(i => i.format);
-    const isGrail = movieItems.some(i => i.is_grail);
-    const isWishlist = movieItems.every(i => i.status === 'wishlist');
+    const ownedFormats = movieItems.map((i: any) => i.format);
+    const isGrail = movieItems.some((i: any) => i.is_grail);
+    const isWishlist = movieItems.every((i: any) => i.status === 'wishlist');
 
     // Logic to toggle format
     const toggleFormat = async (format: MovieFormat) => {
         await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        const existingItems = movieItems.filter(i => i.format === format);
+        const existingItems = movieItems.filter((i: any) => i.format === format);
 
         try {
             if (existingItems.length > 0) {
                 // Remove format (handle duplicates)
-                await Promise.all(existingItems.map(i => deleteMutation.mutateAsync(i.id)));
+                await Promise.all(existingItems.map((i: any) => deleteMutation.mutateAsync(i.id)));
             } else {
                 // Add format
                 await addMutation.mutateAsync({
@@ -261,7 +269,7 @@ export default function MovieDetailScreen() {
     const handleConfirmAddFormat = async () => {
         if (!pendingFormat || !activeMovie) return;
 
-        const isDuplicate = movieItems.some(item => item.format === pendingFormat);
+        const isDuplicate = movieItems.some((item: any) => item.format === pendingFormat);
 
         // Validate: Edition required if duplicate
         if (isDuplicate && !editionInput.trim()) {
@@ -311,7 +319,7 @@ export default function MovieDetailScreen() {
         setSelectedFormat(fmt);
     };
 
-    const existingFormatItem = movieItems.find(i => i.format === selectedFormat);
+    const existingFormatItem = movieItems.find((i: any) => i.format === selectedFormat);
 
     const toggleGrail = async () => {
         // Toggle grail for ALL items of this movie? Or just the "top" one?
@@ -320,7 +328,7 @@ export default function MovieDetailScreen() {
         // Let's set it on all items for this movie.
         try {
             const newGrail = !isGrail;
-            await Promise.all(movieItems.map(item =>
+            await Promise.all(movieItems.map((item: any) =>
                 updateMutation.mutateAsync({ itemId: item.id, updates: { is_grail: newGrail } })
             ));
         } catch (e) {
@@ -340,7 +348,7 @@ export default function MovieDetailScreen() {
                 // Visual delay for sound/animation
                 await new Promise(resolve => setTimeout(resolve, 2000)); // 2s eject time
 
-                await Promise.all(movieItems.map(item => deleteMutation.mutateAsync(item.id)));
+                await Promise.all(movieItems.map((item: any) => deleteMutation.mutateAsync(item.id)));
                 if (refetch) refetch();
 
                 // Navigate back after eject
@@ -406,29 +414,26 @@ export default function MovieDetailScreen() {
                 <View className="px-5 -mt-24">
                     <View className="flex-row items-end">
                         {/* Poster */}
-                        <View className="w-32 h-48 rounded-lg shadow-xl relative" style={{ elevation: 10, shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 10 }}>
+                        <View className="w-32 rounded-lg shadow-xl relative" style={{ elevation: 10, shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 10 }}>
                             {(() => {
-                                // Use custom art if available, otherwise show format-specific preview
-                                if (customArtUri && Platform.OS === 'web') {
-                                    return <Image source={{ uri: customArtUri }} style={{ width: '100%', height: '100%', borderRadius: 8 }} contentFit="cover" />;
-                                }
-
-                                // Determine active format for preview
-                                // Prefer manually selected preview, otherwise fallback to highest quality owned, otherwise none (default image)
+                                // Determine active format for detection
                                 const availableFormats = ownedFormats.length > 0 ? ownedFormats : null;
                                 let activeFormat = selectedFormat;
-
                                 if (!activeFormat && availableFormats) {
-                                    // Sort by basic priority for default View
-                                    // This is a rough sort.
                                     const priority = ['4K', 'BluRay', 'DVD', 'VHS', 'Digital'];
-                                    activeFormat = availableFormats.sort((a, b) => priority.indexOf(a) - priority.indexOf(b))[0];
+                                    activeFormat = availableFormats.sort((a: any, b: any) => priority.indexOf(a) - priority.indexOf(b))[0];
                                 }
 
-                                if (activeFormat === 'VHS') return <VHSCard posterUrl={posterUrl} style={{ width: '100%', height: '100%' }} />;
-                                if (activeFormat && ['DVD', 'BluRay', '4K'].includes(activeFormat)) return <GlossyCard posterUrl={posterUrl} format={activeFormat as MovieFormat} style={{ width: '100%', height: '100%' }} />;
+                                const finalPosterUrl = customArtUrl || posterUrl;
+                                const isCustom = !!customArtUrl;
 
-                                return <Image source={{ uri: posterUrl ?? undefined }} style={{ width: '100%', height: '100%', borderRadius: 8 }} contentFit="cover" />;
+                                if (activeFormat === 'VHS') return <VHSCard posterUrl={finalPosterUrl} isCustom={isCustom} style={{ width: '100%' }} />;
+                                if (activeFormat && ['DVD', 'BluRay', '4K'].includes(activeFormat)) return <GlossyCard posterUrl={finalPosterUrl} format={activeFormat as MovieFormat} isCustom={isCustom} style={{ width: '100%' }} />;
+
+                                const ratio = isCustom
+                                    ? (activeFormat === 'VHS' ? 2 / 3.5 : (activeFormat === 'BluRay' || activeFormat === '4K') ? 0.78 : 0.71)
+                                    : 2 / 3;
+                                return <Image source={{ uri: finalPosterUrl ?? undefined }} style={{ width: '100%', aspectRatio: ratio, borderRadius: 8 }} contentFit="cover" />;
                             })()}
                         </View>
 
@@ -456,17 +461,17 @@ export default function MovieDetailScreen() {
                         ) : (
                             <Pressable
                                 onPress={async () => {
-                                    const isOnDisplay = movieItems.some(i => i.is_on_display);
-                                    await Promise.all(movieItems.map(item =>
+                                    const isOnDisplay = movieItems.some((i: any) => i.is_on_display);
+                                    await Promise.all(movieItems.map((item: any) =>
                                         updateMutation.mutateAsync({ itemId: item.id, updates: { is_on_display: !isOnDisplay } })
                                     ));
                                     playSound('click');
                                 }}
-                                className={`flex-1 flex-row items-center justify-center p-3 rounded-lg border ${movieItems.some(i => i.is_on_display) ? 'bg-indigo-500/10 border-indigo-500' : 'bg-neutral-900 border-neutral-800'}`}
+                                className={`flex-1 flex-row items-center justify-center p-3 rounded-lg border ${movieItems.some((i: any) => i.is_on_display) ? 'bg-indigo-500/10 border-indigo-500' : 'bg-neutral-900 border-neutral-800'}`}
                             >
-                                <Ionicons name={movieItems.some(i => i.is_on_display) ? "star" : "star-outline"} size={20} color={movieItems.some(i => i.is_on_display) ? "#6366f1" : "#737373"} />
-                                <Text className={`ml-2 font-mono font-bold ${movieItems.some(i => i.is_on_display) ? 'text-indigo-500' : 'text-neutral-500'}`}>
-                                    {movieItems.some(i => i.is_on_display) ? 'STAFF PICK' : 'MAKE STAFF PICK'}
+                                <Ionicons name={movieItems.some((i: any) => i.is_on_display) ? "star" : "star-outline"} size={20} color={movieItems.some((i: any) => i.is_on_display) ? "#6366f1" : "#737373"} />
+                                <Text className={`ml-2 font-mono font-bold ${movieItems.some((i: any) => i.is_on_display) ? 'text-indigo-500' : 'text-neutral-500'}`}>
+                                    {movieItems.some((i: any) => i.is_on_display) ? 'STAFF PICK' : 'MAKE STAFF PICK'}
                                 </Text>
                             </Pressable>
                         )}
@@ -479,8 +484,8 @@ export default function MovieDetailScreen() {
                         </Pressable>
                     </View>
 
-                    {/* Custom Cover Art Section (Web Only) - TEMPORARILY DISABLED */}
-                    {/* {Platform.OS === 'web' && movieItems.length > 0 && (
+                    {/* Custom Cover Art Section */}
+                    {movieItems.length > 0 && (
                         <View className="mt-4 flex-row gap-2">
                             <Pressable
                                 onPress={handleUploadCustomArt}
@@ -488,10 +493,10 @@ export default function MovieDetailScreen() {
                             >
                                 <Ionicons name="image-outline" size={18} color="#f59e0b" />
                                 <Text className="ml-2 font-mono text-xs font-bold text-amber-500">
-                                    {customArtUri ? 'CHANGE COVER' : 'UPLOAD COVER'}
+                                    {customArtUrl ? 'CHANGE COVER' : 'UPLOAD COVER'}
                                 </Text>
                             </Pressable>
-                            {customArtUri && (
+                            {customArtUrl && (
                                 <Pressable
                                     onPress={handleRemoveCustomArt}
                                     className="bg-red-900/20 px-3 py-1 rounded border border-red-900/50 items-center justify-center"
@@ -500,14 +505,14 @@ export default function MovieDetailScreen() {
                                 </Pressable>
                             )}
                         </View>
-                    )} */}
+                    )}
 
                     {/* Cast Section */}
-                    {activeMovie.cast && activeMovie.cast.length > 0 && (
+                    {activeMovie.movie_cast && activeMovie.movie_cast.length > 0 && (
                         <View className="mt-8 mb-2">
                             <Text className="text-white font-bold text-lg mb-3 font-mono">STARRING</Text>
                             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                                {activeMovie.cast.map((member: any) => (
+                                {activeMovie.movie_cast.map((member: any) => (
                                     <View key={member.id} className="mr-4 items-center w-20">
                                         <View className="w-16 h-16 rounded-full overflow-hidden bg-neutral-800 mb-2 border border-neutral-700">
                                             {member.profile_path ? (
@@ -555,7 +560,7 @@ export default function MovieDetailScreen() {
                                             playSound('click');
                                             // Update all formats? Or just the first one?
                                             // Ideally rating is per movie in this app model
-                                            await Promise.all(movieItems.map(item =>
+                                            await Promise.all(movieItems.map((item: any) =>
                                                 updateMutation.mutateAsync({ itemId: item.id, updates: { rating: star } })
                                             ));
                                         }}
@@ -587,7 +592,7 @@ export default function MovieDetailScreen() {
                         ownedFormats.length > 0 && (
                             <View className="mt-6">
                                 <Text className="text-white font-bold mb-2">Format Notes</Text>
-                                {movieItems.map(item => (
+                                {movieItems.map((item: any) => (
                                     <View key={item.id} className="mb-4">
                                         <View className="flex-row items-center mb-2">
                                             <View className={`px-2 py-1 rounded ${FORMAT_COLORS[item.format] || 'bg-neutral-800'}`}>
@@ -650,7 +655,7 @@ export default function MovieDetailScreen() {
                             <View className="mt-8">
                                 <Text className="text-white font-bold mb-3">Owned Formats</Text>
                                 <View className="gap-2">
-                                    {movieItems.map(item => (
+                                    {movieItems.map((item: any) => (
                                         <View key={item.id} className="flex-row items-center justify-between bg-neutral-900 p-3 rounded-lg border border-neutral-800">
                                             <Pressable
                                                 className="flex-row items-center gap-2"
@@ -754,7 +759,7 @@ export default function MovieDetailScreen() {
                     <View className="absolute inset-0 z-[100] bg-[#0000AA] items-center justify-center">
                         {/* Scanlines Effect */}
                         <View className="absolute inset-0 opacity-10">
-                            {Array.from({ length: 100 }).map((_, i) => (
+                            {Array.from({ length: 100 }).map((_: any, i: number) => (
                                 <View key={i} className="h-[2px] w-full bg-black mb-[2px]" />
                             ))}
                         </View>
@@ -783,7 +788,7 @@ export default function MovieDetailScreen() {
                             Add {pendingFormat}
                         </Text>
                         <Text className="text-neutral-400 font-mono text-xs mb-4">
-                            {movieItems.some(i => i.format === pendingFormat)
+                            {movieItems.some((i: any) => i.format === pendingFormat)
                                 ? '⚠️ Edition required (duplicate format)'
                                 : 'Edition optional (e.g., Theatrical, Unrated, Box Set)'}
                         </Text>
@@ -832,6 +837,16 @@ export default function MovieDetailScreen() {
                             setPendingImageUri(null);
                         }}
                         onSave={handleSaveCustomArt}
+                        targetRatio={(() => {
+                            const availableFormats = ownedFormats.length > 0 ? ownedFormats : null;
+                            let activeFormat = selectedFormat;
+                            if (!activeFormat && availableFormats) {
+                                const priority = ['4K', 'BluRay', 'DVD', 'VHS', 'Digital'];
+                                activeFormat = availableFormats.sort((a: any, b: any) => priority.indexOf(a) - priority.indexOf(b))[0];
+                            }
+                            const ratio = activeFormat === 'VHS' ? 2 / 3.5 : (activeFormat === 'BluRay' || activeFormat === '4K') ? 0.78 : 0.71;
+                            return ratio;
+                        })()}
                     />
                 )
             }

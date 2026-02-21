@@ -37,6 +37,7 @@ export interface CollectionItem {
   digital_provider: string | null;
   condition: string | null;
   notes: string | null;
+  custom_poster_url: string | null;
   rating?: number; // 0-5
   created_at: string;
 }
@@ -59,7 +60,9 @@ export interface Database {
           id?: string;
           created_at?: string;
         };
-        Update: Partial<Omit<CollectionItem, 'id' | 'user_id'>>;
+        Update: Partial<Omit<CollectionItem, 'id' | 'user_id'>> & {
+          custom_poster_url?: string | null;
+        };
       };
       profiles: {
         Row: Profile;

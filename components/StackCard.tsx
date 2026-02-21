@@ -1,12 +1,11 @@
 import { useSound } from '@/context/SoundContext';
-import { getCustomArt } from '@/lib/custom-art-storage';
 import { getPosterUrl } from '@/lib/dummy-data';
 import type { CollectionItemWithMovie } from '@/types/database';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import Animated, {
   interpolate,
   useAnimatedStyle,
@@ -133,16 +132,17 @@ export function StackCard({
   const isGrail = topItem.is_grail;
   const isOnDisplay = topItem.is_on_display;
   const tmdbPosterUrl = getPosterUrl(movie.poster_path);
-  const posterUrl = customArtUri || tmdbPosterUrl;
+  const hasCustomPoster = sorted.some(i => !!i.custom_poster_url);
+  const posterUrl = sorted.find(i => !!i.custom_poster_url)?.custom_poster_url || tmdbPosterUrl;
 
-  // Load custom art for top item (web only)
-  useEffect(() => {
-    if (Platform.OS !== 'web' || !topItem) return;
+  // Calculate Aspect Ratio based on Top Item
+  const isBluRay = topItem.format === 'BluRay' || topItem.format === '4K';
 
-    getCustomArt(topItem.id)
-      .then((uri: string | null) => setCustomArtUri(uri))
-      .catch(() => setCustomArtUri(null));
-  }, [topItem.id]);
+  // Use format-specific ratios only for custom covers
+  // Standard posters use 2/3 ratio to prevent cropping
+  const aspectRatio = hasCustomPoster
+    ? (topItem.format === 'VHS' ? 0.57 : isBluRay ? 0.78 : 0.71)
+    : (topItem.format === 'Digital' ? 2 / 3 : 2 / 3); // Digital is already 2/3
 
   const tiltX = useSharedValue(0);
   const tiltY = useSharedValue(0);
@@ -225,7 +225,7 @@ export function StackCard({
         delayLongPress={500}
         style={[{
           width: width,
-          height: height,
+          aspectRatio, // Use dynamic ratio instead of fixed height
           marginBottom: 8,
           flexDirection: 'row',
           alignItems: 'center',
@@ -238,8 +238,12 @@ export function StackCard({
         }, isWishlist ? { opacity: 0.6 } : {}]}
       >
         {/* Thumbnail Section */}
-        <View style={{ height: '100%', aspectRatio: 2 / 3, backgroundColor: '#262626' }}>
-          {posterUrl ? (
+        <View style={{ height: '100%', aspectRatio, backgroundColor: '#262626' }}>
+          {topItem.format === 'VHS' ? (
+            <VHSCard posterUrl={posterUrl} isCustom={!!topItem.custom_poster_url} style={{ width: '100%', height: '100%' }} />
+          ) : ['DVD', 'BluRay', '4K'].includes(topItem.format) ? (
+            <GlossyCard posterUrl={posterUrl} format={topItem.format as any} isCustom={!!topItem.custom_poster_url} style={{ width: '100%', height: '100%' }} />
+          ) : posterUrl ? (
             <Image
               source={{ uri: posterUrl }}
               style={{ width: '100%', height: '100%' }}
@@ -248,20 +252,11 @@ export function StackCard({
           ) : (
             <View className="flex-1 items-center justify-center">
               <Text className="text-neutral-600 text-[10px] font-mono p-1 text-center">
-                {movie.title.substring(0, 4)}
+                {movie.title}
               </Text>
             </View>
           )}
-
-          {isGrail && (
-            <View className="absolute top-0 right-0 p-1 bg-amber-500 rounded-bl">
-              <FontAwesome name="star" size={8} color="black" />
-            </View>
-          )}
         </View>
-
-        {/* Sticker for Digital On Display - hidden in list mode */}
-
         {/* Info Section */}
         <View className="flex-1 px-3 py-1 justify-center">
           <Text className="text-white font-bold text-sm leading-4" numberOfLines={1}>
@@ -276,7 +271,7 @@ export function StackCard({
             {sorted.map(item => (
               <View key={item.id} className="items-center">
                 <View
-                  className={`w-5 h-5 rounded-full items-center justify-center ${FORMAT_COLORS[item.format] || 'bg-neutral-700'}`}
+                  className={`px-1.5 h-4 rounded items-center justify-center ${FORMAT_COLORS[item.format] || 'bg-neutral-700'}`}
                   style={{
                     shadowColor: '#000',
                     shadowOffset: { width: 0, height: 1 },
@@ -287,17 +282,9 @@ export function StackCard({
                     gap: 2
                   }}
                 >
-                  <Text style={{ fontSize: 6, fontWeight: 'bold', color: 'white' }}>
-                    {item.format === '4K' ? '4K' :
-                      item.format === 'BluRay' ? 'BR' :
-                        item.format === 'DVD' ? 'DVD' :
-                          item.format === 'VHS' ? 'VHS' : 'DIG'}
+                  <Text style={{ fontSize: 7, fontWeight: 'bold', color: 'white', fontFamily: 'SpaceMono' }}>
+                    {item.format}
                   </Text>
-                  {item.edition && (
-                    <Text style={{ fontSize: 7, color: 'white', opacity: 0.6 }}>
-                      •
-                    </Text>
-                  )}
                 </View>
               </View>
             ))}
@@ -329,7 +316,7 @@ export function StackCard({
         ]}
       >
         <View className="items-center">
-          <View className="relative" style={{ width: width, height: height + (sorted.length - 1) * stackOffset * 0.5 }}>
+          <View className="relative" style={{ width: width, height: (width / aspectRatio) + (sorted.length - 1) * stackOffset * 0.5 }}>
             {/* Sticker Overlays */}
             {isOnDisplay && !isWishlist && <StickerOverlay visible={isOnDisplay} size={40} />}
             {isGrail && isWishlist && <SaleSticker visible={true} size={40} />}
@@ -382,7 +369,7 @@ export function StackCard({
             {sorted.map((item, idx) => {
               const offset = idx * stackOffset;
               const itemMovie = item.movies!;
-              const url = getPosterUrl(itemMovie.poster_path);
+              const url = item.custom_poster_url || getPosterUrl(itemMovie.poster_path);
               const isVHS = item.format === 'VHS';
               const isDisc = ['DVD', 'BluRay', '4K'].includes(item.format);
 
@@ -396,15 +383,15 @@ export function StackCard({
                 left: offset,
                 top: offset * 0.5,
                 width: width,
-                height: height,
+                height: width / aspectRatio,
                 zIndex: sorted.length - idx,
               };
 
               if (isVHS) {
-                return <VHSCard key={item.id} posterUrl={url} style={itemStyle} />;
+                return <VHSCard key={item.id} posterUrl={url} isCustom={!!item.custom_poster_url} style={itemStyle} />;
               }
               if (isDisc) {
-                return <GlossyCard key={item.id} posterUrl={url} format={item.format} style={itemStyle} />;
+                return <GlossyCard key={item.id} posterUrl={url} format={item.format as any} isCustom={!!item.custom_poster_url} style={itemStyle} />;
               }
 
               return (
@@ -492,7 +479,7 @@ export function StackCard({
           className="rounded-xl overflow-hidden relative"
           style={{
             width: width,
-            height: height,
+            aspectRatio: 2 / 3,
             borderWidth: isWishlist ? 2 : 2, // Thicker border
             borderStyle: isWishlist ? 'dashed' : 'solid',
             borderColor: isWishlist ? '#6b7280' : '#00ff88', // Green Neon Border

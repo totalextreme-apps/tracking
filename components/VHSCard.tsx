@@ -4,13 +4,16 @@ import { View } from 'react-native';
 type VHSCardProps = {
     posterUrl: string | null;
     style?: any;
+    isCustom?: boolean;
 };
 
-export function VHSCard({ posterUrl, style }: VHSCardProps) {
+export function VHSCard({ posterUrl, style, isCustom = false }: VHSCardProps) {
+    const aspectRatio = isCustom ? 2 / 3.5 : 2 / 3;
+
     return (
         <View
-            className="relative aspect-[3/4] rounded-xl overflow-hidden shadow-lg bg-neutral-900"
-            style={[{ shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.5, shadowRadius: 5 }, style]}
+            className="relative rounded-xl overflow-hidden shadow-lg bg-neutral-900"
+            style={[{ aspectRatio, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.5, shadowRadius: 5 }, style]}
         >
             {/* Layer 1: Poster */}
             <Image

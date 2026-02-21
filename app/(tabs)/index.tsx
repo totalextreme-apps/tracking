@@ -134,7 +134,7 @@ export default function HomeScreen() {
         if (searchQuery) {
           const query = searchQuery.toLowerCase();
           const matchesTitle = movie.title.toLowerCase().includes(query);
-          const matchesCast = movie.cast?.some((c: any) => c.name.toLowerCase().includes(query));
+          const matchesCast = movie.movie_cast?.some((c: any) => c.name.toLowerCase().includes(query));
 
           if (!matchesTitle && !matchesCast) return false;
         }
@@ -157,7 +157,7 @@ export default function HomeScreen() {
   // Standard Mode: random selection of "is_on_display" items.
   // Thrift Mode: ONLY items that are "is_grail" AND "wishlist".
   const displayItems = thriftMode
-    ? collection?.filter(i => i.status === 'wishlist' && i.is_grail) ?? []
+    ? collection?.filter((i: any) => i.status === 'wishlist' && i.is_grail) ?? []
     : getOnDisplayItems(collection);
 
   const hasCollection = (collection?.length ?? 0) > 0;
@@ -198,9 +198,9 @@ export default function HomeScreen() {
       const isGrail = !item.is_grail;
 
       // Using 'as any' to bypass the build error "Argument of type ... not assignable to never"
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('collection_items')
-        .update({ is_grail: isGrail } as any)
+        .update({ is_grail: isGrail })
         .eq('id', item.id);
 
       if (error) throw error;
@@ -403,7 +403,7 @@ export default function HomeScreen() {
                 contentContainerStyle={{
                   paddingHorizontal: 16,
                   // alignItems: 'center', // Removed to prevent vertical clipping of scaled items
-                  paddingTop: 10, // Additional internal padding
+                  paddingTop: 40, // Increased to prevent clipping of scaled items
                   paddingBottom: 20 // Additional internal padding
                 }}
               >
