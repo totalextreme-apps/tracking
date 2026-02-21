@@ -167,7 +167,6 @@ export default function SettingsScreen() {
 
       {/* HEADER */}
       <View className="mb-6 items-center">
-        <GlobalStatsSection />
         <Text className="text-amber-500/90 font-mono text-sm font-bold tracking-widest mb-1">
           MEMBER ID
         </Text>
@@ -475,6 +474,9 @@ export default function SettingsScreen() {
         {/* Custom Covers Section (Web Only) */}
         {/* Custom Covers Section - TEMPORARILY DISABLED */}
         {/* <CustomCoversSection /> */}
+
+        {/* GLOBAL COMMUNITY STATS */}
+        <GlobalStatsSection />
 
         {/* INFO / ABOUT */}
         <View className="bg-neutral-900 rounded-lg overflow-hidden mt-6">
