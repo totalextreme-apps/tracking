@@ -33,7 +33,7 @@ export const unstable_settings = {
 };
 
 import { DesktopBlocker } from '@/components/DesktopBlocker';
-import { Dimensions, Platform, useWindowDimensions } from 'react-native';
+import { Platform, useWindowDimensions } from 'react-native';
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -46,15 +46,21 @@ export default function RootLayout() {
     if (__DEV__) return false; // Always allow in dev mode
     if (Platform.OS !== 'web') return false;
     if (typeof window === 'undefined') return false;
+
+    // Check width first - if it's wide, it's a desktop or a large tablet in landscape
+    const isWide = window.innerWidth > 900;
+
+    // If it's wide, we want to know if it's a tablet (which we allow)
     const ua = navigator.userAgent;
     const isMobileUA = /iPhone|iPad|iPod|Android|BlackBerry|IEMobile|Opera Mini/i.test(ua);
-    const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    // Explicit iPad check (Modern iPads often report as MacIntel but have touch)
+    const isIPad = /iPad/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-    // If it's a mobile UA or a touch device, it's definitely not a desktop blocker target
-    if (isMobileUA || isTouch) return false;
+    if (isWide && !isMobileUA && !isIPad) {
+      return true; // Wide screen, no mobile UA/tablet indicators -> Desktop
+    }
 
-    // Otherwise, if it's a wide screen, it's desktop
-    return window.innerWidth > 900;
+    return false;
   });
 
   useEffect(() => {
@@ -80,13 +86,12 @@ export default function RootLayout() {
     if (Platform.OS === 'web') {
       const ua = navigator.userAgent;
       const isMobileUA = /iPhone|iPad|iPod|Android|BlackBerry|IEMobile|Opera Mini/i.test(ua);
-      const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-      const { width: windowWidth } = Dimensions.get('window');
+      const isIPad = /iPad/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-      if (isMobileUA || isTouch) {
+      if (isMobileUA || isIPad) {
         setIsDesktop(false);
       } else {
-        setIsDesktop(windowWidth > 900);
+        setIsDesktop(width > 900);
       }
     }
   }, [width]);

@@ -243,9 +243,11 @@ export default function HomeScreen() {
       );
     }
 
+    const loadingLabel = authLoading ? "AUTH SYNC" : "LOADING STACKS";
+
     return (
       <View className="flex-1 bg-neutral-950 items-center justify-center">
-        <TrackingLoader />
+        <TrackingLoader label={loadingLabel} />
       </View>
     );
   }
@@ -256,7 +258,7 @@ export default function HomeScreen() {
       if (showRetryFallback) {
         return (
           <View className="flex-1 bg-neutral-950 items-center justify-center p-6">
-            <TrackingLoader />
+            <TrackingLoader label="SYNC TIMEOUT" />
             <Text className="text-amber-500 font-mono text-xl mt-8">STILL VERIFYING?</Text>
             <Text className="text-white/40 font-mono text-xs text-center px-8 mt-4 mb-12 uppercase">
               Identity verification is taking longer than usual. Please check your connection or restart the signal.
@@ -280,7 +282,7 @@ export default function HomeScreen() {
 
       return (
         <View className="flex-1 bg-neutral-950 items-center justify-center p-6">
-          <TrackingLoader />
+          <TrackingLoader label="AUTH CHALLENGE" />
           <Text className="text-amber-500 font-mono text-xl mt-8">VERIFYING IDENTITY...</Text>
           <Text className="text-white/40 font-mono text-xs text-center px-8 mt-4">
             CHECKING FOR ROBOTS. PLEASE BE PATIENT.

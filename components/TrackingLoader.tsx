@@ -10,7 +10,11 @@ import Animated, {
     withTiming,
 } from 'react-native-reanimated';
 
-export function TrackingLoader() {
+interface TrackingLoaderProps {
+    label?: string;
+}
+
+export function TrackingLoader({ label = "AUTO TRACKING" }: TrackingLoaderProps) {
     const progress = useSharedValue(0);
     const textOpacity = useSharedValue(1);
 
@@ -48,7 +52,7 @@ export function TrackingLoader() {
 
     return (
         <View style={styles.container}>
-            <Animated.Text style={[styles.text, textStyle]}>AUTO TRACKING</Animated.Text>
+            <Animated.Text style={[styles.text, textStyle]}>{label}</Animated.Text>
             <View style={styles.lineWrapper}>
                 <Animated.View style={[styles.scanLine, lineStyle]} />
             </View>
