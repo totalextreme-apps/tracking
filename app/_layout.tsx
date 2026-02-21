@@ -91,31 +91,28 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
     setShowStatic(false);
   }, [pathname, staticEnabled]);
 
-  // Handle Desktop Blocking on Web
+  // Handle Desktop Blocking on Web - Only show after mount to avoid hydration mismatch
   if (Platform.OS === 'web' && isMounted && isDesktop) {
     return <DesktopBlocker />;
   }
 
-  // Final rendering shell
+  // Final rendering shell - No fontsLoaded guard here to allow static rendering
   return (
     <PersistQueryClientProvider
       client={queryClient}
       persistOptions={{ persister: asyncStoragePersister }}
     >
-      <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#000' }}>
+      <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#0a0a0a' }}>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <View style={{ flex: 1, backgroundColor: '#000' }}>
-            {fontsLoaded ? (
-              <Stack>
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen name="add" options={{ presentation: 'modal', headerShown: false }} />
-                <Stack.Screen name="auth" options={{ presentation: 'modal', headerShown: false }} />
-                <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-                <Stack.Screen name="movie/[id]" options={{ presentation: 'modal', headerShown: false }} />
-              </Stack>
-            ) : (
-              <View style={{ flex: 1, backgroundColor: '#000' }} />
-            )}
+          {/* We use a black background for the root container */}
+          <View style={{ flex: 1, backgroundColor: '#0a0a0a' }}>
+            <Stack>
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="add" options={{ presentation: 'modal', headerShown: false }} />
+              <Stack.Screen name="auth" options={{ presentation: 'modal', headerShown: false }} />
+              <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="movie/[id]" options={{ presentation: 'modal', headerShown: false }} />
+            </Stack>
             <StaticOverlay visible={showStatic} />
             <OnboardingModal key={onboardingKey} />
           </View>

@@ -13,7 +13,7 @@ export const DesktopBlocker = () => {
             <View style={styles.content}>
                 <View style={styles.tvTube}>
                     <View style={styles.header}>
-                        <Text style={styles.headerText}>SIGNAL: CHANNEL 01</Text>
+                        <Text style={styles.headerText}>SIGNAL: CHANNEL 01 [v1.0.2]</Text>
                         <Text style={styles.headerText}>[ PUBLIC ACCESS ]</Text>
                     </View>
 
