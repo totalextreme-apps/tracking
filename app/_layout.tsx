@@ -8,7 +8,7 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import 'react-native-reanimated';
 
 import { OnboardingModal } from '@/components/OnboardingModal';
@@ -19,7 +19,6 @@ import { SettingsProvider, useSettings } from '@/context/SettingsContext';
 import { SoundProvider } from '@/context/SoundContext';
 import { ThriftModeProvider } from '@/context/ThriftModeContext';
 import { usePathname } from 'expo-router';
-import { useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 export {
@@ -42,26 +41,12 @@ export default function RootLayout() {
   });
 
   const { width } = useWindowDimensions();
-  const [isDesktop, setIsDesktop] = useState(() => {
-    if (__DEV__) return false; // Always allow in dev mode
-    if (Platform.OS !== 'web') return false;
-    if (typeof window === 'undefined') return false;
+  const [isDesktop, setIsDesktop] = useState(false);
+  const [hasHydrated, setHasHydrated] = useState(false);
 
-    // Check width first - if it's wide, it's a desktop or a large tablet in landscape
-    const isWide = window.innerWidth > 900;
-
-    // If it's wide, we want to know if it's a tablet (which we allow)
-    const ua = navigator.userAgent;
-    const isMobileUA = /iPhone|iPad|iPod|Android|BlackBerry|IEMobile|Opera Mini/i.test(ua);
-    // Explicit iPad check (Modern iPads often report as MacIntel but have touch)
-    const isIPad = /iPad/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-
-    if (isWide && !isMobileUA && !isIPad) {
-      return true; // Wide screen, no mobile UA/tablet indicators -> Desktop
-    }
-
-    return false;
-  });
+  useEffect(() => {
+    setHasHydrated(true);
+  }, []);
 
   useEffect(() => {
     SplashScreen.preventAutoHideAsync();
@@ -100,7 +85,7 @@ export default function RootLayout() {
     return null;
   }
 
-  if (isDesktop) {
+  if (hasHydrated && isDesktop) {
     return <DesktopBlocker />;
   }
 

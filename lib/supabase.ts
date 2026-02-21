@@ -13,15 +13,27 @@ const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
 const ExpoStorage = {
     getItem: (key: string) => {
         if (typeof window === 'undefined') return Promise.resolve(null);
-        return AsyncStorage.getItem(key);
+        try {
+            return AsyncStorage.getItem(key).catch(() => null);
+        } catch (e) {
+            return Promise.resolve(null);
+        }
     },
     setItem: (key: string, value: string) => {
         if (typeof window === 'undefined') return Promise.resolve();
-        return AsyncStorage.setItem(key, value);
+        try {
+            return AsyncStorage.setItem(key, value).catch(() => { });
+        } catch (e) {
+            return Promise.resolve();
+        }
     },
     removeItem: (key: string) => {
         if (typeof window === 'undefined') return Promise.resolve();
-        return AsyncStorage.removeItem(key);
+        try {
+            return AsyncStorage.removeItem(key).catch(() => { });
+        } catch (e) {
+            return Promise.resolve();
+        }
     },
 };
 
