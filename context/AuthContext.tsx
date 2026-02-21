@@ -20,48 +20,60 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userId, setUserId] = useState<string | undefined>();
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [authPhase, setAuthPhase] = useState('INITIALIZING');
+  const [authPhase, setAuthPhase] = useState('INIT');
   const [showCaptcha, setShowCaptcha] = useState(false);
   const [pendingCaptchaCallback, setPendingCaptchaCallback] = useState<((token: string) => void) | null>(null);
 
   useEffect(() => {
-    console.log('AuthProvider State:', { userId, session: !!session, showCaptcha, isLoading });
-  }, [userId, session, showCaptcha, isLoading]);
+    // Debugging exposure for web console
+    if (typeof window !== 'undefined') {
+      (window as any).__AUTH_STATE__ = { userId, session: !!session, authPhase, isLoading };
+    }
+  }, [userId, session, authPhase, isLoading]);
 
   useEffect(() => {
-    console.log('[DEBUG] AuthProvider Mounting...');
-    setAuthPhase('USE_EFFECT_START');
+    console.log('[DEBUG] AuthProvider Signal Received');
+    setAuthPhase('STARTING');
 
     const isFinished = { current: false };
 
+    // Failsafe timeout
     const timeoutId = setTimeout(() => {
       if (!isFinished.current) {
-        console.warn('Auth check timed out, forcing load completion');
-        setAuthPhase('TIMED_OUT');
+        console.warn('Auth system timed out - proceeding to UI');
+        setAuthPhase('FORCED_TIMEOUT');
         isFinished.current = true;
         setIsLoading(false);
       }
-    }, 5000); // 5 seconds for slow web sessions
+    }, 4000);
 
     const initAuth = async () => {
-      setAuthPhase('GET_SESSION');
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        setAuthPhase('CHECKING_SESSION');
+        const { data, error } = await supabase.auth.getSession();
+
         if (isFinished.current) return;
 
-        setAuthPhase('SESSION_RECEIVED');
-        if (session?.user?.id) {
-          setUserId(session.user.id);
-          setSession(session);
-          setAuthPhase('AUTHENTICATED');
+        if (error) {
+          console.error('Session check error', error);
+          setAuthPhase('SESSION_ERROR');
+        }
+
+        const sessionData = data?.session;
+
+        if (sessionData?.user?.id) {
+          console.log('Valid session found for user:', sessionData.user.id);
+          setUserId(sessionData.user.id);
+          setSession(sessionData);
+          setAuthPhase('COMPLETED');
         } else {
-          // If no session, show CAPTCHA before signing in (Initial anonymous load)
-          setAuthPhase('REQUIRE_CAPTCHA');
+          console.log('No valid session - showing verification');
+          setAuthPhase('AWAITING_VERIFICATION');
           setShowCaptcha(true);
         }
       } catch (e) {
-        console.error('Auth Init Error', e);
-        setAuthPhase('ERROR');
+        console.error('Critical Auth Init Error:', e);
+        setAuthPhase('CRITICAL_ERROR');
       } finally {
         if (!isFinished.current) {
           isFinished.current = true;
@@ -73,11 +85,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     initAuth();
 
-    console.log('[DEBUG] Setting up Auth State Change listener');
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('[DEBUG] Auth state changed EVENT:', event, 'User:', session?.user?.id);
-      setUserId(session?.user?.id);
-      setSession(session);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
+      console.log('AUTH_EVENT:', event);
+      setUserId(newSession?.user?.id);
+      setSession(newSession);
+      if (newSession?.user?.id) {
+        setIsLoading(false);
+      }
     });
 
     return () => {
@@ -87,49 +101,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const handleCaptchaSuccess = async (token: string) => {
-    console.log('Captcha Success, token received. Length:', token.length);
+    console.log('Verification Success');
 
-    // 1. Check for pending callbacks (e.g. from Sign In or Sign Up screen)
     if (pendingCaptchaCallback) {
-      console.log('Executing pending CAPTCHA callback');
       pendingCaptchaCallback(token);
       setPendingCaptchaCallback(null);
       setShowCaptcha(false);
       return;
     }
 
-    // 2. Default behavior (Initial Anonymous Sign-in)
-    // Development Bypass Logic
-    if (__DEV__ && (token === 'manual-bypass-token' || token === 'dev-manual-bypass')) {
-      console.warn('Handling Manual CAPTCHA Bypass (DEV MODE)');
-      try {
-        const { data: { session: anonSession }, error } = await supabase.auth.signInAnonymously();
-
-        if (!error && anonSession?.user?.id) {
-          setUserId(anonSession.user.id);
-          setSession(anonSession);
-          setShowCaptcha(false);
-          setIsLoading(false);
-          return;
-        }
-
-        console.warn('Anonymous sign-in without token failed, falling back to mock session for UI testing');
-        // Fallback: MOCK session for UI testing if backend enforces CAPTCHA
-        setUserId('00000000-0000-0000-0000-000000000000');
-        setSession({ user: { id: '00000000-0000-0000-0000-000000000000', is_anonymous: true } } as any);
-        setShowCaptcha(false);
-        setIsLoading(false);
-        return;
-      } catch (e) {
-        console.error('Bypass error', e);
-      }
-    }
-
     try {
       const { data: { session: anonSession }, error } = await supabase.auth.signInAnonymously({
-        options: {
-          captchaToken: token,
-        },
+        options: { captchaToken: token },
       });
 
       if (!error && anonSession?.user?.id) {
@@ -138,12 +121,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setShowCaptcha(false);
         setIsLoading(false);
       } else if (error) {
-        console.error('Anonymous Sign-in Error:', error.message);
-        setShowCaptcha(false); // Close modal so user can see the error screen
+        console.error('Sign-in Error:', error.message);
+        setShowCaptcha(false);
         setIsLoading(false);
       }
     } catch (e) {
-      console.error('handleCaptchaSuccess Error', e);
+      console.error('Verification Handler Error', e);
+      setShowCaptcha(false);
+      setIsLoading(false);
     }
   };
 
@@ -170,7 +155,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         onCancel={() => {
           setShowCaptcha(false);
           setPendingCaptchaCallback(null);
-          console.warn('Captcha cancelled');
         }}
       />
     </AuthContext.Provider>

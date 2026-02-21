@@ -38,69 +38,72 @@ export default function RootLayout() {
     ...FontAwesome.font,
   });
 
-  useEffect(() => {
-    if (error) {
-      console.error('Font Load Error:', error);
-    }
-  }, [error]);
+  const [isMounted, setIsMounted] = useState(false);
+  const { width } = useWindowDimensions();
+  const [isDesktop, setIsDesktop] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
     if (loaded) {
       SplashScreen.hideAsync().catch(() => { });
     }
   }, [loaded]);
 
-  if (!loaded) {
-    // Return a black screen during font loading to avoid white flash
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      const ua = navigator.userAgent;
+      const isMobileUA = /iPhone|iPad|iPod|Android|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+      const isIPad = /iPad/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+      // Force desktop blocker if definitely on a desktop-sized screen
+      if (!isMobileUA && !isIPad && width > 900) {
+        setIsDesktop(true);
+      } else {
+        setIsDesktop(false);
+      }
+    }
+  }, [width, isMounted]);
+
+  if (!isMounted) {
     return <View style={{ flex: 1, backgroundColor: '#000' }} />;
+  }
+
+  // Desktop Blocker takes precedence on web
+  if (Platform.OS === 'web' && isDesktop) {
+    return <DesktopBlocker />;
   }
 
   return (
     <SettingsProvider>
-      <RootLayoutNav />
+      <SoundProvider>
+        <AuthProvider>
+          <ThriftModeProvider>
+            <RootLayoutNav fontsLoaded={loaded} />
+          </ThriftModeProvider>
+        </AuthProvider>
+      </SoundProvider>
     </SettingsProvider>
   );
 }
 
-function RootLayoutNav() {
+function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
   const colorScheme = useColorScheme();
   const pathname = usePathname();
   const [showStatic, setShowStatic] = useState(false);
   const { staticEnabled, onboardingKey } = useSettings();
-  const { width } = useWindowDimensions();
-  const [isDesktop, setIsDesktop] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    setIsMounted(true);
-
-    const checkIsDesktop = () => {
-      if (Platform.OS !== 'web') return false;
-      const ua = navigator.userAgent;
-      const isMobileUA = /iPhone|iPad|iPod|Android|BlackBerry|IEMobile|Opera Mini/i.test(ua);
-      const isIPad = /iPad/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-      return !isMobileUA && !isIPad && window.innerWidth > 900;
-    };
-
-    setIsDesktop(checkIsDesktop());
-  }, [width]);
-
-  useEffect(() => {
-    // Trigger static on route change IF enabled
     if (staticEnabled) {
       setShowStatic(true);
-      const timer = setTimeout(() => {
-        setShowStatic(false);
-      }, 400); // 400ms static burst
+      const timer = setTimeout(() => setShowStatic(false), 400);
       return () => clearTimeout(timer);
     } else {
       setShowStatic(false);
     }
   }, [pathname, staticEnabled]);
 
-  // If we are on desktop web, show the blocker
-  if (Platform.OS === 'web' && isMounted && isDesktop) {
-    return <DesktopBlocker />;
+  if (!fontsLoaded) {
+    return <View style={{ flex: 1, backgroundColor: '#000' }} />;
   }
 
   return (
@@ -108,25 +111,19 @@ function RootLayoutNav() {
       client={queryClient}
       persistOptions={{ persister: asyncStoragePersister }}
     >
-      <SoundProvider>
-        <AuthProvider>
-          <ThriftModeProvider>
-            <GestureHandlerRootView style={{ flex: 1 }}>
-              <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-                <Stack>
-                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                  <Stack.Screen name="add" options={{ presentation: 'modal', headerShown: false }} />
-                  <Stack.Screen name="auth" options={{ presentation: 'modal', headerShown: false }} />
-                  <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-                  <Stack.Screen name="movie/[id]" options={{ presentation: 'modal', headerShown: false }} />
-                </Stack>
-                <StaticOverlay visible={showStatic} />
-                <OnboardingModal key={onboardingKey} />
-              </ThemeProvider>
-            </GestureHandlerRootView>
-          </ThriftModeProvider>
-        </AuthProvider>
-      </SoundProvider>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          <Stack>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="add" options={{ presentation: 'modal', headerShown: false }} />
+            <Stack.Screen name="auth" options={{ presentation: 'modal', headerShown: false }} />
+            <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="movie/[id]" options={{ presentation: 'modal', headerShown: false }} />
+          </Stack>
+          <StaticOverlay visible={showStatic} />
+          <OnboardingModal key={onboardingKey} />
+        </ThemeProvider>
+      </GestureHandlerRootView>
     </PersistQueryClientProvider>
   );
 }
