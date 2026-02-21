@@ -20,64 +20,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userId, setUserId] = useState<string | undefined>();
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [authPhase, setAuthPhase] = useState('INIT');
+  const [authPhase, setAuthPhase] = useState('SYNC');
   const [showCaptcha, setShowCaptcha] = useState(false);
   const [pendingCaptchaCallback, setPendingCaptchaCallback] = useState<((token: string) => void) | null>(null);
 
   useEffect(() => {
-    // Debugging exposure for web console
-    if (typeof window !== 'undefined') {
-      (window as any).__AUTH_STATE__ = { userId, session: !!session, authPhase, isLoading };
-    }
-  }, [userId, session, authPhase, isLoading]);
+    let isFinished = false;
 
-  useEffect(() => {
-    console.log('[DEBUG] AuthProvider Signal Received');
-    setAuthPhase('STARTING');
-
-    const isFinished = { current: false };
-
-    // Failsafe timeout
+    // Emergency Failsafe
     const timeoutId = setTimeout(() => {
-      if (!isFinished.current) {
-        console.warn('Auth system timed out - proceeding to UI');
-        setAuthPhase('FORCED_TIMEOUT');
-        isFinished.current = true;
+      if (!isFinished) {
+        setAuthPhase('TIMEOUT_RECOVERY');
         setIsLoading(false);
+        isFinished = true;
       }
-    }, 4000);
+    }, 5000);
 
     const initAuth = async () => {
       try {
-        setAuthPhase('CHECKING_SESSION');
+        setAuthPhase('CONNECTING');
         const { data, error } = await supabase.auth.getSession();
 
-        if (isFinished.current) return;
+        if (isFinished) return;
 
         if (error) {
-          console.error('Session check error', error);
-          setAuthPhase('SESSION_ERROR');
+          console.error('Session Error:', error);
+          setAuthPhase('ERROR');
         }
 
         const sessionData = data?.session;
 
         if (sessionData?.user?.id) {
-          console.log('Valid session found for user:', sessionData.user.id);
           setUserId(sessionData.user.id);
           setSession(sessionData);
-          setAuthPhase('COMPLETED');
+          setAuthPhase('READY');
         } else {
-          console.log('No valid session - showing verification');
-          setAuthPhase('AWAITING_VERIFICATION');
+          setAuthPhase('AUTHENTICATING');
           setShowCaptcha(true);
         }
       } catch (e) {
-        console.error('Critical Auth Init Error:', e);
-        setAuthPhase('CRITICAL_ERROR');
+        console.error('Auth Hub Error:', e);
+        setAuthPhase('FATAL');
       } finally {
-        if (!isFinished.current) {
-          isFinished.current = true;
+        if (!isFinished) {
           setIsLoading(false);
+          isFinished = true;
           clearTimeout(timeoutId);
         }
       }
@@ -86,11 +73,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
-      console.log('AUTH_EVENT:', event);
       setUserId(newSession?.user?.id);
       setSession(newSession);
       if (newSession?.user?.id) {
         setIsLoading(false);
+        isFinished = true;
       }
     });
 
@@ -101,8 +88,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const handleCaptchaSuccess = async (token: string) => {
-    console.log('Verification Success');
-
     if (pendingCaptchaCallback) {
       pendingCaptchaCallback(token);
       setPendingCaptchaCallback(null);
@@ -120,13 +105,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(anonSession);
         setShowCaptcha(false);
         setIsLoading(false);
-      } else if (error) {
-        console.error('Sign-in Error:', error.message);
+      } else {
         setShowCaptcha(false);
         setIsLoading(false);
       }
     } catch (e) {
-      console.error('Verification Handler Error', e);
       setShowCaptcha(false);
       setIsLoading(false);
     }

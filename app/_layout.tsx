@@ -9,7 +9,7 @@ import { useFonts } from 'expo-font';
 import { Stack, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
-import { Platform, View, useWindowDimensions } from 'react-native';
+import { Dimensions, Platform, View } from 'react-native';
 import 'react-native-reanimated';
 
 import { DesktopBlocker } from '@/components/DesktopBlocker';
@@ -22,13 +22,14 @@ import { SoundProvider } from '@/context/SoundContext';
 import { ThriftModeProvider } from '@/context/ThriftModeContext';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+// Prevent splash screen from hiding early
+SplashScreen.preventAutoHideAsync().catch(() => { });
+
 export {
-  // Catch any errors thrown by the Layout component.
   ErrorBoundary
 } from 'expo-router';
 
 export const unstable_settings = {
-  // Ensure that reloading on `/modal` keeps a back button present.
   initialRouteName: '(tabs)',
 };
 
@@ -39,38 +40,19 @@ export default function RootLayout() {
   });
 
   const [isMounted, setIsMounted] = useState(false);
-  const { width } = useWindowDimensions();
-  const [isDesktop, setIsDesktop] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
-    if (loaded) {
-      SplashScreen.hideAsync().catch(() => { });
-    }
-  }, [loaded]);
+  }, []);
 
   useEffect(() => {
-    if (Platform.OS === 'web') {
-      const ua = navigator.userAgent;
-      const isMobileUA = /iPhone|iPad|iPod|Android|BlackBerry|IEMobile|Opera Mini/i.test(ua);
-      const isIPad = /iPad/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-
-      // Force desktop blocker if definitely on a desktop-sized screen
-      if (!isMobileUA && !isIPad && width > 900) {
-        setIsDesktop(true);
-      } else {
-        setIsDesktop(false);
-      }
+    if (loaded || error) {
+      SplashScreen.hideAsync().catch(() => { });
     }
-  }, [width, isMounted]);
+  }, [loaded, error]);
 
   if (!isMounted) {
     return <View style={{ flex: 1, backgroundColor: '#000' }} />;
-  }
-
-  // Desktop Blocker takes precedence on web
-  if (Platform.OS === 'web' && isDesktop) {
-    return <DesktopBlocker />;
   }
 
   return (
@@ -78,7 +60,7 @@ export default function RootLayout() {
       <SoundProvider>
         <AuthProvider>
           <ThriftModeProvider>
-            <RootLayoutNav fontsLoaded={loaded} />
+            <RootLayoutNav />
           </ThriftModeProvider>
         </AuthProvider>
       </SoundProvider>
@@ -86,24 +68,41 @@ export default function RootLayout() {
   );
 }
 
-function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
+function RootLayoutNav() {
   const colorScheme = useColorScheme();
   const pathname = usePathname();
   const [showStatic, setShowStatic] = useState(false);
   const { staticEnabled, onboardingKey } = useSettings();
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const checkViewport = () => {
+      if (Platform.OS !== 'web') return;
+
+      const { width } = Dimensions.get('window');
+      const ua = navigator.userAgent;
+      const isMobileUA = /iPhone|iPad|iPod|Android|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+      const isIPad = /iPad/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+      setIsDesktop(!isMobileUA && !isIPad && width > 900);
+    };
+
+    checkViewport();
+    const subscription = Dimensions.addEventListener('change', checkViewport);
+    return () => subscription.remove();
+  }, []);
 
   useEffect(() => {
     if (staticEnabled) {
       setShowStatic(true);
       const timer = setTimeout(() => setShowStatic(false), 400);
       return () => clearTimeout(timer);
-    } else {
-      setShowStatic(false);
     }
+    setShowStatic(false);
   }, [pathname, staticEnabled]);
 
-  if (!fontsLoaded) {
-    return <View style={{ flex: 1, backgroundColor: '#000' }} />;
+  if (Platform.OS === 'web' && isDesktop) {
+    return <DesktopBlocker />;
   }
 
   return (
