@@ -39,28 +39,18 @@ export default function RootLayout() {
     ...FontAwesome.font,
   });
 
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
   useEffect(() => {
     if (loaded || error) {
       SplashScreen.hideAsync().catch(() => { });
     }
   }, [loaded, error]);
 
-  if (!isMounted) {
-    return <View style={{ flex: 1, backgroundColor: '#000' }} />;
-  }
-
   return (
     <SettingsProvider>
       <SoundProvider>
         <AuthProvider>
           <ThriftModeProvider>
-            <RootLayoutNav />
+            <RootLayoutNav fontsLoaded={loaded} />
           </ThriftModeProvider>
         </AuthProvider>
       </SoundProvider>
@@ -68,22 +58,22 @@ export default function RootLayout() {
   );
 }
 
-function RootLayoutNav() {
+function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
   const colorScheme = useColorScheme();
   const pathname = usePathname();
   const [showStatic, setShowStatic] = useState(false);
   const { staticEnabled, onboardingKey } = useSettings();
   const [isDesktop, setIsDesktop] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
     const checkViewport = () => {
       if (Platform.OS !== 'web') return;
-
       const { width } = Dimensions.get('window');
       const ua = navigator.userAgent;
       const isMobileUA = /iPhone|iPad|iPod|Android|BlackBerry|IEMobile|Opera Mini/i.test(ua);
       const isIPad = /iPad/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-
       setIsDesktop(!isMobileUA && !isIPad && width > 900);
     };
 
@@ -101,26 +91,34 @@ function RootLayoutNav() {
     setShowStatic(false);
   }, [pathname, staticEnabled]);
 
-  if (Platform.OS === 'web' && isDesktop) {
+  // Handle Desktop Blocking on Web
+  if (Platform.OS === 'web' && isMounted && isDesktop) {
     return <DesktopBlocker />;
   }
 
+  // Final rendering shell
   return (
     <PersistQueryClientProvider
       client={queryClient}
       persistOptions={{ persister: asyncStoragePersister }}
     >
-      <GestureHandlerRootView style={{ flex: 1 }}>
+      <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#000' }}>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <Stack>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="add" options={{ presentation: 'modal', headerShown: false }} />
-            <Stack.Screen name="auth" options={{ presentation: 'modal', headerShown: false }} />
-            <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-            <Stack.Screen name="movie/[id]" options={{ presentation: 'modal', headerShown: false }} />
-          </Stack>
-          <StaticOverlay visible={showStatic} />
-          <OnboardingModal key={onboardingKey} />
+          <View style={{ flex: 1, backgroundColor: '#000' }}>
+            {fontsLoaded ? (
+              <Stack>
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="add" options={{ presentation: 'modal', headerShown: false }} />
+                <Stack.Screen name="auth" options={{ presentation: 'modal', headerShown: false }} />
+                <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+                <Stack.Screen name="movie/[id]" options={{ presentation: 'modal', headerShown: false }} />
+              </Stack>
+            ) : (
+              <View style={{ flex: 1, backgroundColor: '#000' }} />
+            )}
+            <StaticOverlay visible={showStatic} />
+            <OnboardingModal key={onboardingKey} />
+          </View>
         </ThemeProvider>
       </GestureHandlerRootView>
     </PersistQueryClientProvider>
