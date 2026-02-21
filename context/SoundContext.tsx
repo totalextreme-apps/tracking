@@ -2,7 +2,7 @@ import { Audio } from 'expo-av';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useSettings } from './SettingsContext';
 
-type SoundType = 'click' | 'insert' | 'static' | 'whir' | 'tv_off' | 'rewind' | 'eject';
+type SoundType = 'click' | 'insert' | 'static' | 'whir' | 'tv_off' | 'rewind' | 'eject' | 'peel';
 
 type SoundContextType = {
     playSound: (type: SoundType) => Promise<void>;
@@ -30,6 +30,7 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
         tv_off: null,
         rewind: null,
         eject: null,
+        peel: null,
     });
     // Track active web audio objects to allow stopping them
     const activeWebSounds = React.useRef<Record<string, HTMLAudioElement>>({});
@@ -63,6 +64,7 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
             const tvOffSound = await load(require('@/assets/sounds/tv_off.mp3'));
             const rewindSound = await load(require('@/assets/sounds/rewind.mp3'));
             const ejectSound = await load(require('@/assets/sounds/vcr_eject.mp3'));
+            const peelSound = await load(require('@/assets/sounds/sticker_peel.mp3'));
 
             setSounds({
                 click: clickSound,
@@ -72,6 +74,7 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
                 tv_off: tvOffSound,
                 rewind: rewindSound,
                 eject: ejectSound,
+                peel: peelSound,
             });
 
             // Configure Audio
@@ -106,6 +109,7 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
                     tv_off: require('@/assets/sounds/tv_off.mp3'),
                     rewind: require('@/assets/sounds/rewind.mp3'),
                     eject: require('@/assets/sounds/vcr_eject.mp3'),
+                    peel: require('@/assets/sounds/sticker_peel.mp3'),
                 };
 
                 const source = paths[type];

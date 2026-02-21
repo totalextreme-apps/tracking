@@ -1,3 +1,4 @@
+import { useSound } from '@/context/SoundContext';
 import { getPosterUrl } from '@/lib/dummy-data';
 import type { CollectionItemWithMovie } from '@/types/database';
 import * as Haptics from 'expo-haptics';
@@ -27,6 +28,7 @@ type OnDisplayCardProps = {
 };
 
 export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPressAction, onToggleFavorite }: OnDisplayCardProps) {
+  const { playSound } = useSound();
   const movie = item.movies!;
   const isPhysical = item.format !== 'Digital';
   const isWishlist = item.status === 'wishlist';
@@ -55,6 +57,7 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
 
       console.log('MANUAL: Double Tap Detected');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      playSound('peel');
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 

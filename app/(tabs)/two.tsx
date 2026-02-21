@@ -1,5 +1,6 @@
 
 import { DeveloperAbout } from '@/components/DeveloperAbout';
+import { GlobalStatsSection } from '@/components/GlobalStatsSection';
 import { MemberCard } from '@/components/MemberCard';
 import { StatsSection } from '@/components/StatsSection';
 import { useAuth } from '@/context/AuthContext';
@@ -166,6 +167,7 @@ export default function SettingsScreen() {
 
       {/* HEADER */}
       <View className="mb-6 items-center">
+        <GlobalStatsSection />
         <Text className="text-amber-500/90 font-mono text-sm font-bold tracking-widest mb-1">
           MEMBER ID
         </Text>

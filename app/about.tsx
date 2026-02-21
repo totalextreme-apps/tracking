@@ -117,6 +117,11 @@ export default function AboutScreen() {
                                 author="Sanderboah"
                                 license="CC0"
                             />
+                            <AttributionItem
+                                title="StickyNoteTear"
+                                author="AHPreston"
+                                license="Attribution 4.0"
+                            />
                         </View>
                     </View>
                 </View>

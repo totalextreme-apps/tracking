@@ -168,6 +168,7 @@ export function StackCard({
     if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
       // Double tap detected
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+      playSound('peel');
       onToggleFavorite?.(topItem);
       lastTapRef.current = 0; // Reset to prevent triple-tap triggering
     } else {
@@ -225,7 +226,7 @@ export function StackCard({
         delayLongPress={500}
         style={[{
           width: width,
-          aspectRatio, // Use dynamic ratio instead of fixed height
+          height: height,
           marginBottom: 8,
           flexDirection: 'row',
           alignItems: 'center',
