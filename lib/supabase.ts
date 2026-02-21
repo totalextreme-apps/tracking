@@ -4,7 +4,7 @@ import 'react-native-url-polyfill/auto';
 
 import type { Database } from '@/types/database';
 
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
@@ -17,11 +17,11 @@ const ExpoStorage = {
     },
     setItem: (key: string, value: string) => {
         if (typeof window === 'undefined') return Promise.resolve();
-        AsyncStorage.setItem(key, value);
+        return AsyncStorage.setItem(key, value);
     },
     removeItem: (key: string) => {
         if (typeof window === 'undefined') return Promise.resolve();
-        AsyncStorage.removeItem(key);
+        return AsyncStorage.removeItem(key);
     },
 };
 
@@ -34,11 +34,13 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     },
 });
 
-// Update auth polling for React Native
-AppState.addEventListener('change', (state) => {
-    if (state === 'active') {
-        supabase.auth.startAutoRefresh();
-    } else {
-        supabase.auth.stopAutoRefresh();
-    }
-});
+// Update auth polling for React Native - Only if AppState is available (Native)
+if (Platform.OS !== 'web') {
+    AppState.addEventListener('change', (state) => {
+        if (state === 'active') {
+            supabase.auth.startAutoRefresh();
+        } else {
+            supabase.auth.stopAutoRefresh();
+        }
+    });
+}

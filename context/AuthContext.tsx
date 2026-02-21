@@ -20,7 +20,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userId, setUserId] = useState<string | undefined>();
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [authPhase, setAuthPhase] = useState('INIT');
+  const [authPhase, setAuthPhase] = useState('BOOTING');
   const [showCaptcha, setShowCaptcha] = useState(false);
   const [pendingCaptchaCallback, setPendingCaptchaCallback] = useState<((token: string) => void) | null>(null);
 
@@ -29,6 +29,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [userId, session, showCaptcha, isLoading]);
 
   useEffect(() => {
+    console.log('[DEBUG] AuthProvider Mounting...');
+    setAuthPhase('USE_EFFECT_START');
+
     const isFinished = { current: false };
 
     const timeoutId = setTimeout(() => {
@@ -70,8 +73,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     initAuth();
 
+    console.log('[DEBUG] Setting up Auth State Change listener');
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('Auth state changed:', event, 'User ID:', session?.user?.id);
+      console.log('[DEBUG] Auth state changed EVENT:', event, 'User:', session?.user?.id);
       setUserId(session?.user?.id);
       setSession(session);
     });
