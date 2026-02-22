@@ -1,7 +1,12 @@
 const CLOUD_NAME = process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME;
 const UPLOAD_PRESET = process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'ml_default';
 
-export async function uploadToCloudinary(blob: Blob): Promise<string> {
+interface UploadResult {
+    url: string;
+    publicId: string;
+}
+
+export async function uploadToCloudinary(blob: Blob): Promise<UploadResult> {
     if (!CLOUD_NAME) {
         throw new Error('Cloudinary Cloud Name is not configured');
     }
@@ -25,5 +30,34 @@ export async function uploadToCloudinary(blob: Blob): Promise<string> {
     }
 
     const data = await response.json();
-    return data.secure_url;
+    return {
+        url: data.secure_url,
+        publicId: data.public_id
+    };
+}
+
+/**
+ * Calls our secure Vercel API to delete an image by its URL or Public ID
+ */
+export async function deleteFromCloudinary(imageUrl: string): Promise<boolean> {
+    try {
+        const response = await fetch('/api/delete-image', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ imageUrl }),
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            console.warn('Image deletion API failed:', error);
+            return false;
+        }
+
+        return true;
+    } catch (error) {
+        console.error('Error calling delete API:', error);
+        return false;
+    }
 }

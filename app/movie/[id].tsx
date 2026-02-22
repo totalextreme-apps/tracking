@@ -16,7 +16,8 @@ import { useAuth } from '@/context/AuthContext';
 import { useSound } from '@/context/SoundContext';
 import { useThriftMode } from '@/context/ThriftModeContext';
 import { useAddToCollection, useCollection, useDeleteCollectionItem, useUpdateCollectionItem } from '@/hooks/useCollection';
-import { uploadToCloudinary } from '@/lib/cloudinary';
+import { deleteFromCloudinary, uploadToCloudinary } from '@/lib/cloudinary';
+
 import { getBackdropUrl, getPosterUrl } from '@/lib/dummy-data';
 import { compressImage } from '@/lib/image-utils';
 import { getMovieById } from '@/lib/tmdb';
@@ -150,6 +151,9 @@ export default function MovieDetailScreen() {
         console.log('Starting custom art save process...');
 
         try {
+            // Find existing art to delete later
+            const oldUrl = movieItems.find((i: any) => i.custom_poster_url)?.custom_poster_url;
+
             // Convert data URL to Blob
             console.log('Converting data URL to blob...');
             const response = await fetch(croppedDataUrl);
@@ -161,7 +165,7 @@ export default function MovieDetailScreen() {
 
             // Upload to Cloudinary
             console.log('Uploading to Cloudinary...');
-            const uploadUrl = await uploadToCloudinary(compressedBlob);
+            const { url: uploadUrl } = await uploadToCloudinary(compressedBlob);
             console.log('Cloudinary upload success:', uploadUrl);
 
             // Save to Supabase
@@ -171,6 +175,12 @@ export default function MovieDetailScreen() {
                 updates: { custom_poster_url: uploadUrl }
             });
 
+            // Cleanup: Delete old art from Cloudinary if it existed
+            if (oldUrl) {
+                console.log('Cleaning up old image from Cloudinary:', oldUrl);
+                deleteFromCloudinary(oldUrl); // Run in background
+            }
+
             // Update UI
             setCropModalVisible(false);
             setPendingImageUri(null);
@@ -178,6 +188,7 @@ export default function MovieDetailScreen() {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             console.log('Custom art save complete!');
         } catch (e: any) {
+
             console.error('Failed to save custom art:', e);
             Alert.alert('Error', `Failed to save custom cover art: ${e.message || 'Unknown error'}`);
         }
@@ -187,12 +198,21 @@ export default function MovieDetailScreen() {
         if (!movieItems[0]?.id) return;
 
         const confirmRemove = async () => {
+            const oldUrl = movieItems.find((i: any) => i.custom_poster_url)?.custom_poster_url;
+
             await updateMutation.mutateAsync({
                 itemId: movieItems[0].id,
                 updates: { custom_poster_url: null }
             });
+
+            if (oldUrl) {
+                console.log('Deleting image from Cloudinary:', oldUrl);
+                deleteFromCloudinary(oldUrl);
+            }
+
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         };
+
 
         if (Platform.OS === 'web') {
             if (window.confirm('Remove custom cover art? This will restore the default TMDB poster.')) {
