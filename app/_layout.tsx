@@ -1,5 +1,9 @@
 import { asyncStoragePersister, queryClient } from '@/lib/query-client';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
+
+
 
 import '../global.css';
 
@@ -115,7 +119,15 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
             </Stack>
             <StaticOverlay visible={showStatic} />
             <OnboardingModal key={onboardingKey} />
+            {Platform.OS === 'web' && (
+              <>
+                <Analytics />
+                <SpeedInsights />
+              </>
+            )}
           </View>
+
+
         </ThemeProvider>
       </GestureHandlerRootView>
     </PersistQueryClientProvider>
