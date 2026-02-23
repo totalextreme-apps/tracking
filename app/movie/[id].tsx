@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { GlossyCard } from '@/components/GlossyCard';
@@ -48,6 +48,7 @@ export default function MovieDetailScreen() {
     const [showShareModal, setShowShareModal] = useState(false);
     const [localNotes, setLocalNotes] = useState<Record<string, string>>({});
     const [localEditions, setLocalEditions] = useState<Record<string, string>>({});
+    const [persistedMovie, setPersistedMovie] = useState<any>(null);
     const viewShotRef = useRef<ViewShot>(null);
 
     // Custom art state
@@ -73,13 +74,13 @@ export default function MovieDetailScreen() {
 
     console.log('Movie items count:', movieItems.length, 'Formats:', movieItems.map((i: any) => i.format));
 
-    const [persistedMovie, setPersistedMovie] = useState<any>(null);
-
-    if (movie && !persistedMovie) {
-        setPersistedMovie(movie);
-    }
-
     const activeMovie = movie || persistedMovie;
+
+    useEffect(() => {
+        if (movie && !persistedMovie) {
+            setPersistedMovie(movie);
+        }
+    }, [movie, persistedMovie]);
 
     const { data: tmdbMovie } = useQuery({
         queryKey: ['tmdb', activeMovie?.tmdb_id],
@@ -98,47 +99,43 @@ export default function MovieDetailScreen() {
 
         if (Platform.OS !== 'web') {
             // For native: use expo-image-picker
-            const result = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                allowsEditing: true,
-                aspect: [2, 3],
-                quality: 0.9,
-            });
+            try {
+                const result = await ImagePicker.launchImageLibraryAsync({
+                    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                    allowsEditing: true,
+                    aspect: [2, 3],
+                    quality: 0.9,
+                });
 
-            if (!result.canceled && result.assets[0]) {
-                setPendingImageUri(result.assets[0].uri);
-                setCropModalVisible(true);
+                if (!result.canceled && result.assets[0]) {
+                    setPendingImageUri(result.assets[0].uri);
+                    setCropModalVisible(true);
+                }
+            } catch (error) {
+                console.error('ImagePicker error:', error);
+                Alert.alert('Error', 'Failed to open image library');
             }
         } else {
-            // For web: use input file
-            try {
-                console.log('Creating file input for web');
-                const input = document.createElement('input');
-                input.type = 'file';
-                input.accept = 'image/*';
-                input.onchange = async (e: any) => {
-                    console.log('File selected', e.target?.files?.[0]);
-                    const file = e.target?.files?.[0];
-                    if (file) {
-                        const reader = new FileReader();
-                        reader.onload = (event) => {
-                            const dataUrl = event.target?.result as string;
-                            console.log('Image loaded, opening crop modal');
-                            setPendingImageUri(dataUrl);
-                            setCropModalVisible(true);
-                        };
-                        reader.onerror = (error) => {
-                            console.error('FileReader error:', error);
-                            Alert.alert('Error', 'Failed to read image file');
-                        };
-                        reader.readAsDataURL(file);
-                    }
-                };
+            // For web: trigger the hidden input
+            const input = document.getElementById('custom-art-input') as HTMLInputElement;
+            if (input) {
                 input.click();
-                console.log('File input clicked');
+            }
+        }
+    };
+
+    const handleWebFileChange = (e: any) => {
+        const file = e.target?.files?.[0];
+        if (file) {
+            try {
+                console.log('File selected:', file.name, file.size);
+                // Use URL.createObjectURL instead of FileReader for better memory performance
+                const url = URL.createObjectURL(file);
+                setPendingImageUri(url);
+                setCropModalVisible(true);
             } catch (error) {
-                console.error('Upload error:', error);
-                Alert.alert('Error', 'Failed to open file picker');
+                console.error('File selection error:', error);
+                Alert.alert('Error', 'Failed to process image');
             }
         }
     };
@@ -183,6 +180,9 @@ export default function MovieDetailScreen() {
 
             // Update UI
             setCropModalVisible(false);
+            if (pendingImageUri && pendingImageUri.startsWith('blob:')) {
+                URL.revokeObjectURL(pendingImageUri);
+            }
             setPendingImageUri(null);
 
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -404,6 +404,16 @@ export default function MovieDetailScreen() {
         <View className="flex-1 bg-neutral-950">
             <StatusBar style="light" />
             <Stack.Screen options={{ headerShown: false, presentation: 'modal' }} />
+
+            {Platform.OS === 'web' && (
+                <input
+                    id="custom-art-input"
+                    type="file"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={handleWebFileChange}
+                />
+            )}
 
             <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 40 }}>
                 {/* Backdrop */}
@@ -854,6 +864,9 @@ export default function MovieDetailScreen() {
                         imageUri={pendingImageUri}
                         onClose={() => {
                             setCropModalVisible(false);
+                            if (pendingImageUri && pendingImageUri.startsWith('blob:')) {
+                                URL.revokeObjectURL(pendingImageUri);
+                            }
                             setPendingImageUri(null);
                         }}
                         onSave={handleSaveCustomArt}

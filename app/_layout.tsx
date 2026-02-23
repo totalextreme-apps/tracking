@@ -11,6 +11,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack, usePathname } from 'expo-router';
+import Head from 'expo-router/head';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
 import { Dimensions, Platform, View } from 'react-native';
@@ -110,6 +111,18 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
           {/* We use a black background for the root container */}
           <View style={{ flex: 1, backgroundColor: '#0a0a0a' }}>
+            {Platform.OS === 'web' && (
+              <Head>
+                <title>Tracking - Your Personal Retro Video Store</title>
+                <meta name="description" content="Catalog your physical and digital collection, hunt for grails, and organize your stacks with the tactile feel of the VHS era." />
+                <meta property="og:title" content="Tracking - Movie & Physical Media Collector" />
+                <meta property="og:description" content="The ultimate tool for physical media collectors. VHS, 4K, Blu-ray, and more." />
+                <meta property="og:image" content="https://mediatracking.app/logo_tracking.png" />
+                <meta property="og:url" content="https://mediatracking.app" />
+                <meta name="twitter:card" content="summary_large_image" />
+                <link rel="canonical" href="https://mediatracking.app" />
+              </Head>
+            )}
             <Stack>
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen name="add" options={{ presentation: 'modal', headerShown: false }} />
