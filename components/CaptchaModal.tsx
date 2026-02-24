@@ -41,14 +41,8 @@ export function CaptchaModal({ visible, onSuccess, onCancel }: CaptchaModalProps
                         <Turnstile
                             key={`turnstile-${retryCount}`}
                             siteKey={siteKey}
+                            injectScript={false}
                             options={{ theme: 'dark', size: 'compact' }}
-                            scriptOptions={{
-                                appendTo: 'body',
-                                onError: () => {
-                                    console.error('Turnstile Script Load Error');
-                                    setTurnstileError('Script blocked by Safari Content Blockers or Network. Please disable block ad-blockers and reload.');
-                                }
-                            }}
                             onLoad={() => {
                                 console.log('Turnstile widget loaded successfully');
                                 setTurnstileError(null);
