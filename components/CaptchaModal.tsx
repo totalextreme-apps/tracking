@@ -9,7 +9,7 @@ interface CaptchaModalProps {
 }
 
 export function CaptchaModal({ visible, onSuccess, onCancel }: CaptchaModalProps) {
-    const siteKey = process.env.EXPO_PUBLIC_TURNSTILE_SITE_KEY || '';
+    const siteKey = process.env.EXPO_PUBLIC_TURNSTILE_SITE_KEY || '0x4AAAAAACfqPZmY0_dkAil1';
     const [retryCount, setRetryCount] = React.useState(0);
     const [turnstileError, setTurnstileError] = React.useState<string | null>(null);
 
@@ -37,13 +37,18 @@ export function CaptchaModal({ visible, onSuccess, onCancel }: CaptchaModalProps
 
             <View style={[styles.captchaContainer, { backgroundColor: '#111', borderRadius: 8, borderWidth: 1, borderColor: '#333' }]}>
                 {Platform.OS === 'web' ? (
-                    <View style={{ width: '100%', minHeight: 65, paddingHorizontal: 10 }}>
+                    <View style={{ width: '100%', minHeight: 140, alignItems: 'center', justifyContent: 'center' }}>
                         <Turnstile
                             key={`turnstile-${retryCount}`}
                             siteKey={siteKey}
-                            style={{ width: '100%', minHeight: 65, display: 'block' } as any}
-                            options={{ theme: 'dark', size: 'flexible' }}
-                            scriptOptions={{ appendTo: 'body' }}
+                            options={{ theme: 'dark', size: 'compact' }}
+                            scriptOptions={{
+                                appendTo: 'body',
+                                onError: () => {
+                                    console.error('Turnstile Script Load Error');
+                                    setTurnstileError('Script blocked by Safari Content Blockers or Network. Please disable block ad-blockers and reload.');
+                                }
+                            }}
                             onLoad={() => {
                                 console.log('Turnstile widget loaded successfully');
                                 setTurnstileError(null);
@@ -61,7 +66,7 @@ export function CaptchaModal({ visible, onSuccess, onCancel }: CaptchaModalProps
                         />
                         {turnstileError && (
                             <Text style={{ color: '#ff4444', fontSize: 10, textAlign: 'center', marginTop: 5 }}>
-                                Error: {turnstileError}. Staging Domains must be added to Cloudflare!
+                                {turnstileError}
                             </Text>
                         )}
                     </View>
