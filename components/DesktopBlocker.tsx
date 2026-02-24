@@ -21,13 +21,10 @@ export const DesktopBlocker = () => {
                     <View style={styles.messageBox}>
                         <Text style={styles.title}>ACCESS RESTRICTED</Text>
                         <Text style={styles.body}>
-                            THE TRACKING INTERFACE IS OPTIMIZED FOR PORTABLE HANDHELD UNITS ONLY.
-                        </Text>
-                        <Text style={styles.body}>
-                            PLEASE TERMINATE THIS SESSION AND RECONNECT VIA A MOBILE TELECOMMUNICATIONS DEVICE.
+                            THE TRACKING INTERFACE IS OPTIMIZED FOR PORTABLE HANDHELD UNITS ONLY. PLEASE CONNECT VIA A MOBILE TELECOMMUNICATIONS DEVICE.
                         </Text>
 
-                        <View style={{ backgroundColor: '#fff', padding: 15, marginTop: 10, marginBottom: 10, alignSelf: 'center', shadowColor: '#fff', shadowOpacity: 0.8, shadowRadius: 10, shadowOffset: { width: 0, height: 0 } }}>
+                        <View style={{ backgroundColor: '#fff', padding: 10, marginTop: 5, marginBottom: 5, alignSelf: 'center', shadowColor: '#fff', shadowOpacity: 0.8, shadowRadius: 10, shadowOffset: { width: 0, height: 0 } }}>
                             <QRCode
                                 value="https://mediatracking.app"
                                 size={120}
@@ -109,9 +106,9 @@ const styles = StyleSheet.create({
     title: {
         color: '#FFFF00',
         fontFamily: 'SpaceMono',
-        fontSize: 42,
+        fontSize: 36,
         fontWeight: 'bold',
-        marginBottom: 30,
+        marginBottom: 20,
         textAlign: 'center',
         textShadowColor: 'rgba(255, 255, 0, 0.5)',
         textShadowOffset: { width: 4, height: 4 },
@@ -120,10 +117,10 @@ const styles = StyleSheet.create({
     body: {
         color: '#ffffff',
         fontFamily: 'SpaceMono',
-        fontSize: 20,
-        lineHeight: 32,
+        fontSize: 18,
+        lineHeight: 28,
         textAlign: 'center',
-        marginBottom: 20,
+        marginBottom: 15,
         textTransform: 'uppercase',
     },
     blinkContainer: {
