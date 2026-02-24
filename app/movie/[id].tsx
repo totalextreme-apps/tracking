@@ -104,11 +104,17 @@ export default function MovieDetailScreen() {
                     mediaTypes: ImagePicker.MediaTypeOptions.Images,
                     allowsEditing: true,
                     aspect: [2, 3],
-                    quality: 0.9,
+                    quality: 0.8,
+                    base64: true,
                 });
 
                 if (!result.canceled && result.assets[0]) {
-                    setPendingImageUri(result.assets[0].uri);
+                    if (result.assets[0].base64) {
+                        const mime = result.assets[0].mimeType || 'image/jpeg';
+                        setPendingImageUri(`data:${mime};base64,${result.assets[0].base64}`);
+                    } else {
+                        setPendingImageUri(result.assets[0].uri);
+                    }
                     setCropModalVisible(true);
                 }
             } catch (error) {
@@ -163,12 +169,9 @@ export default function MovieDetailScreen() {
                 console.log('Compressing image...');
                 finalImageToUpload = await compressImage(blob, 1000, 0.8);
             } else {
-                console.log('Using native image file...');
-                finalImageToUpload = {
-                    uri: croppedDataUrl,
-                    type: 'image/jpeg',
-                    name: 'upload.jpg',
-                };
+                console.log('Using native image base64 data...');
+                // we passed a data URI from ImagePicker, which Cloudinary understands natively!
+                finalImageToUpload = croppedDataUrl;
             }
 
             // Upload to Cloudinary
@@ -199,9 +202,11 @@ export default function MovieDetailScreen() {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             console.log('Custom art save complete!');
         } catch (e: any) {
-
             console.error('Failed to save custom art:', e);
-            Alert.alert('Error', `Failed to save custom cover art: ${e.message || 'Unknown error'}`);
+            setCropModalVisible(false);
+            setTimeout(() => {
+                Alert.alert('Error', `Failed to save custom cover art: ${e.message || JSON.stringify(e)}`);
+            }, 500);
         }
     };
 

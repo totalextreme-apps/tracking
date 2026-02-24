@@ -6,13 +6,13 @@ interface UploadResult {
     publicId: string;
 }
 
-export async function uploadToCloudinary(blob: Blob): Promise<UploadResult> {
+export async function uploadToCloudinary(fileData: Blob | any): Promise<UploadResult> {
     if (!CLOUD_NAME) {
         throw new Error('Cloudinary Cloud Name is not configured');
     }
 
     const formData = new FormData();
-    formData.append('file', blob);
+    formData.append('file', fileData);
     formData.append('upload_preset', UPLOAD_PRESET);
 
     const response = await fetch(
