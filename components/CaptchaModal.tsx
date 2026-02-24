@@ -36,11 +36,12 @@ export function CaptchaModal({ visible, onSuccess, onCancel }: CaptchaModalProps
 
             <View style={[styles.captchaContainer, { backgroundColor: '#111', borderRadius: 8, borderWidth: 1, borderColor: '#333' }]}>
                 {Platform.OS === 'web' ? (
-                    <View style={{ minWidth: 300, minHeight: 65, alignItems: 'center', justifyContent: 'center' }}>
+                    <View style={{ width: 300, height: 65, overflow: 'hidden' }}>
                         <Turnstile
                             key={`turnstile-${retryCount}`}
                             siteKey={siteKey}
-                            options={{ theme: 'dark' }}
+                            style={{ width: 300, height: 65, display: 'block' } as any}
+                            options={{ theme: 'dark', size: 'normal' }}
                             onLoad={() => console.log('Turnstile widget loaded successfully')}
                             onSuccess={(token) => {
                                 console.log('Turnstile success inside modal');
