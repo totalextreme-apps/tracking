@@ -11,6 +11,7 @@ interface CaptchaModalProps {
 export function CaptchaModal({ visible, onSuccess, onCancel }: CaptchaModalProps) {
     const siteKey = process.env.EXPO_PUBLIC_TURNSTILE_SITE_KEY || '';
     const [retryCount, setRetryCount] = React.useState(0);
+    const [turnstileError, setTurnstileError] = React.useState<string | null>(null);
 
     React.useEffect(() => {
         if (visible) {
@@ -36,20 +37,33 @@ export function CaptchaModal({ visible, onSuccess, onCancel }: CaptchaModalProps
 
             <View style={[styles.captchaContainer, { backgroundColor: '#111', borderRadius: 8, borderWidth: 1, borderColor: '#333' }]}>
                 {Platform.OS === 'web' ? (
-                    <View style={{ width: 300, height: 65, overflow: 'hidden' }}>
+                    <View style={{ width: '100%', minHeight: 65, paddingHorizontal: 10 }}>
                         <Turnstile
                             key={`turnstile-${retryCount}`}
                             siteKey={siteKey}
-                            style={{ width: 300, height: 65, display: 'block' } as any}
-                            options={{ theme: 'dark', size: 'normal' }}
-                            onLoad={() => console.log('Turnstile widget loaded successfully')}
+                            style={{ width: '100%', minHeight: 65, display: 'block' } as any}
+                            options={{ theme: 'dark', size: 'flexible' }}
+                            scriptOptions={{ appendTo: 'body' }}
+                            onLoad={() => {
+                                console.log('Turnstile widget loaded successfully');
+                                setTurnstileError(null);
+                            }}
                             onSuccess={(token) => {
                                 console.log('Turnstile success inside modal');
+                                setTurnstileError(null);
                                 onSuccess(token);
                             }}
-                            onError={(e) => console.error('Turnstile Error:', e)}
+                            onError={(e) => {
+                                console.error('Turnstile Error:', e);
+                                setTurnstileError(String(e) || 'Unknown Script Error');
+                            }}
                             onExpire={() => console.warn('Turnstile Expired')}
                         />
+                        {turnstileError && (
+                            <Text style={{ color: '#ff4444', fontSize: 10, textAlign: 'center', marginTop: 5 }}>
+                                Error: {turnstileError}. Staging Domains must be added to Cloudflare!
+                            </Text>
+                        )}
                     </View>
                 ) : (
                     <View style={{ padding: 20 }}>
