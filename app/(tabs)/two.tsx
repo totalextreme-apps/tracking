@@ -568,16 +568,28 @@ export default function SettingsScreen() {
           </View>
           <ScrollView showsVerticalScrollIndicator={false}>
             <Text className="text-neutral-300 mb-4 leading-6">
-              <Text className="font-bold text-white">Data Storage:</Text> Your movie collection and profile data are securely stored in the cloud using Supabase (PostgreSQL).
+              <Text className="font-bold text-white">1. Data Collection:</Text> We collect information you provide directly, including your email address (if you link an account), username, bio, and your cataloged movie collection data. If you use our app without creating an account, we rely on an anonymous identifier tied to your device.
             </Text>
             <Text className="text-neutral-300 mb-4 leading-6">
-              <Text className="font-bold text-white">Security:</Text> We use Row Level Security (RLS) to ensure that only you can access and modify your data. Your data is associated with your unique User ID.
+              <Text className="font-bold text-white">2. Data Usage & Storage:</Text> Your movie collection and profile data are securely stored in the cloud using Supabase (PostgreSQL). We use your data solely to provide and improve the Tracking application experience.
             </Text>
             <Text className="text-neutral-300 mb-4 leading-6">
-              <Text className="font-bold text-white">Local Storage:</Text> The app uses your device's local storage to save preferences (like theme and sound settings) and to cache data for faster performance.
+              <Text className="font-bold text-white">3. Third-Party Disclosures:</Text> We do not sell your personal data. We utilize third-party services such as Supabase for secure cloud database hosting and TMDB (The Movie Database) for retrieving movie metadata and images.
             </Text>
             <Text className="text-neutral-300 mb-4 leading-6">
-              <Text className="font-bold text-white">Account Recovery:</Text> If you are using an anonymous account, your data is tied to this specific device installation. To prevent data loss, we recommend linking an email address in the Settings.
+              <Text className="font-bold text-white">4. Data Retention:</Text> We retain your data for as long as your account is active. Non-linked anonymous accounts may lose access to data if the device caching is cleared.
+            </Text>
+            <Text className="text-neutral-300 mb-4 leading-6">
+              <Text className="font-bold text-white">5. Security:</Text> We use Row Level Security (RLS) policies within our database to ensure that only you can access and modify your personal data. Your data is strictly associated with your unique User ID.
+            </Text>
+            <Text className="text-neutral-300 mb-4 leading-6">
+              <Text className="font-bold text-white">6. Local Storage:</Text> The app uses your device's local storage to save specific preferences (e.g., theme and sound settings) to optimize your experience.
+            </Text>
+            <Text className="text-neutral-300 mb-4 leading-6">
+              <Text className="font-bold text-white">7. User Rights:</Text> You have the right to access, update, export (via CSV), or delete your personal data. You may export your collection at any time via the Settings menu.
+            </Text>
+            <Text className="text-neutral-300 mb-4 leading-6">
+              <Text className="font-bold text-white">8. Contact Information:</Text> For any privacy-related questions or data deletion requests, please contact the developer via the official repository or support channels.
             </Text>
             <View className="h-12" />
           </ScrollView>
