@@ -32,7 +32,18 @@ const responsiveBackground = `
 body {
   background-color: #fff;
   overscroll-behavior-y: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
+
+/* Prevent native image save/copy overlays globally to act like native */
+img {
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
 @media (prefers-color-scheme: dark) {
   body {
     background-color: #000;
