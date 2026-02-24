@@ -418,9 +418,6 @@ export default function HomeScreen() {
                       playSound('click');
                       router.push(`/movie/${item.movie_id}`);
                     }}
-                    onLongPressAction={thriftMode ? () => {
-                      handleAcquiredPress(item);
-                    } : undefined}
                     onToggleFavorite={(item: any) => {
                       if (thriftMode) {
                         handleToggleGrail(item);
@@ -636,7 +633,6 @@ export default function HomeScreen() {
                           stack={stack}
                           mode={viewMode === 'list' ? 'list' : 'grid'} // Pass mode prop
                           onAcquiredPress={thriftMode ? handleAcquiredPress : undefined}
-                          onLongPress={thriftMode ? handleAcquiredPress : undefined}
                           onToggleFavorite={thriftMode ? handleToggleGrail : handleToggleFavorite}
                           onPress={() => router.push(`/movie/${stack[0].movie_id}`)}
                           width={itemWidth}
