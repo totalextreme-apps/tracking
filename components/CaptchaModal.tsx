@@ -10,6 +10,7 @@ interface CaptchaModalProps {
 
 export function CaptchaModal({ visible, onSuccess, onCancel }: CaptchaModalProps) {
     const siteKey = process.env.EXPO_PUBLIC_TURNSTILE_SITE_KEY || '';
+    const [retryCount, setRetryCount] = React.useState(0);
 
     React.useEffect(() => {
         if (visible) {
@@ -35,17 +36,20 @@ export function CaptchaModal({ visible, onSuccess, onCancel }: CaptchaModalProps
 
             <View style={[styles.captchaContainer, { backgroundColor: '#111', borderRadius: 8, borderWidth: 1, borderColor: '#333' }]}>
                 {Platform.OS === 'web' ? (
-                    <Turnstile
-                        key={visible ? 'active' : 'inactive'}
-                        siteKey={siteKey}
-                        onLoad={() => console.log('Turnstile widget loaded successfully')}
-                        onSuccess={(token) => {
-                            console.log('Turnstile success inside modal');
-                            onSuccess(token);
-                        }}
-                        onError={(e) => console.error('Turnstile Error:', e)}
-                        onExpire={() => console.warn('Turnstile Expired')}
-                    />
+                    <View style={{ minWidth: 300, minHeight: 65, alignItems: 'center', justifyContent: 'center' }}>
+                        <Turnstile
+                            key={`turnstile-${retryCount}`}
+                            siteKey={siteKey}
+                            options={{ theme: 'dark' }}
+                            onLoad={() => console.log('Turnstile widget loaded successfully')}
+                            onSuccess={(token) => {
+                                console.log('Turnstile success inside modal');
+                                onSuccess(token);
+                            }}
+                            onError={(e) => console.error('Turnstile Error:', e)}
+                            onExpire={() => console.warn('Turnstile Expired')}
+                        />
+                    </View>
                 ) : (
                     <View style={{ padding: 20 }}>
                         <Text style={{ color: '#a1a1a6', textAlign: 'center' }}>
@@ -69,9 +73,11 @@ export function CaptchaModal({ visible, onSuccess, onCancel }: CaptchaModalProps
                 </Pressable>
             )}
 
-            <Text style={styles.hintText}>
-                Not seeing the challenge? Check your internet or browser extensions.
-            </Text>
+            <Pressable onPress={() => setRetryCount(c => c + 1)} style={{ marginTop: 10, marginBottom: 20 }}>
+                <Text style={styles.hintText}>
+                    Not seeing the challenge? Tap here to reload.
+                </Text>
+            </Pressable>
 
             <Pressable onPress={onCancel} style={styles.closeButton}>
                 <Text style={styles.closeButtonText}>Cancel</Text>
