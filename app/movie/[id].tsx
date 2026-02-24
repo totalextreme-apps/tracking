@@ -151,18 +151,29 @@ export default function MovieDetailScreen() {
             // Find existing art to delete later
             const oldUrl = movieItems.find((i: any) => i.custom_poster_url)?.custom_poster_url;
 
-            // Convert data URL to Blob
-            console.log('Converting data URL to blob...');
-            const response = await fetch(croppedDataUrl);
-            const blob = await response.blob();
+            let finalImageToUpload: any;
 
-            // Compress
-            console.log('Compressing image...');
-            const compressedBlob = await compressImage(blob, 1000, 0.8);
+            if (Platform.OS === 'web') {
+                // Convert data URL to Blob
+                console.log('Converting data URL to blob...');
+                const response = await fetch(croppedDataUrl);
+                const blob = await response.blob();
+
+                // Compress
+                console.log('Compressing image...');
+                finalImageToUpload = await compressImage(blob, 1000, 0.8);
+            } else {
+                console.log('Using native image file...');
+                finalImageToUpload = {
+                    uri: croppedDataUrl,
+                    type: 'image/jpeg',
+                    name: 'upload.jpg',
+                };
+            }
 
             // Upload to Cloudinary
             console.log('Uploading to Cloudinary...');
-            const { url: uploadUrl } = await uploadToCloudinary(compressedBlob);
+            const { url: uploadUrl } = await uploadToCloudinary(finalImageToUpload);
             console.log('Cloudinary upload success:', uploadUrl);
 
             // Save to Supabase

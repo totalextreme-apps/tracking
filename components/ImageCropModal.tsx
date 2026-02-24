@@ -21,22 +21,23 @@ export function ImageCropModal({ visible, imageUri, onClose, onSave, targetRatio
     const previewHeight = PREVIEW_WIDTH / targetRatio;
 
     const handleSave = async () => {
-        if (Platform.OS !== 'web') {
-            // For native, we'd use expo-image-manipulator here
-            // For now, just pass through the original
-            onSave(imageUri);
-            return;
-        }
-
         setLoading(true);
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
         try {
+            if (Platform.OS !== 'web') {
+                // For native, we pass through the original (since ImagePicker already cropped and compressed)
+                await onSave(imageUri);
+                return;
+            }
+
             const croppedUri = await cropToRatio(imageUri, targetRatio);
             await onSave(croppedUri);
         } catch (e) {
             console.error('Failed to crop image:', e);
-            await onSave(imageUri); // Fall back to original
+            if (Platform.OS === 'web') {
+                await onSave(imageUri); // Fall back to original only on web
+            }
         } finally {
             setLoading(false);
         }
