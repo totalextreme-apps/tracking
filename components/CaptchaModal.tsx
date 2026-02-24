@@ -1,4 +1,3 @@
-import { Turnstile } from '@marsidev/react-turnstile';
 import React from 'react';
 import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -7,6 +6,70 @@ interface CaptchaModalProps {
     onSuccess: (token: string) => void;
     onCancel: () => void;
 }
+
+const NativeWebTurnstile = ({ siteKey, onSuccess, onError }: any) => {
+    const containerRef = React.useRef<any>(null);
+    const widgetIdRef = React.useRef<any>(null);
+
+    React.useEffect(() => {
+        if (Platform.OS !== 'web') return;
+
+        let interval: any;
+
+        const initTurnstile = () => {
+            const turnstile = (window as any).turnstile;
+            if (turnstile && containerRef.current && !widgetIdRef.current) {
+                try {
+                    if (interval) clearInterval(interval);
+                    widgetIdRef.current = turnstile.render(containerRef.current, {
+                        sitekey: siteKey,
+                        theme: 'dark',
+                        size: 'compact',
+                        callback: (token: string) => {
+                            console.log('Turnstile successfully issued native token');
+                            onSuccess(token);
+                        },
+                        'error-callback': (err: any) => {
+                            console.error('Turnstile Native Error:', err);
+                            onError(err || 'Turnstile Loading Error');
+                        }
+                    });
+                } catch (e) {
+                    onError(String(e));
+                }
+            }
+        };
+
+        if ((window as any).turnstile) {
+            initTurnstile();
+        } else {
+            interval = setInterval(initTurnstile, 250);
+        }
+
+        return () => {
+            if (interval) clearInterval(interval);
+            const turnstile = (window as any).turnstile;
+            if (widgetIdRef.current && turnstile) {
+                turnstile.remove(widgetIdRef.current);
+                widgetIdRef.current = null;
+            }
+        };
+    }, [siteKey]);
+
+    if (Platform.OS !== 'web') return null;
+
+    // Use pure React DOM element (div) to avoid ReactNative NativeWeb flex-div nesting collapsing the iframe iframe entirely
+    return React.createElement('div', {
+        ref: containerRef,
+        style: {
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            width: '100%',
+            minHeight: 140
+        }
+    });
+};
 
 export function CaptchaModal({ visible, onSuccess, onCancel }: CaptchaModalProps) {
     const siteKey = process.env.EXPO_PUBLIC_TURNSTILE_SITE_KEY || '0x4AAAAAACfqPZmY0_dkAil1';
@@ -38,25 +101,15 @@ export function CaptchaModal({ visible, onSuccess, onCancel }: CaptchaModalProps
             <View style={[styles.captchaContainer, { backgroundColor: '#111', borderRadius: 8, borderWidth: 1, borderColor: '#333' }]}>
                 {Platform.OS === 'web' ? (
                     <View style={{ width: '100%', minHeight: 140, alignItems: 'center', justifyContent: 'center' }}>
-                        <Turnstile
-                            key={`turnstile-${retryCount}`}
+                        <NativeWebTurnstile
                             siteKey={siteKey}
-                            injectScript={false}
-                            options={{ theme: 'dark', size: 'compact' }}
-                            onLoad={() => {
-                                console.log('Turnstile widget loaded successfully');
-                                setTurnstileError(null);
-                            }}
-                            onSuccess={(token) => {
-                                console.log('Turnstile success inside modal');
+                            onSuccess={(token: string) => {
                                 setTurnstileError(null);
                                 onSuccess(token);
                             }}
-                            onError={(e) => {
-                                console.error('Turnstile Error:', e);
-                                setTurnstileError(String(e) || 'Unknown Script Error');
+                            onError={(err: any) => {
+                                setTurnstileError(String(err));
                             }}
-                            onExpire={() => console.warn('Turnstile Expired')}
                         />
                         {turnstileError && (
                             <Text style={{ color: '#ff4444', fontSize: 10, textAlign: 'center', marginTop: 5 }}>
