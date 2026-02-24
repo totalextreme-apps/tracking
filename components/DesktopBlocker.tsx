@@ -1,5 +1,6 @@
 import React from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
+import QRCode from 'react-native-qrcode-svg';
 
 // Desktop Blocker - V3 (Force Render Fix)
 export const DesktopBlocker = () => {
@@ -26,8 +27,17 @@ export const DesktopBlocker = () => {
                             PLEASE TERMINATE THIS SESSION AND RECONNECT VIA A MOBILE TELECOMMUNICATIONS DEVICE.
                         </Text>
 
+                        <View style={{ backgroundColor: '#fff', padding: 15, marginTop: 10, marginBottom: 10, alignSelf: 'center', shadowColor: '#fff', shadowOpacity: 0.8, shadowRadius: 10, shadowOffset: { width: 0, height: 0 } }}>
+                            <QRCode
+                                value="https://mediatracking.app"
+                                size={120}
+                                color="#0000AA"
+                                backgroundColor="#ffffff"
+                            />
+                        </View>
+
                         <View style={styles.blinkContainer}>
-                            <Text style={styles.blinkText}>SWITCH TO YOUR MOBILE DEVICE TO CONTINUE</Text>
+                            <Text style={styles.blinkText}>SCAN TO CONTINUE ON MOBILE</Text>
                         </View>
                     </View>
 
