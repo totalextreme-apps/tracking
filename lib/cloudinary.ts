@@ -1,4 +1,3 @@
-import { Platform } from 'react-native';
 
 const CLOUD_NAME = process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME;
 const UPLOAD_PRESET = process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'ml_default';
@@ -15,38 +14,7 @@ export async function uploadToCloudinary(fileData: Blob | string | any): Promise
 
     const uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`;
 
-    if (Platform.OS !== 'web' && typeof fileData === 'string' && fileData.startsWith('data:')) {
-        console.log('Using native JSON upload for base64 image...');
 
-        const response = await fetch(uploadUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                file: fileData,
-                upload_preset: UPLOAD_PRESET,
-            }),
-        });
-
-        if (!response.ok) {
-            let errorMsg = 'Failed to upload image to Cloudinary via JSON';
-            try {
-                const error = await response.json();
-                console.error('Cloudinary JSON upload error:', error);
-                errorMsg = error.error?.message || errorMsg;
-            } catch (e) {
-                console.error('Could not parse JSON error response', e);
-            }
-            throw new Error(errorMsg);
-        }
-
-        const data = await response.json();
-        return {
-            url: data.secure_url,
-            publicId: data.public_id
-        };
-    }
 
     const formData = new FormData();
     formData.append('file', fileData);
