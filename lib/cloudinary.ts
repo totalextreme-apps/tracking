@@ -1,3 +1,5 @@
+import * as FileSystem from 'expo-file-system';
+import { Platform } from 'react-native';
 
 const CLOUD_NAME = process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME;
 const UPLOAD_PRESET = process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'ml_default';
@@ -14,7 +16,33 @@ export async function uploadToCloudinary(fileData: Blob | string | any): Promise
 
     const uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`;
 
+    if (Platform.OS !== 'web') {
+        let uri = typeof fileData === 'string' ? fileData : fileData?.uri;
+        if (!uri) throw new Error("No pure URI provided for native filesystem upload");
 
+        console.log('Using expo-file-system native upload for:', uri);
+
+        const uploadResult = await FileSystem.uploadAsync(uploadUrl, uri, {
+            httpMethod: 'POST',
+            uploadType: 1, // FileSystemUploadType.MULTIPART
+            fieldName: 'file',
+            mimeType: 'image/jpeg',
+            parameters: {
+                upload_preset: UPLOAD_PRESET,
+            },
+        });
+
+        if (uploadResult.status < 200 || uploadResult.status >= 300) {
+            console.error('Cloudinary native upload error:', uploadResult.body);
+            throw new Error(`Native Cloudinary Upload Failed: ${uploadResult.status}`);
+        }
+
+        const data = JSON.parse(uploadResult.body);
+        return {
+            url: data.secure_url,
+            publicId: data.public_id
+        };
+    }
 
     const formData = new FormData();
     formData.append('file', fileData);

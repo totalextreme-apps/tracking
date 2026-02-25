@@ -105,16 +105,10 @@ export default function MovieDetailScreen() {
                     allowsEditing: true,
                     aspect: [2, 3],
                     quality: 0.8,
-                    base64: true,
                 });
 
                 if (!result.canceled && result.assets[0]) {
-                    if (result.assets[0].base64) {
-                        const mime = result.assets[0].mimeType || 'image/jpeg';
-                        setPendingImageUri(`data:${mime};base64,${result.assets[0].base64}`);
-                    } else {
-                        setPendingImageUri(result.assets[0].uri);
-                    }
+                    setPendingImageUri(result.assets[0].uri);
                     setCropModalVisible(true);
                 }
             } catch (error) {
@@ -169,8 +163,7 @@ export default function MovieDetailScreen() {
                 console.log('Compressing image...');
                 finalImageToUpload = await compressImage(blob, 1000, 0.8);
             } else {
-                console.log('Using native image base64 data uri...');
-                // send the raw string data uri to cloudinary using JSON
+                console.log('Using native image file uri...');
                 finalImageToUpload = croppedDataUrl;
             }
 
