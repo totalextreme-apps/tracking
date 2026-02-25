@@ -133,16 +133,16 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
     : [];
 
   // Unified Width: 100 for proper spacing
-  const baseWidth = 110; // Slightly wider base
-  const layoutWidth = baseWidth * scale;
-  const contentHeight = (isPhysical ? 230 : 160) * scale + 40; // More precise height including text zone
+  const baseWidth = 100;
+  const layoutWidth = baseWidth * scale + 10;
+  const contentHeight = (isPhysical ? 230 : 170) * scale;
 
   // Ensure wrapper has explicit dimensions to prevent collapse
   const wrapperStyle = {
     width: layoutWidth,
     alignItems: 'center' as const,
-    marginHorizontal: 4,
-    justifyContent: 'flex-end' as const,
+    marginHorizontal: 2,
+    justifyContent: 'center' as const,
     minHeight: contentHeight,
     overflow: 'visible' as const,
   };

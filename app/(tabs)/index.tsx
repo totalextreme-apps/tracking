@@ -418,8 +418,8 @@ export default function HomeScreen() {
                   style={{ zIndex: 10 }}
                   contentContainerStyle={{
                     paddingHorizontal: 16,
-                    paddingTop: 10,
-                    paddingBottom: 30
+                    paddingTop: 30,
+                    paddingBottom: 40
                   }}
                 >
                   {displayItems.map((item: any) => (
