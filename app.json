@@ -42,7 +42,8 @@
           "microphonePermission": "Allow Tracking to access your microphone",
           "recordAudioPermission": "Allow Tracking to access your microphone"
         }
-      ]
+      ],
+      "expo-audio"
     ],
     "experiments": {
       "typedRoutes": true

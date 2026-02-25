@@ -1,4 +1,4 @@
-import { Audio } from 'expo-av';
+import { createAudioPlayer } from 'expo-audio';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useSettings } from './SettingsContext';
 
@@ -22,7 +22,7 @@ export function useSound() {
 }
 
 export function SoundProvider({ children }: { children: React.ReactNode }) {
-    const [sounds, setSounds] = useState<Record<SoundType, Audio.Sound | null>>({
+    const [players, setPlayers] = useState<Record<SoundType, any>>({
         click: null,
         insert: null,
         static: null,
@@ -46,40 +46,34 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
     const loadSounds = async () => {
         try {
             // Load sounds - utilizing try/catch for individual loads in case files are missing
-            const load = async (source: any) => {
+            const load = (source: any) => {
                 try {
-                    const { sound } = await Audio.Sound.createAsync(source);
-                    return sound;
+                    // In expo-audio, we use createAudioPlayer
+                    const player = createAudioPlayer(source);
+                    return player;
                 } catch (e) {
-                    console.log('Failed to load sound', e);
+                    console.log('Failed to create audio player', e);
                     return null;
                 }
             };
 
-            const clickSound = await load(require('@/assets/sounds/ui_click.mp3'));
-            const insertSound = await load(require('@/assets/sounds/vhs_insert.mp3'));
-            const staticSound = await load(require('@/assets/sounds/static_noise.mp3'));
-            // const whirSound = await load(require('@/assets/sounds/mechanical_whir.mp3'));
+            const clickPlayer = load(require('@/assets/sounds/ui_click.mp3'));
+            const insertPlayer = load(require('@/assets/sounds/vhs_insert.mp3'));
+            const staticPlayer = load(require('@/assets/sounds/static_noise.mp3'));
+            const tvOffPlayer = load(require('@/assets/sounds/tv_off.mp3'));
+            const rewindPlayer = load(require('@/assets/sounds/rewind.mp3'));
+            const ejectPlayer = load(require('@/assets/sounds/vcr_eject.mp3'));
+            const peelPlayer = load(require('@/assets/sounds/sticker_peel.mp3'));
 
-            const tvOffSound = await load(require('@/assets/sounds/tv_off.mp3'));
-            const rewindSound = await load(require('@/assets/sounds/rewind.mp3'));
-            const ejectSound = await load(require('@/assets/sounds/vcr_eject.mp3'));
-            const peelSound = await load(require('@/assets/sounds/sticker_peel.mp3'));
-
-            setSounds({
-                click: clickSound,
-                insert: insertSound,
-                static: staticSound,
+            setPlayers({
+                click: clickPlayer,
+                insert: insertPlayer,
+                static: staticPlayer,
                 whir: null,
-                tv_off: tvOffSound,
-                rewind: rewindSound,
-                eject: ejectSound,
-                peel: peelSound,
-            });
-
-            // Configure Audio
-            await Audio.setAudioModeAsync({
-                playsInSilentModeIOS: true,
+                tv_off: tvOffPlayer,
+                rewind: rewindPlayer,
+                eject: ejectPlayer,
+                peel: peelPlayer,
             });
 
         } catch (e) {
@@ -88,8 +82,8 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
     };
 
     const unloadSounds = async () => {
-        Object.values(sounds).forEach(async (sound) => {
-            if (sound) await sound.unloadAsync();
+        Object.values(players).forEach((player) => {
+            if (player && player.terminate) player.terminate();
         });
         // Clear web sounds
         activeWebSounds.current = {};
@@ -128,12 +122,16 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
             }
         }
 
-        const sound = sounds[type];
-        if (sound) {
+        const player = players[type];
+        if (player) {
             try {
-                await sound.replayAsync();
+                // If the player is already playing, seek to start
+                if (player.playing) {
+                    player.seekTo(0);
+                }
+                player.play();
             } catch (e) {
-                console.log('Error playing sound', e);
+                console.log('Error playing sound with expo-audio', e);
             }
         }
     };
@@ -148,12 +146,13 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
         }
 
         // Stop native audio
-        const sound = sounds[type];
-        if (sound) {
+        const player = players[type];
+        if (player) {
             try {
-                await sound.stopAsync();
+                player.pause();
+                player.seekTo(0);
             } catch (e) {
-                console.log('Error stopping sound', e);
+                console.log('Error stopping sound with expo-audio', e);
             }
         }
     };

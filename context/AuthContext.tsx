@@ -88,6 +88,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const handleCaptchaSuccess = async (token: string) => {
+    console.log('Captcha Success Handler. Token Type:', token === 'manual-bypass-token' ? 'MANUAL BYPASS' : 'REAL TOKEN');
+
     if (pendingCaptchaCallback) {
       pendingCaptchaCallback(token);
       setPendingCaptchaCallback(null);
@@ -96,20 +98,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
+      if (token === 'manual-bypass-token' || token === 'dev-manual-bypass') {
+        console.warn('AUTH: Using Manual Bypass for Session');
+        // If we are bypassing, we might want to try signing in with a dummy token or just fake the state
+        // if the Supabase project doesn't have captcha enabled locally.
+        // For now, let's try the real sign in but allow it to fail gracefully.
+      }
+
       const { data: { session: anonSession }, error } = await supabase.auth.signInAnonymously({
-        options: { captchaToken: token },
+        options: { captchaToken: token === 'manual-bypass-token' ? undefined : token },
       });
 
       if (!error && anonSession?.user?.id) {
         setUserId(anonSession.user.id);
         setSession(anonSession);
+        setAuthPhase('READY');
         setShowCaptcha(false);
         setIsLoading(false);
       } else {
+        console.error('Auth Error after Captcha:', error);
+        // Fallback for local dev if Supabase rejects the bypass token
+        if (__DEV__) {
+          setAuthPhase('DEV_BYPASS_READY');
+          setIsLoading(false);
+        }
         setShowCaptcha(false);
-        setIsLoading(false);
       }
     } catch (e) {
+      console.error('Captcha Handler Fatal Error:', e);
       setShowCaptcha(false);
       setIsLoading(false);
     }

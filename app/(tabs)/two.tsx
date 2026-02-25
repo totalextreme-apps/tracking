@@ -12,7 +12,7 @@ import { exportCollection } from '@/lib/export-utils';
 import { printInventoryReceipt } from '@/lib/receipt-utils';
 import { supabase } from '@/lib/supabase';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { Audio } from 'expo-av';
+import { createAudioPlayer } from 'expo-audio';
 import * as Haptics from 'expo-haptics';
 import { Image as ExpoImage } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
@@ -398,8 +398,8 @@ export default function SettingsScreen() {
                 }
 
                 // Play mechanical sound
-                const { sound } = await Audio.Sound.createAsync(require('@/assets/sounds/dotmatrix_noise.mp3'));
-                await sound.playAsync();
+                const player = createAudioPlayer(require('@/assets/sounds/dotmatrix_noise.mp3'));
+                player.play();
 
                 await printInventoryReceipt(inventoryItems);
               } catch (e) {
