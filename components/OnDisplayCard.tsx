@@ -132,10 +132,10 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
     ? [{ borderWidth: 2, borderStyle: 'dashed' as const, borderColor: '#6b7280', borderRadius: 12 }]
     : [];
 
-  // Unified Width: 100 for proper spacing (Digital was too wide at 180)
-  const baseWidth = 100;
-  const layoutWidth = baseWidth * scale + 16;
-  const contentHeight = (isPhysical ? 250 : 180) * scale; // Increased base and made scale-aware
+  // Unified Width: 100 for proper spacing
+  const baseWidth = 110; // Slightly wider base
+  const layoutWidth = baseWidth * scale;
+  const contentHeight = (isPhysical ? 230 : 160) * scale + 40; // More precise height including text zone
 
   // Ensure wrapper has explicit dimensions to prevent collapse
   const wrapperStyle = {
