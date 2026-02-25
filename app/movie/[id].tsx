@@ -625,12 +625,12 @@ export default function MovieDetailScreen() {
                                 <Text className="text-white font-bold mb-2">Format Notes</Text>
                                 {movieItems.map((item: any) => (
                                     <View key={item.id} className="mb-4">
-                                        <View className="flex-row items-center mb-2">
-                                            <View className={`px-2 py-1 rounded ${FORMAT_COLORS[item.format] || 'bg-neutral-800'}`}>
+                                        <View className="flex-row items-center flex-wrap mb-2">
+                                            <View className={`px-2 py-1 rounded shrink-0 ${FORMAT_COLORS[item.format] || 'bg-neutral-800'}`}>
                                                 <Text className="text-white font-mono text-xs font-bold">{item.format}</Text>
                                             </View>
                                             {item.edition && (
-                                                <Text className="text-neutral-500 font-mono text-xs ml-2">({item.edition})</Text>
+                                                <Text className="text-neutral-500 font-mono text-xs ml-2 flex-1" style={{ minWidth: 100 }}>({item.edition})</Text>
                                             )}
                                         </View>
                                         <TextInput
@@ -688,20 +688,22 @@ export default function MovieDetailScreen() {
                                 <View className="gap-2">
                                     {movieItems.map((item: any) => (
                                         <View key={item.id} className="flex-row items-center justify-between bg-neutral-900 p-3 rounded-lg border border-neutral-800">
-                                            <Pressable
-                                                className="flex-row items-center gap-2"
-                                                onPress={() => {
-                                                    setSelectedFormat(item.format);
-                                                    playSound('click');
-                                                }}
-                                            >
-                                                <View className={`px-2 py-1 rounded ${FORMAT_COLORS[item.format] || 'bg-neutral-800'}`}>
-                                                    <Text className="text-white font-mono text-xs font-bold">{item.format}</Text>
-                                                </View>
+                                            <View className="flex-1 flex-row items-center flex-wrap gap-2 mr-2">
+                                                <Pressable
+                                                    className="flex-row items-center gap-2"
+                                                    onPress={() => {
+                                                        setSelectedFormat(item.format);
+                                                        playSound('click');
+                                                    }}
+                                                >
+                                                    <View className={`px-2 py-1 rounded shrink-0 ${FORMAT_COLORS[item.format] || 'bg-neutral-800'}`}>
+                                                        <Text className="text-white font-mono text-xs font-bold">{item.format}</Text>
+                                                    </View>
+                                                </Pressable>
                                                 {item.edition && (
-                                                    <Text className="text-neutral-400 font-mono text-sm">({item.edition})</Text>
+                                                    <Text className="text-neutral-400 font-mono text-sm flex-1" numberOfLines={2}>({item.edition})</Text>
                                                 )}
-                                            </Pressable>
+                                            </View>
                                             <Pressable
                                                 onPress={async () => {
                                                     await deleteMutation.mutateAsync(item.id);
