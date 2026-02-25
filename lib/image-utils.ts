@@ -60,14 +60,16 @@ export async function compressImage(
 
 /**
  * Crop an image to a specific aspect ratio (e.g., 2:3 for posters)
- * Returns a data URL of the cropped image
+ * Returns a data URL of the cropped, resized image
  */
 export async function cropToRatio(
     imageUri: string,
-    targetRatio: number = 2 / 3
+    targetRatio: number = 2 / 3,
+    maxHeight: number = 1000
 ): Promise<string> {
     return new Promise((resolve, reject) => {
         const img = new Image();
+        img.crossOrigin = 'anonymous';
 
         img.onload = () => {
             const sourceRatio = img.width / img.height;
@@ -87,15 +89,32 @@ export async function cropToRatio(
                 sourceY = (img.height - sourceHeight) / 2;
             }
 
+            // Calculate destination dimensions (always resize to a sane maximum)
+            let destHeight = sourceHeight;
+            let destWidth = sourceWidth;
+
+            if (destHeight > maxHeight) {
+                destHeight = maxHeight;
+                destWidth = destHeight * targetRatio;
+            }
+
             const canvas = document.createElement('canvas');
-            canvas.width = sourceWidth;
-            canvas.height = sourceHeight;
+            canvas.width = destWidth;
+            canvas.height = destHeight;
 
             const ctx = canvas.getContext('2d');
             if (!ctx) {
                 reject(new Error('Failed to get canvas context'));
                 return;
             }
+
+            // Ensure backdrop is clean
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, destWidth, destHeight);
+
+            // Use better image smoothing
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
 
             ctx.drawImage(
                 img,
@@ -105,15 +124,16 @@ export async function cropToRatio(
                 sourceHeight,
                 0,
                 0,
-                sourceWidth,
-                sourceHeight
+                destWidth,
+                destHeight
             );
 
-            resolve(canvas.toDataURL('image/jpeg', 0.9));
+            // Return compressed jpeg data URL
+            resolve(canvas.toDataURL('image/jpeg', 0.85));
         };
 
         img.onerror = () => {
-            reject(new Error('Failed to load image'));
+            reject(new Error('Failed to load image for cropping. Ensure it is a valid image file.'));
         };
 
         img.src = imageUri;

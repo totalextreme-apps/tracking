@@ -44,10 +44,31 @@ export async function uploadToCloudinary(fileData: Blob | string | any): Promise
         };
     }
 
+    // Help convert data URLs to Blobs for better Safari/Chrome mobile support
+    let uploadPayload = fileData;
+    if (typeof fileData === 'string' && fileData.startsWith('data:')) {
+        try {
+            const arr = fileData.split(',');
+            const mimeMatch = arr[0].match(/:(.*?);/);
+            const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+            const bstr = atob(arr[1]);
+            let n = bstr.length;
+            const u8arr = new Uint8Array(n);
+            while (n--) {
+                u8arr[n] = bstr.charCodeAt(n);
+            }
+            uploadPayload = new Blob([u8arr], { type: mime });
+            console.log('Converted data URL to Blob for upload');
+        } catch (e) {
+            console.error('Failed to convert data URL to blob, falling back to raw string', e);
+        }
+    }
+
     const formData = new FormData();
-    formData.append('file', fileData);
+    formData.append('file', uploadPayload, 'upload.jpg');
     formData.append('upload_preset', UPLOAD_PRESET);
 
+    console.log('Sending fetch request to Cloudinary...');
     const response = await fetch(
         uploadUrl,
         {
@@ -57,9 +78,15 @@ export async function uploadToCloudinary(fileData: Blob | string | any): Promise
     );
 
     if (!response.ok) {
-        const error = await response.json();
-        console.error('Cloudinary upload error:', error);
-        throw new Error(error.error?.message || 'Failed to upload image to Cloudinary');
+        let errorMsg = 'Failed to upload image to Cloudinary';
+        try {
+            const error = await response.json();
+            console.error('Cloudinary upload error response:', error);
+            errorMsg = error.error?.message || errorMsg;
+        } catch (e) {
+            console.error('Failed to parse Cloudinary error JSON');
+        }
+        throw new Error(errorMsg);
     }
 
     const data = await response.json();

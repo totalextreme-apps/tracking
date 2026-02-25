@@ -45,9 +45,17 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
+    // Failsafe: hide splash screen even if fonts hang (common on Safari iOS)
+    const failsafe = setTimeout(() => {
+      console.warn('Splash screen hide failsafe triggered');
+      SplashScreen.hideAsync().catch(() => { });
+    }, 7000);
+
     if (loaded || error) {
+      clearTimeout(failsafe);
       SplashScreen.hideAsync().catch(() => { });
     }
+    return () => clearTimeout(failsafe);
   }, [loaded, error]);
 
   return (

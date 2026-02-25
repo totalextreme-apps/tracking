@@ -19,7 +19,6 @@ import { useAddToCollection, useCollection, useDeleteCollectionItem, useUpdateCo
 import { deleteFromCloudinary, uploadToCloudinary } from '@/lib/cloudinary';
 
 import { getBackdropUrl, getPosterUrl } from '@/lib/dummy-data';
-import { compressImage } from '@/lib/image-utils';
 import { getMovieById } from '@/lib/tmdb';
 import type { MovieFormat } from '@/types/database';
 import { useQuery } from '@tanstack/react-query';
@@ -154,14 +153,8 @@ export default function MovieDetailScreen() {
             let finalImageToUpload: any;
 
             if (Platform.OS === 'web') {
-                // Convert data URL to Blob
-                console.log('Converting data URL to blob...');
-                const response = await fetch(croppedDataUrl);
-                const blob = await response.blob();
-
-                // Compress
-                console.log('Compressing image...');
-                finalImageToUpload = await compressImage(blob, 1000, 0.8);
+                // croppedDataUrl from cropToRatio is already resized and compressed to JPEG
+                finalImageToUpload = croppedDataUrl;
             } else {
                 console.log('Using native image file uri...');
                 finalImageToUpload = croppedDataUrl;
@@ -197,9 +190,8 @@ export default function MovieDetailScreen() {
         } catch (e: any) {
             console.error('Failed to save custom art:', e);
             setCropModalVisible(false);
-            setTimeout(() => {
-                Alert.alert('Error', `Failed to save custom cover art: ${e.message || JSON.stringify(e)}`);
-            }, 500);
+            const errorMsg = e.message || JSON.stringify(e);
+            Alert.alert('Upload Error', `Failed to save custom cover art. Error: ${errorMsg}`);
         }
     };
 
