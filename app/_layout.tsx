@@ -17,7 +17,6 @@ import { useEffect, useState } from 'react';
 import { Dimensions, Platform, View } from 'react-native';
 import 'react-native-reanimated';
 
-import { DesktopBlocker } from '@/components/DesktopBlocker';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { StaticOverlay } from '@/components/StaticOverlay';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -105,9 +104,9 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
   }, [pathname, staticEnabled]);
 
   // Handle Desktop Blocking on Web - Only show after mount to avoid hydration mismatch
-  if (Platform.OS === 'web' && isMounted && isDesktop) {
-    return <DesktopBlocker />;
-  }
+  // if (Platform.OS === 'web' && isMounted && isDesktop) {
+  //   return <DesktopBlocker />;
+  // }
 
   // Final rendering shell - No fontsLoaded guard here to allow static rendering
   return (

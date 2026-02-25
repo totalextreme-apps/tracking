@@ -1,5 +1,6 @@
 import { ScrambledChannel } from '@/components/ScrambledChannel';
 import { TrackingLoader } from '@/components/TrackingLoader';
+import { Ionicons } from '@expo/vector-icons';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
@@ -44,6 +45,8 @@ export default function HomeScreen() {
   const [isGenreDropdownOpen, setIsGenreDropdownOpen] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const viewShotRef = useRef<ViewShot>(null);
+  const shelfRef = useRef<ScrollView>(null);
+  const isDesktop = Platform.OS === 'web' && windowWidth > 1024;
 
   // Rewind State
   const [refreshing, setRefreshing] = useState(false);
@@ -179,6 +182,15 @@ export default function HomeScreen() {
     } catch (e) {
       console.error('Error acquiring item:', e);
       alert('Failed to acquire item');
+    }
+  };
+
+  const scrollShelf = (direction: 'left' | 'right') => {
+    if (shelfRef.current) {
+      playSound('click');
+      const offset = direction === 'left' ? -400 : 400;
+      // Use scrollTo for manual scrolling on desktop
+      (shelfRef.current as any).scrollTo({ x: offset, animated: true, relative: true });
     }
   };
 
@@ -398,40 +410,61 @@ export default function HomeScreen() {
                 {thriftMode ? 'GRAILS' : 'ON DISPLAY'}
               </Text>
 
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={{ zIndex: 10 }}
-                contentContainerStyle={{
-                  paddingHorizontal: 16,
-                  // alignItems: 'center', // Removed to prevent vertical clipping of scaled items
-                  paddingTop: 40, // Increased to prevent clipping of scaled items
-                  paddingBottom: 20 // Additional internal padding
-                }}
-              >
-                {displayItems.map((item: any) => (
-                  <OnDisplayCard
-                    key={item.id}
-                    item={item}
-                    scale={1.2}
-                    onSingleTapAction={() => {
-                      playSound('click');
-                      router.push(`/movie/${item.movie_id}`);
-                    }}
-                    onLongPressAction={thriftMode ? () => {
-                      handleAcquiredPress(item);
-                    } : undefined}
-                    onToggleFavorite={(item: any) => {
-                      if (thriftMode) {
-                        handleToggleGrail(item);
-                      } else {
-                        handleToggleFavorite(item);
-                      }
-                      playSound('click');
-                    }}
-                  />
-                ))}
-              </ScrollView>
+              <View className="relative">
+                <ScrollView
+                  ref={shelfRef}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={{ zIndex: 10 }}
+                  contentContainerStyle={{
+                    paddingHorizontal: 16,
+                    paddingTop: 40,
+                    paddingBottom: 20
+                  }}
+                >
+                  {displayItems.map((item: any) => (
+                    <OnDisplayCard
+                      key={item.id}
+                      item={item}
+                      scale={1.2}
+                      onSingleTapAction={() => {
+                        playSound('click');
+                        router.push(`/movie/${item.movie_id}`);
+                      }}
+                      onLongPressAction={thriftMode ? () => {
+                        handleAcquiredPress(item);
+                      } : undefined}
+                      onToggleFavorite={(item: any) => {
+                        if (thriftMode) {
+                          handleToggleGrail(item);
+                        } else {
+                          handleToggleFavorite(item);
+                        }
+                        playSound('click');
+                      }}
+                    />
+                  ))}
+                </ScrollView>
+
+                {isDesktop && displayItems.length > 0 && (
+                  <>
+                    <Pressable
+                      onPress={() => scrollShelf('left')}
+                      className="absolute left-0 top-[40%] z-20 bg-black/60 p-2 rounded-r-xl border border-white/10"
+                      style={{ transform: [{ translateY: -12 }] }}
+                    >
+                      <Ionicons name="play-back" size={24} color="#f59e0b" />
+                    </Pressable>
+                    <Pressable
+                      onPress={() => scrollShelf('right')}
+                      className="absolute right-0 top-[40%] z-20 bg-black/60 p-2 rounded-l-xl border border-white/10"
+                      style={{ transform: [{ translateY: -12 }] }}
+                    >
+                      <Ionicons name="play-forward" size={24} color="#f59e0b" />
+                    </Pressable>
+                  </>
+                )}
+              </View>
             </View>
 
             {/* Divider */}
