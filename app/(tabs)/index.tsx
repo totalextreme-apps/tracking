@@ -426,7 +426,7 @@ export default function HomeScreen() {
                     <OnDisplayCard
                       key={item.id}
                       item={item}
-                      scale={1.2}
+                      scale={isDesktop ? 1.5 : 1.2}
                       onSingleTapAction={() => {
                         playSound('click');
                         router.push(`/movie/${item.movie_id}`);
