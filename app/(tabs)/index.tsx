@@ -37,8 +37,9 @@ export default function HomeScreen() {
 
   const [sortBy, setSortBy] = useState<'recent' | 'title' | 'release' | 'rating'>('recent');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [viewMode, setViewMode] = useState<'list' | 'grid2' | 'grid4'>('grid2');
   const { width: windowWidth } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && windowWidth > 1024;
+  const [viewMode, setViewMode] = useState<'list' | 'grid2' | 'grid4'>(isDesktop ? 'grid4' : 'grid2');
   const [searchQuery, setSearchQuery] = useState('');
   const [formatFilter, setFormatFilter] = useState<string | null>(null);
   const [genreFilter, setGenreFilter] = useState<string | null>(null);
@@ -46,7 +47,6 @@ export default function HomeScreen() {
   const [showShareModal, setShowShareModal] = useState(false);
   const viewShotRef = useRef<ViewShot>(null);
   const shelfRef = useRef<ScrollView>(null);
-  const isDesktop = Platform.OS === 'web' && windowWidth > 1024;
 
   // Rewind State
   const [refreshing, setRefreshing] = useState(false);

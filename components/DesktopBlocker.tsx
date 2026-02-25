@@ -1,9 +1,9 @@
 import React from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
 // Desktop Blocker - V3 (Force Render Fix)
-export const DesktopBlocker = () => {
+export const DesktopBlocker = ({ onDismiss }: { onDismiss?: () => void }) => {
     if (Platform.OS !== 'web') return null;
 
     return (
@@ -19,9 +19,9 @@ export const DesktopBlocker = () => {
                     </View>
 
                     <View style={styles.messageBox}>
-                        <Text style={styles.title}>ACCESS RESTRICTED</Text>
+                        <Text style={styles.title}>HANDHELD OPTIMIZED</Text>
                         <Text style={styles.body}>
-                            THE TRACKING INTERFACE IS OPTIMIZED FOR PORTABLE HANDHELD UNITS ONLY. PLEASE CONNECT VIA A MOBILE TELECOMMUNICATIONS DEVICE.
+                            TRACKING WORKS BEST ON A MOBILE TELECOMMUNICATIONS DEVICE.
                         </Text>
 
                         <View style={{ backgroundColor: '#fff', padding: 10, marginTop: 5, marginBottom: 5, alignSelf: 'center', shadowColor: '#fff', shadowOpacity: 0.8, shadowRadius: 10, shadowOffset: { width: 0, height: 0 } }}>
@@ -33,14 +33,26 @@ export const DesktopBlocker = () => {
                             />
                         </View>
 
-                        <View style={styles.blinkContainer}>
-                            <Text style={styles.blinkText}>SCAN TO CONTINUE ON MOBILE</Text>
-                        </View>
+                        {onDismiss ? (
+                            <Pressable
+                                onPress={onDismiss}
+                                style={({ hovered }: any) => [
+                                    styles.blinkContainer,
+                                    hovered && { backgroundColor: '#FFFF00', transform: [{ scale: 1.05 }] }
+                                ]}
+                            >
+                                <Text style={[styles.blinkText, { textDecorationLine: 'underline' }]}>PROCEED TO DESKTOP MODE</Text>
+                            </Pressable>
+                        ) : (
+                            <View style={styles.blinkContainer}>
+                                <Text style={styles.blinkText}>SCAN TO CONTINUE ON MOBILE</Text>
+                            </View>
+                        )}
                     </View>
 
                     <View style={styles.footer}>
                         <Text style={styles.footerText}>© 1984 TRACKING SYSTEMS CORP.</Text>
-                        <Text style={styles.footerText}>MODE: HANDHELD ONLY</Text>
+                        <Text style={styles.footerText}>MODE: HANDHELD RECOMMENDED</Text>
                     </View>
                 </View>
             </View>

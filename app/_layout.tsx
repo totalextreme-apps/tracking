@@ -17,6 +17,7 @@ import { useEffect, useState } from 'react';
 import { Dimensions, Platform, View } from 'react-native';
 import 'react-native-reanimated';
 
+import { DesktopBlocker } from '@/components/DesktopBlocker';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { StaticOverlay } from '@/components/StaticOverlay';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -24,6 +25,7 @@ import { AuthProvider } from '@/context/AuthContext';
 import { SettingsProvider, useSettings } from '@/context/SettingsContext';
 import { SoundProvider } from '@/context/SoundContext';
 import { ThriftModeProvider } from '@/context/ThriftModeContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 // Prevent splash screen from hiding early
@@ -77,9 +79,11 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
   const { staticEnabled, onboardingKey } = useSettings();
   const [isDesktop, setIsDesktop] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [dismissedWarning, setDismissedWarning] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
+    checkWarningDismissed();
     const checkViewport = () => {
       if (Platform.OS !== 'web') return;
       const { width } = Dimensions.get('window');
@@ -94,6 +98,27 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
     return () => subscription.remove();
   }, []);
 
+  const checkWarningDismissed = async () => {
+    if (Platform.OS !== 'web') return;
+    try {
+      const dismissed = await AsyncStorage.getItem('has_dismissed_desktop_warning');
+      if (dismissed === 'true') {
+        setDismissedWarning(true);
+      }
+    } catch (e) {
+      console.error('Failed to check warning dismissal status', e);
+    }
+  };
+
+  const handleDismissWarning = async () => {
+    try {
+      await AsyncStorage.setItem('has_dismissed_desktop_warning', 'true');
+      setDismissedWarning(true);
+    } catch (e) {
+      console.error('Failed to save warning dismissal status', e);
+    }
+  };
+
   useEffect(() => {
     if (staticEnabled) {
       setShowStatic(true);
@@ -103,10 +128,10 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
     setShowStatic(false);
   }, [pathname, staticEnabled]);
 
-  // Handle Desktop Blocking on Web - Only show after mount to avoid hydration mismatch
-  // if (Platform.OS === 'web' && isMounted && isDesktop) {
-  //   return <DesktopBlocker />;
-  // }
+  // Handle Desktop Warning on Web - Only show after mount to avoid hydration mismatch
+  if (Platform.OS === 'web' && isMounted && isDesktop && !dismissedWarning) {
+    return <DesktopBlocker onDismiss={handleDismissWarning} />;
+  }
 
   // Final rendering shell - No fontsLoaded guard here to allow static rendering
   return (
@@ -138,7 +163,7 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
               <Stack.Screen name="movie/[id]" options={{ presentation: 'modal', headerShown: false }} />
             </Stack>
             <StaticOverlay visible={showStatic} />
-            <OnboardingModal key={onboardingKey} />
+            {!isDesktop && <OnboardingModal key={onboardingKey} />}
             {Platform.OS === 'web' && (
               <>
                 <Analytics />
