@@ -54,10 +54,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUserId(sessionData.user.id);
           setSession(sessionData);
           setAuthPhase('READY');
-        } else if (__DEV__) {
-          console.warn('AUTH: Automatic Dev Bypass Active');
-          setUserId('00000000-0000-0000-0000-000000000000');
-          setAuthPhase('READY');
         } else {
           setAuthPhase('AUTHENTICATING');
           setShowCaptcha(true);
