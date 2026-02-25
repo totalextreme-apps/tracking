@@ -81,13 +81,15 @@ export function CaptchaModal({ visible, onSuccess, onCancel }: CaptchaModalProps
             console.log('CaptchaModal Rendering (Visible). SiteKey Length:', siteKey.length);
             console.log('Platform:', Platform.OS);
 
-            // Auto-bypass in dev mode to keep local work moving
-            if (__DEV__) {
-                console.warn('DEV MODE: Auto-bypassing CAPTCHA');
-                onSuccess('dev-manual-bypass');
+            const host = typeof window !== 'undefined' ? window.location.hostname : '';
+            const isPreview = host.includes('vercel.app') && !host.includes('mediatracking.app');
+
+            // Auto-bypass in dev mode or preview environments to keep local work moving
+            if (__DEV__ || isPreview) {
+                console.warn('DEV/PREVIEW MODE: Enabling CAPTCHA Bypass option');
             }
         }
-    }, [visible, onSuccess]);
+    }, [visible, siteKey]); // Changed onSuccess to siteKey to avoid effect spam but track key changes
 
     if (!visible) return null;
 
@@ -126,19 +128,26 @@ export function CaptchaModal({ visible, onSuccess, onCancel }: CaptchaModalProps
                 )}
             </View>
 
-            {(__DEV__ || turnstileError) && (
-                <Pressable
-                    onPress={() => {
-                        console.warn('MANUAL BYPASS TRIGGERED');
-                        onSuccess('manual-bypass-token');
-                    }}
-                    style={{ marginTop: 15, padding: 15, backgroundColor: '#3b0000', borderRadius: 8, borderWidth: 1, borderColor: '#ff4444' }}
-                >
-                    <Text style={{ color: '#ff4444', fontSize: 13, fontWeight: 'bold', textAlign: 'center' }}>
-                        [DEBUG] FORCE BYPASS CAPTCHA
-                    </Text>
-                </Pressable>
-            )}
+            {((): boolean => {
+                const host = typeof window !== 'undefined' ? window.location.hostname : '';
+                const isPreview = host.includes('vercel.app') && !host.includes('mediatracking.app');
+                return __DEV__ || isPreview || !!turnstileError;
+            })() && (
+                    <Pressable
+                        onPress={() => {
+                            console.warn('MANUAL BYPASS TRIGGERED');
+                            onSuccess('manual-bypass-token');
+                        }}
+                        style={{ marginTop: 25, padding: 18, backgroundColor: '#4a0000', borderRadius: 12, borderWidth: 2, borderColor: '#ff0000', alignSelf: 'stretch', marginHorizontal: 20 }}
+                    >
+                        <Text style={{ color: '#ffffff', fontSize: 14, fontWeight: 'bold', textAlign: 'center' }}>
+                            [DEBUG] FORCE BYPASS CAPTCHA
+                        </Text>
+                        <Text style={{ color: '#ffaaaa', fontSize: 10, textAlign: 'center', marginTop: 4 }}>
+                            (Use this if Turnstile is blocked or mismatched)
+                        </Text>
+                    </Pressable>
+                )}
 
             <Pressable onPress={() => setRetryCount(c => c + 1)} style={{ marginTop: 10, marginBottom: 20 }}>
                 <Text style={styles.hintText}>

@@ -98,15 +98,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      if (token === 'manual-bypass-token' || token === 'dev-manual-bypass') {
-        console.warn('AUTH: Using Manual Bypass for Session');
-        // If we are bypassing, we might want to try signing in with a dummy token or just fake the state
-        // if the Supabase project doesn't have captcha enabled locally.
-        // For now, let's try the real sign in but allow it to fail gracefully.
-      }
+      console.log('Proceeding with signin using token length:', token.length);
 
       const { data: { session: anonSession }, error } = await supabase.auth.signInAnonymously({
-        options: { captchaToken: token === 'manual-bypass-token' ? undefined : token },
+        options: { captchaToken: (token === 'manual-bypass-token' || token === 'dev-manual-bypass') ? undefined : token },
       });
 
       if (!error && anonSession?.user?.id) {
