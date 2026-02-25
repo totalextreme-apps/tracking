@@ -1,4 +1,3 @@
-import * as FileSystem from 'expo-file-system';
 import { Platform } from 'react-native';
 
 const CLOUD_NAME = process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME;
@@ -16,25 +15,33 @@ export async function uploadToCloudinary(fileData: Blob | string | any): Promise
 
     const uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`;
 
-    if (Platform.OS !== 'web') {
-        const uri = typeof fileData === 'string' ? fileData : fileData.uri;
-        console.log('Using expo-file-system native upload for:', uri);
+    if (Platform.OS !== 'web' && typeof fileData === 'string' && fileData.startsWith('data:')) {
+        console.log('Using native JSON upload for base64 image...');
 
-        const uploadResult = await FileSystem.uploadAsync(uploadUrl, uri, {
-            httpMethod: 'POST',
-            uploadType: (FileSystem as any).FileSystemUploadType?.MULTIPART || 1,
-            fieldName: 'file',
-            parameters: {
-                upload_preset: UPLOAD_PRESET,
+        const response = await fetch(uploadUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
             },
+            body: JSON.stringify({
+                file: fileData,
+                upload_preset: UPLOAD_PRESET,
+            }),
         });
 
-        if (uploadResult.status < 200 || uploadResult.status >= 300) {
-            console.error('Cloudinary native upload error:', uploadResult.body);
-            throw new Error(`Native Cloudinary Upload Failed: ${uploadResult.status}`);
+        if (!response.ok) {
+            let errorMsg = 'Failed to upload image to Cloudinary via JSON';
+            try {
+                const error = await response.json();
+                console.error('Cloudinary JSON upload error:', error);
+                errorMsg = error.error?.message || errorMsg;
+            } catch (e) {
+                console.error('Could not parse JSON error response', e);
+            }
+            throw new Error(errorMsg);
         }
 
-        const data = JSON.parse(uploadResult.body);
+        const data = await response.json();
         return {
             url: data.secure_url,
             publicId: data.public_id
