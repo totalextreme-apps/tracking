@@ -261,6 +261,46 @@ export function useBulkUpdateCustomLists(userId: string | undefined) {
   });
 }
 
+/** Rename a custom list across all collection items that contain it */
+export function useRenameCustomList(userId: string | undefined) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ oldName, newName }: { oldName: string; newName: string }) => {
+      if (!userId) throw new Error('Not authenticated');
+      if (!newName.trim() || newName.trim() === oldName) return;
+
+      // Fetch all items that have oldName in their custom_lists
+      const { data: items, error: fetchError } = await supabase
+        .from('collection_items')
+        .select('id, custom_lists')
+        .contains('custom_lists', [oldName])
+        .eq('user_id', userId);
+
+      if (fetchError) throw fetchError;
+      if (!items || items.length === 0) return;
+
+      const updatePromises = items.map((item: any) => {
+        const updated = (item.custom_lists || []).map((l: string) =>
+          l === oldName ? newName.trim() : l
+        );
+        return (supabase as any)
+          .from('collection_items')
+          .update({ custom_lists: updated })
+          .eq('id', item.id)
+          .eq('user_id', userId);
+      });
+
+      const results = await Promise.all(updatePromises);
+      const firstError = results.find((r: any) => r.error)?.error;
+      if (firstError) throw firstError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['collection'] });
+    },
+  });
+}
+
 export function useDeleteCollectionItem(userId: string | undefined) {
   const queryClient = useQueryClient();
 

@@ -10,7 +10,7 @@ import type { CollectionItemWithMovie } from '@/types/database';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import Slider from '@react-native-community/slider';
 import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
     Alert,
@@ -34,7 +34,11 @@ export default function CreateListScreen() {
     const { data: collection, isLoading: collectionLoading } = useCollection(userId);
     const bulkUpdateMutation = useBulkUpdateCustomLists(userId);
 
-    const [listName, setListName] = useState('');
+    // If coming from an existing stack, lock the name and add to that list
+    const { existingListName } = useLocalSearchParams<{ existingListName?: string }>();
+    const isEditingExisting = !!existingListName;
+
+    const [listName, setListName] = useState(existingListName ? decodeURIComponent(existingListName) : '');
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [searchQuery, setSearchQuery] = useState('');
     const [formatFilter, setFormatFilter] = useState<string | null>(null);
@@ -88,7 +92,10 @@ export default function CreateListScreen() {
                 listName: listName.trim(),
                 isAdding: true,
             });
-            router.replace('/lists');
+            router.replace(isEditingExisting
+                ? `/stack/${encodeURIComponent(listName.trim())}` as any
+                : '/lists'
+            );
         } catch (e: any) {
             showAlert('Save Failed', e.message);
         }
@@ -124,7 +131,7 @@ export default function CreateListScreen() {
         const isSelected = selectedIds.has(item.id);
         const posterUrl = item.custom_poster_url || getPosterUrl(item.movies?.poster_path ?? null, 'w500');
         const isPhysical = item.format !== 'Digital';
-        const isOwned = item.status === 'owned';
+        const showSticker = item.is_on_display && isPhysical && item.status === 'owned';
 
         return (
             <Pressable
@@ -149,8 +156,8 @@ export default function CreateListScreen() {
                         />
                     )}
 
-                    {/* Staff Pick sticker (same logic as StackCard) */}
-                    {isPhysical && isOwned && (
+                    {/* Staff Pick sticker — only on display items, matching StackCard logic */}
+                    {showSticker && (
                         <StickerOverlay visible={true} size={Math.max(24, itemWidth * 0.28)} />
                     )}
 
@@ -186,7 +193,14 @@ export default function CreateListScreen() {
                 {/* CANCEL pill + selection count + SAVE */}
                 <View className="flex-row items-center justify-between mb-3">
                     <Pressable
-                        onPress={() => { playSound('click'); router.back(); }}
+                        onPress={() => {
+                            playSound('click');
+                            if (isEditingExisting) {
+                                router.replace(`/stack/${encodeURIComponent(listName.trim())}` as any);
+                            } else {
+                                router.back();
+                            }
+                        }}
                         className="bg-[#0000FF] px-4 py-1.5 rounded-md self-start active:opacity-80"
                     >
                         <Text className="text-white text-[10px] font-bold uppercase tracking-widest" style={{ fontFamily: 'VCR_OSD_MONO' }}>BACK</Text>
@@ -210,16 +224,22 @@ export default function CreateListScreen() {
                     </View>
                 </View>
 
-                {/* Stack Name */}
-                <TextInput
-                    nativeID="create-list-name-input"
-                    placeholder="NAME THIS STACK (e.g. Action Flicks)..."
-                    placeholderTextColor="#525252"
-                    value={listName}
-                    onChangeText={setListName}
-                    className="bg-neutral-900 border border-neutral-800 text-white font-mono rounded-lg px-4 py-2.5 mb-3 text-sm"
-                    onSubmitEditing={() => Keyboard.dismiss()}
-                />
+                {/* Stack Name — read-only when adding to an existing list */}
+                {isEditingExisting ? (
+                    <View className="bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-2.5 mb-3">
+                        <Text className="text-amber-500 font-mono text-sm uppercase tracking-widest">{listName}</Text>
+                    </View>
+                ) : (
+                    <TextInput
+                        nativeID="create-list-name-input"
+                        placeholder="NAME THIS STACK (e.g. Action Flicks)..."
+                        placeholderTextColor="#525252"
+                        value={listName}
+                        onChangeText={setListName}
+                        className="bg-neutral-900 border border-neutral-800 text-white font-mono rounded-lg px-4 py-2.5 mb-3 text-sm"
+                        onSubmitEditing={() => Keyboard.dismiss()}
+                    />
+                )}
 
                 {/* Status Filter (Owned / Wishlist / All) */}
                 <View className="flex-row gap-2 mb-3">
@@ -250,7 +270,7 @@ export default function CreateListScreen() {
                         onChangeText={setSearchQuery}
                         className="bg-neutral-900 border border-neutral-800 text-white font-mono rounded-md px-3 py-2 flex-1 text-xs"
                     />
-                    {['ALL', 'VHS', 'DVD', 'BluRay', '4K'].map((fmt) => {
+                    {['ALL', 'VHS', 'DVD', 'BluRay', '4K', 'Digital'].map((fmt) => {
                         const isActive = formatFilter === fmt || (fmt === 'ALL' && !formatFilter);
                         return (
                             <Pressable

@@ -12,7 +12,6 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { useFonts } from 'expo-font';
 import { Stack, usePathname } from 'expo-router';
 import Head from 'expo-router/head';
-import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
 import { Dimensions, Platform, View } from 'react-native';
 import 'react-native-reanimated';
@@ -30,18 +29,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-// Prevent splash screen from hiding early (native only — web has no native splash)
-let splashHidden = false;
-const hideSplash = () => {
-  if (splashHidden || Platform.OS === 'web') return;
-  splashHidden = true;
-  SplashScreen.hideAsync().catch(() => { });
-};
-
-if (Platform.OS !== 'web') {
-  // hideSplash() is called after fonts load — no need to preventAutoHideAsync
-  // (calling it before the native view controller is ready causes an unhandled error)
-}
 
 export {
   ErrorBoundary
@@ -58,19 +45,7 @@ export default function RootLayout() {
     ...FontAwesome.font,
   });
 
-  useEffect(() => {
-    // Failsafe: hide after 7 s if fonts hang (common on Safari iOS)
-    const failsafe = setTimeout(() => {
-      console.warn('Splash screen hide failsafe triggered');
-      hideSplash();
-    }, 7000);
 
-    if (loaded || error) {
-      clearTimeout(failsafe);
-      hideSplash();
-    }
-    return () => clearTimeout(failsafe);
-  }, [loaded, error]);
 
   return (
     <SettingsProvider>

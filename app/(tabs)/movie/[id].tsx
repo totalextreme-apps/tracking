@@ -6,6 +6,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GlossyCard } from '@/components/GlossyCard';
 import { VHSCard } from '@/components/VHSCard';
@@ -38,11 +39,12 @@ const FORMAT_COLORS: Record<string, string> = {
 };
 
 export default function MovieDetailScreen() {
-    const { id } = useLocalSearchParams(); // This is the movie_id (internal DB id)
+    const { id } = useLocalSearchParams();
     const router = useRouter();
     const { userId } = useAuth();
     const { thriftMode } = useThriftMode();
     const { playSound } = useSound();
+    const insets = useSafeAreaInsets();
     const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
     const [ejecting, setEjecting] = useState(false);
     const [showShareModal, setShowShareModal] = useState(false);
@@ -453,7 +455,7 @@ export default function MovieDetailScreen() {
             <ScrollView
                 className="flex-1"
                 contentContainerStyle={{
-                    paddingBottom: 40,
+                    paddingBottom: insets.bottom + 120,
                     paddingHorizontal: 0,
                     maxWidth: 1200,
                     alignSelf: 'center',
