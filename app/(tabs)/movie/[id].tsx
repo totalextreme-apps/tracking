@@ -39,7 +39,7 @@ const FORMAT_COLORS: Record<string, string> = {
 };
 
 export default function MovieDetailScreen() {
-    const { id } = useLocalSearchParams();
+    const { id, fromStack } = useLocalSearchParams<{ id: string; fromStack?: string }>();
     const router = useRouter();
     const { userId } = useAuth();
     const { thriftMode } = useThriftMode();
@@ -281,9 +281,18 @@ export default function MovieDetailScreen() {
     const backdropUrl = getBackdropUrl(displayMovie.backdrop_path);
     const posterUrl = getPosterUrl(displayMovie.poster_path);
 
-    const ownedFormats = movieItems.map((i: any) => i.format);
+    const ownedFormats: string[] = movieItems.map((i: any) => i.format);
     const isGrail = movieItems.some((i: any) => i.is_grail);
     const isWishlist = movieItems.every((i: any) => i.status === 'wishlist');
+
+    // Derive active format — plain const (no hook) so it's safe after the early return above.
+    // selectedFormat wins if it's still in the owned list; otherwise fall back to highest-priority owned format.
+    const FORMAT_PRIORITY = ['4K', 'BluRay', 'DVD', 'VHS', 'Digital'];
+    const activeFormat: string | null = (selectedFormat && ownedFormats.includes(selectedFormat))
+        ? selectedFormat
+        : (ownedFormats.length > 0
+            ? [...ownedFormats].sort((a, b) => FORMAT_PRIORITY.indexOf(a) - FORMAT_PRIORITY.indexOf(b))[0]
+            : null);
 
     // Logic to toggle format
     const toggleFormat = async (format: MovieFormat) => {
@@ -358,6 +367,9 @@ export default function MovieDetailScreen() {
             }
 
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+            // Switch active format to the one just added
+            setSelectedFormat(pendingFormat);
 
             // Close modal and reset
             setShowEditionModal(false);
@@ -472,7 +484,13 @@ export default function MovieDetailScreen() {
 
                     {/* Close Button */}
                     <Pressable
-                        onPress={() => router.back()}
+                        onPress={() => {
+                            if (fromStack) {
+                                router.replace(`/stack/${fromStack}` as any);
+                            } else {
+                                router.back();
+                            }
+                        }}
                         className="absolute top-12 right-4 bg-black/50 p-2 rounded-full"
                     >
                         <Ionicons name="close" size={24} color="white" />
@@ -492,14 +510,6 @@ export default function MovieDetailScreen() {
                         {/* Poster */}
                         <View className="w-32 rounded-lg shadow-xl relative" style={{ elevation: 10, shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 10 }}>
                             {(() => {
-                                // Determine active format for detection
-                                const availableFormats = ownedFormats.length > 0 ? ownedFormats : null;
-                                let activeFormat = selectedFormat;
-                                if (!activeFormat && availableFormats) {
-                                    const priority = ['4K', 'BluRay', 'DVD', 'VHS', 'Digital'];
-                                    activeFormat = availableFormats.sort((a: any, b: any) => priority.indexOf(a) - priority.indexOf(b))[0];
-                                }
-
                                 const finalPosterUrl = customArtUrl || posterUrl;
                                 const isCustom = !!customArtUrl;
 
@@ -791,14 +801,21 @@ export default function MovieDetailScreen() {
                                         <View key={item.id} className="flex-row items-center justify-between bg-neutral-900 p-3 rounded-lg border border-neutral-800">
                                             <View className="flex-1 flex-row items-center flex-wrap gap-2 mr-2">
                                                 <Pressable
-                                                    className="flex-row items-center gap-2"
+                                                    className="flex-row items-center gap-2 active:opacity-70"
                                                     onPress={() => {
                                                         setSelectedFormat(item.format);
                                                         playSound('click');
                                                     }}
                                                 >
-                                                    <View className={`px-2 py-1 rounded shrink-0 ${FORMAT_COLORS[item.format] || 'bg-neutral-800'}`}>
-                                                        <Text className="text-white font-mono text-xs font-bold">{item.format}</Text>
+                                                    <View style={{
+                                                        borderWidth: activeFormat === item.format ? 2 : 0,
+                                                        borderColor: '#fff',
+                                                        borderRadius: 6,
+                                                        padding: activeFormat === item.format ? 1 : 0,
+                                                    }}>
+                                                        <View className={`px-2 py-1 rounded shrink-0 ${FORMAT_COLORS[item.format] || 'bg-neutral-800'}`}>
+                                                            <Text className="text-white font-mono text-xs font-bold">{item.format}</Text>
+                                                        </View>
                                                     </View>
                                                 </Pressable>
                                                 {item.edition && (
@@ -841,7 +858,7 @@ export default function MovieDetailScreen() {
                                             {fmt}
                                         </Text>
                                     </Pressable>
-                                )
+                                );
                             })}
                         </View>
                     </View>
@@ -977,12 +994,6 @@ export default function MovieDetailScreen() {
                         }}
                         onSave={handleSaveCustomArt}
                         targetRatio={(() => {
-                            const availableFormats = ownedFormats.length > 0 ? ownedFormats : null;
-                            let activeFormat = selectedFormat;
-                            if (!activeFormat && availableFormats) {
-                                const priority = ['4K', 'BluRay', 'DVD', 'VHS', 'Digital'];
-                                activeFormat = availableFormats.sort((a: any, b: any) => priority.indexOf(a) - priority.indexOf(b))[0];
-                            }
                             const ratio = activeFormat === 'VHS' ? 2 / 3.5 : (activeFormat === 'BluRay' || activeFormat === '4K') ? 0.78 : 0.71;
                             return ratio;
                         })()}

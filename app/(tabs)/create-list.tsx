@@ -10,8 +10,8 @@ import type { CollectionItemWithMovie } from '@/types/database';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import Slider from '@react-native-community/slider';
 import * as Haptics from 'expo-haptics';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useState } from 'react';
 import {
     Alert,
     FlatList,
@@ -45,6 +45,17 @@ export default function CreateListScreen() {
     const [statusFilter, setStatusFilter] = useState<'owned' | 'wishlist' | 'all'>('owned');
     const defaultCols = isDesktop ? 5 : 3;
     const [numColumns, setNumColumns] = useState(defaultCols);
+
+    // Reset form state each time the screen is focused without an existingListName
+    useFocusEffect(useCallback(() => {
+        if (!isEditingExisting) {
+            setListName('');
+            setSelectedIds(new Set());
+            setSearchQuery('');
+            setFormatFilter(null);
+            setStatusFilter('owned');
+        }
+    }, [isEditingExisting]));
 
     if (collectionLoading) {
         return (

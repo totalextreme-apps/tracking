@@ -1,6 +1,7 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+import React, { useMemo } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 type MemberCardProps = {
@@ -11,11 +12,16 @@ type MemberCardProps = {
 };
 
 export function MemberCard({ userId, profile, onEditPress, onAvatarPress }: MemberCardProps) {
-    // Generate discrete barcode lines
-    const barcodeLines = Array.from({ length: 40 }).map((_, i) => ({
-        width: Math.random() > 0.5 ? 4 : 2,
-        margin: Math.random() > 0.5 ? 2 : 1,
-    }));
+    // Deterministic pseudo-random barcode seeded from userId so it's stable across renders
+    const barcodeLines = useMemo(() => {
+        // Simple seeded LCG — gives consistent output for the same userId
+        let seed = (userId || 'guest').split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+        const rand = () => { seed = (seed * 1664525 + 1013904223) & 0xffffffff; return (seed >>> 0) / 0xffffffff; };
+        return Array.from({ length: 48 }).map(() => ({
+            width: rand() > 0.5 ? 4 : 2,
+            margin: rand() > 0.5 ? 2 : 1,
+        }));
+    }, [userId]);
 
     // Format Member Since Date
     const memberSince = profile?.created_at ? new Date(profile.created_at).toLocaleDateString(undefined, { month: '2-digit', year: '2-digit' }) : 'MM/YY';
@@ -80,8 +86,8 @@ export function MemberCard({ userId, profile, onEditPress, onAvatarPress }: Memb
                     </View>
 
                     {/* Barcode */}
-                    <View className="flex-row h-8 items-end overflow-hidden mt-auto bg-white px-2 py-1 rounded-sm w-full">
-                        {barcodeLines.map((line, i) => (
+                    <View style={{ flexDirection: 'row', height: 32, alignItems: 'flex-end', overflow: 'hidden', marginTop: 'auto', backgroundColor: 'white', paddingHorizontal: 6, paddingVertical: 4, borderRadius: 2 }}>
+                        {barcodeLines.map((line: { width: number; margin: number }, i: number) => (
                             <View key={i} style={{ width: line.width, height: '100%', backgroundColor: 'black', marginRight: line.margin }} />
                         ))}
                     </View>

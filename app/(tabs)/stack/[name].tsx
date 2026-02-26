@@ -77,7 +77,7 @@ export default function CuratedStackScreen() {
                 {/* BACK + ADD row */}
                 <View className="flex-row items-center justify-between mb-3">
                     <Pressable
-                        onPress={() => { playSound('click'); router.back(); }}
+                        onPress={() => { playSound('click'); router.replace('/lists' as any); }}
                         className="bg-[#0000FF] px-4 py-1.5 rounded-md active:opacity-80"
                     >
                         <Text className="text-white text-[10px] font-bold uppercase tracking-widest" style={{ fontFamily: 'VCR_OSD_MONO' }}>BACK</Text>
@@ -145,7 +145,7 @@ export default function CuratedStackScreen() {
                                     stackOffset={4}
                                     onPress={() => {
                                         playSound('click');
-                                        router.push(`/movie/${stack[0].movie_id}`);
+                                        router.push(`/movie/${stack[0].movie_id}?fromStack=${encodeURIComponent(decodedName)}` as any);
                                     }}
                                 />
                             </View>

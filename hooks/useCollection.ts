@@ -152,6 +152,10 @@ export function useAddToCollection(userId: string | undefined) {
         .insert(itemsToInsert as any);
 
       if (itemError) {
+        // 23505 = unique_violation — same format already exists without a unique edition
+        if (itemError.code === '23505') {
+          throw new Error('You already own this format. Fill in the Edition field to add another copy (e.g. "Director\'s Cut", "Criterion").');
+        }
         console.error('useAddToCollection: Item insert error:', itemError);
         throw itemError;
       }
