@@ -2,6 +2,7 @@ import { ScrambledChannel } from '@/components/ScrambledChannel';
 import { TrackingLoader } from '@/components/TrackingLoader';
 import { Ionicons } from '@expo/vector-icons';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import Slider from '@react-native-community/slider';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
@@ -17,6 +18,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useSound } from '@/context/SoundContext';
 import { useThriftMode } from '@/context/ThriftModeContext';
 import { useCollection, useUpdateCollectionItem } from '@/hooks/useCollection';
+import { usePersistedState } from '@/hooks/usePersistedState';
 import { getGenres, getOnDisplayItems, getStacks } from '@/lib/collection-utils';
 import { supabase } from '@/lib/supabase'; // Restore Supabase
 import type { CollectionItemWithMovie } from '@/types/database';
@@ -39,7 +41,9 @@ export default function HomeScreen() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const { width: windowWidth } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && windowWidth > 1024;
-  const [viewMode, setViewMode] = useState<'list' | 'grid2' | 'grid4'>(isDesktop ? 'grid4' : 'grid2');
+  const [viewMode, setViewMode] = usePersistedState<'list' | 'grid2' | 'grid4'>('stacks_viewMode', isDesktop ? 'grid4' : 'grid2');
+  // numColumns drives actual grid width — presets snap to column values, slider gives fine control
+  const [numColumns, setNumColumns] = usePersistedState<number>('stacks_numColumns', isDesktop ? 4 : 2);
   const [searchQuery, setSearchQuery] = useState('');
   const [formatFilter, setFormatFilter] = useState<string | null>(null);
   const [genreFilter, setGenreFilter] = useState<string | null>(null);
@@ -135,9 +139,9 @@ export default function HomeScreen() {
         if (!movie) return false;
 
         if (searchQuery) {
-          const query = searchQuery.toLowerCase();
-          const matchesTitle = movie.title.toLowerCase().includes(query);
-          const matchesCast = movie.movie_cast?.some((c: any) => c.name.toLowerCase().includes(query));
+          const query = searchQuery.toLowerCase().replace(/[^a-z0-9]/g, '');
+          const matchesTitle = movie.title.toLowerCase().replace(/[^a-z0-9]/g, '').includes(query);
+          const matchesCast = movie.movie_cast?.some((c: any) => c.name.toLowerCase().replace(/[^a-z0-9]/g, '').includes(query));
 
           if (!matchesTitle && !matchesCast) return false;
         }
@@ -358,9 +362,12 @@ export default function HomeScreen() {
       <ScrollView
         className="flex-1 bg-neutral-950"
         contentContainerStyle={{
-          paddingBottom: 120, // INCREASED padding to clear the 100px tab bar
-          paddingHorizontal: isEmpty ? 0 : 16,
-          flexGrow: 1
+          paddingBottom: 120,
+          paddingHorizontal: 0,
+          flexGrow: 1,
+          maxWidth: 1200, // Centering on web
+          alignSelf: 'center',
+          width: '100%'
         }}
         showsVerticalScrollIndicator={false}
         alwaysBounceVertical={true}
@@ -398,15 +405,18 @@ export default function HomeScreen() {
                 style={{
                   position: 'absolute',
                   top: 0,
-                  left: -16,
-                  right: -16,
+                  left: 0,
+                  right: 0,
                   bottom: 0,
                   opacity: 0.5,
                 }}
                 contentFit="cover"
                 pointerEvents="none" // Ensure background doesn't steal touches
               />
-              <Text className="text-amber-500/90 font-mono text-sm font-bold tracking-widest mb-3 px-4">
+              <Text
+                className="text-amber-500 text-3xl font-black tracking-widest mb-3 px-8"
+                style={{ fontFamily: 'VCR_OSD_MONO' }}
+              >
                 {thriftMode ? 'GRAILS' : 'ON DISPLAY'}
               </Text>
 
@@ -471,12 +481,13 @@ export default function HomeScreen() {
             <View className="h-px bg-neutral-800" />
             <View className="h-px opacity-30 -mt-px" style={{ backgroundColor: 'rgba(0,255,136,0.2)' }} />
 
-            {/* Search Bar (Simplified Re-implementation could go here, omitting for safety in this critical step if not needed, but user uses it. I will restore basic search UI) */}
-            {/* Minimal Search & Filter UI Restoration */}
-            <View className="mt-6 mb-2">
+            {/* Search Bar */}
+            <View className="px-8 mt-6 mb-2">
               <View className="flex-row items-center bg-neutral-900 rounded-lg px-3 py-2 border border-neutral-800">
                 <FontAwesome name="search" size={14} color="#737373" />
                 <TextInput
+                  nativeID="search-input"
+                  {...({ name: 'search' } as any)}
                   className="flex-1 ml-2 font-mono text-white text-sm"
                   placeholder="Search collection..."
                   placeholderTextColor="#737373"
@@ -496,37 +507,47 @@ export default function HomeScreen() {
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                className="pl-4"
-                contentContainerStyle={{ paddingRight: 16 }}
+                contentContainerStyle={{ paddingHorizontal: 32 }}
               >
-                {['VHS', 'DVD', 'BluRay', '4K', 'Digital'].map((fmt) => (
-                  <Pressable
-                    key={fmt}
-                    onPress={() => {
-                      setFormatFilter(prev => prev === fmt ? null : fmt);
-                      playSound('click');
-                    }}
-                    className={`px-4 py-2 mr-3 rounded-full border ${formatFilter === fmt
-                      ? 'bg-amber-500 border-amber-500'
-                      : 'bg-neutral-900 border-neutral-800'
-                      }`}
-                  >
-                    <Text className={`font-mono text-xs ${formatFilter === fmt ? 'text-black font-bold' : 'text-neutral-400'}`}>
-                      {fmt}
-                    </Text>
-                  </Pressable>
-                ))}
+                {['ALL', 'VHS', 'DVD', 'BluRay', '4K', 'Digital'].map((fmt) => {
+                  const isActive = formatFilter === fmt || (fmt === 'ALL' && !formatFilter);
+
+                  // Dynamic colors based on format
+                  let activeBg = 'bg-amber-500';
+                  if (fmt === 'VHS') activeBg = 'bg-red-500';
+                  if (fmt === 'DVD') activeBg = 'bg-purple-500';
+                  if (fmt === 'BluRay') activeBg = 'bg-blue-500';
+                  if (fmt === '4K') activeBg = 'bg-yellow-500';
+                  if (fmt === 'Digital') activeBg = 'bg-green-500';
+                  if (fmt === 'ALL') activeBg = 'bg-neutral-500';
+
+                  return (
+                    <Pressable
+                      key={fmt}
+                      onPress={() => {
+                        setFormatFilter(fmt === 'ALL' ? null : fmt);
+                        playSound('click');
+                      }}
+                      className={`px-4 py-2 mr-3 rounded-full border justify-center items-center ${isActive ? activeBg + ' border-transparent' : 'bg-neutral-900 border-neutral-800'
+                        }`}
+                    >
+                      <Text className={`font-mono text-xs ${isActive ? 'text-black font-bold' : 'text-neutral-400'}`}>
+                        {fmt}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
               </ScrollView>
             </View>
 
             {/* Genre Filter Dropdown Trigger */}
-            <View className="px-4 mb-4 z-50">
+            <View className="px-8 mb-4 z-50">
               <Pressable
                 onPress={() => {
                   setIsGenreDropdownOpen(!isGenreDropdownOpen);
                   playSound('click');
                 }}
-                className={`flex-row justify-between items-center px-4 py-2 rounded-lg border ${genreFilter
+                className={`flex-row justify-between items-center px-4 py-3 rounded-lg border ${genreFilter
                   ? 'bg-amber-900/40 border-amber-500'
                   : 'bg-neutral-900 border-neutral-800'
                   }`}
@@ -539,7 +560,7 @@ export default function HomeScreen() {
 
               {/* Dropdown Menu */}
               {isGenreDropdownOpen && (
-                <View className="absolute top-full left-4 right-4 mt-1 bg-neutral-900 border border-neutral-800 rounded-lg overflow-hidden shadow-lg z-50" style={{ maxHeight: 200 }}>
+                <View className="absolute top-full left-8 right-8 mt-1 bg-neutral-900 border border-neutral-800 rounded-lg overflow-hidden shadow-lg z-50">
                   <ScrollView nestedScrollEnabled className="max-h-48">
                     <Pressable
                       onPress={() => {
@@ -576,8 +597,7 @@ export default function HomeScreen() {
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                className="pl-4"
-                contentContainerStyle={{ paddingRight: 16 }}
+                contentContainerStyle={{ paddingHorizontal: 32 }}
               >
                 {[
                   { id: 'recent', label: 'Recent' },
@@ -610,34 +630,63 @@ export default function HomeScreen() {
 
 
 
-            <View className="pb-6">
+            <View className="pb-6 px-8">
               <View className="flex-row items-center justify-between mb-3">
-                <Text className="text-amber-500/90 font-mono text-sm font-bold tracking-widest">
+                <Text
+                  className="text-amber-500 text-3xl font-black tracking-widest"
+                  style={{ fontFamily: 'VCR_OSD_MONO' }}
+                >
                   {thriftMode ? 'WISHLIST' : 'THE STACKS'}
                 </Text>
 
-                {/* View Mode Toggle */}
+                {/* View Mode Toggle + Slider */}
                 <View className="flex-row bg-neutral-900 rounded-lg p-1 border border-neutral-800">
                   <Pressable
-                    onPress={() => { setViewMode('list'); playSound('click'); }}
+                    onPress={() => { setViewMode('list'); setNumColumns(1); playSound('click'); }}
                     className={`p-1.5 rounded ${viewMode === 'list' ? 'bg-neutral-800' : ''}`}
                   >
                     <FontAwesome name="list" size={14} color={viewMode === 'list' ? '#f59e0b' : '#525252'} />
                   </Pressable>
                   <Pressable
-                    onPress={() => { setViewMode('grid2'); playSound('click'); }}
+                    onPress={() => { setViewMode('grid2'); setNumColumns(2); playSound('click'); }}
                     className={`p-1.5 rounded ${viewMode === 'grid2' ? 'bg-neutral-800' : ''}`}
                   >
                     <FontAwesome name="th-large" size={14} color={viewMode === 'grid2' ? '#f59e0b' : '#525252'} />
                   </Pressable>
                   <Pressable
-                    onPress={() => { setViewMode('grid4'); playSound('click'); }}
+                    onPress={() => { setViewMode('grid4'); setNumColumns(4); playSound('click'); }}
                     className={`p-1.5 rounded ${viewMode === 'grid4' ? 'bg-neutral-800' : ''}`}
                   >
                     <FontAwesome name="th" size={14} color={viewMode === 'grid4' ? '#f59e0b' : '#525252'} />
                   </Pressable>
                 </View>
               </View>
+
+              {/* Poster Size Slider — sits below the title/preset row */}
+              {viewMode !== 'list' && (
+                <View className="flex-row items-center gap-2 px-0 mb-3">
+                  <FontAwesome name="th" size={11} color="#525252" />
+                  <Slider
+                    style={{ flex: 1, height: 24 }}
+                    minimumValue={2}
+                    maximumValue={isDesktop ? 8 : 6}
+                    step={1}
+                    value={numColumns}
+                    onValueChange={(val) => {
+                      setNumColumns(val);
+                      // Keep preset highlight in sync
+                      if (val === 1) setViewMode('list');
+                      else if (val === 2) setViewMode('grid2');
+                      else if (val === 4) setViewMode('grid4');
+                      else setViewMode('grid4'); // treat other values as grid
+                    }}
+                    minimumTrackTintColor="#f59e0b"
+                    maximumTrackTintColor="#262626"
+                    thumbTintColor="#f59e0b"
+                  />
+                  <FontAwesome name="th-large" size={11} color="#525252" />
+                </View>
+              )}
 
               {/* Show Empty State if Filtering Yields No Results */}
               {filteredStacks.length === 0 ? (
@@ -647,35 +696,30 @@ export default function HomeScreen() {
               ) : (
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
                   {filteredStacks.map((stack: any, idx: number) => {
-                    // Adjust width based on View Mode
-                    let itemWidth = (windowWidth - 48) / 2; // grid2 default
+                    // Derive width from numColumns; list mode = full width
+                    const isList = viewMode === 'list';
+                    const gap = 16;
+                    const sidePad = 64;
+                    const itemWidth = isList
+                      ? windowWidth - sidePad
+                      : (windowWidth - sidePad - gap * (numColumns - 1)) / numColumns;
 
-                    if (viewMode === 'grid4') {
-                      itemWidth = (windowWidth - 64) / 4;
-                    } else if (viewMode === 'list') {
-                      itemWidth = windowWidth - 32;
-                    }
-
-
-
-                    // Fix for List Mode Height
-                    const itemHeight = viewMode === 'list'
-                      ? 76 // Slender height for List Mode
-                      : itemWidth * 1.5;
+                    const itemHeight = isList ? 76 : itemWidth * 1.5;
+                    // Tighter stack offset for dense grids
+                    const stackOffset = numColumns >= 4 ? 2 : 4;
 
                     return (
-                      <View key={idx} style={{ width: itemWidth, marginBottom: viewMode === 'list' ? 8 : 16 }}>
+                      <View key={idx} style={{ width: itemWidth, marginBottom: isList ? 8 : 16 }}>
                         <StackCard
                           stack={stack}
-                          mode={viewMode === 'list' ? 'list' : 'grid'} // Pass mode prop
+                          mode={isList ? 'list' : 'grid'}
                           onAcquiredPress={thriftMode ? handleAcquiredPress : undefined}
                           onLongPress={thriftMode ? handleAcquiredPress : undefined}
                           onToggleFavorite={thriftMode ? handleToggleGrail : handleToggleFavorite}
                           onPress={() => router.push(`/movie/${stack[0].movie_id}`)}
                           width={itemWidth}
                           height={itemHeight}
-                          // Lower offset for tighter grids
-                          stackOffset={viewMode === 'grid4' ? 2 : 4}
+                          stackOffset={stackOffset}
                         />
                       </View>
                     );

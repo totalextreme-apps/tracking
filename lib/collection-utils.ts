@@ -9,6 +9,15 @@ export function getGenres(collection: CollectionItemWithMovie[] | undefined): st
   return Array.from(genres).sort();
 }
 
+export function getCustomLists(collection: CollectionItemWithMovie[] | undefined): string[] {
+  if (!collection) return [];
+  const lists = new Set<string>();
+  collection.forEach((item) => {
+    item.custom_lists?.forEach((listName) => lists.add(listName));
+  });
+  return Array.from(lists).sort();
+}
+
 const FORMAT_ORDER: Record<string, number> = {
   '4K': 5,
   BluRay: 4,

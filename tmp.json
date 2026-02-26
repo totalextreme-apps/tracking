@@ -1,0 +1,461 @@
+{
+  "page": 1,
+  "results": [
+    {
+      "adult": false,
+      "id": 488,
+      "name": "Steven Spielberg",
+      "original_name": "Steven Spielberg",
+      "media_type": "person",
+      "popularity": 6.8153,
+      "gender": 2,
+      "known_for_department": "Directing",
+      "profile_path": "/tZxcg19YQ3e8fJ0pOs7hjlnmmr6.jpg",
+      "known_for": [
+        {
+          "adult": false,
+          "backdrop_path": "/alqZDg4DXBpNCVTzRPXe5zkkAXX.jpg",
+          "id": 329,
+          "title": "Jurassic Park",
+          "original_title": "Jurassic Park",
+          "overview": "A wealthy entrepreneur secretly creates a theme park featuring living dinosaurs drawn from prehistoric DNA. Before opening day, he invites a team of experts and his two eager grandchildren to experience the park and help calm anxious investors. However, the park is anything but amusing as the security systems go off-line and the dinosaurs escape.",
+          "poster_path": "/maFjKnJ62hDQ9E66dKqDZgbUy0H.jpg",
+          "media_type": "movie",
+          "original_language": "en",
+          "genre_ids": [
+            12,
+            878
+          ],
+          "popularity": 8.4148,
+          "release_date": "1993-06-11",
+          "video": false,
+          "vote_average": 8,
+          "vote_count": 17554
+        },
+        {
+          "adult": false,
+          "backdrop_path": "/zb6fM1CX41D9rF9hdgclu0peUmy.jpg",
+          "id": 424,
+          "title": "Schindler's List",
+          "original_title": "Schindler's List",
+          "overview": "The true story of how businessman Oskar Schindler saved over a thousand Jewish lives from the Nazis while they worked as slaves in his factory during World War II.",
+          "poster_path": "/sF1U4EUQS8YHUYjNl3pMGNIQyr0.jpg",
+          "media_type": "movie",
+          "original_language": "en",
+          "genre_ids": [
+            18,
+            36,
+            10752
+          ],
+          "popularity": 14.3964,
+          "release_date": "1993-12-15",
+          "video": false,
+          "vote_average": 8.566,
+          "vote_count": 17145
+        },
+        {
+          "adult": false,
+          "backdrop_path": "/rW2xRFlJRbTnBJlQTSjQmjevIwb.jpg",
+          "id": 857,
+          "title": "Saving Private Ryan",
+          "original_title": "Saving Private Ryan",
+          "overview": "As U.S. troops storm the beaches of Normandy, three brothers lie dead on the battlefield, with a fourth trapped behind enemy lines. Ranger captain John Miller and seven men are tasked with penetrating German-held territory and bringing the boy home.",
+          "poster_path": "/uqx37cS8cpHg8U35f9U5IBlrCV3.jpg",
+          "media_type": "movie",
+          "original_language": "en",
+          "genre_ids": [
+            10752,
+            18,
+            36
+          ],
+          "popularity": 10.0911,
+          "release_date": "1998-07-24",
+          "video": false,
+          "vote_average": 8.222,
+          "vote_count": 16907
+        }
+      ]
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/1pzjpUwKEbUcqSjDVFGQpVu4arM.jpg",
+      "id": 1188411,
+      "title": "Steven Spielberg, the “New Hollywood” Prodigy",
+      "original_title": "Steven Spielberg, l'homme et l'enfant",
+      "overview": "A new light on American filmmaker Steven Spielberg, Hollywood’s greatest director, offering a unique perspective on his work and digging into his personal influences.",
+      "poster_path": "/8qegRoVdx04IV5e72zzZxM4pe5L.jpg",
+      "media_type": "movie",
+      "original_language": "fr",
+      "genre_ids": [
+        99,
+        10770
+      ],
+      "popularity": 0.4561,
+      "release_date": "2025-02-04",
+      "video": false,
+      "vote_average": 8,
+      "vote_count": 5
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/sQryWia3qi1Rv9FnzZv17ACN4CX.jpg",
+      "id": 663019,
+      "title": "Filip and Fredrik meet Steven Spielberg - for a minute",
+      "original_title": "Filip och Fredrik träffar Steven Spielberg - i en minut",
+      "overview": "Swedish television presenters/entertainers Filip Hammar and Fredrik Wikingsson have been given the chance to interview Steven Spielberg for one minute. What will they ask?",
+      "poster_path": "/x7uOFsZctn13MSxYoxjFwWhyq8C.jpg",
+      "media_type": "movie",
+      "original_language": "sv",
+      "genre_ids": [
+        99
+      ],
+      "popularity": 0.2013,
+      "release_date": "2019-11-28",
+      "video": false,
+      "vote_average": 0,
+      "vote_count": 0
+    },
+    {
+      "adult": false,
+      "backdrop_path": null,
+      "id": 1209739,
+      "title": "Short Cuts: Steven Spielberg's The Color Purple",
+      "original_title": "Short Cuts: La Couleur Pourpre de Steven Spielberg",
+      "overview": "“The Color Purple” by Steven Spielberg animated and summarized in 1 minute by Mohammad Babakoohi.  Inspired by some paintings by Felix Vallotton in visual research.",
+      "poster_path": "/smaV2dCBKhNZ425fHhWH2Q4wquZ.jpg",
+      "media_type": "movie",
+      "original_language": "fr",
+      "genre_ids": [
+        16
+      ],
+      "popularity": 0.0071,
+      "release_date": "",
+      "video": false,
+      "vote_average": 0,
+      "vote_count": 0
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/kXnTDs4xdEHw2alRsPQgfrtOjek.jpg",
+      "id": 345115,
+      "title": "Abdulladzhan, or Dedicated to Steven Spielberg",
+      "original_title": "Абдуллажон, ёки Стевен Спиелбергга багʻишланади",
+      "overview": "Considering that Musakov’s Abdulladzhan (1991) was dedicated to Steven Spielberg, we might suggest that these four boys embody nothing more complicated than a conflict of youthful innocence with some ominous threat—the basic workings of E.T. (1982) or War of the Worlds (2005), say. That threat, however, is best understood not through vague nationalism or warmed-over socialism, but through the other reference-point of Abdulladzhan—Tarkovskii’s Stalker (1980). Musakov leaves his boys in a simplified radiance so bright and so overexposed that it no longer looks like the skies of sunny Tashkent, but a disturbing, borderless luminosity to match the flat tonal range of Stalker’s “Zone.” Our Uzbek boys are nowhere in particular; this is a broader domain than anything international.",
+      "poster_path": "/zWJCR1kNdHozZSsr6hqDXgft6mA.jpg",
+      "media_type": "movie",
+      "original_language": "uz",
+      "genre_ids": [
+        35,
+        878
+      ],
+      "popularity": 0.1804,
+      "release_date": "1992-07-13",
+      "video": false,
+      "vote_average": 5.9,
+      "vote_count": 9
+    },
+    {
+      "adult": false,
+      "backdrop_path": null,
+      "id": 682252,
+      "title": "Steven Spielberg's Movie",
+      "original_title": "Steven Spielberg's Movie",
+      "overview": "A young film director named Milo Jacobson legally changes his name to Steven Spielberg in order to persuade his girlfriend's uncle (a sleazy movie producer) to finance his first film.",
+      "poster_path": null,
+      "media_type": "movie",
+      "original_language": "en",
+      "genre_ids": [
+        35
+      ],
+      "popularity": 0.0929,
+      "release_date": "2001-02-10",
+      "video": false,
+      "vote_average": 0,
+      "vote_count": 0
+    },
+    {
+      "adult": false,
+      "backdrop_path": null,
+      "id": 296263,
+      "title": "Duel: A Conversation with Director Steven Spielberg",
+      "original_title": "Duel: A Conversation with Director Steven Spielberg",
+      "overview": "Director Steven Spielberg discusses the making of his motion picture Duel (1971).",
+      "poster_path": "/yURZFCNwwUl01yPCtnj9PBD73lt.jpg",
+      "media_type": "movie",
+      "original_language": "en",
+      "genre_ids": [
+        99
+      ],
+      "popularity": 0.2421,
+      "release_date": "2004-08-17",
+      "video": false,
+      "vote_average": 6.6,
+      "vote_count": 5
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/3UNB6KuPZi5Up65g5wSUTCDuB6T.jpg",
+      "id": 535860,
+      "title": "Lawrence of Arabia: A Conversation with Steven Spielberg",
+      "original_title": "Lawrence of Arabia: A Conversation with Steven Spielberg",
+      "overview": "Conversation with Steven Spielberg about the movie \"Lawrence of Arabia.\"",
+      "poster_path": "/3vaMjBFBXkHPxqFyxrYYNGpgegf.jpg",
+      "media_type": "movie",
+      "original_language": "en",
+      "genre_ids": [
+        99
+      ],
+      "popularity": 0.2228,
+      "release_date": "2001-04-03",
+      "video": true,
+      "vote_average": 7.6,
+      "vote_count": 5
+    },
+    {
+      "adult": false,
+      "backdrop_path": null,
+      "id": 683208,
+      "title": "Steven Spielberg/John Williams: The Adventure Continues",
+      "original_title": "Steven Spielberg/John Williams: The Adventure Continues",
+      "overview": "",
+      "poster_path": "/5jbMIU28YVwOJRz5EIYb1hQayfC.jpg",
+      "media_type": "movie",
+      "original_language": "de",
+      "genre_ids": [
+        99
+      ],
+      "popularity": 0.0214,
+      "release_date": "2018-11-04",
+      "video": false,
+      "vote_average": 5,
+      "vote_count": 1
+    },
+    {
+      "adult": false,
+      "backdrop_path": null,
+      "id": 1212731,
+      "title": "Short Cuts : Minority Report de Steven Spielberg",
+      "original_title": "Short Cuts : Minority Report de Steven Spielberg",
+      "overview": "Salomé Châtelain revisits Steven Spielberg's Minority Report in a one-minute animated clip.",
+      "poster_path": "/v2dyugSG0xRyyGS91QNLKtTldeK.jpg",
+      "media_type": "movie",
+      "original_language": "en",
+      "genre_ids": [
+        16
+      ],
+      "popularity": 0.0416,
+      "release_date": "2023-12-03",
+      "video": false,
+      "vote_average": 6,
+      "vote_count": 1
+    },
+    {
+      "adult": false,
+      "backdrop_path": null,
+      "id": 1533788,
+      "title": "Steven Spielberg 30 Years of CLOSE ENCOUNTERS",
+      "original_title": "Steven Spielberg 30 Years of CLOSE ENCOUNTERS",
+      "overview": "Steven Spielberg discusses the 30 impact of his 1977 film 'Close Encounters of the Third Kind' amid it's 30th anniversary",
+      "poster_path": "/t5mB9xNqbDEtEyCFJP5KdjWEcaK.jpg",
+      "media_type": "movie",
+      "original_language": "en",
+      "genre_ids": [],
+      "popularity": 0.0861,
+      "release_date": "2007-11-13",
+      "video": false,
+      "vote_average": 0,
+      "vote_count": 0
+    },
+    {
+      "adult": false,
+      "backdrop_path": null,
+      "id": 1444385,
+      "title": "Short Cuts : A.I. - Intelligence artificielle  de Steven Spielberg",
+      "original_title": "Short Cuts : A.I. - Intelligence artificielle  de Steven Spielberg",
+      "overview": "",
+      "poster_path": "/pvaDcIW8uc0O5tCfQc1iDtu0uWw.jpg",
+      "media_type": "movie",
+      "original_language": "fr",
+      "genre_ids": [],
+      "popularity": 0.0143,
+      "release_date": "",
+      "video": false,
+      "vote_average": 5,
+      "vote_count": 1
+    },
+    {
+      "adult": false,
+      "backdrop_path": null,
+      "id": 766784,
+      "title": "AFI's Master Class - The Art of Collaboration: Steven Spielberg and John Williams",
+      "original_title": "AFI's Master Class - The Art of Collaboration: Steven Spielberg and John Williams",
+      "overview": "Filmmaker Steven Spielberg and composer John Williams sit down to discuss their four-decade friendship and working relationship in front of a class at the American Film Institute.",
+      "poster_path": "/lht0i4Nh4VGzNLnKIvv5XCuRneT.jpg",
+      "media_type": "movie",
+      "original_language": "en",
+      "genre_ids": [
+        99
+      ],
+      "popularity": 0.1812,
+      "release_date": "2011-11-07",
+      "video": false,
+      "vote_average": 8,
+      "vote_count": 2
+    },
+    {
+      "adult": false,
+      "backdrop_path": null,
+      "id": 1409660,
+      "title": "Short Cuts : Les dents de la mer de Steven Spielberg",
+      "original_title": "Short Cuts : Les dents de la mer de Steven Spielberg",
+      "overview": "",
+      "poster_path": "/kB3CVbERXHOSelneVe2HMZtRJD9.jpg",
+      "media_type": "movie",
+      "original_language": "fr",
+      "genre_ids": [],
+      "popularity": 0.0143,
+      "release_date": "",
+      "video": false,
+      "vote_average": 7,
+      "vote_count": 1
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/kgEFD11dQdi8tCUgdNX1Ul02LlW.jpg",
+      "id": 107124,
+      "name": "Animaniacs",
+      "original_name": "Animaniacs",
+      "overview": "Yakko, Wakko and Dot return for all-new big laughs and the occasional epic takedown of authority figures in serious need of an ego check. Joining the Warners are Starbox & Cindy on their latest play date while Pinky and the Brain's ideas for world domination lead them to all new adventures.",
+      "poster_path": "/wmPZzLov9OhiknK4jW4qE6mgvHf.jpg",
+      "media_type": "tv",
+      "original_language": "en",
+      "genre_ids": [
+        16,
+        35
+      ],
+      "popularity": 15.3974,
+      "first_air_date": "2020-11-20",
+      "vote_average": 8.432,
+      "vote_count": 585,
+      "origin_country": [
+        "US"
+      ]
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/85VdFnoD33M9H2QW43QVOnpnKxU.jpg",
+      "id": 2432,
+      "name": "Taken",
+      "original_name": "Taken",
+      "overview": "The show takes place from 1944 to 2002 and follows the lives of three families: the Crawfords, who seek to cover up the Roswell crash and the existence of aliens; the Keys, who are subject to frequent experimentation by the aliens; and the Clarkes, who sheltered one of the surviving aliens from the crash.",
+      "poster_path": "/dFMBPZvgbvhnpCW8YfYakNB2xrT.jpg",
+      "media_type": "tv",
+      "original_language": "en",
+      "genre_ids": [
+        10765,
+        18,
+        9648,
+        80
+      ],
+      "popularity": 6.4085,
+      "first_air_date": "2002-12-02",
+      "vote_average": 7.436,
+      "vote_count": 401,
+      "origin_country": [
+        "US"
+      ]
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/zywtNiaZ9r7azrcNdl2j0jOgrkw.jpg",
+      "id": 594,
+      "title": "The Terminal",
+      "original_title": "The Terminal",
+      "overview": "An Eastern European tourist unexpectedly finds himself stranded in JFK airport, and must take up temporary residence there.",
+      "poster_path": "/cPB3ZMM4UdsSAhNdS4c7ps5nypY.jpg",
+      "media_type": "movie",
+      "original_language": "en",
+      "genre_ids": [
+        35,
+        18
+      ],
+      "popularity": 8.1361,
+      "release_date": "2004-06-17",
+      "video": false,
+      "vote_average": 7.35,
+      "vote_count": 8537
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/9b2NUGEGd2lknAcHxwOZfWgj87h.jpg",
+      "id": 1830,
+      "name": "Tiny Toon Adventures",
+      "original_name": "Tiny Toon Adventures",
+      "overview": "Follow the adventures of a group of young cartoon characters who attend the Acme Looniversity to become the next generation of characters from the Looney Tunes series.",
+      "poster_path": "/j9B9RmerM2b39s7xzW6g4vN5B1m.jpg",
+      "media_type": "tv",
+      "original_language": "en",
+      "genre_ids": [
+        16,
+        35,
+        10751,
+        10762
+      ],
+      "popularity": 9.7565,
+      "first_air_date": "1990-09-14",
+      "vote_average": 7.8,
+      "vote_count": 517,
+      "origin_country": [
+        "US"
+      ]
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/hHlhvZcB6B9dNSTvJouZ6M2BUNR.jpg",
+      "id": 2228,
+      "name": "Pinky and the Brain",
+      "original_name": "Pinky and the Brain",
+      "overview": "Pinky and Brain are genetically enhanced laboratory mice who reside in a cage in the Acme Labs research facility. Brain is self-centered and scheming; Pinky is good-natured but feebleminded. In each episode, Brain devises a new plan to take over the world, which ultimately ends in failure, usually due to Pinky's idiocy, the impossibility of Brain's plan, Brain's own arrogance, or just circumstances beyond their control.",
+      "poster_path": "/d3ER6VaqYP1SLeAOtMJX5qm3v4a.jpg",
+      "media_type": "tv",
+      "original_language": "en",
+      "genre_ids": [
+        16,
+        35,
+        10751,
+        10765,
+        10762
+      ],
+      "popularity": 5.7734,
+      "first_air_date": "1995-09-09",
+      "vote_average": 7.7,
+      "vote_count": 735,
+      "origin_country": [
+        "US"
+      ]
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/exnFsbb9c3fDutTsgtJSWcDmZm0.jpg",
+      "id": 511809,
+      "title": "West Side Story",
+      "original_title": "West Side Story",
+      "overview": "Two youngsters from rival New York City gangs fall in love, but tensions between their respective friends build toward tragedy.",
+      "poster_path": "/yfz3IUoYYSY32tkb97HlUBGFsnh.jpg",
+      "media_type": "movie",
+      "original_language": "en",
+      "genre_ids": [
+        18,
+        10749,
+        80
+      ],
+      "popularity": 3.3592,
+      "release_date": "2021-12-08",
+      "video": false,
+      "vote_average": 6.945,
+      "vote_count": 1739
+    }
+  ],
+  "total_pages": 2,
+  "total_results": 24
+}

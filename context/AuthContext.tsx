@@ -101,14 +101,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('Proceeding with signin using token length:', token.length);
       const isBypass = token === 'manual-bypass-token' || token === 'dev-manual-bypass';
 
-      const signInOptions: any = {};
-      if (!isBypass) {
-        signInOptions.captchaToken = token;
+      if (isBypass) {
+        console.warn('AUTH: Manual bypass token detected. MOCKING USER ID to unblock UI natively or on dev error.');
+        setUserId('00000000-0000-0000-0000-000000000000');
+        setAuthPhase('READY');
+        setShowCaptcha(false);
+        setIsLoading(false);
+        return;
       }
 
-      const { data: { session: anonSession }, error } = await supabase.auth.signInAnonymously(
-        isBypass ? {} : { options: signInOptions }
-      );
+      const signInOptions: any = { captchaToken: token };
+
+      const { data: { session: anonSession }, error } = await supabase.auth.signInAnonymously({ options: signInOptions });
 
       if (!error && anonSession?.user?.id) {
         setUserId(anonSession.user.id);
@@ -117,21 +121,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setShowCaptcha(false);
         setIsLoading(false);
       } else {
-        console.error('Auth Error after Captcha:', error);
-
-        // CRITICAL FIX: If bypassing or erroring in a way that blocks the user, 
-        // fall back to the Dev Mock ID to allow app access.
+        console.error('Auth Error after Captcha verify:', error);
+        // If there's a legit Turnstile error, it might be due to a dev configuration. Still unblock the UI if in dev/preview
         const host = typeof window !== 'undefined' ? window.location.hostname : '';
         const isPreview = host.includes('vercel.app') || host.includes('localhost');
 
-        if (isBypass || isPreview || __DEV__) {
-          console.warn('AUTH: Falling back to MOCK USER ID to unblock UI');
+        if (isPreview || __DEV__) {
+          console.warn('AUTH: Falling back to MOCK USER ID due to auth failure in preview.');
           setUserId('00000000-0000-0000-0000-000000000000');
-          setAuthPhase('READY'); // Set to READY to allow index.tsx to render normally
-          setIsLoading(false);
+          setAuthPhase('READY');
+        } else {
+          setAuthPhase('ERROR');
         }
-
         setShowCaptcha(false);
+        setIsLoading(false);
       }
     } catch (e) {
       console.error('Captcha Handler Fatal Error:', e);

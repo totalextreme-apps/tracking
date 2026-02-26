@@ -78,31 +78,79 @@ export function EmptyState() {
             />
 
             {/* VCR UI Overlay */}
-            <View className="absolute top-12 left-8 z-20">
-                <Text className="text-white font-mono text-xl">PLAY</Text>
+            <View className="absolute top-8 left-10 z-20">
+                <Text
+                    className="text-white text-xl"
+                    style={{
+                        fontFamily: 'VCR_OSD_MONO',
+                        textShadowColor: '#000',
+                        textShadowOffset: { width: 1, height: 1 },
+                        textShadowRadius: 0
+                    }}
+                >
+                    PLAY
+                </Text>
             </View>
 
-            <View className="absolute top-12 right-8 z-20">
-                <Text className="text-white font-mono text-xl">SP</Text>
+            <View className="absolute top-8 right-10 z-20">
+                <Text
+                    className="text-white text-xl"
+                    style={{
+                        fontFamily: 'VCR_OSD_MONO',
+                        textShadowColor: '#000',
+                        textShadowOffset: { width: 1, height: 1 },
+                        textShadowRadius: 0
+                    }}
+                >
+                    SP
+                </Text>
             </View>
 
-            <View className="absolute bottom-32 left-8 z-20">
-                <Text className="text-white font-mono text-xl">NO DATA</Text>
+            <View className="absolute bottom-10 left-10 z-20">
+                <Text
+                    className="text-white text-xl"
+                    style={{
+                        fontFamily: 'VCR_OSD_MONO',
+                        textShadowColor: '#000',
+                        textShadowOffset: { width: 1, height: 1 },
+                        textShadowRadius: 0
+                    }}
+                >
+                    NO DATA
+                </Text>
             </View>
 
-            <View className="absolute bottom-32 right-8 z-20">
-                <Text className="text-white font-mono text-xl">00:00:00</Text>
+            <View className="absolute bottom-10 right-10 z-20">
+                <Text
+                    className="text-white text-xl"
+                    style={{
+                        fontFamily: 'VCR_OSD_MONO',
+                        textShadowColor: '#000',
+                        textShadowOffset: { width: 1, height: 1 },
+                        textShadowRadius: 0
+                    }}
+                >
+                    00:00:00
+                </Text>
             </View>
 
             {/* Main Content */}
             <Animated.View style={animatedText} className="items-center z-30">
                 <Text
-                    className="text-white font-mono text-5xl font-bold tracking-widest text-center mb-2 pt-4 pb-2 leading-relaxed"
-                    style={{ textShadowColor: '#000', textShadowOffset: { width: 2, height: 2 }, textShadowRadius: 0 }}
+                    className="text-white text-5xl font-bold tracking-widest text-center mb-2 pt-4 pb-2 leading-relaxed"
+                    style={{
+                        fontFamily: 'VCR_OSD_MONO',
+                        textShadowColor: '#000',
+                        textShadowOffset: { width: 2, height: 2 },
+                        textShadowRadius: 0
+                    }}
                 >
                     NO SIGNAL
                 </Text>
-                <Text className="text-white/80 font-mono text-lg text-center tracking-widest mt-4">
+                <Text
+                    className="text-white/80 text-lg text-center tracking-widest mt-4"
+                    style={{ fontFamily: 'VCR_OSD_MONO' }}
+                >
                     INSERT TAPE
                 </Text>
             </Animated.View>

@@ -60,6 +60,7 @@ export function ShareableShelf({ items, mode = 'display' }: ShareableShelfProps)
             <View className="absolute bottom-20 items-center">
                 <Text className="text-white font-black italic text-2xl tracking-tighter"
                     style={{
+                        fontFamily: 'VCR_OSD_MONO',
                         textShadowColor: 'rgba(245, 158, 11, 0.5)',
                         textShadowOffset: { width: 2, height: 2 },
                         textShadowRadius: 1
@@ -71,7 +72,10 @@ export function ShareableShelf({ items, mode = 'display' }: ShareableShelfProps)
 
             {/* Footer Date */}
             <View className="absolute bottom-8 items-center bg-black/60 px-4 py-1 rounded-full border border-white/10">
-                <Text className="text-amber-500 font-mono text-xs tracking-widest">
+                <Text
+                    className="text-amber-500 text-xs tracking-widest"
+                    style={{ fontFamily: 'VCR_OSD_MONO' }}
+                >
                     {new Date().toLocaleDateString().toUpperCase()}
                 </Text>
             </View>

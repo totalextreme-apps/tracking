@@ -7,10 +7,10 @@ import {
     KeyboardAvoidingView,
     Platform,
     Pressable,
+    ScrollView,
     Text,
     TextInput,
-    TouchableWithoutFeedback,
-    View,
+    View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -87,10 +87,31 @@ export default function AuthScreen() {
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             className="flex-1 bg-neutral-950"
         >
-            <TouchableWithoutFeedback onPress={Platform.OS === 'web' ? undefined : Keyboard.dismiss}>
-                <View className="flex-1 justify-center px-8" style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
+            <ScrollView className="flex-1 bg-neutral-950 pt-4" contentContainerStyle={{ paddingHorizontal: 32, paddingBottom: insets.bottom + 32 }}>
+                <View style={{ maxWidth: 800, alignSelf: 'center', width: '100%' }}>
+                    <Pressable
+                        onPress={() => {
+                            if (router.canGoBack()) {
+                                router.back();
+                            } else {
+                                router.replace('/');
+                            }
+                        }}
+                        className="mb-12 mt-4 bg-[#0000FF] px-4 py-1.5 rounded-md self-start shadow-sm"
+                    >
+                        <Text
+                            className="text-white text-[10px] font-bold uppercase tracking-widest"
+                            style={{ fontFamily: 'VCR_OSD_MONO' }}
+                        >
+                            BACK
+                        </Text>
+                    </Pressable>
+
                     <View className="mb-8">
-                        <Text className="text-white font-mono text-3xl font-bold mb-2 tracking-tighter">
+                        <Text
+                            className="text-white text-3xl font-bold mb-2 tracking-tighter"
+                            style={{ fontFamily: 'VCR_OSD_MONO' }}
+                        >
                             {mode === 'signin' ? 'WELCOME BACK' : 'CREATE ACCOUNT'}
                         </Text>
                         <Text className="text-neutral-400 font-mono text-sm">
@@ -102,8 +123,15 @@ export default function AuthScreen() {
 
                     <View className="space-y-4 gap-4">
                         <View>
-                            <Text className="text-amber-500 font-mono text-xs mb-2 ml-1">EMAIL</Text>
+                            <Text
+                                className="text-amber-500 text-xs mb-2 ml-1"
+                                style={{ fontFamily: 'VCR_OSD_MONO' }}
+                            >
+                                EMAIL
+                            </Text>
                             <TextInput
+                                nativeID="email-input"
+                                {...({ name: 'email' } as any)}
                                 className="bg-neutral-900 text-white px-4 py-3 rounded-lg font-mono border border-neutral-800 focus:border-amber-500"
                                 placeholder="email@example.com"
                                 placeholderTextColor="#666"
@@ -116,8 +144,15 @@ export default function AuthScreen() {
                         </View>
 
                         <View>
-                            <Text className="text-amber-500 font-mono text-xs mb-2 ml-1">PASSWORD</Text>
+                            <Text
+                                className="text-amber-500 text-xs mb-2 ml-1"
+                                style={{ fontFamily: 'VCR_OSD_MONO' }}
+                            >
+                                PASSWORD
+                            </Text>
                             <TextInput
+                                nativeID="password-input"
+                                {...({ name: 'password' } as any)}
                                 className="bg-neutral-900 text-white px-4 py-3 rounded-lg font-mono border border-neutral-800 focus:border-amber-500"
                                 placeholder="••••••••"
                                 placeholderTextColor="#666"
@@ -136,7 +171,10 @@ export default function AuthScreen() {
                             {loading ? (
                                 <ActivityIndicator color="#fff" />
                             ) : (
-                                <Text className="text-neutral-950 font-bold font-mono text-lg">
+                                <Text
+                                    className="text-neutral-950 font-bold text-lg"
+                                    style={{ fontFamily: 'VCR_OSD_MONO' }}
+                                >
                                     {mode === 'signin' ? 'SIGN IN' : 'SIGN UP'}
                                 </Text>
                             )}
@@ -153,21 +191,8 @@ export default function AuthScreen() {
                             </Pressable>
                         </View>
                     </View>
-
-                    <Pressable
-                        className="mt-12 items-center"
-                        onPress={() => {
-                            if (router.canGoBack()) {
-                                router.back();
-                            } else {
-                                router.replace('/');
-                            }
-                        }}
-                    >
-                        <Text className="text-neutral-500 font-mono text-xs">CANCEL</Text>
-                    </Pressable>
                 </View>
-            </TouchableWithoutFeedback>
+            </ScrollView>
         </KeyboardAvoidingView>
     );
 }

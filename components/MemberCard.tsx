@@ -55,7 +55,7 @@ export function MemberCard({ userId, profile, onEditPress, onAvatarPress }: Memb
                         <View className="bg-neutral-900 border-2 border-amber-600 -rotate-2 p-1 self-start shadow-sm" style={{ transform: [{ skewX: '-10deg' }] }}>
                             <Image
                                 source={require('@/assets/images/logo_tracking.png')}
-                                style={{ width: 100, height: 30 }}
+                                style={{ width: 91, height: 30 }}
                                 contentFit="contain"
                             />
                             {/* "VIDEO STORE" text if not in logo? Logo is just "Tracking"? 

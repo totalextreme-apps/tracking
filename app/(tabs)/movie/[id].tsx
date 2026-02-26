@@ -17,6 +17,7 @@ import { useSound } from '@/context/SoundContext';
 import { useThriftMode } from '@/context/ThriftModeContext';
 import { useAddToCollection, useCollection, useDeleteCollectionItem, useUpdateCollectionItem } from '@/hooks/useCollection';
 import { deleteFromCloudinary, uploadToCloudinary } from '@/lib/cloudinary';
+import { getCustomLists } from '@/lib/collection-utils';
 
 import { getBackdropUrl, getPosterUrl } from '@/lib/dummy-data';
 import { getMovieById } from '@/lib/tmdb';
@@ -57,6 +58,10 @@ export default function MovieDetailScreen() {
     const [showEditionModal, setShowEditionModal] = useState(false);
     const [pendingFormat, setPendingFormat] = useState<string | null>(null);
     const [editionInput, setEditionInput] = useState('');
+
+    // Curated Stacks State
+    const [showNewStackInput, setShowNewStackInput] = useState(false);
+    const [newStackName, setNewStackName] = useState('');
 
     // We use the main collection query and filter. 
     // In a generic app we might want a specific query for just this movie, 
@@ -229,6 +234,35 @@ export default function MovieDetailScreen() {
                 ]
             );
         }
+    };
+
+    const handleToggleStack = async (listName: string) => {
+        playSound('click');
+        const isInStack = movieItems.some((i: any) => i.custom_lists?.includes(listName));
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        try {
+            await Promise.all(movieItems.map((item: any) => {
+                const currentLists = item.custom_lists || [];
+                const updatedLists = isInStack
+                    ? currentLists.filter((l: string) => l !== listName)
+                    : [...currentLists, listName];
+
+                return updateMutation.mutateAsync({
+                    itemId: item.id,
+                    updates: { custom_lists: updatedLists }
+                });
+            }));
+        } catch (e) {
+            Alert.alert('Error', 'Failed to update curated stack.');
+        }
+    };
+
+    const handleCreateStack = async () => {
+        if (!newStackName.trim()) return;
+        await handleToggleStack(newStackName.trim());
+        setNewStackName('');
+        setShowNewStackInput(false);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     };
 
     if (!activeMovie || !movieId) {
@@ -416,7 +450,16 @@ export default function MovieDetailScreen() {
                 />
             )}
 
-            <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 40 }}>
+            <ScrollView
+                className="flex-1"
+                contentContainerStyle={{
+                    paddingBottom: 40,
+                    paddingHorizontal: 0,
+                    maxWidth: 1200,
+                    alignSelf: 'center',
+                    width: '100%'
+                }}
+            >
                 {/* Backdrop */}
                 <View className="relative h-72 w-full">
                     <Image source={{ uri: backdropUrl ?? undefined }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
@@ -442,7 +485,7 @@ export default function MovieDetailScreen() {
                     </Pressable>
                 </View>
 
-                <View className="px-5 -mt-24">
+                <View className="px-8 -mt-24">
                     <View className="flex-row items-end">
                         {/* Poster */}
                         <View className="w-32 rounded-lg shadow-xl relative" style={{ elevation: 10, shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 10 }}>
@@ -607,17 +650,6 @@ export default function MovieDetailScreen() {
                         </View>
                     </View>
 
-                    {/* Format Preview / Form */}
-                    {
-                        selectedFormat && (
-                            <View className="mt-6 bg-neutral-900/50 p-4 rounded-lg border border-neutral-800">
-                                <Text className="text-amber-500 font-mono font-bold mb-4 flex-row items-center">
-                                    {existingFormatItem ? 'EDIT' : 'ADD'} {selectedFormat}
-                                </Text>
-                            </View>
-                        )
-                    }
-
                     {/* Format Notes Section */}
                     {
                         ownedFormats.length > 0 && (
@@ -634,6 +666,8 @@ export default function MovieDetailScreen() {
                                             )}
                                         </View>
                                         <TextInput
+                                            nativeID={`edition-input-${item.id}`}
+                                            {...({ name: `edition-${item.id}` } as any)}
                                             className="bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm mb-2"
                                             placeholder="Edition (Theatrical, Unrated, Director's Cut, etc.)"
                                             placeholderTextColor="#525252"
@@ -643,6 +677,8 @@ export default function MovieDetailScreen() {
                                             autoCorrect={false}
                                         />
                                         <TextInput
+                                            nativeID={`notes-input-${item.id}`}
+                                            {...({ name: `notes-${item.id}` } as any)}
                                             className="bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm min-h-[80px]"
                                             placeholder={`Add notes for your ${item.format} copy...`}
                                             placeholderTextColor="#525252"
@@ -676,6 +712,69 @@ export default function MovieDetailScreen() {
                                         </Pressable>
                                     </View>
                                 ))}
+                            </View>
+                        )
+                    }
+
+                    {/* Curated Stacks Section */}
+                    {
+                        ownedFormats.length > 0 && (
+                            <View className="mt-8">
+                                <Text className="text-white font-bold mb-3">Curated Stacks</Text>
+                                <View className="flex-row flex-wrap gap-2 mb-2">
+                                    {getCustomLists(collection).map(listName => {
+                                        const isInStack = movieItems.some((i: any) => i.custom_lists?.includes(listName));
+                                        return (
+                                            <Pressable
+                                                key={listName}
+                                                onPress={() => handleToggleStack(listName)}
+                                                className={`px-3 py-1.5 border rounded-full flex-row items-center gap-1 ${isInStack ? 'bg-amber-600/20 border-amber-500' : 'bg-neutral-900 border-neutral-700'}`}
+                                            >
+                                                <Ionicons name={isInStack ? 'checkmark' : 'add'} size={14} color={isInStack ? '#f59e0b' : '#a3a3a3'} />
+                                                <Text className={`font-mono text-xs ${isInStack ? 'text-amber-500 font-bold' : 'text-neutral-400'}`}>
+                                                    {listName}
+                                                </Text>
+                                            </Pressable>
+                                        );
+                                    })}
+
+                                    <Pressable
+                                        onPress={() => {
+                                            playSound('click');
+                                            setShowNewStackInput(!showNewStackInput);
+                                        }}
+                                        className={`px-3 py-1.5 border rounded-full flex-row items-center gap-1 ${showNewStackInput ? 'bg-neutral-800 border-neutral-600' : 'bg-neutral-900 border-neutral-700 border-dashed'}`}
+                                    >
+                                        <Ionicons name={showNewStackInput ? 'close' : 'add'} size={14} color={showNewStackInput ? '#fff' : '#a3a3a3'} />
+                                        <Text className={`font-mono text-xs ${showNewStackInput ? 'text-white' : 'text-neutral-500'}`}>
+                                            {showNewStackInput ? 'CANCEL' : 'NEW STACK'}
+                                        </Text>
+                                    </Pressable>
+                                </View>
+
+                                {showNewStackInput && (
+                                    <View className="flex-row items-center gap-2 mt-2">
+                                        <TextInput
+                                            className="flex-1 bg-neutral-900 text-white px-3 py-2 rounded-lg border border-neutral-800 font-mono text-sm"
+                                            placeholder="Stack Name..."
+                                            placeholderTextColor="#525252"
+                                            value={newStackName}
+                                            onChangeText={setNewStackName}
+                                            autoFocus
+                                            onSubmitEditing={handleCreateStack}
+                                            returnKeyType="done"
+                                        />
+                                        <Pressable
+                                            onPress={handleCreateStack}
+                                            disabled={!newStackName.trim() || updateMutation.isPending}
+                                            className={`px-4 py-2 rounded-lg border ${newStackName.trim() ? 'bg-amber-600/10 border-amber-600/50' : 'bg-neutral-900 border-neutral-800'}`}
+                                        >
+                                            <Text className={`font-mono text-xs font-bold ${newStackName.trim() ? 'text-amber-500' : 'text-neutral-600'}`}>
+                                                SAVE
+                                            </Text>
+                                        </Pressable>
+                                    </View>
+                                )}
                             </View>
                         )
                     }
@@ -827,6 +926,8 @@ export default function MovieDetailScreen() {
                         </Text>
 
                         <TextInput
+                            nativeID="modal-edition-input"
+                            {...({ name: 'modal-edition' } as any)}
                             className="bg-neutral-800 text-white p-3 rounded-lg border border-neutral-700 font-mono text-sm mb-4"
                             placeholder="Edition (e.g., Theatrical, Unrated)"
                             placeholderTextColor="#525252"
@@ -886,6 +987,6 @@ export default function MovieDetailScreen() {
                     />
                 )
             }
-        </View >
+        </View>
     );
 }

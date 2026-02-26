@@ -1,7 +1,7 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { router, Tabs } from 'expo-router';
+import { Tabs } from 'expo-router';
 import React from 'react';
-import { Image, Platform, Pressable, Switch, Text, View } from 'react-native';
+import { Image, Platform } from 'react-native';
 
 import { useColorScheme } from '@/components/useColorScheme';
 import { useSound } from '@/context/SoundContext';
@@ -11,6 +11,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 const logoSource = Platform.OS === 'web'
   ? { uri: '/logo_tracking.png' }
   : require('@/assets/images/logo_tracking.png');
+
+const stacksIconSource = Platform.OS === 'web'
+  ? { uri: '/tab_stacks.png' }
+  : require('@/assets/images/tab_stacks.png');
 
 function TabBarIcon(props: {
   name: React.ComponentProps<typeof FontAwesome>['name'];
@@ -79,35 +83,33 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'My Stacks', // Renamed from 'Tracking'
-          headerTitleAlign: 'left',
-          headerTitle: () => (
+          headerShown: false,
+          title: 'My Stacks',
+          tabBarIcon: ({ color, focused }) => (
             <Image
-              source={logoSource}
-              style={{ width: 140, height: 40, resizeMode: 'contain' }}
+              source={stacksIconSource}
+              style={{
+                width: 28,
+                height: 28,
+                marginBottom: -3,
+                tintColor: color,
+              }}
+              resizeMode="contain"
             />
           ),
+        }}
+        listeners={{
+          tabPress: () => {
+            playSound('click');
+          },
+        }}
+      />
+      <Tabs.Screen
+        name="lists"
+        options={{
+          headerShown: false,
+          title: 'Curated',
           tabBarIcon: ({ color }) => <TabBarIcon name="film" color={color} />,
-          headerRight: () => (
-            <View className="flex-row items-center mr-2 gap-3">
-              <Pressable
-                onPress={() => router.push('/add')}
-                style={{ padding: 8, marginRight: 4 }}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <FontAwesome name="plus" size={22} color="#f59e0b" />
-              </Pressable>
-              <Text className="text-neutral-400 font-mono text-xs" style={{ marginLeft: 4 }}>
-                THRIFT
-              </Text>
-              <Switch
-                value={thriftMode}
-                onValueChange={handleToggleThrift}
-                trackColor={{ false: '#374151', true: '#059669' }}
-                thumbColor="#fff"
-              />
-            </View>
-          ),
         }}
         listeners={{
           tabPress: () => {
@@ -118,6 +120,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="two"
         options={{
+          headerShown: false,
           title: 'Settings',
           tabBarIcon: ({ color }) => <TabBarIcon name="cog" color={color} />,
         }}
@@ -125,6 +128,56 @@ export default function TabLayout() {
           tabPress: () => {
             playSound('click');
           },
+        }}
+      />
+      <Tabs.Screen
+        name="privacy"
+        options={{
+          headerShown: false,
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="developer"
+        options={{
+          headerShown: false,
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="about"
+        options={{
+          headerShown: false,
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="add"
+        options={{
+          headerShown: false,
+          href: null,
+        }}
+      />
+
+      <Tabs.Screen
+        name="movie/[id]"
+        options={{
+          headerShown: false,
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="create-list"
+        options={{
+          headerShown: false,
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="stack/[name]"
+        options={{
+          headerShown: false,
+          href: null,
         }}
       />
     </Tabs>

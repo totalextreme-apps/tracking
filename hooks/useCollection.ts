@@ -102,6 +102,23 @@ export function useAddToCollection(userId: string | undefined) {
         }
       }
 
+      let combinedCast = (movieData as any).credits?.cast?.slice(0, 10).map((c: any) => ({
+        id: c.id,
+        name: c.name,
+        character: c.character,
+        profile_path: c.profile_path,
+      })) ?? [];
+
+      const director = (movieData as any).credits?.crew?.find((c: any) => c.job === 'Director');
+      if (director) {
+        combinedCast.push({
+          id: director.id,
+          name: director.name,
+          character: 'Director',
+          profile_path: director.profile_path,
+        });
+      }
+
       const moviePayload: any = {
         tmdb_id: movieData.id,
         title: movieData.title,
@@ -109,12 +126,7 @@ export function useAddToCollection(userId: string | undefined) {
         backdrop_path: movieData.backdrop_path,
         release_date: movieData.release_date,
         genres: movieData.genres ?? null,
-        movie_cast: (movieData as any).credits?.cast?.slice(0, 10).map((c: any) => ({
-          id: c.id,
-          name: c.name,
-          character: c.character,
-          profile_path: c.profile_path,
-        })) ?? null,
+        movie_cast: combinedCast.length > 0 ? combinedCast : null,
       };
 
       const { data: movieRow, error: movieError } = await supabase
@@ -170,6 +182,7 @@ export function useUpdateCollectionItem(userId: string | undefined) {
         notes?: string;
         edition?: string | null;
         custom_poster_url?: string | null;
+        custom_lists?: string[] | null;
       };
     }) => {
       if (!userId) throw new Error('Not authenticated');
@@ -183,6 +196,64 @@ export function useUpdateCollectionItem(userId: string | undefined) {
 
       if (error) throw error;
       return { itemId };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['collection'] });
+    },
+  });
+}
+
+export function useBulkUpdateCustomLists(userId: string | undefined) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      itemIds,
+      listName,
+      isAdding,
+    }: {
+      itemIds: string[];
+      listName: string;
+      isAdding: boolean;
+    }) => {
+      if (!userId) throw new Error('Not authenticated');
+
+      // Since Supabase doesn't easily support dynamic array append/remove in bulk RPC without custom functions,
+      // and we want to keep it simple: we fetch the items, modify their arrays in memory, and upsert/update them.
+      // Actually, since we only do this once on "Save Stack", we can just fetch, modify, and update.
+
+      const { data: items, error: fetchError } = await supabase
+        .from('collection_items')
+        .select('id, custom_lists')
+        .in('id', itemIds)
+        .eq('user_id', userId);
+
+      if (fetchError) throw fetchError;
+      if (!items || items.length === 0) return { itemIds };
+
+      // Run individual updates per item — using .update() ensures we never attempt
+      // an INSERT (which would fail due to NOT NULL constraints on movie_id etc.)
+      const updatePromises = items.map((item: any) => {
+        let currentLists = item.custom_lists || [];
+        if (isAdding) {
+          if (!currentLists.includes(listName)) {
+            currentLists = [...currentLists, listName];
+          }
+        } else {
+          currentLists = currentLists.filter((l: string) => l !== listName);
+        }
+        return (supabase as any)
+          .from('collection_items')
+          .update({ custom_lists: currentLists })
+          .eq('id', item.id)
+          .eq('user_id', userId);
+      });
+
+      const results = await Promise.all(updatePromises);
+      const firstError = results.find(r => r.error)?.error;
+      if (firstError) throw firstError;
+
+      return { itemIds, listName };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['collection'] });
@@ -247,12 +318,24 @@ export function useRefreshLibrary(userId: string | undefined) {
           // Fetch from TMDB with credits
           const movieData = await getMovieById(tmdbId);
 
-          const movie_cast = (movieData as any).credits?.cast?.slice(0, 10).map((c: any) => ({
+          let combinedCast = (movieData as any).credits?.cast?.slice(0, 10).map((c: any) => ({
             id: c.id,
             name: c.name,
             character: c.character,
             profile_path: c.profile_path,
-          })) ?? null;
+          })) ?? [];
+
+          const director = (movieData as any).credits?.crew?.find((c: any) => c.job === 'Director');
+          if (director) {
+            combinedCast.push({
+              id: director.id,
+              name: director.name,
+              character: 'Director',
+              profile_path: director.profile_path,
+            });
+          }
+
+          const movie_cast = combinedCast.length > 0 ? combinedCast : null;
 
           // Update DB
           // eslint-disable-next-line @typescript-eslint/no-explicit-any

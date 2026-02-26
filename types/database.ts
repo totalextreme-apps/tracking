@@ -38,6 +38,7 @@ export interface CollectionItem {
   condition: string | null;
   notes: string | null;
   custom_poster_url: string | null;
+  custom_lists: string[] | null;
   rating?: number; // 0-5
   created_at: string;
 }

@@ -18,6 +18,7 @@ import { Dimensions, Platform, View } from 'react-native';
 import 'react-native-reanimated';
 
 import { DesktopBlocker } from '@/components/DesktopBlocker';
+import { GlobalHeader } from '@/components/GlobalHeader';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { StaticOverlay } from '@/components/StaticOverlay';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -27,9 +28,20 @@ import { SoundProvider } from '@/context/SoundContext';
 import { ThriftModeProvider } from '@/context/ThriftModeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-// Prevent splash screen from hiding early
-SplashScreen.preventAutoHideAsync().catch(() => { });
+// Prevent splash screen from hiding early (native only — web has no native splash)
+let splashHidden = false;
+const hideSplash = () => {
+  if (splashHidden || Platform.OS === 'web') return;
+  splashHidden = true;
+  SplashScreen.hideAsync().catch(() => { });
+};
+
+if (Platform.OS !== 'web') {
+  // hideSplash() is called after fonts load — no need to preventAutoHideAsync
+  // (calling it before the native view controller is ready causes an unhandled error)
+}
 
 export {
   ErrorBoundary
@@ -42,19 +54,20 @@ export const unstable_settings = {
 export default function RootLayout() {
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+    VCR_OSD_MONO: require('../assets/fonts/VCR_OSD_MONO.ttf'),
     ...FontAwesome.font,
   });
 
   useEffect(() => {
-    // Failsafe: hide splash screen even if fonts hang (common on Safari iOS)
+    // Failsafe: hide after 7 s if fonts hang (common on Safari iOS)
     const failsafe = setTimeout(() => {
       console.warn('Splash screen hide failsafe triggered');
-      SplashScreen.hideAsync().catch(() => { });
+      hideSplash();
     }, 7000);
 
     if (loaded || error) {
       clearTimeout(failsafe);
-      SplashScreen.hideAsync().catch(() => { });
+      hideSplash();
     }
     return () => clearTimeout(failsafe);
   }, [loaded, error]);
@@ -140,40 +153,41 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
       persistOptions={{ persister: asyncStoragePersister }}
     >
       <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#0a0a0a' }}>
-        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          {/* We use a black background for the root container */}
-          <View style={{ flex: 1, backgroundColor: '#0a0a0a' }}>
-            {Platform.OS === 'web' && (
-              <Head>
-                <title>Tracking - Your Personal Retro Video Store</title>
-                <meta name="description" content="Catalog your physical and digital collection, hunt for grails, and organize your stacks with the tactile feel of the VHS era." />
-                <meta property="og:title" content="Tracking - Movie & Physical Media Collector" />
-                <meta property="og:description" content="The ultimate tool for physical media collectors. VHS, 4K, Blu-ray, and more." />
-                <meta property="og:image" content="https://mediatracking.app/logo_tracking.png" />
-                <meta property="og:url" content="https://mediatracking.app" />
-                <meta name="twitter:card" content="summary_large_image" />
-                <link rel="canonical" href="https://mediatracking.app" />
-              </Head>
-            )}
-            <Stack>
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="add" options={{ presentation: 'modal', headerShown: false }} />
-              <Stack.Screen name="auth" options={{ presentation: 'modal', headerShown: false }} />
-              <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-              <Stack.Screen name="movie/[id]" options={{ presentation: 'modal', headerShown: false }} />
-            </Stack>
-            <StaticOverlay visible={showStatic} />
-            {!isDesktop && <OnboardingModal key={onboardingKey} />}
-            {Platform.OS === 'web' && (
-              <>
-                <Analytics />
-                <SpeedInsights />
-              </>
-            )}
-          </View>
+        <SafeAreaProvider>
+          <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+            {/* We use a black background for the root container */}
+            <View style={{ flex: 1, backgroundColor: '#0a0a0a' }}>
+              {Platform.OS === 'web' && (
+                <Head>
+                  <title>Tracking - Your Personal Retro Video Store</title>
+                  <meta name="description" content="Catalog your physical and digital collection, hunt for grails, and organize your stacks with the tactile feel of the VHS era." />
+                  <meta property="og:title" content="Tracking - Movie & Physical Media Collector" />
+                  <meta property="og:description" content="The ultimate tool for physical media collectors. VHS, 4K, Blu-ray, and more." />
+                  <meta property="og:image" content="https://mediatracking.app/logo_tracking.png" />
+                  <meta property="og:url" content="https://mediatracking.app" />
+                  <meta name="twitter:card" content="summary_large_image" />
+                  <link rel="canonical" href="https://mediatracking.app" />
+                </Head>
+              )}
+              <GlobalHeader />
+              <Stack>
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="auth" options={{ presentation: 'modal', headerShown: false }} />
+                <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+              </Stack>
+              <StaticOverlay visible={showStatic} />
+              {!isDesktop && <OnboardingModal key={onboardingKey} />}
+              {Platform.OS === 'web' && (
+                <>
+                  <Analytics />
+                  <SpeedInsights />
+                </>
+              )}
+            </View>
 
 
-        </ThemeProvider>
+          </ThemeProvider>
+        </SafeAreaProvider>
       </GestureHandlerRootView>
     </PersistQueryClientProvider>
   );

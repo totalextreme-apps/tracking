@@ -240,14 +240,7 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
           )
         }
 
-        <View style={{ height: 'auto', minHeight: 60, width: 100, marginTop: 8, alignItems: 'center', justifyContent: 'flex-start' }}>
-          <Text
-            className="text-white font-mono text-xs text-center leading-3"
-            numberOfLines={2}
-            style={{ marginBottom: 4 }}
-          >
-            {movie.title}
-          </Text>
+        <View style={{ height: 'auto', minHeight: 30, width: 100, marginTop: 8, alignItems: 'center', justifyContent: 'flex-start' }}>
           <View className="px-2 py-1 rounded mt-1 bg-amber-900/80">
             <Text className="font-mono text-[10px] text-amber-200">
               {isPhysical ? item.format : (item.digital_provider || 'Digital')}

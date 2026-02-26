@@ -130,8 +130,8 @@ export function CaptchaModal({ visible, onSuccess, onCancel }: CaptchaModalProps
 
             {((): boolean => {
                 const host = typeof window !== 'undefined' ? window.location.hostname : '';
-                const isPreview = host.includes('vercel.app') && !host.includes('mediatracking.app');
-                return __DEV__ || isPreview || !!turnstileError;
+                if (Platform.OS === 'web') return !!turnstileError;
+                return true; // Mobile Native has no webview yet, so allow bypass
             })() && (
                     <Pressable
                         onPress={() => {

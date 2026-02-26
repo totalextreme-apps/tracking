@@ -1,0 +1,79 @@
+{
+  "page": 1,
+  "results": [
+    {
+      "adult": false,
+      "id": 568589,
+      "name": "Jim Hellwig",
+      "original_name": "Jim Hellwig",
+      "media_type": "person",
+      "popularity": 0.6401,
+      "gender": 2,
+      "known_for_department": "Acting",
+      "profile_path": "/wnB8jCYvOuZBgvbJyOEeGh89cBk.jpg",
+      "known_for": [
+        {
+          "adult": false,
+          "backdrop_path": "/3zYxvSFtnE7QaicXEwxHIULxWJg.jpg",
+          "id": 34422,
+          "title": "The Self Destruction of the Ultimate Warrior",
+          "original_title": "The Self Destruction of the Ultimate Warrior",
+          "overview": "The strange career of one of the wrestling world's most controversial figures is explored in this WWE Home Video release focusing on eccentric brawler The Ultimate Warrior.",
+          "poster_path": "/bWWz6zYAthdG1hFtSdXUKsOmMYj.jpg",
+          "media_type": "movie",
+          "original_language": "en",
+          "genre_ids": [
+            99
+          ],
+          "popularity": 0.3832,
+          "release_date": "2005-09-27",
+          "video": true,
+          "vote_average": 6.4,
+          "vote_count": 14
+        },
+        {
+          "adult": false,
+          "backdrop_path": "/dVMZcH0rch4qYAqC0ZwdPHC097S.jpg",
+          "id": 188800,
+          "title": "WWE WrestleMania VI",
+          "original_title": "WWE WrestleMania VI",
+          "overview": "More than 65,000 fans pack the Toronto SkyDome to witness The Ultimate Challenge as The Ultimate Warrior faces Hulk Hogan with both the WWE Championship and WWE Intercontinental Championship on the line. \"The Million Dollar Man\" Ted DiBiase defends the Million Dollar Championship against Jake \"The Snake\" Roberts. Dusty Rhodes and more in action!",
+          "poster_path": "/5YIED4k7IwhhUO5kcCASpdoTJ6V.jpg",
+          "media_type": "movie",
+          "original_language": "en",
+          "genre_ids": [
+            28,
+            18
+          ],
+          "popularity": 0.4586,
+          "release_date": "1990-04-01",
+          "video": true,
+          "vote_average": 8.4,
+          "vote_count": 23
+        },
+        {
+          "adult": false,
+          "backdrop_path": "/blMe4FkYMb5FuXNYBSWSadtATYE.jpg",
+          "id": 197112,
+          "title": "WWE Survivor Series 1989",
+          "original_title": "WWE Survivor Series 1989",
+          "overview": "The 1989 WWE Survivor Series was the third annual Survivor Series professional wrestling pay-per-view event produced by the World Wrestling Federation. It took place on Thanksgiving Day, November 23, 1989 at The Rosemont Horizon in Rosemont, Illinois. This was the first Survivor Series event to feature team names. It was also the first Survivor Series to feature four-on-four tag matches instead of five-on-five.  The main event was a four-on-four Survivor Series match where The Ultimate Warriors  faced The Heenan Family. The undercard also featured Traditional Survivor Series Elimination Matches.",
+          "poster_path": "/sf9VzqysvYYm06sgpCn5918EKFQ.jpg",
+          "media_type": "movie",
+          "original_language": "en",
+          "genre_ids": [
+            28,
+            18
+          ],
+          "popularity": 0.2254,
+          "release_date": "1989-11-23",
+          "video": true,
+          "vote_average": 7.7,
+          "vote_count": 8
+        }
+      ]
+    }
+  ],
+  "total_pages": 1,
+  "total_results": 1
+}
