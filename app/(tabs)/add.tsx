@@ -138,6 +138,8 @@ export default function AddScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelectedFormats([]);
     setSelectedMovie(movie);
+    setQuery('');
+    setDebouncedQuery('');
     setTriedToSubmit(false);
   };
 
@@ -401,12 +403,15 @@ export default function AddScreen() {
               </Pressable>
             </View>
             <Pressable
-              onPress={() => setSelectedMovie(null)}
-              className="py-2"
+              onPress={() => {
+                setSelectedMovie(null);
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }}
+              className="bg-red-700 py-3 rounded-lg items-center active:opacity-90"
+              style={{ minHeight: 48, marginBottom: insets.bottom + 8 }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Text className="text-neutral-500 font-mono text-center">
-                Choose different movie
-              </Text>
+              <Text className="text-white font-mono font-semibold">CHOOSE DIFFERENT MOVIE</Text>
             </Pressable>
           </View>
         ) : (

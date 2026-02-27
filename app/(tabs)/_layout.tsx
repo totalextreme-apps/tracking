@@ -6,7 +6,7 @@ import { Image, Platform } from 'react-native';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useSound } from '@/context/SoundContext';
 import { useThriftMode } from '@/context/ThriftModeContext';
-import { LinearGradient } from 'expo-linear-gradient';
+import { View as RNView } from 'react-native';
 
 const logoSource = Platform.OS === 'web'
   ? { uri: '/logo_tracking.png' }
@@ -63,10 +63,7 @@ export default function TabLayout() {
           shadowRadius: 10,
         },
         tabBarBackground: () => (
-          <LinearGradient
-            colors={['#1f1f1f', '#000000']} // Dark Gray to Black
-            style={{ flex: 1, borderTopWidth: 1, borderTopColor: '#262626' }}
-          />
+          <RNView style={{ flex: 1, backgroundColor: '#000000', borderTopWidth: 1, borderTopColor: '#262626' }} />
         ),
         tabBarLabelStyle: {
           fontFamily: 'SpaceMono',
