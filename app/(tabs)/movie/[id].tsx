@@ -56,6 +56,7 @@ export default function MovieDetailScreen() {
 
     // Custom art state
     const [customArtUri, setCustomArtUri] = useState<string | null>(null);
+    const [customArtType, setCustomArtType] = useState<'poster' | 'backdrop'>('poster');
     const [cropModalVisible, setCropModalVisible] = useState(false);
     const [pendingImageUri, setPendingImageUri] = useState<string | null>(null);
     const [showEditionModal, setShowEditionModal] = useState(false);
@@ -100,9 +101,11 @@ export default function MovieDetailScreen() {
 
     // Load custom art from ANY collection item for this movie
     const customArtUrl = movieItems.find((i: any) => i.custom_poster_url)?.custom_poster_url;
+    const customBackdropUrl = movieItems.find((i: any) => i.custom_backdrop_url)?.custom_backdrop_url;
 
-    const handleUploadCustomArt = async () => {
-        console.log('Upload custom art clicked', Platform.OS);
+    const handleUploadCustomArt = async (type: 'poster' | 'backdrop' = 'poster') => {
+        console.log(`Upload custom ${type} clicked`, Platform.OS);
+        setCustomArtType(type);
 
         if (Platform.OS !== 'web') {
             // For native: use expo-image-picker
@@ -110,7 +113,7 @@ export default function MovieDetailScreen() {
                 const result = await ImagePicker.launchImageLibraryAsync({
                     mediaTypes: ImagePicker.MediaTypeOptions.Images,
                     allowsEditing: true,
-                    aspect: [2, 3],
+                    aspect: type === 'poster' ? [2, 3] : [16, 9],
                     quality: 0.8,
                 });
 
@@ -149,14 +152,14 @@ export default function MovieDetailScreen() {
 
     const handleSaveCustomArt = async (croppedDataUrl: string) => {
         if (!movieItems[0]?.id) {
-            Alert.alert('Error', 'No collection item found to attach this cover to.');
+            Alert.alert('Error', `No collection item found to attach this ${customArtType} to.`);
             return;
         }
-        console.log('Starting custom art save process...');
+        console.log(`Starting custom ${customArtType} save process...`);
 
         try {
             // Find existing art to delete later
-            const oldUrl = movieItems.find((i: any) => i.custom_poster_url)?.custom_poster_url;
+            const oldUrl = customArtType === 'poster' ? customArtUrl : customBackdropUrl;
 
             let finalImageToUpload: any;
 
@@ -175,9 +178,13 @@ export default function MovieDetailScreen() {
 
             // Save to Supabase
             console.log('Saving URL to Supabase...');
+            const updates: any = {};
+            if (customArtType === 'poster') updates.custom_poster_url = uploadUrl;
+            else updates.custom_backdrop_url = uploadUrl;
+
             await updateMutation.mutateAsync({
                 itemId: movieItems[0].id,
-                updates: { custom_poster_url: uploadUrl }
+                updates
             });
 
             // Cleanup: Delete old art from Cloudinary if it existed
@@ -194,28 +201,32 @@ export default function MovieDetailScreen() {
             setPendingImageUri(null);
 
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            console.log('Custom art save complete!');
+            console.log(`Custom ${customArtType} save complete!`);
         } catch (e: any) {
-            console.error('Failed to save custom art:', e);
+            console.error(`Failed to save custom ${customArtType}:`, e);
             setCropModalVisible(false);
             const errorMsg = e.message || JSON.stringify(e);
-            Alert.alert('Upload Error', `Failed to save custom cover art. Error: ${errorMsg}`);
+            Alert.alert('Upload Error', `Failed to save custom ${customArtType}. Error: ${errorMsg}`);
         }
     };
 
-    const handleRemoveCustomArt = async () => {
+    const handleRemoveCustomArt = async (type: 'poster' | 'backdrop' = 'poster') => {
         if (!movieItems[0]?.id) return;
 
         const confirmRemove = async () => {
-            const oldUrl = movieItems.find((i: any) => i.custom_poster_url)?.custom_poster_url;
+            const oldUrl = type === 'poster' ? customArtUrl : customBackdropUrl;
+
+            const updates: any = {};
+            if (type === 'poster') updates.custom_poster_url = null;
+            else updates.custom_backdrop_url = null;
 
             await updateMutation.mutateAsync({
                 itemId: movieItems[0].id,
-                updates: { custom_poster_url: null }
+                updates
             });
 
             if (oldUrl) {
-                console.log('Deleting image from Cloudinary:', oldUrl);
+                console.log(`Deleting custom ${type} from Cloudinary:`, oldUrl);
                 deleteFromCloudinary(oldUrl);
             }
 
@@ -224,13 +235,13 @@ export default function MovieDetailScreen() {
 
 
         if (Platform.OS === 'web') {
-            if (window.confirm('Remove custom cover art? This will restore the default TMDB poster.')) {
+            if (window.confirm(`Remove custom ${type === 'poster' ? 'cover' : 'background'}? This will restore the default.`)) {
                 confirmRemove();
             }
         } else {
             Alert.alert(
-                'Remove Custom Art',
-                'This will restore the default TMDB poster.',
+                `Remove Custom ${type === 'poster' ? 'Cover' : 'Background'}`,
+                'This will restore the default.',
                 [
                     { text: 'Cancel', style: 'cancel' },
                     { text: 'Remove', style: 'destructive', onPress: confirmRemove },
@@ -477,8 +488,8 @@ export default function MovieDetailScreen() {
             >
                 {/* Backdrop */}
                 <View className="relative h-72 w-full">
-                    {backdropUrl ? (
-                        <Image source={{ uri: backdropUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                    {customBackdropUrl || backdropUrl ? (
+                        <Image source={{ uri: customBackdropUrl || backdropUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
                     ) : (
                         <NoPosterPlaceholder width="100%" height="100%" />
                     )}
@@ -582,24 +593,46 @@ export default function MovieDetailScreen() {
 
                     {/* Custom Cover Art Section */}
                     {movieItems.length > 0 && (
-                        <View className="mt-4 flex-row gap-2">
-                            <Pressable
-                                onPress={handleUploadCustomArt}
-                                className="flex-1 flex-row items-center justify-center p-3 rounded-lg bg-amber-600/10 border border-amber-600/50"
-                            >
-                                <Ionicons name="image-outline" size={18} color="#f59e0b" />
-                                <Text className="ml-2 font-mono text-xs font-bold text-amber-500">
-                                    {customArtUrl ? 'CHANGE COVER' : 'UPLOAD COVER'}
-                                </Text>
-                            </Pressable>
-                            {customArtUrl && (
+                        <View className="mt-4 gap-2">
+                            <View className="flex-row gap-2">
                                 <Pressable
-                                    onPress={handleRemoveCustomArt}
-                                    className="bg-red-900/20 px-3 py-1 rounded border border-red-900/50 items-center justify-center"
+                                    onPress={() => handleUploadCustomArt('poster')}
+                                    className="flex-1 flex-row items-center justify-center p-3 rounded-lg bg-amber-600/10 border border-amber-600/50"
                                 >
-                                    <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                                    <Ionicons name="image-outline" size={18} color="#f59e0b" />
+                                    <Text className="ml-2 font-mono text-xs font-bold text-amber-500">
+                                        {customArtUrl ? 'CHANGE COVER' : 'UPLOAD COVER'}
+                                    </Text>
                                 </Pressable>
-                            )}
+                                {customArtUrl && (
+                                    <Pressable
+                                        onPress={() => handleRemoveCustomArt('poster')}
+                                        className="bg-red-900/20 px-3 py-1 rounded border border-red-900/50 items-center justify-center"
+                                    >
+                                        <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                                    </Pressable>
+                                )}
+                            </View>
+
+                            <View className="flex-row gap-2">
+                                <Pressable
+                                    onPress={() => handleUploadCustomArt('backdrop')}
+                                    className="flex-1 flex-row items-center justify-center p-3 rounded-lg bg-blue-600/10 border border-blue-600/50"
+                                >
+                                    <Ionicons name="images-outline" size={18} color="#60a5fa" />
+                                    <Text className="ml-2 font-mono text-xs font-bold text-blue-400">
+                                        {customBackdropUrl ? 'CHANGE BACKDROP' : 'UPLOAD BACKDROP'}
+                                    </Text>
+                                </Pressable>
+                                {customBackdropUrl && (
+                                    <Pressable
+                                        onPress={() => handleRemoveCustomArt('backdrop')}
+                                        className="bg-red-900/20 px-3 py-1 rounded border border-red-900/50 items-center justify-center"
+                                    >
+                                        <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                                    </Pressable>
+                                )}
+                            </View>
                         </View>
                     )}
 
@@ -1004,6 +1037,7 @@ export default function MovieDetailScreen() {
                         }}
                         onSave={handleSaveCustomArt}
                         targetRatio={(() => {
+                            if (customArtType === 'backdrop') return 16 / 9;
                             const ratio = activeFormat === 'VHS' ? 2 / 3.5 : (activeFormat === 'BluRay' || activeFormat === '4K') ? 0.78 : 0.71;
                             return ratio;
                         })()}

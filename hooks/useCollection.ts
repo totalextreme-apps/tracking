@@ -186,6 +186,7 @@ export function useUpdateCollectionItem(userId: string | undefined) {
         notes?: string;
         edition?: string | null;
         custom_poster_url?: string | null;
+        custom_backdrop_url?: string | null;
         custom_lists?: string[] | null;
       };
     }) => {
