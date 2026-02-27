@@ -9,6 +9,7 @@ import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, Text,
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GlossyCard } from '@/components/GlossyCard';
+import { NoPosterPlaceholder } from '@/components/NoPosterPlaceholder';
 import { VHSCard } from '@/components/VHSCard';
 
 import { ImageCropModal } from '@/components/ImageCropModal';
@@ -476,7 +477,11 @@ export default function MovieDetailScreen() {
             >
                 {/* Backdrop */}
                 <View className="relative h-72 w-full">
-                    <Image source={{ uri: backdropUrl ?? undefined }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                    {backdropUrl ? (
+                        <Image source={{ uri: backdropUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                    ) : (
+                        <NoPosterPlaceholder width="100%" height="100%" />
+                    )}
                     <LinearGradient
                         colors={['transparent', '#0a0a0a']}
                         style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 160 }}
@@ -519,7 +524,12 @@ export default function MovieDetailScreen() {
                                 const ratio = isCustom
                                     ? (activeFormat === 'VHS' ? 2 / 3.5 : (activeFormat === 'BluRay' || activeFormat === '4K') ? 0.78 : 0.71)
                                     : 2 / 3;
-                                return <Image source={{ uri: finalPosterUrl ?? undefined }} style={{ width: '100%', aspectRatio: ratio, borderRadius: 8 }} contentFit="cover" />;
+
+                                if (!finalPosterUrl) {
+                                    return <NoPosterPlaceholder width="100%" height="100%" style={{ aspectRatio: ratio, borderRadius: 8 }} />;
+                                }
+
+                                return <Image source={{ uri: finalPosterUrl }} style={{ width: '100%', aspectRatio: ratio, borderRadius: 8 }} contentFit="cover" />;
                             })()}
                         </View>
 
