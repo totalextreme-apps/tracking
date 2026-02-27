@@ -1,3 +1,4 @@
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -24,6 +25,8 @@ export default function AuthScreen() {
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+    const [signUpSuccess, setSignUpSuccess] = useState(false);
+    const [errorMsg, setErrorMsg] = useState('');
 
     async function handleAuth() {
         if (!email || !password) {
@@ -32,6 +35,7 @@ export default function AuthScreen() {
         }
 
         setLoading(true);
+        setErrorMsg('');
         Keyboard.dismiss();
 
         requestCaptcha(async (captchaToken) => {
@@ -57,7 +61,8 @@ export default function AuthScreen() {
                             router.replace('/');
                         }
                     } else {
-                        Alert.alert('Check your email', 'Please check your inbox for email verification!');
+                        // Email confirmation required — show in-screen success state
+                        setSignUpSuccess(true);
                     }
                 } else {
                     const { data, error } = await supabase.auth.signInWithPassword({
@@ -75,7 +80,7 @@ export default function AuthScreen() {
                     }
                 }
             } catch (error: any) {
-                Alert.alert(mode === 'signup' ? 'Sign Up Failed' : 'Sign In Failed', error.message || 'An error occurred');
+                setErrorMsg(error.message || 'An error occurred. Please try again.');
             } finally {
                 setLoading(false);
             }
@@ -121,76 +126,111 @@ export default function AuthScreen() {
                         </Text>
                     </View>
 
-                    <View className="space-y-4 gap-4">
-                        <View>
+                    {/* Sign-up success screen */}
+                    {signUpSuccess ? (
+                        <View className="flex-1 items-center justify-center py-16">
+                            <FontAwesome name="envelope" size={48} color="#f59e0b" style={{ marginBottom: 24 }} />
                             <Text
-                                className="text-amber-500 text-xs mb-2 ml-1"
+                                className="text-white text-2xl font-bold mb-3 text-center"
                                 style={{ fontFamily: 'VCR_OSD_MONO' }}
                             >
-                                EMAIL
+                                CHECK YOUR EMAIL
                             </Text>
-                            <TextInput
-                                nativeID="email-input"
-                                {...({ name: 'email' } as any)}
-                                className="bg-neutral-900 text-white px-4 py-3 rounded-lg font-mono border border-neutral-800 focus:border-amber-500"
-                                placeholder="email@example.com"
-                                placeholderTextColor="#666"
-                                autoCapitalize="none"
-                                autoComplete="email"
-                                keyboardType="email-address"
-                                value={email}
-                                onChangeText={setEmail}
-                            />
-                        </View>
-
-                        <View>
-                            <Text
-                                className="text-amber-500 text-xs mb-2 ml-1"
-                                style={{ fontFamily: 'VCR_OSD_MONO' }}
+                            <Text className="text-neutral-400 font-mono text-sm text-center leading-5 mb-2">
+                                We sent a confirmation link to:
+                            </Text>
+                            <Text className="text-amber-500 font-mono text-sm text-center mb-8">
+                                {email}
+                            </Text>
+                            <Text className="text-neutral-500 font-mono text-xs text-center leading-5 px-4">
+                                Click the link in the email to verify your account, then come back and sign in.
+                            </Text>
+                            <Pressable
+                                onPress={() => { setSignUpSuccess(false); setMode('signin'); }}
+                                className="mt-10 bg-amber-500 px-8 py-3 rounded-lg"
                             >
-                                PASSWORD
-                            </Text>
-                            <TextInput
-                                nativeID="password-input"
-                                {...({ name: 'password' } as any)}
-                                className="bg-neutral-900 text-white px-4 py-3 rounded-lg font-mono border border-neutral-800 focus:border-amber-500"
-                                placeholder="••••••••"
-                                placeholderTextColor="#666"
-                                secureTextEntry
-                                value={password}
-                                onChangeText={setPassword}
-                            />
-                        </View>
-
-                        <Pressable
-                            onPress={handleAuth}
-                            disabled={loading}
-                            className={`py-4 rounded-lg items-center mt-4 ${loading ? 'bg-neutral-800' : 'bg-amber-500'
-                                }`}
-                        >
-                            {loading ? (
-                                <ActivityIndicator color="#fff" />
-                            ) : (
-                                <Text
-                                    className="text-neutral-950 font-bold text-lg"
-                                    style={{ fontFamily: 'VCR_OSD_MONO' }}
-                                >
-                                    {mode === 'signin' ? 'SIGN IN' : 'SIGN UP'}
-                                </Text>
-                            )}
-                        </Pressable>
-
-                        <View className="flex-row justify-center mt-4">
-                            <Text className="text-neutral-400 font-mono">
-                                {mode === 'signin' ? "Don't have an account? " : 'Already have an account? '}
-                            </Text>
-                            <Pressable onPress={() => setMode(mode === 'signin' ? 'signup' : 'signin')}>
-                                <Text className="text-amber-500 font-mono font-bold">
-                                    {mode === 'signin' ? 'Sign Up' : 'Sign In'}
-                                </Text>
+                                <Text className="text-neutral-950 font-mono font-bold">BACK TO SIGN IN</Text>
                             </Pressable>
                         </View>
-                    </View>
+                    ) : (
+                        <View className="space-y-4 gap-4">
+                            <View>
+                                <Text
+                                    className="text-amber-500 text-xs mb-2 ml-1"
+                                    style={{ fontFamily: 'VCR_OSD_MONO' }}
+                                >
+                                    EMAIL
+                                </Text>
+                                <TextInput
+                                    nativeID="email-input"
+                                    {...({ name: 'email' } as any)}
+                                    className="bg-neutral-900 text-white px-4 py-3 rounded-lg font-mono border border-neutral-800 focus:border-amber-500"
+                                    placeholder="email@example.com"
+                                    placeholderTextColor="#666"
+                                    autoCapitalize="none"
+                                    autoComplete="email"
+                                    keyboardType="email-address"
+                                    value={email}
+                                    onChangeText={setEmail}
+                                />
+                            </View>
+
+                            <View>
+                                <Text
+                                    className="text-amber-500 text-xs mb-2 ml-1"
+                                    style={{ fontFamily: 'VCR_OSD_MONO' }}
+                                >
+                                    PASSWORD
+                                </Text>
+                                <TextInput
+                                    nativeID="password-input"
+                                    {...({ name: 'password' } as any)}
+                                    className="bg-neutral-900 text-white px-4 py-3 rounded-lg font-mono border border-neutral-800 focus:border-amber-500"
+                                    placeholder="••••••••"
+                                    placeholderTextColor="#666"
+                                    secureTextEntry
+                                    value={password}
+                                    onChangeText={setPassword}
+                                />
+                            </View>
+
+                            <Pressable
+                                onPress={handleAuth}
+                                disabled={loading}
+                                className={`py-4 rounded-lg items-center mt-4 ${loading ? 'bg-neutral-800' : 'bg-amber-500'
+                                    }`}
+                            >
+                                {loading ? (
+                                    <ActivityIndicator color="#fff" />
+                                ) : (
+                                    <Text
+                                        className="text-neutral-950 font-bold text-lg"
+                                        style={{ fontFamily: 'VCR_OSD_MONO' }}
+                                    >
+                                        {mode === 'signin' ? 'SIGN IN' : 'SIGN UP'}
+                                    </Text>
+                                )}
+                            </Pressable>
+
+                            {/* Inline error message */}
+                            {errorMsg ? (
+                                <View className="bg-red-900/30 border border-red-800 rounded-lg px-4 py-3 mt-1">
+                                    <Text className="text-red-400 font-mono text-xs text-center">{errorMsg}</Text>
+                                </View>
+                            ) : null}
+
+                            <View className="flex-row justify-center mt-4">
+                                <Text className="text-neutral-400 font-mono">
+                                    {mode === 'signin' ? "Don't have an account? " : 'Already have an account? '}
+                                </Text>
+                                <Pressable onPress={() => setMode(mode === 'signin' ? 'signup' : 'signin')}>
+                                    <Text className="text-amber-500 font-mono font-bold">
+                                        {mode === 'signin' ? 'Sign Up' : 'Sign In'}
+                                    </Text>
+                                </Pressable>
+                            </View>
+                        </View>
+                    )}
                 </View>
             </ScrollView>
         </KeyboardAvoidingView>
