@@ -26,6 +26,7 @@ export default function AuthScreen() {
     const [loading, setLoading] = useState(false);
     const [mode, setMode] = useState<'signin' | 'signup'>('signin');
     const [signUpSuccess, setSignUpSuccess] = useState(false);
+    const [showWelcome, setShowWelcome] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
 
     async function handleAuth() {
@@ -55,11 +56,8 @@ export default function AuthScreen() {
                     });
                     if (error) throw error;
                     if (data.session) {
-                        if (router.canGoBack()) {
-                            router.back();
-                        } else {
-                            router.replace('/');
-                        }
+                        // Show welcome screen before entering the app
+                        setShowWelcome(true);
                     } else {
                         // Email confirmation required — show in-screen success state
                         setSignUpSuccess(true);
@@ -126,8 +124,42 @@ export default function AuthScreen() {
                         </Text>
                     </View>
 
-                    {/* Sign-up success screen */}
-                    {signUpSuccess ? (
+                    {/* Welcome screen — shown after immediate sign-up success */}
+                    {showWelcome ? (
+                        <View className="flex-1 items-center justify-center py-16">
+                            <FontAwesome name="film" size={52} color="#f59e0b" style={{ marginBottom: 24 }} />
+                            <Text
+                                className="text-amber-500 text-3xl font-bold mb-3 text-center"
+                                style={{ fontFamily: 'VCR_OSD_MONO' }}
+                            >
+                                WELCOME TO{'\n'}TRACKING
+                            </Text>
+                            <Text className="text-neutral-400 font-mono text-sm text-center leading-6 mb-2 px-4">
+                                Your account has been created.{'\n'}Time to start building your collection.
+                            </Text>
+                            <Text className="text-neutral-600 font-mono text-xs text-center mb-10">
+                                {email}
+                            </Text>
+                            <Pressable
+                                onPress={() => {
+                                    if (router.canGoBack()) {
+                                        router.back();
+                                    } else {
+                                        router.replace('/');
+                                    }
+                                }}
+                                className="bg-amber-500 px-10 py-4 rounded-xl active:opacity-80"
+                                style={{ shadowColor: '#f59e0b', shadowOpacity: 0.5, shadowRadius: 16, shadowOffset: { width: 0, height: 4 } }}
+                            >
+                                <Text
+                                    className="text-neutral-950 font-bold text-lg"
+                                    style={{ fontFamily: 'VCR_OSD_MONO' }}
+                                >
+                                    START TRACKING
+                                </Text>
+                            </Pressable>
+                        </View>
+                    ) : signUpSuccess ? (
                         <View className="flex-1 items-center justify-center py-16">
                             <FontAwesome name="envelope" size={48} color="#f59e0b" style={{ marginBottom: 24 }} />
                             <Text
