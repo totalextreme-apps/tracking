@@ -72,7 +72,7 @@ const NativeWebTurnstile = ({ siteKey, onSuccess, onError }: any) => {
 };
 
 export function CaptchaModal({ visible, onSuccess, onCancel }: CaptchaModalProps) {
-    const siteKey = process.env.EXPO_PUBLIC_TURNSTILE_SITE_KEY || '0x4AAAAAACfqPZmY0_dkAil1';
+    const siteKey = process.env.EXPO_PUBLIC_TURNSTILE_SITE_KEY ?? '';
     const [retryCount, setRetryCount] = React.useState(0);
     const [turnstileError, setTurnstileError] = React.useState<string | null>(null);
 
@@ -128,26 +128,23 @@ export function CaptchaModal({ visible, onSuccess, onCancel }: CaptchaModalProps
                 )}
             </View>
 
-            {((): boolean => {
-                const host = typeof window !== 'undefined' ? window.location.hostname : '';
-                if (Platform.OS === 'web') return !!turnstileError;
-                return true; // Mobile Native has no webview yet, so allow bypass
-            })() && (
-                    <Pressable
-                        onPress={() => {
-                            console.warn('MANUAL BYPASS TRIGGERED');
-                            onSuccess('manual-bypass-token');
-                        }}
-                        style={{ marginTop: 25, padding: 18, backgroundColor: '#4a0000', borderRadius: 12, borderWidth: 2, borderColor: '#ff0000', alignSelf: 'stretch', marginHorizontal: 20 }}
-                    >
-                        <Text style={{ color: '#ffffff', fontSize: 14, fontWeight: 'bold', textAlign: 'center' }}>
-                            [DEBUG] FORCE BYPASS CAPTCHA
-                        </Text>
-                        <Text style={{ color: '#ffaaaa', fontSize: 10, textAlign: 'center', marginTop: 4 }}>
-                            (Use this if Turnstile is blocked or mismatched)
-                        </Text>
-                    </Pressable>
-                )}
+            {/* Bypass button: ONLY on native mobile (no WebView captcha) or local dev. NEVER on production web. */}
+            {(Platform.OS !== 'web' || __DEV__) && (
+                <Pressable
+                    onPress={() => {
+                        console.warn('MANUAL BYPASS TRIGGERED');
+                        onSuccess('manual-bypass-token');
+                    }}
+                    style={{ marginTop: 25, padding: 18, backgroundColor: '#4a0000', borderRadius: 12, borderWidth: 2, borderColor: '#ff0000', alignSelf: 'stretch', marginHorizontal: 20 }}
+                >
+                    <Text style={{ color: '#ffffff', fontSize: 14, fontWeight: 'bold', textAlign: 'center' }}>
+                        [DEBUG] FORCE BYPASS CAPTCHA
+                    </Text>
+                    <Text style={{ color: '#ffaaaa', fontSize: 10, textAlign: 'center', marginTop: 4 }}>
+                        (Use this if Turnstile is blocked or mismatched)
+                    </Text>
+                </Pressable>
+            )}
 
             <Pressable onPress={() => setRetryCount(c => c + 1)} style={{ marginTop: 10, marginBottom: 20 }}>
                 <Text style={styles.hintText}>

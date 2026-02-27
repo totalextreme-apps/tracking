@@ -122,15 +122,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsLoading(false);
       } else {
         console.error('Auth Error after Captcha verify:', error);
-        // If there's a legit Turnstile error, it might be due to a dev configuration. Still unblock the UI if in dev/preview
         const host = typeof window !== 'undefined' ? window.location.hostname : '';
-        const isPreview = host.includes('vercel.app') || host.includes('localhost');
+        const isLocalOrDev = host.includes('localhost') || __DEV__;
 
-        if (isPreview || __DEV__) {
-          console.warn('AUTH: Falling back to MOCK USER ID due to auth failure in preview.');
+        if (isLocalOrDev) {
+          console.warn('AUTH: Falling back to MOCK USER ID (localhost/dev only).');
           setUserId('00000000-0000-0000-0000-000000000000');
           setAuthPhase('READY');
         } else {
+          // Production: show a real error state — do not bypass auth
           setAuthPhase('ERROR');
         }
         setShowCaptcha(false);
@@ -138,9 +138,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (e) {
       console.error('Captcha Handler Fatal Error:', e);
-      // Even on fatal error, try to unblock if in preview/dev
-      setUserId('00000000-0000-0000-0000-000000000000');
-      setAuthPhase('READY');
+      const host = typeof window !== 'undefined' ? window.location.hostname : '';
+      const isLocalOrDev = host.includes('localhost') || __DEV__;
+      if (isLocalOrDev) {
+        setUserId('00000000-0000-0000-0000-000000000000');
+        setAuthPhase('READY');
+      } else {
+        setAuthPhase('ERROR');
+      }
       setShowCaptcha(false);
       setIsLoading(false);
     }
