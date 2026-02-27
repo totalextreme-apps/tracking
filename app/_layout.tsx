@@ -16,6 +16,7 @@ import { useEffect, useState } from 'react';
 import { Dimensions, Platform, View } from 'react-native';
 import 'react-native-reanimated';
 
+import { AuthErrorBanner } from '@/components/AuthErrorBanner';
 import { DesktopBlocker } from '@/components/DesktopBlocker';
 import { GlobalHeader } from '@/components/GlobalHeader';
 import { OnboardingModal } from '@/components/OnboardingModal';
@@ -68,6 +69,25 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
   const [isDesktop, setIsDesktop] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [dismissedWarning, setDismissedWarning] = useState(false);
+  const [authError, setAuthError] = useState<{ code: string; description: string } | null>(null);
+
+  // Detect Supabase auth error params in URL hash (e.g. expired magic link)
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    try {
+      const hash = window.location.hash;
+      if (hash && hash.includes('error=')) {
+        const params = new URLSearchParams(hash.replace(/^#/, ''));
+        const code = params.get('error_code') ?? params.get('error') ?? 'unknown';
+        const description = params.get('error_description')?.replace(/\+/g, ' ') ?? '';
+        setAuthError({ code, description });
+        // Clear the hash so it doesn't persist on reload
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+    } catch (e) {
+      // Non-critical — ignore
+    }
+  }, []);
 
   useEffect(() => {
     setIsMounted(true);
@@ -145,6 +165,13 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
                 </Head>
               )}
               <GlobalHeader />
+              {authError && (
+                <AuthErrorBanner
+                  errorCode={authError.code}
+                  errorDescription={authError.description}
+                  onDismiss={() => setAuthError(null)}
+                />
+              )}
               <Stack>
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                 <Stack.Screen name="auth" options={{ presentation: 'modal', headerShown: false }} />
