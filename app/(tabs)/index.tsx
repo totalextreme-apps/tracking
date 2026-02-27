@@ -41,9 +41,12 @@ export default function HomeScreen() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const { width: windowWidth } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && windowWidth > 1024;
-  const [viewMode, setViewMode] = usePersistedState<'list' | 'grid2' | 'grid4'>('stacks_viewMode', isDesktop ? 'grid4' : 'grid2');
-  // numColumns drives actual grid width — presets snap to column values, slider gives fine control
+  const [viewMode, setViewMode] = usePersistedState<'list' | 'grid2' | 'grid4' | 'custom'>('stacks_viewMode', isDesktop ? 'grid4' : 'grid2');
+  // numColumns is the actual column count used for rendering; driven by viewMode presets or the fine-grain slider
   const [numColumns, setNumColumns] = usePersistedState<number>('stacks_numColumns', isDesktop ? 4 : 2);
+
+  // Keep numColumns in sync with preset buttons — presets are the source of truth when set
+  const resolvedColumns = viewMode === 'list' ? 1 : viewMode === 'grid2' ? 2 : viewMode === 'grid4' ? 4 : numColumns;
   const [searchQuery, setSearchQuery] = useState('');
   const [formatFilter, setFormatFilter] = useState<string | null>(null);
   const [genreFilter, setGenreFilter] = useState<string | null>(null);
@@ -671,14 +674,13 @@ export default function HomeScreen() {
                     minimumValue={2}
                     maximumValue={isDesktop ? 8 : 6}
                     step={1}
-                    value={numColumns}
+                    value={resolvedColumns}
                     onValueChange={(val) => {
                       setNumColumns(val);
                       // Keep preset highlight in sync
-                      if (val === 1) setViewMode('list');
-                      else if (val === 2) setViewMode('grid2');
+                      if (val === 2) setViewMode('grid2');
                       else if (val === 4) setViewMode('grid4');
-                      else setViewMode('grid4'); // treat other values as grid
+                      else setViewMode('custom' as any);
                     }}
                     minimumTrackTintColor="#f59e0b"
                     maximumTrackTintColor="#262626"
@@ -702,11 +704,11 @@ export default function HomeScreen() {
                     const sidePad = 64;
                     const itemWidth = isList
                       ? windowWidth - sidePad
-                      : (windowWidth - sidePad - gap * (numColumns - 1)) / numColumns;
+                      : (windowWidth - sidePad - gap * (resolvedColumns - 1)) / resolvedColumns;
 
                     const itemHeight = isList ? 76 : itemWidth * 1.5;
                     // Tighter stack offset for dense grids
-                    const stackOffset = numColumns >= 4 ? 2 : 4;
+                    const stackOffset = resolvedColumns >= 4 ? 2 : 4;
 
                     return (
                       <View key={idx} style={{ width: itemWidth, marginBottom: isList ? 8 : 16 }}>
