@@ -1,4 +1,5 @@
 
+import { ConfirmModal } from '@/components/ConfirmModal';
 import { GlobalStatsSection } from '@/components/GlobalStatsSection';
 import { MemberCard } from '@/components/MemberCard';
 import { StatsSection } from '@/components/StatsSection';
@@ -34,6 +35,7 @@ export default function SettingsScreen() {
   const [isEditing, setIsEditing] = useState(false);
   const [editUsername, setEditUsername] = useState('');
   const [editBio, setEditBio] = useState('');
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
 
   // Account Upgrade State
   const [email, setEmail] = useState('');
@@ -86,25 +88,13 @@ export default function SettingsScreen() {
   };
 
   const handleSignOut = async () => {
-    const performSignOut = async () => {
-      await supabase.auth.signOut();
-      router.replace('/auth');
-    };
+    setShowSignOutConfirm(true);
+  };
 
-    if (Platform.OS === 'web') {
-      if (window.confirm('Are you sure you want to sign out?')) {
-        await performSignOut();
-      }
-    } else {
-      Alert.alert('Sign Out?', 'Are you sure?', [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Sign Out',
-          style: 'destructive',
-          onPress: performSignOut
-        }
-      ]);
-    }
+  const performSignOut = async () => {
+    setShowSignOutConfirm(false);
+    await supabase.auth.signOut();
+    router.replace('/auth');
   };
 
   const pickImage = async () => {
@@ -156,6 +146,16 @@ export default function SettingsScreen() {
 
   return (
     <View className="flex-1 bg-neutral-950">
+      <ConfirmModal
+        visible={showSignOutConfirm}
+        title="Sign Out?"
+        message="Are you sure you want to sign out?"
+        confirmLabel="Sign Out"
+        cancelLabel="Cancel"
+        destructive
+        onConfirm={performSignOut}
+        onCancel={() => setShowSignOutConfirm(false)}
+      />
       <ScrollView
         className="flex-1 bg-neutral-950"
         contentContainerStyle={{
