@@ -1,13 +1,13 @@
 import * as Haptics from 'expo-haptics';
 
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { router, Stack } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { router, Stack, useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  FlatList,
   Keyboard,
+  KeyboardAvoidingView,
   Platform,
   Pressable,
   Image as RNImage,
@@ -28,12 +28,6 @@ import type { MovieFormat } from '@/types/database';
 import BarcodeScanner from '@/components/BarcodeScanner';
 import { lookupUPC } from '@/lib/upc';
 import { useCameraPermissions } from 'expo-camera';
-
-
-
-const logoSource = Platform.OS === 'web'
-  ? { uri: '/logo_tracking.png' }
-  : require('@/assets/images/logo_tracking.png');
 
 const FORMATS: MovieFormat[] = ['VHS', 'DVD', 'BluRay', '4K', 'Digital'];
 
@@ -59,14 +53,25 @@ export default function AddScreen() {
   // Prevent rapid multiple scans using ref for immediate blocking
   const isProcessingScan = useRef(false);
 
+  // Reset all search/form state every time this screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      setQuery('');
+      setDebouncedQuery('');
+      setSelectedMovie(null);
+      setSelectedFormats([]);
+      setEdition('');
+      setStatus('owned');
+      setTriedToSubmit(false);
+    }, [])
+  );
+
   const handleBarCodeScanned = async ({ type, data }: { type: string; data: string }) => {
     if (isProcessingScan.current) return;
 
-    // Lock immediately
     isProcessingScan.current = true;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-    // Close camera immediately to prevent user from keeping scanning
     setIsScanning(false);
     setIsLookingUp(true);
 
@@ -78,16 +83,13 @@ export default function AddScreen() {
         Alert.alert(
           'Not Found',
           `Could not identify product for barcode: ${data}`,
-          [{ text: "OK", onPress: () => isProcessingScan.current = false }]
+          [{ text: 'OK', onPress: () => (isProcessingScan.current = false) }]
         );
       }
     } catch (e) {
       Alert.alert('Error', 'Failed to lookup barcode');
     } finally {
       setIsLookingUp(false);
-      // We don't unlock 'isProcessingScan' here if successful, 
-      // because we don't want to scan again immediately.
-      // We only unlock if failed (in Alert logic) or if user manually restarts.
     }
   };
 
@@ -111,9 +113,8 @@ export default function AddScreen() {
     return () => clearTimeout(t);
   }, [query]);
 
-  // Magic Effect: Detect Manual Barcode Entry
+  // Detect Manual Barcode Entry (12–13 digit UPC/EAN)
   useEffect(() => {
-    // If it looks like a UPC/EAN (12 or 13 digits)
     if (/^\d{12,13}$/.test(debouncedQuery)) {
       handleManualBarcode(debouncedQuery);
     }
@@ -128,7 +129,7 @@ export default function AddScreen() {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
     } catch (e) {
-      // failures silently fail, user can keep typing if it was just a year or something
+      // Silently fail — user can keep typing
     } finally {
       setIsLookingUp(false);
     }
@@ -141,14 +142,13 @@ export default function AddScreen() {
     setQuery('');
     setDebouncedQuery('');
     setTriedToSubmit(false);
+    Keyboard.dismiss();
   };
 
   const handleAdd = async () => {
     if (!selectedMovie) return;
-    console.log('handleAdd called with:', selectedMovie.title);
 
     if (!userId) {
-      console.log('No userId found');
       Alert.alert(
         'Not signed in',
         'Anonymous sign-in is required. Enable it in Supabase Dashboard → Auth → Providers.'
@@ -157,14 +157,12 @@ export default function AddScreen() {
     }
 
     if (selectedFormats.length === 0) {
-      console.log('No formats selected');
       setTriedToSubmit(true);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       return;
     }
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    console.log('Invoking addMutation...');
     try {
       await addMutation.mutateAsync({
         tmdbMovie: selectedMovie,
@@ -172,13 +170,10 @@ export default function AddScreen() {
         status,
         edition: edition.trim() || null,
       });
-      console.log('Add success!');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.back();
     } catch (e: any) {
-      console.error('Add individual/bulk error:', e);
       const msg = e.message || String(e);
-      // Check for uniqueness violation (Supabase error 23505)
       if (msg.includes('duplicate key') || msg.includes('unique constraint')) {
         Alert.alert('Already in collection', `You might already have ${selectedMovie.title} on one of these formats.`);
       } else {
@@ -187,48 +182,40 @@ export default function AddScreen() {
     }
   };
 
-  const renderResult = ({ item }: { item: TmdbMovieResult }) => {
-    const posterUrl = getPosterUrl(item.poster_path, 'w154');
-    const year = item.release_date?.slice(0, 4) ?? '—';
-
-    return (
-      <Pressable
-        onPress={() => handleSelectMovie(item)}
-        className="flex-row items-center p-3 bg-neutral-900 rounded-lg mb-2 active:opacity-80"
-      >
-        <View className="rounded bg-neutral-800 overflow-hidden" style={{ width: 48, height: 72 }}>
-          {posterUrl ? (
-            <RNImage source={{ uri: posterUrl }} className="w-full h-full" resizeMode="cover" />
-          ) : (
-            <View className="flex-1 items-center justify-center">
-              <Text className="text-neutral-600 text-xs">?</Text>
-            </View>
-          )}
-        </View>
-        <View className="ml-3 flex-1">
-          <Text className="text-white font-medium" numberOfLines={2}>
-            {item.title}
-          </Text>
-          <Text className="text-neutral-500 text-sm mt-0.5">{year}</Text>
-        </View>
-      </Pressable>
-    );
-  };
+  const results = searchQuery.data?.results ?? [];
 
   return (
-    <View className="flex-1 bg-neutral-950">
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: '#0a0a0a' }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={insets.top}
+    >
       <Stack.Screen options={{ headerShown: false }} />
+
+      {/* Camera Modal Overlay */}
+      {isScanning && (
+        <View style={{ position: 'absolute', inset: 0, zIndex: 50, backgroundColor: '#000' }}>
+          <BarcodeScanner
+            onScanned={handleBarCodeScanned}
+            onClose={() => setIsScanning(false)}
+            barcodeTypes={['upc_a', 'upc_e', 'ean13', 'ean8', 'qr', 'code128', 'code39']}
+          />
+        </View>
+      )}
+
       <ScrollView
         className="flex-1 bg-neutral-950"
         contentContainerStyle={{
           paddingHorizontal: 32,
-          paddingBottom: 40,
+          paddingBottom: insets.bottom + 40,
           maxWidth: 1200,
           alignSelf: 'center',
-          width: '100%'
+          width: '100%',
         }}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
       >
-        {/* Custom Header with CRT Glow */}
+        {/* Back Button */}
         <View className="px-4 pt-2">
           <Pressable
             onPress={() => router.back()}
@@ -246,11 +233,12 @@ export default function AddScreen() {
         {!userId && (
           <View className="bg-red-900/20 mx-4 mt-4 p-3 rounded border border-red-900/50">
             <Text className="text-red-400 font-mono text-xs text-center">
-              Not signed in. enable Anonymous Auth in Supabase or check connection.
+              Not signed in. Enable Anonymous Auth in Supabase or check connection.
             </Text>
           </View>
         )}
 
+        {/* Search Row */}
         <View className="p-4 flex-row">
           <TextInput
             nativeID="add-search-input"
@@ -263,32 +251,21 @@ export default function AddScreen() {
             className="bg-neutral-900 text-white px-4 py-3 rounded-lg font-mono flex-1 mr-2"
             autoCapitalize="none"
             autoCorrect={false}
+            returnKeyType="search"
           />
-          {true && (
-            <Pressable
-              onPress={startScanning}
-              className="bg-neutral-900 w-12 items-center justify-center rounded-lg border border-neutral-800"
-            >
-              {isLookingUp ? (
-                <ActivityIndicator size="small" color="#f59e0b" />
-              ) : (
-                <FontAwesome name="barcode" size={20} color="#f59e0b" />
-              )}
-            </Pressable>
-          )}
+          <Pressable
+            onPress={startScanning}
+            className="bg-neutral-900 w-12 items-center justify-center rounded-lg border border-neutral-800"
+          >
+            {isLookingUp ? (
+              <ActivityIndicator size="small" color="#f59e0b" />
+            ) : (
+              <FontAwesome name="barcode" size={20} color="#f59e0b" />
+            )}
+          </Pressable>
         </View>
 
-        {/* Camera Modal Overlay */}
-        {isScanning && (
-          <View className="absolute inset-0 z-50 bg-black">
-            <BarcodeScanner
-              onScanned={handleBarCodeScanned}
-              onClose={() => setIsScanning(false)}
-              barcodeTypes={["upc_a", "upc_e", "ean13", "ean8", "qr", "code128", "code39"]}
-            />
-          </View>
-        )}
-
+        {/* Movie Selected: Show Add Form */}
         {selectedMovie ? (
           <View className="px-4 pb-4">
             <View className="bg-neutral-900 rounded-lg p-4 mb-4">
@@ -309,15 +286,14 @@ export default function AddScreen() {
                   </Text>
                 </View>
               </View>
+
+              {/* Owned / Wishlist */}
               <View className="flex-row gap-2 mb-4">
                 <Pressable
                   onPress={() => setStatus('owned')}
                   className={`flex-1 py-2 rounded ${status === 'owned' ? 'bg-amber-600' : 'bg-neutral-800'}`}
                 >
-                  <Text
-                    className={`font-mono text-sm text-center ${status === 'owned' ? 'text-white' : 'text-neutral-400'
-                      }`}
-                  >
+                  <Text className={`font-mono text-sm text-center ${status === 'owned' ? 'text-white' : 'text-neutral-400'}`}>
                     OWNED
                   </Text>
                 </Pressable>
@@ -325,18 +301,15 @@ export default function AddScreen() {
                   onPress={() => setStatus('wishlist')}
                   className={`flex-1 py-2 rounded ${status === 'wishlist' ? 'bg-amber-600' : 'bg-neutral-800'}`}
                 >
-                  <Text
-                    className={`font-mono text-sm text-center ${status === 'wishlist' ? 'text-white' : 'text-neutral-400'
-                      }`}
-                  >
+                  <Text className={`font-mono text-sm text-center ${status === 'wishlist' ? 'text-white' : 'text-neutral-400'}`}>
                     WISHLIST
                   </Text>
                 </Pressable>
               </View>
+
+              {/* Format */}
               <View className="flex-row items-baseline mb-2 gap-2">
-                <Text className="text-amber-500/90 font-mono text-xs tracking-widest">
-                  FORMAT
-                </Text>
+                <Text className="text-amber-500/90 font-mono text-xs tracking-widest">FORMAT</Text>
                 {selectedFormats.length === 0 && triedToSubmit && (
                   <Text className="text-red-500 font-mono text-[10px] tracking-wider">
                     * A format option must be selected
@@ -350,22 +323,14 @@ export default function AddScreen() {
                     <Pressable
                       key={f}
                       onPress={() => {
-                        setSelectedFormats((prev) => {
-                          if (prev.includes(f)) {
-                            return prev.filter(format => format !== f);
-                          } else {
-                            return [...prev, f];
-                          }
-                        });
+                        setSelectedFormats((prev) =>
+                          prev.includes(f) ? prev.filter((fmt) => fmt !== f) : [...prev, f]
+                        );
                         Haptics.selectionAsync();
                       }}
-                      className={`px-3 py-2 rounded ${isSelected ? 'bg-amber-600' : 'bg-neutral-800'
-                        }`}
+                      className={`px-3 py-2 rounded ${isSelected ? 'bg-amber-600' : 'bg-neutral-800'}`}
                     >
-                      <Text
-                        className={`font-mono text-sm ${isSelected ? 'text-white' : 'text-neutral-400'
-                          }`}
-                      >
+                      <Text className={`font-mono text-sm ${isSelected ? 'text-white' : 'text-neutral-400'}`}>
                         {f}
                       </Text>
                     </Pressable>
@@ -373,6 +338,7 @@ export default function AddScreen() {
                 })}
               </View>
 
+              {/* Edition */}
               <Text className="text-amber-500/90 font-mono text-xs tracking-widest mb-2 mt-2">
                 EDITION (OPTIONAL)
               </Text>
@@ -388,6 +354,7 @@ export default function AddScreen() {
                 autoCorrect={false}
               />
 
+              {/* ADD Button */}
               <Pressable
                 onPress={handleAdd}
                 disabled={addMutation.isPending}
@@ -402,33 +369,57 @@ export default function AddScreen() {
                 )}
               </Pressable>
             </View>
+
+            {/* CHOOSE DIFFERENT MOVIE Button */}
             <Pressable
               onPress={() => {
                 setSelectedMovie(null);
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               }}
               className="bg-red-700 py-3 rounded-lg items-center active:opacity-90"
-              style={{ minHeight: 48, marginBottom: insets.bottom + 8 }}
+              style={{ minHeight: 48 }}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <Text className="text-white font-mono font-semibold">CHOOSE DIFFERENT MOVIE</Text>
             </Pressable>
           </View>
         ) : (
+          /* Search Results — plain Views instead of FlatList to avoid VirtualizedList nesting warning */
           <View className="flex-1 px-4">
             {searchQuery.isFetching && debouncedQuery.length >= 2 ? (
               <View className="py-12 items-center">
                 <ActivityIndicator color="#f59e0b" />
                 <Text className="text-neutral-500 font-mono mt-2">Searching...</Text>
               </View>
-            ) : searchQuery.data?.results && searchQuery.data.results.length > 0 ? (
-              <FlatList
-                data={searchQuery.data.results}
-                renderItem={renderResult}
-                keyExtractor={(item) => String(item.id)}
-                keyboardShouldPersistTaps="handled"
-                ListFooterComponent={<View className="h-8" />}
-              />
+            ) : results.length > 0 ? (
+              <View>
+                {results.map((item) => {
+                  const posterUrl = getPosterUrl(item.poster_path, 'w154');
+                  const year = item.release_date?.slice(0, 4) ?? '—';
+                  return (
+                    <Pressable
+                      key={String(item.id)}
+                      onPress={() => handleSelectMovie(item)}
+                      className="flex-row items-center p-3 bg-neutral-900 rounded-lg mb-2 active:opacity-80"
+                    >
+                      <View className="rounded bg-neutral-800 overflow-hidden" style={{ width: 48, height: 72 }}>
+                        {posterUrl ? (
+                          <RNImage source={{ uri: posterUrl }} className="w-full h-full" resizeMode="cover" />
+                        ) : (
+                          <View className="flex-1 items-center justify-center">
+                            <Text className="text-neutral-600 text-xs">?</Text>
+                          </View>
+                        )}
+                      </View>
+                      <View className="ml-3 flex-1">
+                        <Text className="text-white font-medium" numberOfLines={2}>{item.title}</Text>
+                        <Text className="text-neutral-500 text-sm mt-0.5">{year}</Text>
+                      </View>
+                    </Pressable>
+                  );
+                })}
+                <View className="h-8" />
+              </View>
             ) : debouncedQuery.length >= 2 && !searchQuery.isFetching ? (
               <View className="py-12 items-center">
                 <Text className="text-neutral-500 font-mono">No results</Text>
@@ -443,6 +434,6 @@ export default function AddScreen() {
           </View>
         )}
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
