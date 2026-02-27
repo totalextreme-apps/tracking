@@ -44,9 +44,10 @@ export default function TabLayout() {
           borderBottomColor: '#262626', // Neutral-800
         },
         tabBarStyle: {
-          backgroundColor: 'transparent',
-          borderTopWidth: 0,
-          height: 80, // Reduced from 100
+          backgroundColor: '#000000',
+          borderTopWidth: 1,
+          borderTopColor: '#262626',
+          height: 80,
           paddingBottom: 10,
           paddingTop: 10,
           position: 'absolute',
@@ -54,13 +55,6 @@ export default function TabLayout() {
           left: 0,
           right: 0,
           elevation: 0,
-          shadowColor: '#00ff88', // CRT Phosphor Green Glow
-          shadowOffset: {
-            width: 0,
-            height: -4, // Cast upwards
-          },
-          shadowOpacity: 0.15, // Subtle glow
-          shadowRadius: 10,
         },
         tabBarBackground: () => (
           <RNView style={{ flex: 1, backgroundColor: '#000000', borderTopWidth: 1, borderTopColor: '#262626' }} />
