@@ -207,7 +207,7 @@ export default function AddScreen() {
         className="flex-1 bg-neutral-950"
         contentContainerStyle={{
           paddingHorizontal: 32,
-          paddingBottom: insets.bottom + 40,
+          paddingBottom: insets.bottom + 100,
           maxWidth: 1200,
           alignSelf: 'center',
           width: '100%',

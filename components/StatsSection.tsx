@@ -1,4 +1,4 @@
-import { CollectionItemWithMovie } from '@/hooks/useCollection';
+import { CollectionItemWithMovie } from '@/types/database';
 import { useMemo } from 'react';
 import { Dimensions, Text, View } from 'react-native';
 import { PieChart } from 'react-native-chart-kit';
@@ -58,38 +58,28 @@ export function StatsSection({ collection }: StatsSectionProps) {
     const genreData = useMemo(() => {
         const counts: Record<string, number> = {};
         collection.forEach(item => {
-            // item.movies.genre_ids might be needed, currently assuming we might have genre text or need to fetch/map it. 
-            // Wait, we don't have genres stored directly on the item usually, except maybe in `item.movies`.
-            // Let's check `item.movies`. 
-            // Actually `useCollection` query selects `movies (*)` but Supabase type might not layout genres easily if it's just IDs.
-            // If `genre_ids` is an array of IDs, we need a map. 
-            // OR if we stored `genres` (text).
-            // Checking: We likely don't have comprehensive genre data stored as text on `movies` based on previous files.
-            // Let's stick to Formats for now and verify Genres availability. 
-            // If no genres, I'll just show formats.
-            // Actually, `movies` table usually has `genre_ids` (array of ints). I don't have the ID->Name map loaded.
-            // I'll skip Genres for this iteration and focus on Formats + Status (Owned vs Wishlist). 
-        });
-        return [];
-    }, [collection]);
-
-    // Alternative: Status Distribution (Owned vs Wishlist)
-    const statusData = useMemo(() => {
-        const counts: Record<string, number> = {
-            'Owned': 0,
-            'Wishlist': 0,
-            'For Sale': 0 // Grail in Thrift Mode context? No, status is 'owned' | 'wishlist'.
-        };
-
-        collection.forEach(item => {
-            if (item.status === 'owned') counts['Owned']++;
-            else if (item.status === 'wishlist') counts['Wishlist']++;
+            const genres = item.movies?.genres || [];
+            if (genres.length === 0) {
+                counts['Uncategorized'] = (counts['Uncategorized'] || 0) + 1;
+            } else {
+                genres.forEach((g: any) => {
+                    counts[g.name] = (counts[g.name] || 0) + 1;
+                });
+            }
         });
 
-        return [
-            { name: 'Owned', population: counts['Owned'], color: '#f59e0b', legendFontColor: '#d4d4d4', legendFontSize: 10 },
-            { name: 'Wishlist', population: counts['Wishlist'], color: '#737373', legendFontColor: '#d4d4d4', legendFontSize: 10 },
-        ].filter(i => i.population > 0);
+        const palette = [
+            '#f59e0b', '#ef4444', '#3b82f6', '#a855f7', '#22c55e',
+            '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1'
+        ];
+
+        return Object.keys(counts).map((key, index) => ({
+            name: key,
+            population: counts[key],
+            color: palette[index % palette.length],
+            legendFontColor: '#d4d4d4',
+            legendFontSize: 10,
+        })).sort((a, b) => b.population - a.population).slice(0, 8); // Top 8 genres
     }, [collection]);
 
     return (
@@ -115,19 +105,20 @@ export function StatsSection({ collection }: StatsSectionProps) {
                 />
             </View>
 
-            {/* Status Bar Chart or Pie? Let's use Pie for status too for consistency, or maybe a simple breakdown */}
+            {/* Genre Distribution Pie Chart */}
             <View className="bg-neutral-900 rounded-xl p-2 border border-neutral-800 items-center">
-                <Text className="text-neutral-500 font-mono text-xs font-bold mb-2 mt-2">BY STATUS</Text>
+                <Text className="text-neutral-500 font-mono text-xs font-bold mb-2 mt-2">BY GENRE</Text>
                 <PieChart
-                    data={statusData}
+                    data={genreData}
                     width={screenWidth - 64}
-                    height={150}
+                    height={200}
                     chartConfig={chartConfig}
                     accessor={"population"}
                     backgroundColor={"transparent"}
                     paddingLeft={"15"}
                     center={[10, 0]}
                     absolute
+                    hasLegend={true}
                 />
             </View>
         </View>
