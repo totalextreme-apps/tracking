@@ -464,7 +464,7 @@ export default function MovieDetailScreen() {
     return (
         <View className="flex-1 bg-neutral-950">
             <StatusBar style="light" />
-            <Stack.Screen options={{ headerShown: false, presentation: 'modal' }} />
+            <Stack.Screen options={{ headerShown: false }} />
 
             {Platform.OS === 'web' && (
                 <input
