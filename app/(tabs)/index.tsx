@@ -77,7 +77,6 @@ export default function HomeScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      // Only refetch if we are not already loading
       if (refetch && !collectionLoading) refetch();
     }, [refetch, collectionLoading])
   );
@@ -158,7 +157,7 @@ export default function HomeScreen() {
   const scrollShelfRight = () => {
     if (shelfRef.current) {
       playSound('click');
-      shelfRef.current.scrollTo({ x: 400, animated: true }); // Simple scroll for now to avoid flicker logic
+      shelfRef.current.scrollTo({ x: 500, animated: true });
     }
   };
 
@@ -179,6 +178,14 @@ export default function HomeScreen() {
       if (refetch) refetch();
     } catch (e) {
       console.error('Failed to acquire', e);
+    }
+  };
+
+  const navigateToDetail = (item: CollectionItemWithMedia) => {
+    if (item.media_type === 'tv') {
+      router.push(`/show/${item.show_id}?season=${item.season_number}`);
+    } else {
+      router.push(`/movie/${item.movie_id}`);
     }
   };
 
@@ -251,79 +258,81 @@ export default function HomeScreen() {
             />
           }
         >
-          {/* Permanent Search & Filters */}
-          <View className="bg-neutral-950 border-b border-neutral-900">
-            <View className="px-6 py-4">
-              <View className="flex-row items-center bg-neutral-900 rounded-lg px-4 py-3 border border-neutral-800 mb-4">
-                <Ionicons name="search" size={18} color="#666" style={{ marginRight: 12 }} />
-                <TextInput
-                  placeholder="SEARCH COLLECTION..."
-                  placeholderTextColor="#444"
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  className="flex-1 text-white font-mono text-sm uppercase"
-                  autoCapitalize="none"
-                />
-                {searchQuery.length > 0 && (
-                  <Pressable onPress={() => setSearchQuery('')}>
-                    <Ionicons name="close-circle" size={20} color="#666" />
-                  </Pressable>
-                )}
+          {/* Header/Search Bar */}
+          <View className="px-6 pt-4 pb-4 border-b border-neutral-900">
+            <View className="flex-row items-center justify-between mb-4">
+              <View className="flex-row items-center bg-neutral-950 rounded-full border border-neutral-800 p-1 flex-1 mr-4">
+                <Pressable
+                  onPress={() => { setMediaTypeFilter(null); playSound('click'); }}
+                  className={`px-4 py-2 rounded-full ${mediaTypeFilter === null ? 'bg-neutral-800' : ''}`}
+                >
+                  <Text className={`font-mono text-[10px] ${mediaTypeFilter === null ? 'text-amber-500 font-bold' : 'text-neutral-500'}`}>ALL</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => { setMediaTypeFilter('movie'); playSound('click'); }}
+                  className={`px-4 py-2 rounded-full ${mediaTypeFilter === 'movie' ? 'bg-neutral-800' : ''}`}
+                >
+                  <Text className={`font-mono text-[10px] ${mediaTypeFilter === 'movie' ? 'text-amber-500 font-bold' : 'text-neutral-500'}`}>FILM</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => { setMediaTypeFilter('tv'); playSound('click'); }}
+                  className={`px-4 py-2 rounded-full ${mediaTypeFilter === 'tv' ? 'bg-neutral-800' : ''}`}
+                >
+                  <Text className={`font-mono text-[10px] ${mediaTypeFilter === 'tv' ? 'text-amber-500 font-bold' : 'text-neutral-500'}`}>TV</Text>
+                </Pressable>
               </View>
 
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-                <View className="flex-row bg-neutral-900 rounded-lg p-1 border border-neutral-800 mr-2">
-                  <Pressable
-                    onPress={() => setMediaTypeFilter(mediaTypeFilter === 'movie' ? null : 'movie')}
-                    className={`px-4 py-1.5 rounded-md ${mediaTypeFilter === 'movie' ? 'bg-amber-500' : ''}`}
-                  >
-                    <Text className={`font-mono text-[10px] ${mediaTypeFilter === 'movie' ? 'text-black' : 'text-neutral-500'}`}>FILM</Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={() => setMediaTypeFilter(mediaTypeFilter === 'tv' ? null : 'tv')}
-                    className={`px-4 py-1.5 rounded-md ${mediaTypeFilter === 'tv' ? 'bg-amber-500' : ''}`}
-                  >
-                    <Text className={`font-mono text-[10px] ${mediaTypeFilter === 'tv' ? 'text-black' : 'text-neutral-500'}`}>TV</Text>
-                  </Pressable>
-                </View>
-
-                {['VHS', 'DVD', 'BluRay', '4K'].map(f => (
-                  <Pressable
-                    key={f}
-                    onPress={() => setFormatFilter(formatFilter === f ? null : f)}
-                    className={`px-4 py-1.5 rounded-lg border ${formatFilter === f ? 'bg-amber-500/20 border-amber-500/50' : 'bg-neutral-900 border-neutral-800'}`}
-                  >
-                    <Text className={`font-mono text-[10px] ${formatFilter === f ? 'text-amber-500' : 'text-neutral-500'}`}>{f}</Text>
-                  </Pressable>
-                ))}
-
-                <Pressable
-                  onPress={() => setIsGenreDropdownOpen(true)}
-                  className={`px-4 py-1.5 rounded-lg border flex-row items-center gap-2 ${genreFilter ? 'bg-amber-500/20 border-amber-500/50' : 'bg-neutral-900 border-neutral-800'}`}
-                >
-                  <Text className={`font-mono text-[10px] ${genreFilter ? 'text-amber-500' : 'text-neutral-500'}`}>
-                    {genreFilter || 'GENRE'}
-                  </Text>
-                  <Ionicons name="chevron-down" size={12} color={genreFilter ? '#f59e0b' : '#666'} />
-                </Pressable>
-              </ScrollView>
+              <View className="flex-row items-center bg-neutral-900 rounded-lg border border-neutral-800 px-4 py-2.5 flex-1 ml-2">
+                <Ionicons name="search" size={16} color="#444" style={{ marginRight: 8 }} />
+                <TextInput
+                  placeholder="SEARCH..."
+                  placeholderTextColor="#333"
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  className="flex-1 text-white font-mono text-[10px]"
+                  autoCapitalize="none"
+                  style={{ padding: 0 }}
+                />
+              </View>
             </View>
+
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+              {['VHS', 'DVD', 'BluRay', '4K'].map(f => (
+                <Pressable
+                  key={f}
+                  onPress={() => setFormatFilter(formatFilter === f ? null : f)}
+                  className={`px-4 py-1.5 rounded-full border ${formatFilter === f ? 'bg-amber-500/20 border-amber-500/50' : 'bg-neutral-900 border-neutral-800'}`}
+                >
+                  <Text className={`font-mono text-[10px] ${formatFilter === f ? 'text-amber-500' : 'text-neutral-500'}`}>{f}</Text>
+                </Pressable>
+              ))}
+
+              <Pressable
+                onPress={() => setIsGenreDropdownOpen(true)}
+                className={`px-4 py-1.5 rounded-full border flex-row items-center gap-2 ${genreFilter ? 'bg-amber-500/20 border-amber-500/50' : 'bg-neutral-900 border-neutral-800'}`}
+              >
+                <Text className={`font-mono text-[10px] ${genreFilter ? 'text-amber-500' : 'text-neutral-500'}`}>
+                  {genreFilter || 'GENRE'}
+                </Text>
+                <Ionicons name="chevron-down" size={10} color={genreFilter ? '#f59e0b' : '#666'} />
+              </Pressable>
+            </ScrollView>
           </View>
 
           <View className="flex-1">
             {onDisplay.length > 0 && (
-              <View className="mb-6 mt-4">
-                <View className="px-6 flex-row items-center justify-between mb-4">
+              <View className="mb-4 mt-4">
+                <View className="px-6 flex-row items-center justify-between mb-2">
                   <View className="flex-row items-center gap-2">
-                    <Text className="text-amber-500 font-mono text-[12px] uppercase font-bold italic tracking-widest">{thriftMode ? 'MY GRAILS' : 'ON DISPLAY'}</Text>
-                    <View className="h-1 w-8 bg-amber-500/20" />
+                    <Text className="text-amber-500 font-mono text-[10px] uppercase font-bold tracking-widest">{thriftMode ? 'MY GRAILS' : 'ON DISPLAY'}</Text>
+                    <Text className="text-neutral-600 font-mono text-[10px]">/ {onDisplay.length}</Text>
                   </View>
                   <View className="flex-row items-center gap-2">
-                    <Pressable onPress={scrollShelfLeft} className="p-2 bg-neutral-900 border border-neutral-800 rounded-full active:bg-neutral-800">
-                      <Ionicons name="chevron-back" size={18} color="#f59e0b" />
+                    <Pressable onPress={scrollShelfLeft} className="p-2 bg-neutral-900 rounded-full border border-neutral-800 active:bg-neutral-800">
+                      <Ionicons name="chevron-back" size={16} color="#f59e0b" />
                     </Pressable>
-                    <Pressable onPress={scrollShelfRight} className="p-2 bg-neutral-900 border border-neutral-800 rounded-full active:bg-neutral-800">
-                      <Ionicons name="chevron-forward" size={18} color="#f59e0b" />
+                    <Pressable onPress={scrollShelfRight} className="p-2 bg-neutral-900 rounded-full border border-neutral-800 active:bg-neutral-800">
+                      <Ionicons name="chevron-forward" size={16} color="#f59e0b" />
                     </Pressable>
                   </View>
                 </View>
@@ -340,13 +349,7 @@ export default function HomeScreen() {
                       <OnDisplayCard
                         key={item.id}
                         item={item}
-                        onSingleTapAction={() => {
-                          if (item.media_type === 'tv') {
-                            router.push(`/show/${item.show_id}?season=${item.season_number}`);
-                          } else {
-                            router.push(`/movie/${item.movie_id}`);
-                          }
-                        }}
+                        onSingleTapAction={() => navigateToDetail(item)}
                         onLongPressAction={() => handleLongPress(item)}
                         onToggleFavorite={toggleFavorite}
                       />
@@ -357,29 +360,29 @@ export default function HomeScreen() {
             )}
 
             <View className="px-6 pb-4">
-              <View className="flex-row items-center justify-between mb-8">
-                <Text className="text-neutral-600 font-mono text-[10px] tracking-widest uppercase italic">
-                  — {thriftMode ? 'WANTED LIST' : 'THE STACKS'} —
+              <View className="flex-row items-center justify-between mb-6">
+                <Text className="text-neutral-600 font-mono text-[10px] tracking-tighter uppercase italic">
+                  {thriftMode ? 'Wanted List' : 'The Stacks'}
                 </Text>
 
                 <View className="flex-row bg-neutral-900 rounded-md p-1 border border-neutral-800">
                   <Pressable
                     onPress={() => { setViewMode('grid2'); setNumColumns(2); }}
-                    className={`p-2 rounded ${viewMode === 'grid2' ? 'bg-neutral-800' : ''}`}
+                    className={`p-1.5 rounded ${viewMode === 'grid2' ? 'bg-neutral-800' : ''}`}
                   >
-                    <Ionicons name="grid" size={14} color={viewMode === 'grid2' ? '#fff' : '#666'} />
+                    <Ionicons name="apps-outline" size={14} color={viewMode === 'grid2' ? '#fff' : '#666'} />
                   </Pressable>
                   <Pressable
                     onPress={() => { setViewMode('grid4'); setNumColumns(4); }}
-                    className={`p-2 rounded ${viewMode === 'grid4' ? 'bg-neutral-800' : ''}`}
+                    className={`p-1.5 rounded ${viewMode === 'grid4' ? 'bg-neutral-800' : ''}`}
                   >
-                    <Ionicons name="apps" size={14} color={viewMode === 'grid4' ? '#fff' : '#666'} />
+                    <Ionicons name="grid-outline" size={14} color={viewMode === 'grid4' ? '#fff' : '#666'} />
                   </Pressable>
                   <Pressable
                     onPress={() => setViewMode('custom')}
-                    className={`p-2 rounded ${viewMode === 'custom' ? 'bg-neutral-800' : ''}`}
+                    className={`p-1.5 rounded ${viewMode === 'custom' ? 'bg-neutral-800' : ''}`}
                   >
-                    <Ionicons name="options" size={14} color={viewMode === 'custom' ? '#fff' : '#666'} />
+                    <Ionicons name="options-outline" size={14} color={viewMode === 'custom' ? '#fff' : '#666'} />
                   </Pressable>
                 </View>
               </View>
@@ -387,8 +390,8 @@ export default function HomeScreen() {
               {viewMode === 'custom' && (
                 <View className="bg-neutral-900 mb-8 p-6 rounded-xl border border-neutral-800">
                   <View className="flex-row justify-between mb-4">
-                    <Text className="text-neutral-400 font-mono text-[11px] tracking-widest">COLUMN DENSITY ({numColumns})</Text>
-                    <Pressable onPress={() => setNumColumns(2)}><Text className="text-amber-500/50 font-mono text-[11px]">RESET</Text></Pressable>
+                    <Text className="text-neutral-400 font-mono text-[10px] tracking-widest">COLUMN DENSITY ({numColumns})</Text>
+                    <Pressable onPress={() => setNumColumns(2)}><Text className="text-amber-500/50 font-mono text-[10px]">RESET</Text></Pressable>
                   </View>
                   <Slider
                     style={{ width: '100%', height: 40 }}
@@ -410,47 +413,37 @@ export default function HomeScreen() {
               {isEmpty ? (
                 <EmptyState />
               ) : (
-                <View className="flex-row flex-wrap" style={{ marginHorizontal: -12 }}>
+                <View className="flex-row flex-wrap" style={{ marginHorizontal: -10 }}>
                   {filteredStacks.map((stack: any, idx: number) => (
                     <View
                       key={`${stack[0].media_type}-${stack[0].movie_id}-${stack[0].show_id}-${idx}`}
                       style={{
                         width: `${100 / resolvedColumns}%`,
-                        paddingHorizontal: 12,
-                        marginBottom: 40
+                        paddingHorizontal: 10,
+                        marginBottom: 32
                       }}
                     >
-                      <Pressable
-                        onPress={() => {
-                          const item = stack[0];
-                          if (item.media_type === 'tv') {
-                            router.push(`/show/${item.show_id}?season=${item.season_number}`);
-                          } else {
-                            router.push(`/movie/${item.movie_id}`);
-                          }
-                        }}
+                      <StackCard
+                        stack={stack}
+                        onPress={() => navigateToDetail(stack[0])}
+                        onToggleFavorite={toggleFavorite}
                         onLongPress={() => handleLongPress(stack[0])}
-                        className="active:opacity-80"
-                      >
-                        <StackCard
-                          stack={stack}
-                          width={(windowWidth - 48 - (resolvedColumns * 24)) / resolvedColumns}
-                        />
-                        <View className="mt-4">
-                          <Text
-                            className="text-white font-medium text-[12px] uppercase tracking-wider"
-                            numberOfLines={2}
-                            style={{ fontFamily: 'VCR_OSD_MONO' }}
-                          >
-                            {stack[0].movies?.title || stack[0].shows?.name}
+                        width={(windowWidth - 48 - (resolvedColumns * 20)) / resolvedColumns}
+                      />
+                      <View className="mt-3">
+                        <Text
+                          className="text-white font-medium text-[11px] uppercase tracking-wide"
+                          numberOfLines={1}
+                          style={{ fontFamily: 'VCR_OSD_MONO' }}
+                        >
+                          {stack[0].movies?.title || stack[0].shows?.name}
+                        </Text>
+                        {stack[0].media_type === 'tv' && (
+                          <Text className="text-neutral-500 font-mono text-[9px] mt-0.5">
+                            SEASON {stack[0].season_number}
                           </Text>
-                          {stack[0].media_type === 'tv' && (
-                            <Text className="text-amber-500/40 font-mono text-[9px] mt-1 tracking-widest">
-                              SEASON {stack[0].season_number}
-                            </Text>
-                          )}
-                        </View>
-                      </Pressable>
+                        )}
+                      </View>
                     </View>
                   ))}
                 </View>
