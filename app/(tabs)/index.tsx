@@ -280,7 +280,7 @@ export default function HomeScreen() {
                   }}
                   className={`px-3 py-1 rounded-full ${mediaTypeFilter === 'tv' ? 'bg-amber-500' : ''}`}
                 >
-                  <Text className={`font-mono text-[8px] ${mediaTypeFilter === 'tv' ? 'text-black' : 'text-neutral-500'}`}>TAPE</Text>
+                  <Text className={`font-mono text-[8px] ${mediaTypeFilter === 'tv' ? 'text-black' : 'text-neutral-500'}`}>TV</Text>
                 </Pressable>
               </View>
 
