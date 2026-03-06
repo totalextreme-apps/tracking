@@ -184,7 +184,6 @@ export default function AddScreen() {
       return;
     }
 
-    console.log('handleAdd: Starting add process for', selectedItem.id, selectedItem.media_type);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
       if (selectedItem.media_type === 'tv') {
@@ -206,7 +205,6 @@ export default function AddScreen() {
           edition: edition.trim() || null,
         });
       }
-      console.log('handleAdd: Mutation finished successfully');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.back();
     } catch (e: any) {
