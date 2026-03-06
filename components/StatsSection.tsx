@@ -58,7 +58,7 @@ export function StatsSection({ collection }: StatsSectionProps) {
     const genreData = useMemo(() => {
         const counts: Record<string, number> = {};
         collection.forEach(item => {
-            const genres = item.movies?.genres || [];
+            const genres = item.movies?.genres || item.shows?.genres || [];
             if (genres.length === 0) {
                 counts['Uncategorized'] = (counts['Uncategorized'] || 0) + 1;
             } else {

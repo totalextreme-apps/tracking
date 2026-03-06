@@ -152,7 +152,7 @@ export default function AddScreen() {
       setIsLoadingDetails(true);
       try {
         const fullShow = await getTvShowById(item.id);
-        setSelectedItem(fullShow as TmdbMediaResult);
+        setSelectedItem({ ...fullShow, media_type: 'tv' } as TmdbMediaResult);
       } catch (e) {
         console.error('Failed to fetch TV details', e);
       } finally {
@@ -388,49 +388,71 @@ export default function AddScreen() {
                       </Text>
                     )}
                   </View>
+
                   {isLoadingDetails ? (
                     <ActivityIndicator size="small" color="#f59e0b" className="mt-2" />
                   ) : (
-                    <View className="flex-row flex-wrap gap-2">
-                      {selectedItem.seasons?.filter(s => s.season_number > 0).map((s) => {
-                        const isSelected = selectedSeasons.includes(s.season_number);
-                        return (
-                          <Pressable
-                            key={s.id}
-                            onPress={() => {
-                              setSelectedSeasons((prev) =>
-                                prev.includes(s.season_number)
-                                  ? prev.filter((sn) => sn !== s.season_number)
-                                  : [...prev, s.season_number]
-                              );
-                              Haptics.selectionAsync();
-                            }}
-                            className={`px-3 py-2 rounded ${isSelected ? 'bg-amber-600' : 'bg-neutral-800'}`}
-                          >
-                            <Text className={`font-mono text-xs ${isSelected ? 'text-white' : 'text-neutral-400'}`}>
-                              S{s.season_number}
-                            </Text>
-                          </Pressable>
-                        );
-                      })}
+                    <>
+                      <View className="flex-row flex-wrap gap-2 mb-3">
+                        {/* Include Season 0 if it exists */}
+                        {selectedItem.seasons?.map((s) => {
+                          const isSelected = selectedSeasons.includes(s.season_number);
+                          return (
+                            <Pressable
+                              key={s.id}
+                              onPress={() => {
+                                setSelectedSeasons((prev) =>
+                                  prev.includes(s.season_number)
+                                    ? prev.filter((sn) => sn !== s.season_number)
+                                    : [...prev, s.season_number]
+                                );
+                                Haptics.selectionAsync();
+                              }}
+                              className={`px-3 py-2 rounded ${isSelected ? 'bg-amber-600' : 'bg-neutral-800'}`}
+                            >
+                              <Text className={`font-mono text-xs ${isSelected ? 'text-white' : 'text-neutral-400'}`}>
+                                {s.season_number === 0 ? 'Specials' : `S${s.season_number}`}
+                              </Text>
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+
                       {/* Box Set / Complete Series logic helper */}
                       {selectedItem.seasons && selectedItem.seasons.length > 2 && (
                         <Pressable
                           onPress={() => {
-                            const all = selectedItem.seasons?.filter(s => s.season_number > 0).map(s => s.season_number) ?? [];
+                            const all = selectedItem.seasons?.map(s => s.season_number) ?? [];
                             setSelectedSeasons(selectedSeasons.length === all.length ? [] : all);
                             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                           }}
-                          className="px-3 py-2 rounded bg-neutral-800 border border-neutral-700"
+                          className="px-4 py-2 rounded bg-neutral-900 border border-neutral-800 mb-4 self-start"
                         >
-                          <Text className="font-mono text-xs text-amber-500">
-                            {selectedSeasons.length === (selectedItem.seasons?.filter(s => s.season_number > 0).length ?? 0)
+                          <Text className="font-mono text-[10px] text-amber-500 font-bold uppercase tracking-wider">
+                            {selectedSeasons.length === (selectedItem.seasons?.length ?? 0)
                               ? 'DESELECT ALL'
-                              : 'SELECT ALL'}
+                              : 'SELECT ALL SEASONS (BOX SET)'}
                           </Text>
                         </Pressable>
                       )}
-                    </View>
+
+                      {/* Manual Season Entry as fallback */}
+                      <Text className="text-neutral-500 font-mono text-[10px] mb-2 uppercase tracking-tighter">
+                        Or enter season manually:
+                      </Text>
+                      <TextInput
+                        className="bg-neutral-800 text-white px-3 py-2 rounded font-mono text-sm mb-4"
+                        placeholder="Season #"
+                        placeholderTextColor="#444"
+                        keyboardType="numeric"
+                        onChangeText={(val) => {
+                          const n = parseInt(val, 10);
+                          if (!isNaN(n) && !selectedSeasons.includes(n)) {
+                            setSelectedSeasons(prev => [...prev, n]);
+                          }
+                        }}
+                      />
+                    </>
                   )}
                 </View>
               )}
