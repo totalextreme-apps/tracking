@@ -57,11 +57,8 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
         singleTapTimeoutRef.current = null;
       }
 
-      console.log('MANUAL: Double Tap Detected');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       playSound('peel');
-
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
       if (onToggleFavorite) {
         onToggleFavorite(item);
@@ -74,7 +71,6 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
 
       // Wait to see if a second tap comes
       singleTapTimeoutRef.current = setTimeout(() => {
-        console.log('MANUAL: Single Tap Confirmed');
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
         // Trigger Animation
@@ -90,7 +86,6 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
   };
 
   const handleLongPress = () => {
-    console.log('MANUAL: Long Press Detected');
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     if (onLongPressAction) {
       onLongPressAction();
@@ -103,19 +98,6 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
     };
   }, []);
 
-  /* Animation Disabled per User Request
-  if (isGrail) {
-    grailPulse.value = withRepeat(
-      withSequence(
-        withTiming(1.05, { duration: 800 }),
-        withTiming(1, { duration: 800 })
-      ),
-      -1,
-      true
-    );
-  }
-  */
-
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
       { perspective: 1200 },
@@ -123,23 +105,17 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
       { rotateY: `${interpolate(tiltX.value, [0, 10], [0, -8])}deg` },
       { scale: scale * (isGrail ? grailPulse.value : 1) },
     ],
-    opacity: isWishlist && !isGrail ? 0.6 : 1, // Disable ghosting for Grails
+    opacity: isWishlist && !isGrail ? 0.6 : 1,
   }));
 
-  // Border Logic:
-  // Wishlist (Non-Grail) -> Dashed Grey on Wrapper
-  // Grail -> No Border on Wrapper (Moved to Image)
-  // Standard -> No Border
   const cardWrapperStyle = isWishlist && !isGrail
     ? [{ borderWidth: 2, borderStyle: 'dashed' as const, borderColor: '#6b7280', borderRadius: 12 }]
     : [];
 
-  // Unified Width: 100 for proper spacing
   const baseWidth = 100;
   const layoutWidth = baseWidth * scale + 10;
   const contentHeight = (isPhysical ? 180 : 160) * scale;
 
-  // Ensure wrapper has explicit dimensions to prevent collapse
   const wrapperStyle = {
     width: layoutWidth,
     alignItems: 'center' as const,
@@ -150,18 +126,6 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
   };
 
   const CardContent = () => {
-    // Format Logo mapping for physical cards
-    const getPhysicalLogo = (format: string) => {
-      switch (format) {
-        case 'VHS': return require('@/assets/images/overlays/formats/VHS.png');
-        case 'DVD': return require('@/assets/images/overlays/formats/DVD.png');
-        case 'BluRay': return require('@/assets/images/overlays/formats/BluRay.png');
-        case '4K': return require('@/assets/images/overlays/formats/4K Ultra.png');
-        default: return null;
-      }
-    };
-
-    // Unified Layout for both Physical and Digital
     return (
       <View className="items-center" style={{ overflow: 'visible', width: 100 }}>
         {isPhysical ? (
@@ -171,7 +135,6 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
               isCustom={!!item.custom_poster_url}
               style={{
                 width: 100,
-                // GRAIL BORDER logic (Physical Only)
                 borderWidth: isGrail ? 2 : 0,
                 borderColor: '#ffd700',
               }}
@@ -183,26 +146,24 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
               isCustom={!!item.custom_poster_url}
               style={{
                 width: 100,
-                // GRAIL BORDER logic (Physical Only)
                 borderWidth: isGrail ? 2 : 0,
                 borderColor: '#ffd700',
               }}
             />
           )
         ) : (
-          /* Digital Poster Image */
           <View
             className="bg-neutral-900 rounded-lg overflow-hidden relative"
             style={{
               width: 100,
-              aspectRatio: 2 / 3, // Force standard poster ratio for Digital
+              aspectRatio: 2 / 3,
               shadowColor: '#000',
               shadowOffset: { width: 0, height: 8 },
               shadowOpacity: 0.7,
               shadowRadius: 20,
               elevation: 12,
-              borderWidth: !isWishlist ? 2 : 0,
-              borderColor: '#00ff88', // Green for Digital
+              borderWidth: !isWishlist ? 2 : 2, // Always show border for digital if not wishlist? actually let's just make it look good.
+              borderColor: isGrail ? '#ffd700' : '#00ff88',
             }}
           >
             {posterUrl ? (
@@ -219,7 +180,6 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
               </View>
             )}
 
-            {/* Format Logo for Digital */}
             <Image
               source={require('@/assets/images/overlays/formats/Digital.png')}
               style={{ position: 'absolute', bottom: 6, right: 6, width: 30, height: 18, opacity: 0.9, zIndex: 40 }}
@@ -228,31 +188,31 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
           </View>
         )}
 
-        {/* Sticker Overlays on top of the card wrapper */}
         <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 150, pointerEvents: 'none' }}>
-          {/* Physical: Staff Pick */}
-          {item.is_on_display && isPhysical && !isWishlist && <StickerOverlay visible={true} size={40} />}
-          {/* Digital: Now Streaming */}
-          {item.is_on_display && !isPhysical && !isWishlist && <NowStreamingSticker visible={true} size={32} scale={0.55} />}
+          {/* Pick sticker for owned items */}
+          {item.is_on_display && !isWishlist && (
+            isPhysical
+              ? <StickerOverlay visible={true} size={40} />
+              : <NowStreamingSticker visible={true} size={32} scale={0.55} />
+          )}
+
+          {/* Grail sticker for wishlist items */}
+          {item.is_grail && isWishlist && (
+            <SaleSticker visible={true} size={40} label="GRAIL" /> // Assuming SaleSticker can take a label or just using it for the "Wanted" look
+          )}
         </View>
 
-        {
-          isGrail && isWishlist && (
-            <SaleSticker visible={true} size={40} />
-          )
-        }
-
-        <View style={{ height: 'auto', minHeight: 30, width: 100, marginTop: 8, alignItems: 'center', justifyContent: 'flex-start' }}>
+        <View style={{ height: 'auto', minHeight: 30, width: 100, marginTop: 12, alignItems: 'center', justifyContent: 'flex-start' }}>
           <View className="flex-row gap-1 mt-1">
             <View className="px-2 py-1 rounded bg-amber-900/80">
-              <Text className="font-mono text-[10px] text-amber-200">
+              <Text className="font-mono text-[9px] text-amber-200 uppercase">
                 {isPhysical ? item.format : (item.digital_provider || 'Digital')}
               </Text>
             </View>
             {item.media_type === 'tv' && (
               <View className="px-2 py-1 rounded bg-blue-900/80">
-                <Text className="font-mono text-[10px] text-blue-200">
-                  S{item.season_number}
+                <Text className="font-mono text-[9px] text-blue-200">
+                  SEASON {item.season_number}
                 </Text>
               </View>
             )}
