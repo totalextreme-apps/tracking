@@ -18,6 +18,19 @@ export interface Movie {
   cast: CastMember[] | null;
 }
 
+export interface Show {
+  id: number;
+  tmdb_id: number;
+  name: string;
+  poster_path: string | null;
+  backdrop_path: string | null;
+  first_air_date: string | null;
+  primary_color: string | null;
+  genres: { id: number; name: string }[] | null;
+  show_cast: CastMember[] | null;
+  number_of_seasons: number | null;
+}
+
 export interface CastMember {
   id: number;
   name: string;
@@ -28,7 +41,10 @@ export interface CastMember {
 export interface CollectionItem {
   id: string;
   user_id: string;
-  movie_id: number;
+  media_type: 'movie' | 'tv';
+  movie_id: number | null;
+  show_id: number | null;
+  season_number: number | null;
   format: MovieFormat;
   status: ItemStatus;
   is_on_display: boolean;
@@ -43,8 +59,9 @@ export interface CollectionItem {
   created_at: string;
 }
 
-export interface CollectionItemWithMovie extends CollectionItem {
+export interface CollectionItemWithMedia extends CollectionItem {
   movies: Movie | null;
+  shows: Show | null;
 }
 
 export interface Database {
@@ -54,6 +71,11 @@ export interface Database {
         Row: Movie;
         Insert: Omit<Movie, 'id'> & { id?: number };
         Update: Partial<Omit<Movie, 'id'>>;
+      };
+      shows: {
+        Row: Show;
+        Insert: Omit<Show, 'id'> & { id?: number };
+        Update: Partial<Omit<Show, 'id'>>;
       };
       collection_items: {
         Row: CollectionItem;

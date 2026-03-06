@@ -2,7 +2,7 @@ import * as Print from 'expo-print';
 import { shareAsync } from 'expo-sharing';
 import { Platform } from 'react-native';
 
-export async function printInventoryReceipt(items: CollectionItemWithMovie[]) {
+export async function printInventoryReceipt(items: CollectionItemWithMedia[]) {
     // 1. Sort items alphabetically
     const sortedItems = [...items].sort((a, b) =>
         (a.movies?.title || '').localeCompare(b.movies?.title || '')
@@ -35,7 +35,7 @@ export async function printInventoryReceipt(items: CollectionItemWithMovie[]) {
     }
 }
 
-function generateReceiptHtml(items: CollectionItemWithMovie[]) {
+function generateReceiptHtml(items: CollectionItemWithMedia[]) {
     const date = new Date().toLocaleDateString();
     const time = new Date().toLocaleTimeString();
     const count = items.length;

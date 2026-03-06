@@ -6,7 +6,7 @@ import { useSound } from '@/context/SoundContext';
 import { useThriftMode } from '@/context/ThriftModeContext';
 import { useBulkUpdateCustomLists, useCollection } from '@/hooks/useCollection';
 import { getStacks } from '@/lib/collection-utils';
-import type { CollectionItemWithMovie } from '@/types/database';
+import type { CollectionItemWithMedia } from '@/types/database';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
@@ -33,7 +33,7 @@ export default function CuratedStackScreen() {
         );
     }
 
-    const stackItems = collection?.filter((item: CollectionItemWithMovie) =>
+    const stackItems = collection?.filter((item: CollectionItemWithMedia) =>
         item.custom_lists?.includes(decodedName)
     ) || [];
 
@@ -46,8 +46,8 @@ export default function CuratedStackScreen() {
 
     const doRemove = async () => {
         if (confirmMovieId === null) return;
-        const itemsToRemove = stackItems.filter((i: CollectionItemWithMovie) => i.movie_id === confirmMovieId);
-        const ids = itemsToRemove.map((i: CollectionItemWithMovie) => i.id);
+        const itemsToRemove = stackItems.filter((i: CollectionItemWithMedia) => i.movie_id === confirmMovieId);
+        const ids = itemsToRemove.map((i: CollectionItemWithMedia) => i.id);
         setConfirmMovieId(null);
         try {
             await removeMutation.mutateAsync({ itemIds: ids, listName: decodedName, isAdding: false });

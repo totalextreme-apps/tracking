@@ -1,10 +1,10 @@
-import { CollectionItemWithMovie } from '@/types/database';
+import { CollectionItemWithMedia } from '@/types/database';
 import { useMemo } from 'react';
 import { Dimensions, Text, View } from 'react-native';
 import { PieChart } from 'react-native-chart-kit';
 
 interface StatsSectionProps {
-    collection: CollectionItemWithMovie[] | undefined | null;
+    collection: CollectionItemWithMedia[] | undefined | null;
 }
 
 const screenWidth = Dimensions.get('window').width;

@@ -1,6 +1,6 @@
 import { useSound } from '@/context/SoundContext';
 import { getPosterUrl } from '@/lib/dummy-data';
-import type { CollectionItemWithMovie } from '@/types/database';
+import type { CollectionItemWithMedia } from '@/types/database';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useEffect, useRef } from 'react';
@@ -20,20 +20,22 @@ import { VHSCard } from './VHSCard';
 
 
 type OnDisplayCardProps = {
-  item: CollectionItemWithMovie;
+  item: CollectionItemWithMedia;
   scale?: number;
   onSingleTapAction?: () => void;
   onLongPressAction?: () => void;
-  onToggleFavorite?: (item: CollectionItemWithMovie) => void;
+  onToggleFavorite?: (item: CollectionItemWithMedia) => void;
 };
 
 export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPressAction, onToggleFavorite }: OnDisplayCardProps) {
   const { playSound } = useSound();
-  const movie = item.movies!;
+  const media = item.movies || item.shows;
+  if (!media) return null;
+
   const isPhysical = item.format !== 'Digital';
   const isWishlist = item.status === 'wishlist';
   const isGrail = item.is_grail;
-  const tmdbPosterUrl = getPosterUrl(movie.poster_path);
+  const tmdbPosterUrl = getPosterUrl(media.poster_path);
   const posterUrl = item.custom_poster_url || tmdbPosterUrl;
 
   const tiltX = useSharedValue(0);
@@ -212,7 +214,7 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
             ) : (
               <View className="flex-1 items-center justify-center bg-neutral-800">
                 <Text className="text-neutral-500 font-mono text-xs text-center px-2">
-                  {movie.title}
+                  {item.movies?.title || item.shows?.name}
                 </Text>
               </View>
             )}
@@ -241,10 +243,19 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
         }
 
         <View style={{ height: 'auto', minHeight: 30, width: 100, marginTop: 8, alignItems: 'center', justifyContent: 'flex-start' }}>
-          <View className="px-2 py-1 rounded mt-1 bg-amber-900/80">
-            <Text className="font-mono text-[10px] text-amber-200">
-              {isPhysical ? item.format : (item.digital_provider || 'Digital')}
-            </Text>
+          <View className="flex-row gap-1 mt-1">
+            <View className="px-2 py-1 rounded bg-amber-900/80">
+              <Text className="font-mono text-[10px] text-amber-200">
+                {isPhysical ? item.format : (item.digital_provider || 'Digital')}
+              </Text>
+            </View>
+            {item.media_type === 'tv' && (
+              <View className="px-2 py-1 rounded bg-blue-900/80">
+                <Text className="font-mono text-[10px] text-blue-200">
+                  S{item.season_number}
+                </Text>
+              </View>
+            )}
           </View>
         </View>
       </View>

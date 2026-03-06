@@ -1,4 +1,4 @@
-import type { CollectionItemWithMovie, Movie } from '@/types/database';
+import type { CollectionItemWithMedia, Movie } from '@/types/database';
 
 const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p';
 
@@ -15,8 +15,8 @@ export const createMovie = (overrides: Partial<Movie> = {}): Movie => ({
 
 export const createCollectionItem = (
   movie: Movie,
-  overrides: Partial<CollectionItemWithMovie> = {}
-): CollectionItemWithMovie => ({
+  overrides: Partial<CollectionItemWithMedia> = {}
+): CollectionItemWithMedia => ({
   id: Math.random().toString(36).substring(7),
   user_id: 'demo-user',
   movie_id: movie.id,
@@ -96,7 +96,7 @@ export const DUMMY_MOVIES: Movie[] = [
   }),
 ];
 
-export const DUMMY_ON_DISPLAY: CollectionItemWithMovie[] = [
+export const DUMMY_ON_DISPLAY: CollectionItemWithMedia[] = [
   createCollectionItem(DUMMY_MOVIES[0], {
     format: 'VHS',
     is_on_display: true,
@@ -115,7 +115,7 @@ export const DUMMY_ON_DISPLAY: CollectionItemWithMovie[] = [
 ];
 
 // Stacks: Group by movie. Multiple formats = stack. Highest quality on top.
-export const DUMMY_STACKS: CollectionItemWithMovie[][] = [
+export const DUMMY_STACKS: CollectionItemWithMedia[][] = [
   [
     createCollectionItem(DUMMY_MOVIES[0], { format: '4K' }),
     createCollectionItem(DUMMY_MOVIES[0], { format: 'VHS' }),
@@ -131,7 +131,7 @@ export const DUMMY_STACKS: CollectionItemWithMovie[][] = [
 ];
 
 // Thrift Mode: wishlist items (ghost cards, grails)
-export const DUMMY_WISHLIST_ON_DISPLAY: CollectionItemWithMovie[] = [
+export const DUMMY_WISHLIST_ON_DISPLAY: CollectionItemWithMedia[] = [
   createCollectionItem(DUMMY_MOVIES[1], {
     format: 'VHS',
     status: 'wishlist',
@@ -144,7 +144,7 @@ export const DUMMY_WISHLIST_ON_DISPLAY: CollectionItemWithMovie[] = [
   }),
 ];
 
-export const DUMMY_WISHLIST_STACKS: CollectionItemWithMovie[][] = [
+export const DUMMY_WISHLIST_STACKS: CollectionItemWithMedia[][] = [
   [createCollectionItem(DUMMY_MOVIES[5], { format: 'VHS', status: 'wishlist', is_grail: true })],
   [createCollectionItem(DUMMY_MOVIES[3], { format: 'BluRay', status: 'wishlist' })],
   [createCollectionItem(DUMMY_MOVIES[1], { format: 'DVD', status: 'wishlist' })],

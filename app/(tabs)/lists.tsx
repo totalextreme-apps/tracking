@@ -4,7 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useSound } from '@/context/SoundContext';
 import { useBulkUpdateCustomLists, useCollection, useRenameCustomList } from '@/hooks/useCollection';
 import { getCustomLists } from '@/lib/collection-utils';
-import type { CollectionItemWithMovie, MovieFormat } from '@/types/database';
+import type { CollectionItemWithMedia, MovieFormat } from '@/types/database';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
@@ -125,8 +125,8 @@ export default function ListsScreen() {
                     </View>
                 ) : (
                     customLists.map((listName) => {
-                        const stackItems: CollectionItemWithMovie[] = collection?.filter(
-                            (item: CollectionItemWithMovie) => item.custom_lists?.includes(listName)
+                        const stackItems: CollectionItemWithMedia[] = collection?.filter(
+                            (item: CollectionItemWithMedia) => item.custom_lists?.includes(listName)
                         ) || [];
 
                         const itemCount = stackItems.length;

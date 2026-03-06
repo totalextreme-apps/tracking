@@ -3,7 +3,7 @@ import { Image } from 'expo-image';
 import { Pressable, Text, View } from 'react-native';
 
 import { getPosterUrl } from '@/lib/dummy-data';
-import type { CollectionItemWithMovie } from '@/types/database';
+import type { CollectionItemWithMedia } from '@/types/database';
 
 const FORMAT_ORDER: Record<string, number> = {
     '4K': 5,
@@ -14,16 +14,16 @@ const FORMAT_ORDER: Record<string, number> = {
     // Add others if needed
 };
 
-function sortByQuality(items: CollectionItemWithMovie[]): CollectionItemWithMovie[] {
+function sortByQuality(items: CollectionItemWithMedia[]): CollectionItemWithMedia[] {
     return [...items].sort(
         (a, b) => (FORMAT_ORDER[b.format] ?? 0) - (FORMAT_ORDER[a.format] ?? 0)
     );
 }
 
 type StackListItemProps = {
-    stack: CollectionItemWithMovie[];
+    stack: CollectionItemWithMedia[];
     onPress?: () => void;
-    onAcquiredPress?: (item: CollectionItemWithMovie) => void;
+    onAcquiredPress?: (item: CollectionItemWithMedia) => void;
 };
 
 export function StackListItem({ stack, onPress, onAcquiredPress }: StackListItemProps) {

@@ -1,12 +1,12 @@
 import { getPosterUrl } from '@/lib/dummy-data';
-import type { CollectionItemWithMovie } from '@/types/database';
+import type { CollectionItemWithMedia } from '@/types/database';
 import { Image } from 'expo-image';
 import { Text, View } from 'react-native';
 import { GlossyCard } from './GlossyCard';
 import { VHSCard } from './VHSCard';
 
 type ShareableShelfProps = {
-    items: CollectionItemWithMovie[];
+    items: CollectionItemWithMedia[];
     mode?: 'display' | 'thrift';
 };
 

@@ -1,10 +1,10 @@
 
-import type { CollectionItemWithMovie } from '@/types/database';
+import type { CollectionItemWithMedia } from '@/types/database';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Platform } from 'react-native';
 
-export function generateCsv(items: CollectionItemWithMovie[]): string {
+export function generateCsv(items: CollectionItemWithMedia[]): string {
   const headers = [
     'TMDB ID',
     'Title',
@@ -37,7 +37,7 @@ export function generateCsv(items: CollectionItemWithMovie[]): string {
   return [headers.join(','), ...rows].join('\n');
 }
 
-export async function exportCollection(items: CollectionItemWithMovie[]) {
+export async function exportCollection(items: CollectionItemWithMedia[]) {
   if (items.length === 0) {
     throw new Error('No items to export');
   }

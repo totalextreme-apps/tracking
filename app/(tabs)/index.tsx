@@ -21,7 +21,7 @@ import { useCollection, useUpdateCollectionItem } from '@/hooks/useCollection';
 import { usePersistedState } from '@/hooks/usePersistedState';
 import { getGenres, getOnDisplayItems, getStacks } from '@/lib/collection-utils';
 import { supabase } from '@/lib/supabase'; // Restore Supabase
-import type { CollectionItemWithMovie } from '@/types/database';
+import type { CollectionItemWithMedia } from '@/types/database';
 import * as Sharing from 'expo-sharing';
 import { Modal } from 'react-native';
 import ViewShot from 'react-native-view-shot';
@@ -34,7 +34,7 @@ export default function HomeScreen() {
   // Using 'any' cast for useCollection result to prevent strict typing issues with refetch if definitions mismatch
   const { data: collection, isLoading: collectionLoading, isError: collectionError, refetch } = useCollection(userId) as any;
   const updateMutation = useUpdateCollectionItem(userId);
-  const [acquiredItem, setAcquiredItem] = useState<CollectionItemWithMovie | null>(null);
+  const [acquiredItem, setAcquiredItem] = useState<CollectionItemWithMedia | null>(null);
   const router = useRouter();
 
   const [sortBy, setSortBy] = useState<'recent' | 'title' | 'release' | 'rating'>('recent');
@@ -138,13 +138,16 @@ export default function HomeScreen() {
   try {
     if (searchQuery || formatFilter || genreFilter) {
       filteredStacks = filteredStacks.filter((stack: any) => {
-        const movie = stack[0]?.movies;
-        if (!movie) return false;
+        const media = stack[0]?.movies || stack[0]?.shows;
+        if (!media) return false;
 
         if (searchQuery) {
           const query = searchQuery.toLowerCase().replace(/[^a-z0-9]/g, '');
-          const matchesTitle = movie.title.toLowerCase().replace(/[^a-z0-9]/g, '').includes(query);
-          const matchesCast = movie.movie_cast?.some((c: any) => c.name.toLowerCase().replace(/[^a-z0-9]/g, '').includes(query));
+          const title = (stack[0]?.movies?.title || stack[0]?.shows?.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+          const matchesTitle = title.includes(query);
+
+          const cast = (stack[0]?.movies?.movie_cast || stack[0]?.shows?.cast || []);
+          const matchesCast = cast.some((c: any) => c.name.toLowerCase().replace(/[^a-z0-9]/g, '').includes(query));
 
           if (!matchesTitle && !matchesCast) return false;
         }
@@ -152,9 +155,8 @@ export default function HomeScreen() {
           if (!stack.some((i: any) => i.format === formatFilter)) return false;
         }
         if (genreFilter) {
-          const movieGenres = movie.genres?.map((g: any) => g.name) ?? [];
-          console.log(`Filtering ${movie.title}: movieGenres=${JSON.stringify(movieGenres)}, filter=${genreFilter}`);
-          if (!movieGenres.includes(genreFilter)) return false;
+          const mediaGenres = media.genres?.map((g: any) => g.name) ?? [];
+          if (!mediaGenres.includes(genreFilter)) return false;
         }
         return true;
       });
@@ -173,7 +175,7 @@ export default function HomeScreen() {
   const hasCollection = (collection?.length ?? 0) > 0;
   const isEmpty = !hasCollection && displayItems.length === 0;
 
-  const handleAcquiredPress = (item: CollectionItemWithMovie) => {
+  const handleAcquiredPress = (item: CollectionItemWithMedia) => {
     setAcquiredItem(item);
   };
 
@@ -201,7 +203,7 @@ export default function HomeScreen() {
     }
   };
 
-  const handleToggleFavorite = async (item: CollectionItemWithMovie) => {
+  const handleToggleFavorite = async (item: CollectionItemWithMedia) => {
     try {
       await updateMutation.mutateAsync({
         itemId: item.id,
@@ -212,7 +214,7 @@ export default function HomeScreen() {
     }
   };
 
-  const handleToggleGrail = async (item: CollectionItemWithMovie) => {
+  const handleToggleGrail = async (item: CollectionItemWithMedia) => {
     try {
       const isGrail = !item.is_grail;
 
@@ -442,7 +444,11 @@ export default function HomeScreen() {
                       scale={isDesktop ? 1.5 : 1.2}
                       onSingleTapAction={() => {
                         playSound('click');
-                        router.push(`/movie/${item.movie_id}`);
+                        if (item.media_type === 'tv') {
+                          router.push(`/show/${item.show_id}?season=${item.season_number}` as any);
+                        } else {
+                          router.push(`/movie/${item.movie_id}` as any);
+                        }
                       }}
                       onLongPressAction={thriftMode ? () => {
                         handleAcquiredPress(item);
@@ -718,7 +724,14 @@ export default function HomeScreen() {
                           onAcquiredPress={thriftMode ? handleAcquiredPress : undefined}
                           onLongPress={thriftMode ? handleAcquiredPress : undefined}
                           onToggleFavorite={thriftMode ? handleToggleGrail : handleToggleFavorite}
-                          onPress={() => router.push(`/movie/${stack[0].movie_id}`)}
+                          onPress={() => {
+                            const item = stack[0];
+                            if (item.media_type === 'tv') {
+                              router.push(`/show/${item.show_id}?season=${item.season_number}` as any);
+                            } else {
+                              router.push(`/movie/${item.movie_id}` as any);
+                            }
+                          }}
                           width={itemWidth}
                           height={itemHeight}
                           stackOffset={stackOffset}

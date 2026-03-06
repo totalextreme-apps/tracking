@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useSound } from '@/context/SoundContext';
 import { useBulkUpdateCustomLists, useCollection } from '@/hooks/useCollection';
 import { getPosterUrl } from '@/lib/dummy-data';
-import type { CollectionItemWithMovie } from '@/types/database';
+import type { CollectionItemWithMedia } from '@/types/database';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import Slider from '@react-native-community/slider';
 import * as Haptics from 'expo-haptics';
@@ -65,7 +65,7 @@ export default function CreateListScreen() {
         );
     }
 
-    const handleToggleSelect = (item: CollectionItemWithMovie) => {
+    const handleToggleSelect = (item: CollectionItemWithMedia) => {
         playSound('click');
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         setSelectedIds(prev => {
@@ -116,10 +116,10 @@ export default function CreateListScreen() {
     let filteredItems = collection || [];
     // Status filter first
     if (statusFilter !== 'all') {
-        filteredItems = filteredItems.filter((item: CollectionItemWithMovie) => item.status === statusFilter);
+        filteredItems = filteredItems.filter((item: CollectionItemWithMedia) => item.status === statusFilter);
     }
     if (searchQuery || formatFilter) {
-        filteredItems = filteredItems.filter((item: CollectionItemWithMovie) => {
+        filteredItems = filteredItems.filter((item: CollectionItemWithMedia) => {
             const movie = item.movies;
             if (!movie) return false;
             if (searchQuery) {
@@ -138,7 +138,7 @@ export default function CreateListScreen() {
     const totalPadding = 24 + gap * (numColumns - 1);
     const itemWidth = (containerWidth - totalPadding) / numColumns;
 
-    const renderItem = ({ item }: { item: CollectionItemWithMovie }) => {
+    const renderItem = ({ item }: { item: CollectionItemWithMedia }) => {
         const isSelected = selectedIds.has(item.id);
         const posterUrl = item.custom_poster_url || getPosterUrl(item.movies?.poster_path ?? null, 'w500');
         const isPhysical = item.format !== 'Digital';

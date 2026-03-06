@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase';
-import { getMovieById, type TmdbMovieResult } from '@/lib/tmdb';
-import type { CollectionItemWithMovie, MovieFormat } from '@/types/database';
+import { getMovieById, getTvShowById, type TmdbMediaResult } from '@/lib/tmdb';
+import type { CollectionItemWithMedia, MovieFormat } from '@/types/database';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
@@ -17,7 +17,7 @@ export function useCollection(userId: string | undefined) {
 
       const supabasePromise = supabase
         .from('collection_items')
-        .select(`*, movies (*)`)
+        .select(`*, movies (*), shows (*)`)
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
@@ -30,7 +30,7 @@ export function useCollection(userId: string | undefined) {
         if (error) throw error;
 
         // If we have real data, return it
-        if (data && data.length > 0) return data as CollectionItemWithMovie[];
+        if (data && data.length > 0) return data as CollectionItemWithMedia[];
 
         // Fallback to Mock User (if it's the mock ID and DB is empty)
         if (userId === '00000000-0000-0000-0000-000000000000') {
@@ -39,25 +39,29 @@ export function useCollection(userId: string | undefined) {
             {
               id: 'mock-1',
               user_id: '00000000-0000-0000-0000-000000000000',
-              movie_id: 'mock-movie-1',
+              media_type: 'movie',
+              movie_id: 1,
+              show_id: null,
+              season_number: null,
               format: 'VHS',
               status: 'owned',
               is_on_display: true,
               is_grail: true,
               created_at: new Date().toISOString(),
               movies: {
-                id: 'mock-movie-1',
+                id: 1,
                 title: '[DEV] ROBOT JOCK (MOCK)',
                 poster_path: '/poster.jpg',
                 backdrop_path: '/backdrop.jpg',
                 release_date: '1989-01-01',
                 genres: [{ id: 1, name: 'Sci-Fi' }]
-              }
+              },
+              shows: null
             }
           ] as any;
         }
 
-        return [] as CollectionItemWithMovie[];
+        return [] as CollectionItemWithMedia[];
       } catch (e) {
         console.error('Fetch error:', e);
         // Fallback for mock user if network is dead
@@ -76,71 +80,106 @@ export function useAddToCollection(userId: string | undefined) {
 
   return useMutation({
     mutationFn: async ({
-      tmdbMovie,
+      tmdbItem,
       formats,
       status = 'owned',
       edition = null,
+      seasonNumber = null,
     }: {
-      tmdbMovie: TmdbMovieResult;
+      tmdbItem: TmdbMediaResult;
       formats: MovieFormat[];
       status?: 'owned' | 'wishlist';
       edition?: string | null;
+      seasonNumber?: number | null;
     }) => {
       if (!userId) {
         console.error('useAddToCollection: No userId provided');
         throw new Error('Not authenticated');
       }
 
-      console.log('useAddToCollection: Starting for user', userId);
+      const mediaType = tmdbItem.media_type;
+      let itemData = tmdbItem;
 
-      let movieData = tmdbMovie;
-      if (!movieData.genres) {
+      if (!itemData.genres) {
         try {
-          movieData = await getMovieById(tmdbMovie.id);
+          if (mediaType === 'movie') {
+            itemData = await getMovieById(tmdbItem.id);
+          } else {
+            itemData = await getTvShowById(tmdbItem.id);
+          }
         } catch (e) {
-          console.warn('Failed to fetch full movie details', e);
+          console.warn('Failed to fetch full media details', e);
         }
       }
 
-      let combinedCast = (movieData as any).credits?.cast?.slice(0, 10).map((c: any) => ({
+      let combinedCast = (itemData as any).credits?.cast?.slice(0, 10).map((c: any) => ({
         id: c.id,
         name: c.name,
         character: c.character,
         profile_path: c.profile_path,
       })) ?? [];
 
-      const director = (movieData as any).credits?.crew?.find((c: any) => c.job === 'Director');
-      if (director) {
-        combinedCast.push({
-          id: director.id,
-          name: director.name,
-          character: 'Director',
-          profile_path: director.profile_path,
-        });
+      if (mediaType === 'movie') {
+        const director = (itemData as any).credits?.crew?.find((c: any) => c.job === 'Director');
+        if (director) {
+          combinedCast.push({
+            id: director.id,
+            name: director.name,
+            character: 'Director',
+            profile_path: director.profile_path,
+          });
+        }
       }
 
-      const moviePayload: any = {
-        tmdb_id: movieData.id,
-        title: movieData.title,
-        poster_path: movieData.poster_path,
-        backdrop_path: movieData.backdrop_path,
-        release_date: movieData.release_date,
-        genres: movieData.genres ?? null,
-        movie_cast: combinedCast.length > 0 ? combinedCast : null,
-      };
+      let internalId: number;
 
-      const { data: movieRow, error: movieError } = await supabase
-        .from('movies')
-        .upsert(moviePayload, { onConflict: 'tmdb_id' })
-        .select('id')
-        .single();
+      if (mediaType === 'movie') {
+        const moviePayload: any = {
+          tmdb_id: itemData.id,
+          title: itemData.title,
+          poster_path: itemData.poster_path,
+          backdrop_path: itemData.backdrop_path,
+          release_date: itemData.release_date,
+          genres: itemData.genres ?? null,
+          movie_cast: combinedCast.length > 0 ? combinedCast : null,
+        };
 
-      if (movieError) throw movieError;
+        const { data: movieRow, error: movieError } = await supabase
+          .from('movies')
+          .upsert(moviePayload, { onConflict: 'tmdb_id' })
+          .select('id')
+          .single();
 
-      const movieId = (movieRow as any).id;
+        if (movieError) throw movieError;
+        internalId = (movieRow as any).id;
+      } else {
+        const showPayload: any = {
+          tmdb_id: itemData.id,
+          name: itemData.name,
+          poster_path: itemData.poster_path,
+          backdrop_path: itemData.backdrop_path,
+          first_air_date: itemData.first_air_date,
+          genres: itemData.genres ?? null,
+          show_cast: combinedCast.length > 0 ? combinedCast : null,
+          number_of_seasons: itemData.number_of_seasons ?? null,
+        };
+
+        const { data: showRow, error: showError } = await supabase
+          .from('shows')
+          .upsert(showPayload, { onConflict: 'tmdb_id' })
+          .select('id')
+          .single();
+
+        if (showError) throw showError;
+        internalId = (showRow as any).id;
+      }
+
       const itemsToInsert = formats.map((format) => ({
         user_id: userId,
-        movie_id: movieId,
+        media_type: mediaType,
+        movie_id: mediaType === 'movie' ? internalId : null,
+        show_id: mediaType === 'tv' ? internalId : null,
+        season_number: seasonNumber,
         format,
         status,
         edition: edition || null,
@@ -152,16 +191,14 @@ export function useAddToCollection(userId: string | undefined) {
         .insert(itemsToInsert as any);
 
       if (itemError) {
-        // 23505 = unique_violation — same format already exists without a unique edition
         if (itemError.code === '23505') {
-          throw new Error('You already own this format. Fill in the Edition field to add another copy (e.g. "Director\'s Cut", "Criterion").');
+          throw new Error('You already own this format/season. Fill in the Edition field to add another copy.');
         }
         console.error('useAddToCollection: Item insert error:', itemError);
         throw itemError;
       }
 
-      console.log('useAddToCollection: All steps successful!');
-      return { movieId };
+      return { internalId };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['collection'] });
@@ -336,65 +373,72 @@ export function useRefreshLibrary(userId: string | undefined) {
     mutationFn: async () => {
       if (!userId) throw new Error('Not authenticated');
 
-      // 1. Fetch all distinct movies from collection
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // 1. Fetch all items with their media IDs
       const { data: items, error } = await (supabase as any)
         .from('collection_items')
         .select(`
-          movies (
-            tmdb_id
-          )
+          media_type,
+          movie_id,
+          show_id,
+          movies (tmdb_id),
+          shows (tmdb_id)
         `)
         .eq('user_id', userId);
 
       if (error) throw error;
 
-      // Dedup tmdb_ids
-      const tmdbIds = Array.from(new Set(items.map((i: any) => i.movies?.tmdb_id).filter(Boolean))) as number[];
+      // Dedup media items
+      const moviesToRefresh = Array.from(new Set(items.filter((i: any) => i.media_type === 'movie').map((i: any) => i.movies?.tmdb_id).filter(Boolean))) as number[];
+      const showsToRefresh = Array.from(new Set(items.filter((i: any) => i.media_type === 'tv').map((i: any) => i.shows?.tmdb_id).filter(Boolean))) as number[];
 
-      console.log(`Refreshing ${tmdbIds.length} movies...`);
-      setProgress({ current: 0, total: tmdbIds.length });
+      const total = moviesToRefresh.length + showsToRefresh.length;
+      console.log(`Refreshing ${moviesToRefresh.length} movies and ${showsToRefresh.length} shows...`);
+      setProgress({ current: 0, total });
 
-      // 2. Iterate and update
-      for (let i = 0; i < tmdbIds.length; i++) {
-        const tmdbId = tmdbIds[i];
+      let current = 0;
 
+      // 2. Refresh Movies
+      for (const tmdbId of moviesToRefresh) {
         try {
-          // Fetch from TMDB with credits
           const movieData = await getMovieById(tmdbId);
-
           let combinedCast = (movieData as any).credits?.cast?.slice(0, 10).map((c: any) => ({
             id: c.id,
             name: c.name,
             character: c.character,
             profile_path: c.profile_path,
           })) ?? [];
-
           const director = (movieData as any).credits?.crew?.find((c: any) => c.job === 'Director');
           if (director) {
-            combinedCast.push({
-              id: director.id,
-              name: director.name,
-              character: 'Director',
-              profile_path: director.profile_path,
-            });
+            combinedCast.push({ id: director.id, name: director.name, character: 'Director', profile_path: director.profile_path });
           }
-
-          const movie_cast = combinedCast.length > 0 ? combinedCast : null;
-
-          // Update DB
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await (supabase as any)
-            .from('movies')
-            .update({ movie_cast })
-            .eq('tmdb_id', tmdbId);
-
+          await (supabase as any).from('movies').update({ movie_cast: combinedCast }).eq('tmdb_id', tmdbId);
         } catch (e) {
           console.error(`Failed to refresh movie ${tmdbId}`, e);
         }
+        current++;
+        setProgress({ current, total });
+        await new Promise(r => setTimeout(r, 250));
+      }
 
-        setProgress({ current: i + 1, total: tmdbIds.length });
-        // Delay to be nice to API
+      // 3. Refresh Shows
+      for (const tmdbId of showsToRefresh) {
+        try {
+          const showData = await getTvShowById(tmdbId);
+          let combinedCast = (showData as any).credits?.cast?.slice(0, 10).map((c: any) => ({
+            id: c.id,
+            name: c.name,
+            character: c.character,
+            profile_path: c.profile_path,
+          })) ?? [];
+          await (supabase as any).from('shows').update({
+            show_cast: combinedCast,
+            number_of_seasons: showData.number_of_seasons
+          }).eq('tmdb_id', tmdbId);
+        } catch (e) {
+          console.error(`Failed to refresh show ${tmdbId}`, e);
+        }
+        current++;
+        setProgress({ current, total });
         await new Promise(r => setTimeout(r, 250));
       }
     },

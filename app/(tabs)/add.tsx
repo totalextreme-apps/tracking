@@ -22,7 +22,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useAddToCollection } from '@/hooks/useCollection';
 import { useTmdbSearch } from '@/hooks/useTmdbSearch';
 import { getPosterUrl } from '@/lib/dummy-data';
-import type { TmdbMovieResult } from '@/lib/tmdb';
+import { getTvShowById, type TmdbMediaResult } from '@/lib/tmdb';
 import type { MovieFormat } from '@/types/database';
 
 import BarcodeScanner from '@/components/BarcodeScanner';
@@ -36,11 +36,13 @@ export default function AddScreen() {
   const { userId } = useAuth();
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [selectedMovie, setSelectedMovie] = useState<TmdbMovieResult | null>(null);
+  const [selectedItem, setSelectedItem] = useState<TmdbMediaResult | null>(null);
   const [selectedFormats, setSelectedFormats] = useState<MovieFormat[]>([]);
+  const [selectedSeasons, setSelectedSeasons] = useState<number[]>([]);
   const [status, setStatus] = useState<'owned' | 'wishlist'>('owned');
   const [edition, setEdition] = useState('');
   const [triedToSubmit, setTriedToSubmit] = useState(false);
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
 
   const searchQuery = useTmdbSearch(debouncedQuery);
   const addMutation = useAddToCollection(userId);
@@ -58,8 +60,9 @@ export default function AddScreen() {
     useCallback(() => {
       setQuery('');
       setDebouncedQuery('');
-      setSelectedMovie(null);
+      setSelectedItem(null);
       setSelectedFormats([]);
+      setSelectedSeasons([]);
       setEdition('');
       setStatus('owned');
       setTriedToSubmit(false);
@@ -135,18 +138,31 @@ export default function AddScreen() {
     }
   };
 
-  const handleSelectMovie = (movie: TmdbMovieResult) => {
+  const handleSelectItem = async (item: TmdbMediaResult) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelectedFormats([]);
-    setSelectedMovie(movie);
+    setSelectedSeasons([]);
+    setSelectedItem(item);
     setQuery('');
     setDebouncedQuery('');
     setTriedToSubmit(false);
     Keyboard.dismiss();
+
+    if (item.media_type === 'tv') {
+      setIsLoadingDetails(true);
+      try {
+        const fullShow = await getTvShowById(item.id);
+        setSelectedItem(fullShow as TmdbMediaResult);
+      } catch (e) {
+        console.error('Failed to fetch TV details', e);
+      } finally {
+        setIsLoadingDetails(false);
+      }
+    }
   };
 
   const handleAdd = async () => {
-    if (!selectedMovie) return;
+    if (!selectedItem) return;
 
     if (!userId) {
       Alert.alert(
@@ -162,22 +178,42 @@ export default function AddScreen() {
       return;
     }
 
+    if (selectedItem.media_type === 'tv' && selectedSeasons.length === 0) {
+      setTriedToSubmit(true);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      return;
+    }
+
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
-      await addMutation.mutateAsync({
-        tmdbMovie: selectedMovie,
-        formats: selectedFormats,
-        status,
-        edition: edition.trim() || null,
-      });
+      if (selectedItem.media_type === 'tv') {
+        // Add each season separately
+        for (const season of selectedSeasons) {
+          await addMutation.mutateAsync({
+            tmdbItem: selectedItem,
+            formats: selectedFormats,
+            status,
+            edition: edition.trim() || null,
+            seasonNumber: season,
+          });
+        }
+      } else {
+        await addMutation.mutateAsync({
+          tmdbItem: selectedItem,
+          formats: selectedFormats,
+          status,
+          edition: edition.trim() || null,
+        });
+      }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.back();
     } catch (e: any) {
       const msg = e.message || String(e);
       if (msg.includes('duplicate key') || msg.includes('unique constraint')) {
-        Alert.alert('Already in collection', `You might already have ${selectedMovie.title} on one of these formats.`);
+        const title = selectedItem.title ?? selectedItem.name;
+        Alert.alert('Already in collection', `You might already have ${title} in your collection.`);
       } else {
-        Alert.alert('Could not add movie', msg);
+        Alert.alert('Could not add', msg);
       }
     }
   };
@@ -243,7 +279,7 @@ export default function AddScreen() {
           <TextInput
             nativeID="add-search-input"
             {...({ name: 'add-query' } as any)}
-            placeholder="Search movies or enter UPC..."
+            placeholder="Search movies & shows or UPC..."
             placeholderTextColor="#6b7280"
             value={query}
             onChangeText={setQuery}
@@ -265,24 +301,27 @@ export default function AddScreen() {
           </Pressable>
         </View>
 
-        {/* Movie Selected: Show Add Form */}
-        {selectedMovie ? (
+        {/* Item Selected: Show Add Form */}
+        {selectedItem ? (
           <View className="px-4 pb-4">
             <View className="bg-neutral-900 rounded-lg p-4 mb-4">
               <View className="flex-row items-center mb-4">
                 <View className="w-20 h-28 rounded bg-neutral-800 overflow-hidden">
-                  {getPosterUrl(selectedMovie.poster_path) && (
+                  {getPosterUrl(selectedItem.poster_path) && (
                     <RNImage
-                      source={{ uri: getPosterUrl(selectedMovie.poster_path)! }}
+                      source={{ uri: getPosterUrl(selectedItem.poster_path)! }}
                       className="w-full h-full"
                       resizeMode="cover"
                     />
                   )}
                 </View>
                 <View className="ml-3 flex-1">
-                  <Text className="text-white text-lg font-semibold">{selectedMovie.title}</Text>
+                  <Text className="text-white text-lg font-semibold">
+                    {selectedItem.title ?? selectedItem.name}
+                  </Text>
                   <Text className="text-neutral-500">
-                    {selectedMovie.release_date?.slice(0, 4) ?? '—'}
+                    {(selectedItem.release_date ?? selectedItem.first_air_date)?.slice(0, 4) ?? '—'}
+                    {selectedItem.media_type === 'tv' && ' • TV Series'}
                   </Text>
                 </View>
               </View>
@@ -312,7 +351,7 @@ export default function AddScreen() {
                 <Text className="text-amber-500/90 font-mono text-xs tracking-widest">FORMAT</Text>
                 {selectedFormats.length === 0 && triedToSubmit && (
                   <Text className="text-red-500 font-mono text-[10px] tracking-wider">
-                    * A format option must be selected
+                    * Required
                   </Text>
                 )}
               </View>
@@ -338,6 +377,64 @@ export default function AddScreen() {
                 })}
               </View>
 
+              {/* Seasons (TV Only) */}
+              {selectedItem.media_type === 'tv' && (
+                <View className="mb-4">
+                  <View className="flex-row items-baseline mb-2 gap-2">
+                    <Text className="text-amber-500/90 font-mono text-xs tracking-widest">SEASONS</Text>
+                    {selectedSeasons.length === 0 && triedToSubmit && (
+                      <Text className="text-red-500 font-mono text-[10px] tracking-wider">
+                        * Select at least one
+                      </Text>
+                    )}
+                  </View>
+                  {isLoadingDetails ? (
+                    <ActivityIndicator size="small" color="#f59e0b" className="mt-2" />
+                  ) : (
+                    <View className="flex-row flex-wrap gap-2">
+                      {selectedItem.seasons?.filter(s => s.season_number > 0).map((s) => {
+                        const isSelected = selectedSeasons.includes(s.season_number);
+                        return (
+                          <Pressable
+                            key={s.id}
+                            onPress={() => {
+                              setSelectedSeasons((prev) =>
+                                prev.includes(s.season_number)
+                                  ? prev.filter((sn) => sn !== s.season_number)
+                                  : [...prev, s.season_number]
+                              );
+                              Haptics.selectionAsync();
+                            }}
+                            className={`px-3 py-2 rounded ${isSelected ? 'bg-amber-600' : 'bg-neutral-800'}`}
+                          >
+                            <Text className={`font-mono text-xs ${isSelected ? 'text-white' : 'text-neutral-400'}`}>
+                              S{s.season_number}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                      {/* Box Set / Complete Series logic helper */}
+                      {selectedItem.seasons && selectedItem.seasons.length > 2 && (
+                        <Pressable
+                          onPress={() => {
+                            const all = selectedItem.seasons?.filter(s => s.season_number > 0).map(s => s.season_number) ?? [];
+                            setSelectedSeasons(selectedSeasons.length === all.length ? [] : all);
+                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                          }}
+                          className="px-3 py-2 rounded bg-neutral-800 border border-neutral-700"
+                        >
+                          <Text className="font-mono text-xs text-amber-500">
+                            {selectedSeasons.length === (selectedItem.seasons?.filter(s => s.season_number > 0).length ?? 0)
+                              ? 'DESELECT ALL'
+                              : 'SELECT ALL'}
+                          </Text>
+                        </Pressable>
+                      )}
+                    </View>
+                  )}
+                </View>
+              )}
+
               {/* Edition */}
               <Text className="text-amber-500/90 font-mono text-xs tracking-widest mb-2 mt-2">
                 EDITION (OPTIONAL)
@@ -345,7 +442,7 @@ export default function AddScreen() {
               <TextInput
                 nativeID="edition-input"
                 {...({ name: 'edition' } as any)}
-                placeholder="Theatrical, Unrated, Director's Cut, etc."
+                placeholder="Collector's Edition, Box Set, etc."
                 placeholderTextColor="#6b7280"
                 value={edition}
                 onChangeText={setEdition}
@@ -370,21 +467,21 @@ export default function AddScreen() {
               </Pressable>
             </View>
 
-            {/* CHOOSE DIFFERENT MOVIE Button */}
+            {/* CHOOSE DIFFERENT Button */}
             <Pressable
               onPress={() => {
-                setSelectedMovie(null);
+                setSelectedItem(null);
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               }}
               className="bg-red-700 py-3 rounded-lg items-center active:opacity-90"
               style={{ minHeight: 48 }}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Text className="text-white font-mono font-semibold">CHOOSE DIFFERENT MOVIE</Text>
+              <Text className="text-white font-mono font-semibold">CHOOSE DIFFERENT</Text>
             </Pressable>
           </View>
         ) : (
-          /* Search Results — plain Views instead of FlatList to avoid VirtualizedList nesting warning */
+          /* Search Results */
           <View className="flex-1 px-4">
             {searchQuery.isFetching && debouncedQuery.length >= 2 ? (
               <View className="py-12 items-center">
@@ -393,13 +490,13 @@ export default function AddScreen() {
               </View>
             ) : results.length > 0 ? (
               <View>
-                {results.map((item) => {
+                {results.map((item: any) => {
                   const posterUrl = getPosterUrl(item.poster_path, 'w154');
-                  const year = item.release_date?.slice(0, 4) ?? '—';
+                  const year = (item.release_date ?? item.first_air_date)?.slice(0, 4) ?? '—';
                   return (
                     <Pressable
-                      key={String(item.id)}
-                      onPress={() => handleSelectMovie(item)}
+                      key={`${item.media_type}-${item.id}`}
+                      onPress={() => handleSelectItem(item)}
                       className="flex-row items-center p-3 bg-neutral-900 rounded-lg mb-2 active:opacity-80"
                     >
                       <View className="rounded bg-neutral-800 overflow-hidden" style={{ width: 48, height: 72 }}>
@@ -412,8 +509,10 @@ export default function AddScreen() {
                         )}
                       </View>
                       <View className="ml-3 flex-1">
-                        <Text className="text-white font-medium" numberOfLines={2}>{item.title}</Text>
-                        <Text className="text-neutral-500 text-sm mt-0.5">{year}</Text>
+                        <Text className="text-white font-medium" numberOfLines={2}>{item.title ?? item.name}</Text>
+                        <Text className="text-neutral-500 text-sm mt-0.5">
+                          {year} {item.media_type === 'tv' ? '• TV' : '• Movie'}
+                        </Text>
                       </View>
                     </Pressable>
                   );

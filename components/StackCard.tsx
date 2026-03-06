@@ -1,6 +1,6 @@
 import { useSound } from '@/context/SoundContext';
 import { getPosterUrl } from '@/lib/dummy-data';
-import type { CollectionItemWithMovie } from '@/types/database';
+import type { CollectionItemWithMedia } from '@/types/database';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
@@ -39,18 +39,18 @@ const FORMAT_COLORS: Record<string, string> = {
   Digital: 'bg-green-500',
 };
 
-function sortByQuality(items: CollectionItemWithMovie[]): CollectionItemWithMovie[] {
+function sortByQuality(items: CollectionItemWithMedia[]): CollectionItemWithMedia[] {
   return [...items].sort(
     (a, b) => (FORMAT_ORDER[b.format] ?? 0) - (FORMAT_ORDER[a.format] ?? 0)
   );
 }
 
 type StackCardProps = {
-  stack: CollectionItemWithMovie[];
-  onAcquiredPress?: (item: CollectionItemWithMovie) => void;
-  onLongPress?: (item: CollectionItemWithMovie) => void;
+  stack: CollectionItemWithMedia[];
+  onAcquiredPress?: (item: CollectionItemWithMedia) => void;
+  onLongPress?: (item: CollectionItemWithMedia) => void;
   onPress?: () => void;
-  onToggleFavorite?: (item: CollectionItemWithMovie) => void;
+  onToggleFavorite?: (item: CollectionItemWithMedia) => void;
   width?: number;
   height?: number;
   stackOffset?: number;
@@ -80,7 +80,7 @@ export function StackCard({
 
   const sorted = useMemo(() => {
     // Deduplicate "Digital" formats - only keep the first one
-    const uniqueItems: CollectionItemWithMovie[] = [];
+    const uniqueItems: CollectionItemWithMedia[] = [];
     const hasDigital = false;
 
     // First, get the sorted list as usual
@@ -96,7 +96,7 @@ export function StackCard({
 
     // Aggressive deduplication: One coin per unique "Format + Edition" combo
     const seenKeys = new Set();
-    const result: CollectionItemWithMovie[] = [];
+    const result: CollectionItemWithMedia[] = [];
 
     for (const originalItem of items) {
       // Clone to avoid mutating original data
@@ -126,12 +126,14 @@ export function StackCard({
   }, [defaultSorted, activeId]);
 
   const topItem = sorted[0];
-  const movie = topItem.movies!;
+  const media = topItem.movies || topItem.shows;
+  if (!media) return null;
+
   const isPhysical = topItem.format !== 'Digital';
   const isWishlist = topItem.status === 'wishlist';
   const isGrail = topItem.is_grail;
   const isOnDisplay = topItem.is_on_display;
-  const tmdbPosterUrl = getPosterUrl(movie.poster_path);
+  const tmdbPosterUrl = getPosterUrl(media.poster_path);
   const hasCustomPoster = sorted.some(i => !!i.custom_poster_url);
   const posterUrl = sorted.find(i => !!i.custom_poster_url)?.custom_poster_url || tmdbPosterUrl;
 
@@ -253,7 +255,7 @@ export function StackCard({
           ) : (
             <View className="flex-1 items-center justify-center">
               <Text className="text-neutral-600 text-[10px] font-mono p-1 text-center">
-                {movie.title}
+                {topItem.movies?.title || topItem.shows?.name}
               </Text>
             </View>
           )}
@@ -261,10 +263,11 @@ export function StackCard({
         {/* Info Section */}
         <View className="flex-1 px-3 py-1 justify-center">
           <Text className="text-white font-bold text-sm leading-4" numberOfLines={1}>
-            {movie.title.toUpperCase()}
+            {(topItem.movies?.title || topItem.shows?.name || '').toUpperCase()}
           </Text>
           <Text className="text-neutral-500 font-mono text-[10px] my-0.5">
-            {movie.release_date?.substring(0, 4) || '????'}
+            {topItem.movies?.release_date?.substring(0, 4) || topItem.shows?.first_air_date?.substring(0, 4) || '????'}
+            {topItem.media_type === 'tv' && ` • S${topItem.season_number}`}
           </Text>
 
           {/* Format Coins */}
@@ -339,7 +342,7 @@ export function StackCard({
               ) : (
                 <View className="flex-1 items-center justify-center bg-neutral-800">
                   <Text className="text-neutral-500 font-mono text-xs text-center px-2">
-                    {movie.title}
+                    {topItem.movies?.title || topItem.shows?.name}
                   </Text>
                 </View>
               )}
@@ -429,7 +432,8 @@ export function StackCard({
             className="text-white font-mono text-sm mt-3 text-center"
             numberOfLines={2}
           >
-            {movie.title}
+            {topItem.movies?.title || topItem.shows?.name}
+            {topItem.media_type === 'tv' && ` (S${topItem.season_number})`}
           </Text>
           <View className="flex-row flex-wrap justify-center gap-1 mt-2">
             {/* Format Side-by-Side Coins (Deduplicated) */}
@@ -514,7 +518,7 @@ export function StackCard({
           ) : (
             <View className="flex-1 items-center justify-center bg-neutral-800">
               <Text className="text-neutral-500 font-mono text-xs text-center px-2">
-                {movie.title}
+                {topItem.movies?.title || topItem.shows?.name}
               </Text>
             </View>
           )}
@@ -530,7 +534,8 @@ export function StackCard({
           className="text-white font-mono text-xs mt-2 text-center"
           numberOfLines={1}
         >
-          {movie.title}
+          {topItem.movies?.title || topItem.shows?.name}
+          {topItem.media_type === 'tv' && ` (S${topItem.season_number})`}
         </Text>
 
         {/* Format Selectors for Digital (Deduplicated) */}

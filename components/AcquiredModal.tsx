@@ -2,11 +2,11 @@ import { useRef } from 'react';
 import { Modal, View, Text, Pressable } from 'react-native';
 import ConfettiCannon from 'react-native-confetti-cannon';
 import * as Haptics from 'expo-haptics';
-import type { CollectionItemWithMovie } from '@/types/database';
+import type { CollectionItemWithMedia } from '@/types/database';
 
 type AcquiredModalProps = {
   visible: boolean;
-  item: CollectionItemWithMovie | null;
+  item: CollectionItemWithMedia | null;
   onClose: () => void;
   onAcquired: () => void | Promise<void>;
   isPending?: boolean;

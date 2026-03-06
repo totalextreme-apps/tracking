@@ -1,11 +1,11 @@
 import { getPosterUrl } from '@/lib/dummy-data';
-import type { CollectionItemWithMovie } from '@/types/database';
+import type { CollectionItemWithMedia } from '@/types/database';
 import { Image } from 'expo-image';
 import { Text, View } from 'react-native';
 
 type ShareableCardProps = {
-    movie: CollectionItemWithMovie['movies'];
-    items: CollectionItemWithMovie[];
+    movie: CollectionItemWithMedia['movies'];
+    items: CollectionItemWithMedia[];
 };
 
 export function ShareableCard({ movie, items }: ShareableCardProps) {
