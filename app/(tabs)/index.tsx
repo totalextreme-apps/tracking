@@ -43,6 +43,7 @@ export default function HomeScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [formatFilter, setFormatFilter] = useState<string | null>(null);
   const [genreFilter, setGenreFilter] = useState<string | null>(null);
+  const [mediaTypeFilter, setMediaTypeFilter] = useState<'movie' | 'tv' | null>(null);
   const [isGenreDropdownOpen, setIsGenreDropdownOpen] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const viewShotRef = useRef<ViewShot>(null);
@@ -94,7 +95,10 @@ export default function HomeScreen() {
     }, 1500);
   };
 
-  const onDisplay = getOnDisplayItems(collection);
+  const onDisplay = thriftMode
+    ? collection?.filter((item: any) => item.is_grail) ?? []
+    : getOnDisplayItems(collection);
+
   const genres = getGenres(collection);
   const stacks = getStacks(collection, thriftMode, sortBy, sortOrder);
 
@@ -119,6 +123,9 @@ export default function HomeScreen() {
       if (genreFilter) {
         const hasGenre = media.genres?.some((g: any) => g.name === genreFilter);
         if (!hasGenre) return false;
+      }
+      if (mediaTypeFilter) {
+        if (stack[0].media_type !== mediaTypeFilter) return false;
       }
       return true;
     });
@@ -256,6 +263,27 @@ export default function HomeScreen() {
                 </View>
               </View>
 
+              <View className="flex-row items-center bg-neutral-900 rounded-full border border-neutral-800 p-0.5 mr-2">
+                <Pressable
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setMediaTypeFilter(mediaTypeFilter === 'movie' ? null : 'movie');
+                  }}
+                  className={`px-3 py-1 rounded-full ${mediaTypeFilter === 'movie' ? 'bg-amber-500' : ''}`}
+                >
+                  <Text className={`font-mono text-[8px] ${mediaTypeFilter === 'movie' ? 'text-black' : 'text-neutral-500'}`}>FILM</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setMediaTypeFilter(mediaTypeFilter === 'tv' ? null : 'tv');
+                  }}
+                  className={`px-3 py-1 rounded-full ${mediaTypeFilter === 'tv' ? 'bg-amber-500' : ''}`}
+                >
+                  <Text className={`font-mono text-[8px] ${mediaTypeFilter === 'tv' ? 'text-black' : 'text-neutral-500'}`}>TAPE</Text>
+                </Pressable>
+              </View>
+
               <Pressable
                 onPress={() => setIsGenreDropdownOpen(true)}
                 className={`px-4 py-1.5 rounded-full border flex-row items-center gap-2 ${genreFilter ? 'bg-amber-500/20 border-amber-500/50' : 'bg-neutral-900 border-neutral-800'}`}
@@ -308,6 +336,13 @@ export default function HomeScreen() {
                       <OnDisplayCard
                         key={item.id}
                         item={item}
+                        onSingleTapAction={() => {
+                          if (item.media_type === 'tv') {
+                            router.push(`/show/${item.show_id}?season=${item.season_number}` as any);
+                          } else {
+                            router.push(`/movie/${item.movie_id}` as any);
+                          }
+                        }}
                         onLongPressAction={() => handleLongPress(item)}
                         onToggleFavorite={toggleFavorite}
                       />
