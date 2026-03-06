@@ -137,7 +137,7 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
   // Unified Width: 100 for proper spacing
   const baseWidth = 100;
   const layoutWidth = baseWidth * scale + 10;
-  const contentHeight = (isPhysical ? 230 : 170) * scale;
+  const contentHeight = (isPhysical ? 180 : 160) * scale;
 
   // Ensure wrapper has explicit dimensions to prevent collapse
   const wrapperStyle = {
@@ -145,7 +145,7 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
     alignItems: 'center' as const,
     marginHorizontal: 2,
     justifyContent: 'center' as const,
-    minHeight: contentHeight,
+    height: contentHeight,
     overflow: 'visible' as const,
   };
 

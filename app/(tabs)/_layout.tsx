@@ -158,6 +158,13 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="show/[id]"
+        options={{
+          headerShown: false,
+          href: null,
+        }}
+      />
+      <Tabs.Screen
         name="create-list"
         options={{
           headerShown: false,
