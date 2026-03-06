@@ -48,6 +48,7 @@ export default function HomeScreen() {
   const [showShareModal, setShowShareModal] = useState(false);
   const viewShotRef = useRef<ViewShot>(null);
   const shelfRef = useRef<ScrollView>(null);
+  const [shelfScrollX, setShelfScrollX] = useState(0);
 
   const [refreshing, setRefreshing] = useState(false);
   const [showRewind, setShowRewind] = useState(false);
@@ -104,7 +105,7 @@ export default function HomeScreen() {
 
   // Filter Logic
   let filteredStacks = stacks || [];
-  if (searchQuery || formatFilter || genreFilter) {
+  if (searchQuery || formatFilter || genreFilter || mediaTypeFilter) {
     filteredStacks = filteredStacks.filter((stack: any) => {
       const media = stack[0]?.movies || stack[0]?.shows;
       if (!media) return false;
@@ -154,7 +155,14 @@ export default function HomeScreen() {
   const scrollShelfRight = () => {
     if (shelfRef.current) {
       playSound('click');
-      shelfRef.current.scrollTo({ x: 300, animated: true });
+      shelfRef.current.scrollTo({ x: shelfScrollX + 400, animated: true });
+    }
+  };
+
+  const scrollShelfLeft = () => {
+    if (shelfRef.current) {
+      playSound('click');
+      shelfRef.current.scrollTo({ x: Math.max(0, shelfScrollX - 400), animated: true });
     }
   };
 
@@ -316,12 +324,25 @@ export default function HomeScreen() {
               <View className="mb-4 mt-2">
                 <View className="px-6 flex-row items-center justify-between mb-2">
                   <View className="flex-row items-center gap-2">
-                    <Text className="text-amber-500 font-mono text-[10px] uppercase">ON DISPLAY</Text>
+                    <Text className="text-amber-500 font-mono text-[10px] uppercase">{thriftMode ? 'GRAILS' : 'ON DISPLAY'}</Text>
                     <Text className="text-neutral-600 font-mono text-[10px]">/ {onDisplay.length} ITEMS</Text>
                   </View>
-                  <Pressable onPress={scrollShelfRight}>
-                    <Text className="text-neutral-600 font-mono text-[8px] tracking-widest uppercase">SCROLL RIGHT »</Text>
-                  </Pressable>
+                  <View className="flex-row items-center gap-2">
+                    {shelfScrollX > 20 && (
+                      <Pressable
+                        onPress={scrollShelfLeft}
+                        className="bg-neutral-900 w-8 h-8 items-center justify-center rounded-full border border-neutral-800 active:bg-neutral-800"
+                      >
+                        <Ionicons name="chevron-back" size={16} color="#666" />
+                      </Pressable>
+                    )}
+                    <Pressable
+                      onPress={scrollShelfRight}
+                      className="bg-neutral-900 w-8 h-8 items-center justify-center rounded-full border border-neutral-800 active:bg-neutral-800"
+                    >
+                      <Ionicons name="chevron-forward" size={16} color="#666" />
+                    </Pressable>
+                  </View>
                 </View>
 
                 <ViewShot ref={viewShotRef} options={{ format: 'jpg', quality: 0.9 }}>
@@ -330,6 +351,8 @@ export default function HomeScreen() {
                     horizontal
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={{ paddingLeft: 24, paddingRight: 40 }}
+                    onScroll={(e) => setShelfScrollX(e.nativeEvent.contentOffset.x)}
+                    scrollEventThrottle={16}
                     className="py-4"
                   >
                     {onDisplay.map((item: any) => (
