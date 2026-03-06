@@ -372,8 +372,9 @@ export function StackCard({
             )}
             {sorted.map((item, idx) => {
               const offset = idx * stackOffset;
-              const itemMovie = item.movies!;
-              const url = item.custom_poster_url || getPosterUrl(itemMovie.poster_path);
+              const itemMedia = item.movies || item.shows;
+              if (!itemMedia) return null;
+              const url = item.custom_poster_url || getPosterUrl(itemMedia.poster_path);
               const isVHS = item.format === 'VHS';
               const isDisc = ['DVD', 'BluRay', '4K'].includes(item.format);
 
@@ -420,7 +421,7 @@ export function StackCard({
                   ) : (
                     <View className="flex-1 items-center justify-center bg-neutral-800">
                       <Text className="text-neutral-500 font-mono text-xs text-center px-2">
-                        {itemMovie.title}
+                        {(itemMedia as any).title || (itemMedia as any).name}
                       </Text>
                     </View>
                   )}

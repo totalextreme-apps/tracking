@@ -29,8 +29,9 @@ type StackListItemProps = {
 export function StackListItem({ stack, onPress, onAcquiredPress }: StackListItemProps) {
     const sorted = sortByQuality(stack);
     const topItem = sorted[0];
-    const movie = topItem.movies!;
-    const posterUrl = topItem.custom_poster_url || getPosterUrl(movie.poster_path, 'w92');
+    const media = topItem.movies || topItem.shows;
+    if (!media) return null;
+    const posterUrl = topItem.custom_poster_url || getPosterUrl(media.poster_path, 'w92');
 
     const handlePress = () => {
         Haptics.selectionAsync();
@@ -62,10 +63,10 @@ export function StackListItem({ stack, onPress, onAcquiredPress }: StackListItem
             {/* Info */}
             <View className="flex-1 justify-center">
                 <Text className="text-white font-bold font-mono text-base mb-1" numberOfLines={1}>
-                    {movie.title}
+                    {(media as any).title || (media as any).name}
                 </Text>
                 <Text className="text-neutral-500 font-mono text-xs mb-2">
-                    {movie.release_date?.slice(0, 4) ?? '—'}
+                    {((media as any).release_date || (media as any).first_air_date)?.slice(0, 4) ?? '—'}
                 </Text>
 
                 {/* Formats */}

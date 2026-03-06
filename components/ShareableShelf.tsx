@@ -40,9 +40,9 @@ export function ShareableShelf({ items, mode = 'display' }: ShareableShelfProps)
             {/* Grid of Movies */}
             <View className="flex-1 w-full px-4 flex-row flex-wrap justify-center gap-4 content-start pt-4">
                 {displayItems.map((item, idx) => {
-                    const movie = item.movies;
-                    if (!movie) return null;
-                    const posterUrl = getPosterUrl(movie.poster_path);
+                    const media = item.movies || item.shows;
+                    if (!media) return null;
+                    const posterUrl = item.custom_poster_url || getPosterUrl(media.poster_path);
 
                     return (
                         <View key={item.id || idx} className="w-[28%] aspect-[2/3] relative mb-4" style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.5, shadowRadius: 5 }}>

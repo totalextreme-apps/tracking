@@ -4,14 +4,14 @@ import { Image } from 'expo-image';
 import { Text, View } from 'react-native';
 
 type ShareableCardProps = {
-    movie: CollectionItemWithMedia['movies'];
+    media: CollectionItemWithMedia['movies'] | CollectionItemWithMedia['shows'];
     items: CollectionItemWithMedia[];
 };
 
-export function ShareableCard({ movie, items }: ShareableCardProps) {
-    if (!movie) return null;
+export function ShareableCard({ media, items }: ShareableCardProps) {
+    if (!media) return null;
     const customPoster = items.find(i => i.custom_poster_url)?.custom_poster_url;
-    const posterUrl = customPoster || getPosterUrl(movie.poster_path);
+    const posterUrl = customPoster || getPosterUrl(media.poster_path);
 
     return (
         <View className="bg-neutral-950 p-6 items-center justify-center w-[320px] aspect-[9/16] border-8 border-white overflow-hidden relative">
@@ -41,10 +41,10 @@ export function ShareableCard({ movie, items }: ShareableCardProps) {
             {/* Metadata */}
             <View className="w-full px-4 items-center">
                 <Text className="text-white font-bold text-center text-xl mb-1 leading-6" numberOfLines={2}>
-                    {movie.title}
+                    {(media as any).title || (media as any).name}
                 </Text>
                 <Text className="text-neutral-500 font-mono text-xs mb-4">
-                    {movie.release_date?.substring(0, 4)}
+                    {((media as any).release_date || (media as any).first_air_date)?.substring(0, 4)}
                 </Text>
 
                 {/* Formats */}
