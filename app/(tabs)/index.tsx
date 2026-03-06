@@ -183,9 +183,21 @@ export default function HomeScreen() {
 
   const navigateToDetail = (item: CollectionItemWithMedia) => {
     if (item.media_type === 'tv') {
-      router.push(`/show/${item.show_id}?season=${item.season_number}`);
+      const showId = item.show_id || item.shows?.id;
+      if (showId) {
+        router.push({
+          pathname: "/show/[id]",
+          params: { id: showId, season: item.season_number || 1 }
+        } as any);
+      }
     } else {
-      router.push(`/movie/${item.movie_id}`);
+      const movieId = item.movie_id || item.movies?.id;
+      if (movieId) {
+        router.push({
+          pathname: "/movie/[id]",
+          params: { id: movieId }
+        } as any);
+      }
     }
   };
 
@@ -266,19 +278,19 @@ export default function HomeScreen() {
                   onPress={() => { setMediaTypeFilter(null); playSound('click'); }}
                   className={`px-4 py-2 rounded-full ${mediaTypeFilter === null ? 'bg-neutral-800' : ''}`}
                 >
-                  <Text className={`font-mono text-[10px] ${mediaTypeFilter === null ? 'text-amber-500 font-bold' : 'text-neutral-500'}`}>ALL</Text>
+                  <Text className={`font-bold text-xs ${mediaTypeFilter === null ? 'text-amber-500' : 'text-neutral-500'}`}>ALL</Text>
                 </Pressable>
                 <Pressable
                   onPress={() => { setMediaTypeFilter('movie'); playSound('click'); }}
                   className={`px-4 py-2 rounded-full ${mediaTypeFilter === 'movie' ? 'bg-neutral-800' : ''}`}
                 >
-                  <Text className={`font-mono text-[10px] ${mediaTypeFilter === 'movie' ? 'text-amber-500 font-bold' : 'text-neutral-500'}`}>FILM</Text>
+                  <Text className={`font-bold text-xs ${mediaTypeFilter === 'movie' ? 'text-amber-500' : 'text-neutral-500'}`}>FILM</Text>
                 </Pressable>
                 <Pressable
                   onPress={() => { setMediaTypeFilter('tv'); playSound('click'); }}
                   className={`px-4 py-2 rounded-full ${mediaTypeFilter === 'tv' ? 'bg-neutral-800' : ''}`}
                 >
-                  <Text className={`font-mono text-[10px] ${mediaTypeFilter === 'tv' ? 'text-amber-500 font-bold' : 'text-neutral-500'}`}>TV</Text>
+                  <Text className={`font-bold text-xs ${mediaTypeFilter === 'tv' ? 'text-amber-500' : 'text-neutral-500'}`}>TV</Text>
                 </Pressable>
               </View>
 
@@ -289,7 +301,7 @@ export default function HomeScreen() {
                   placeholderTextColor="#333"
                   value={searchQuery}
                   onChangeText={setSearchQuery}
-                  className="flex-1 text-white font-mono text-[10px]"
+                  className="flex-1 text-white font-mono text-xs"
                   autoCapitalize="none"
                   style={{ padding: 0 }}
                 />
@@ -323,9 +335,11 @@ export default function HomeScreen() {
             {onDisplay.length > 0 && (
               <View className="mb-4 mt-4">
                 <View className="px-6 flex-row items-center justify-between mb-2">
-                  <View className="flex-row items-center gap-2">
-                    <Text className="text-amber-500 font-mono text-[10px] uppercase font-bold tracking-widest">{thriftMode ? 'MY GRAILS' : 'ON DISPLAY'}</Text>
-                    <Text className="text-neutral-600 font-mono text-[10px]">/ {onDisplay.length}</Text>
+                  <View className="flex-row items-baseline gap-2">
+                    <Text className="text-amber-500 font-bold text-2xl tracking-tighter uppercase" style={{ fontFamily: 'VCR_OSD_MONO' }}>
+                      {thriftMode ? 'GRAILS' : 'ON DISPLAY'}
+                    </Text>
+                    <Text className="text-neutral-600 font-mono text-xs opacity-50 ml-1">/ {onDisplay.length}</Text>
                   </View>
                   <View className="flex-row items-center gap-2">
                     <Pressable onPress={scrollShelfLeft} className="p-2 bg-neutral-900 rounded-full border border-neutral-800 active:bg-neutral-800">
@@ -361,8 +375,8 @@ export default function HomeScreen() {
 
             <View className="px-6 pb-4">
               <View className="flex-row items-center justify-between mb-6">
-                <Text className="text-neutral-600 font-mono text-[10px] tracking-tighter uppercase italic">
-                  {thriftMode ? 'Wanted List' : 'The Stacks'}
+                <Text className="text-amber-500 font-bold text-2xl tracking-tighter uppercase" style={{ fontFamily: 'VCR_OSD_MONO' }}>
+                  {thriftMode ? 'WISH LIST' : 'THE STACKS'}
                 </Text>
 
                 <View className="flex-row bg-neutral-900 rounded-md p-1 border border-neutral-800">

@@ -70,22 +70,36 @@ export default function ShowDetailScreen() {
     const deleteMutation = useDeleteCollectionItem(userId);
     const addMutation = useAddToCollection(userId);
 
-    const showId = typeof id === 'string' ? id : undefined;
+    // For TV shows, we group by show_id and season_number.
+    const showIdNum = typeof id === 'string' ? parseInt(id, 10) : undefined;
     const { season: seasonQuery } = useLocalSearchParams<{ season?: string }>();
     const seasonNumber = seasonQuery && seasonQuery !== 'undefined' && seasonQuery !== 'null' ? parseInt(seasonQuery, 10) : 1;
 
-    const showItems = collection?.filter((item: any) =>
-        item.show_id === showId && (seasonNumber === undefined || item.season_number === seasonNumber)
-    ) ?? [];
+    // Find items matching this show and season
+    const showItems = collection?.filter((item: any) => {
+        const itemShowId = item.show_id;
+        // Try matching by internal ID, and as a fallback by TMDB ID
+        return (itemShowId === showIdNum || (item.shows?.tmdb_id === showIdNum)) &&
+            (seasonNumber === undefined || item.season_number === seasonNumber);
+    }) ?? [];
 
     const show = showItems[0]?.shows;
     const activeShow = show || persistedShow;
+
+    const [isNotFound, setIsNotFound] = useState(false);
 
     useEffect(() => {
         if (show && !persistedShow) {
             setPersistedShow(show);
         }
-    }, [show, persistedShow]);
+        // If collection is loaded and we still have no show, it's not found
+        if (collection && showItems.length === 0 && !persistedShow && !activeShow) {
+            const timer = setTimeout(() => setIsNotFound(true), 3000);
+            return () => clearTimeout(timer);
+        } else {
+            setIsNotFound(false);
+        }
+    }, [show, persistedShow, collection, showItems.length]);
 
     const { data: tmdbShow } = useQuery({
         queryKey: ['tmdb-show', activeShow?.tmdb_id],
@@ -222,10 +236,24 @@ export default function ShowDetailScreen() {
         }
     };
 
-    if (!activeShow || !showId) {
+    if (isNotFound) {
+        return (
+            <View className="flex-1 bg-neutral-950 items-center justify-center p-8">
+                <Ionicons name="alert-circle-outline" size={48} color="#ef4444" />
+                <Text className="text-white font-bold text-lg mt-4 text-center">Show Not Found</Text>
+                <Text className="text-neutral-500 text-center mt-2">Could not find this show in your collection.</Text>
+                <Pressable onPress={() => router.back()} className="mt-8 bg-neutral-800 px-6 py-3 rounded-lg">
+                    <Text className="text-white font-bold">GO BACK</Text>
+                </Pressable>
+            </View>
+        );
+    }
+
+    if (!activeShow || !showIdNum) {
         return (
             <View className="flex-1 bg-neutral-950 items-center justify-center">
-                <ActivityIndicator color="#f59e0b" />
+                <ActivityIndicator size="large" color="#f59e0b" />
+                <Text className="text-neutral-500 font-mono text-xs mt-4 uppercase tracking-widest">Loading Show...</Text>
             </View>
         );
     }
@@ -470,8 +498,8 @@ export default function ShowDetailScreen() {
             <ImageCropModal
                 visible={cropModalVisible}
                 imageUri={pendingImageUri || ''}
-                aspectRatio={customArtType === 'poster' ? 2 / 3 : 16 / 9}
-                onCancel={() => { setCropModalVisible(false); setPendingImageUri(null); }}
+                targetRatio={customArtType === 'poster' ? 2 / 3 : 16 / 9}
+                onClose={() => { setCropModalVisible(false); setPendingImageUri(null); }}
                 onSave={handleSaveCustomArt}
             />
 
