@@ -98,20 +98,24 @@ export function useAddToCollection(userId: string | undefined) {
       }
 
       const mediaType = tmdbItem.media_type;
+      console.log('ADD Step 1: Mutation started for', mediaType, tmdbItem.id);
       let itemData = tmdbItem;
 
       if (!itemData.genres) {
+        console.log('ADD Step 2: Fetching full details from TMDB');
         try {
           if (mediaType === 'movie') {
             itemData = await getMovieById(tmdbItem.id);
           } else {
             itemData = await getTvShowById(tmdbItem.id);
           }
+          console.log('ADD Step 2.5: Details fetched');
         } catch (e) {
-          console.warn('Failed to fetch full media details', e);
+          console.warn('ADD Step 2 Failure: Failed to fetch details', e);
         }
       }
 
+      console.log('ADD Step 3: Preparing cast data');
       let combinedCast = (itemData as any).credits?.cast?.slice(0, 10).map((c: any) => ({
         id: c.id,
         name: c.name,
@@ -134,6 +138,7 @@ export function useAddToCollection(userId: string | undefined) {
       let internalId: number;
 
       if (mediaType === 'movie') {
+        console.log('ADD Step 4: Upserting media to database');
         const moviePayload: any = {
           tmdb_id: itemData.id,
           title: itemData.title,
@@ -150,8 +155,12 @@ export function useAddToCollection(userId: string | undefined) {
           .select('id')
           .single();
 
-        if (movieError) throw movieError;
+        if (movieError) {
+          console.error('ADD Step 4 Failure: UPSERT ERROR', movieError);
+          throw movieError;
+        }
         internalId = (movieRow as any).id;
+        console.log('ADD Step 4 Complete: Internal ID is', internalId);
       } else {
         const showPayload: any = {
           tmdb_id: itemData.id,
@@ -185,23 +194,25 @@ export function useAddToCollection(userId: string | undefined) {
         edition: edition || null,
       }));
 
-      console.log('useAddToCollection: Inserting collection items:', itemsToInsert.length);
+      console.log('ADD Step 5: Inserting collection links', itemsToInsert);
       const { error: itemError } = await supabase
         .from('collection_items')
         .insert(itemsToInsert as any);
 
       if (itemError) {
         if (itemError.code === '23505') {
+          console.warn('ADD Step 5 Failure (Conflict): User already owns this');
           throw new Error('You already own this format/season. Fill in the Edition field to add another copy.');
         }
-        console.error('useAddToCollection: Item insert error:', itemError);
+        console.error('ADD Step 5 Failure: ITEM INSERT ERROR', itemError);
         throw itemError;
       }
 
+      console.log('ADD Step 6: Success!');
       return { internalId };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['collection'] });
+      queryClient.invalidateQueries({ queryKey: ['collection', userId] });
     },
   });
 }

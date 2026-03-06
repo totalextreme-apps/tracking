@@ -77,7 +77,7 @@ export default function ShowDetailScreen() {
     // I need to update index.tsx to route to /show/${item.show_id}?season=${item.season_number}
 
     const { season: seasonQuery } = useLocalSearchParams<{ season?: string }>();
-    const seasonNumber = seasonQuery ? parseInt(seasonQuery, 10) : undefined;
+    const seasonNumber = seasonQuery && seasonQuery !== 'undefined' && seasonQuery !== 'null' ? parseInt(seasonQuery, 10) : 1;
 
     const showItems = collection?.filter((item: any) =>
         item.show_id === showId && (seasonNumber === undefined || item.season_number === seasonNumber)

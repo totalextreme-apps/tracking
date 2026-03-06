@@ -35,12 +35,21 @@ async function tmdbFetch<T>(path: string): Promise<T> {
   if (!API_KEY) {
     throw new Error('EXPO_PUBLIC_TMDB_API_KEY is not set in .env');
   }
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
   const url = `${TMDB_BASE}${path}${path.includes('?') ? '&' : '?'}api_key=${API_KEY}`;
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`TMDB API error: ${res.status}`);
+
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    if (!res.ok) {
+      throw new Error(`TMDB API error: ${res.status}`);
+    }
+    return await res.json();
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
   }
-  return res.json();
 }
 
 export async function searchMedia(query: string, page = 1): Promise<TmdbSearchResponse> {
