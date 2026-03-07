@@ -92,10 +92,19 @@ export function CaptchaModal({ visible, onSuccess, onCancel }: CaptchaModalProps
     }, [visible, siteKey]); // Changed onSuccess to siteKey to avoid effect spam but track key changes
 
     const host = typeof window !== 'undefined' ? window.location.hostname : '';
-    const isPreview = host.includes('vercel.app') || host.includes('staging') || host.includes('amplifyapp') || host.includes('tracking');
+    const isProduction = host === 'mediatracking.app' || host === 'www.mediatracking.app';
     const [forceBypassVisible, setForceBypassVisible] = React.useState(false);
 
-    const showBypass = Platform.OS !== 'web' || __DEV__ || isPreview || !!turnstileError || forceBypassVisible;
+    React.useEffect(() => {
+        if (visible && !isProduction) {
+            const timer = setTimeout(() => {
+                setForceBypassVisible(true);
+            }, 4000); // Auto-show bypass after 4s on non-prod
+            return () => clearTimeout(timer);
+        }
+    }, [visible, isProduction]);
+
+    const showBypass = Platform.OS !== 'web' || __DEV__ || !isProduction || !!turnstileError || forceBypassVisible;
 
     if (!visible) return null;
 

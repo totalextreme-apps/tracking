@@ -158,14 +158,23 @@ export default function HomeScreen() {
   const scrollShelfRight = () => {
     if (shelfRef.current) {
       playSound('click');
-      shelfRef.current.scrollTo({ x: 500, animated: true });
+      // On web we use current scroll position to increment
+      if (Platform.OS === 'web') {
+        (shelfRef.current as any).scrollTo({ x: (shelfRef.current as any).scrollLeft + 400, animated: true });
+      } else {
+        shelfRef.current.scrollTo({ x: 500, animated: true });
+      }
     }
   };
 
   const scrollShelfLeft = () => {
     if (shelfRef.current) {
       playSound('click');
-      shelfRef.current.scrollTo({ x: 0, animated: true });
+      if (Platform.OS === 'web') {
+        (shelfRef.current as any).scrollTo({ x: (shelfRef.current as any).scrollLeft - 400, animated: true });
+      } else {
+        shelfRef.current.scrollTo({ x: 0, animated: true });
+      }
     }
   };
 
@@ -382,19 +391,19 @@ export default function HomeScreen() {
 
                 <View className="flex-row bg-neutral-900 rounded-md p-1 border border-neutral-800">
                   <Pressable
-                    onPress={() => { setViewMode('grid2'); setNumColumns(2); }}
-                    className={`p-1.5 rounded ${viewMode === 'grid2' ? 'bg-neutral-800' : ''}`}
+                    onPress={() => { setViewMode('grid2'); setNumColumns(2); playSound('click'); }}
+                    className={`p-1.5 rounded ${numColumns === 2 ? 'bg-neutral-800' : ''}`}
                   >
-                    <Ionicons name="apps-outline" size={14} color={viewMode === 'grid2' ? '#fff' : '#666'} />
+                    <Ionicons name="apps-outline" size={14} color={numColumns === 2 ? '#fff' : '#666'} />
                   </Pressable>
                   <Pressable
-                    onPress={() => { setViewMode('grid4'); setNumColumns(4); }}
-                    className={`p-1.5 rounded ${viewMode === 'grid4' ? 'bg-neutral-800' : ''}`}
+                    onPress={() => { setViewMode('grid4'); setNumColumns(4); playSound('click'); }}
+                    className={`p-1.5 rounded ${numColumns === 4 ? 'bg-neutral-800' : ''}`}
                   >
-                    <Ionicons name="grid-outline" size={14} color={viewMode === 'grid4' ? '#fff' : '#666'} />
+                    <Ionicons name="grid-outline" size={14} color={numColumns === 4 ? '#fff' : '#666'} />
                   </Pressable>
                   <Pressable
-                    onPress={() => setViewMode('custom')}
+                    onPress={() => { setViewMode('custom'); playSound('click'); }}
                     className={`p-1.5 rounded ${viewMode === 'custom' ? 'bg-neutral-800' : ''}`}
                   >
                     <Ionicons name="options-outline" size={14} color={viewMode === 'custom' ? '#fff' : '#666'} />
@@ -402,20 +411,24 @@ export default function HomeScreen() {
                 </View>
               </View>
 
-              {viewMode === 'custom' && (
-                <View className="bg-neutral-900 mb-8 p-6 rounded-xl border border-neutral-800">
-                  <View className="flex-row justify-between mb-4">
-                    <Text className="text-neutral-400 font-mono text-[10px] tracking-widest">COLUMN DENSITY ({numColumns})</Text>
-                    <Pressable onPress={() => setNumColumns(2)}><Text className="text-amber-500/50 font-mono text-[10px]">RESET</Text></Pressable>
+              {/* Always show slider on desktop if we have room, or persistent on mobile if requested */}
+              {(viewMode === 'custom' || (isDesktop && numColumns > 1)) && (
+                <View className="bg-neutral-900 mb-8 p-4 rounded-xl border border-neutral-800">
+                  <View className="flex-row justify-between mb-2">
+                    <Text className="text-neutral-400 font-mono text-[9px] tracking-widest">DENSITY: {numColumns} COLUMNS</Text>
+                    <Pressable onPress={() => { setNumColumns(2); setViewMode('grid2'); playSound('click'); }}>
+                      <Text className="text-amber-500/50 font-mono text-[9px]">RESET</Text>
+                    </Pressable>
                   </View>
                   <Slider
-                    style={{ width: '100%', height: 40 }}
+                    style={{ width: '100%', height: 30 }}
                     minimumValue={1}
-                    maximumValue={6}
+                    maximumValue={isDesktop ? 8 : 4}
                     step={1}
                     value={numColumns}
                     onValueChange={(val) => {
                       setNumColumns(val);
+                      setViewMode('custom');
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     }}
                     minimumTrackTintColor="#f59e0b"
@@ -429,12 +442,12 @@ export default function HomeScreen() {
                 <EmptyState />
               ) : (
                 <View className="flex-row flex-wrap" style={{ marginHorizontal: -10 }}>
-                  {filteredStacks.map((stack: any, idx: number) => {
+                  {filteredStacks.map((stack: any) => {
                     if (!stack || !stack[0]) return null;
                     const topItem = stack[0];
                     return (
                       <View
-                        key={`${topItem.media_type}-${topItem.movie_id}-${topItem.show_id}-${idx}`}
+                        key={topItem.id}
                         style={{
                           width: `${100 / resolvedColumns}%`,
                           paddingHorizontal: 10,
