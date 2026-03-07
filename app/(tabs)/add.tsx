@@ -167,10 +167,11 @@ export default function AddScreen() {
     if (!selectedItem) return;
 
     if (!userId) {
-      Alert.alert(
-        'Not signed in',
-        'Anonymous sign-in is required. Enable it in Supabase Dashboard → Auth → Providers.'
-      );
+      if (Platform.OS === 'web') {
+        window.alert('Not signed in. Anonymous sign-in is required.');
+      } else {
+        Alert.alert('Not signed in', 'Anonymous sign-in is required. Enable it in Supabase Dashboard → Auth → Providers.');
+      }
       return;
     }
 
@@ -189,7 +190,6 @@ export default function AddScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
       if (selectedItem.media_type === 'tv') {
-        // Add each season separately
         for (const season of selectedSeasons) {
           await addMutation.mutateAsync({
             tmdbItem: selectedItem,
@@ -212,12 +212,15 @@ export default function AddScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.back();
     } catch (e: any) {
-      const msg = e.message || String(e);
-      if (msg.includes('duplicate key') || msg.includes('unique constraint')) {
-        const title = selectedItem.title ?? selectedItem.name;
-        Alert.alert('Already in collection', `You might already have ${title} in your collection.`);
+      console.error('Add failed:', e);
+      const msg = e?.message || String(e);
+      const errorText = (msg.includes('duplicate key') || msg.includes('unique constraint') || msg.includes('23505'))
+        ? `You might already have ${selectedItem.title ?? selectedItem.name} in this format. Use the Edition field to add another copy.`
+        : `Could not add: ${msg}`;
+      if (Platform.OS === 'web') {
+        window.alert(errorText);
       } else {
-        Alert.alert('Could not add', msg);
+        Alert.alert('Error', errorText);
       }
     }
   };
