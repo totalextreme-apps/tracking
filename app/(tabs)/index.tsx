@@ -317,7 +317,7 @@ export default function HomeScreen() {
 
           <View className="flex-1">
             {onDisplay.length > 0 && (
-              <View className="mb-4 mt-4">
+              <View className="mb-8 mt-6">
                 <View className="px-4 md:px-8 flex-row items-center justify-between mb-2 max-w-7xl mx-auto w-full">
                   <View className="flex-row items-baseline gap-2">
                     <Text className="text-amber-500 font-bold text-3xl tracking-tighter uppercase" style={{ fontFamily: 'VCR_OSD_MONO' }}>
@@ -346,7 +346,7 @@ export default function HomeScreen() {
                     horizontal
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={{ paddingLeft: 24, paddingRight: 40 }}
-                    className="py-4"
+                    className="py-12"
                   >
                     {onDisplay.map((item: any) => (
                       <OnDisplayCard
