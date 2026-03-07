@@ -2,7 +2,6 @@ import type { MovieFormat } from '@/types/database';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { View } from 'react-native';
-import { BootlegSticker } from './BootlegSticker';
 
 type GlossyCardProps = {
     posterUrl: string | null;
@@ -113,7 +112,13 @@ export function GlossyCard({ posterUrl, format, style, isCustom = false, isBootl
             )}
 
             {/* Layer 6: Bootleg Sticker */}
-            {isBootleg && <BootlegSticker size={30} />}
+            {isBootleg && (
+                <Image
+                    source={require('@/assets/images/overlays/boot_sticker.png')}
+                    style={{ position: 'absolute', bottom: 4, left: 4, width: 30, height: 30, zIndex: 100 }}
+                    contentFit="contain"
+                />
+            )}
         </View>
     );
 }

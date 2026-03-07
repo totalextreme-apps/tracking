@@ -15,7 +15,6 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { BootlegSticker } from './BootlegSticker';
 import { GlossyCard } from './GlossyCard';
 import { NowStreamingSticker } from './NowStreamingSticker';
 import { SaleSticker } from './SaleSticker';
@@ -139,6 +138,12 @@ export function StackCard({
       if (!seenKeys.has(key)) {
         seenKeys.add(key);
         result.push(item);
+      } else {
+        // If we already added this format/edition, but THIS duplicate is a bootleg, tag the coin so the sticker appears!
+        const existing = result.find(i => `${i.format.trim()}|${(i.edition || '').trim().toLowerCase()}` === key || (`Digital|${(i.edition || '').trim().toLowerCase()}` === key && i.format.toLowerCase().includes('digital')));
+        if (existing && item.is_bootleg) {
+          existing.is_bootleg = true;
+        }
       }
     }
 
@@ -273,7 +278,13 @@ export function StackCard({
                 style={{ width: '100%', height: '100%' }}
                 contentFit="cover"
               />
-              {topItem.is_bootleg && <BootlegSticker size={20} />}
+              {topItem.is_bootleg && (
+                <Image
+                  source={require('@/assets/images/overlays/boot_sticker.png')}
+                  style={{ position: 'absolute', bottom: 2, left: 2, width: 20, height: 20, zIndex: 50 }}
+                  contentFit="contain"
+                />
+              )}
             </View>
           ) : (
             <View className="flex-1 items-center justify-center">
@@ -451,18 +462,17 @@ export function StackCard({
                       </Text>
                     </View>
                   )}
-                  {item.is_bootleg && <BootlegSticker size={30} />}
+                  {item.is_bootleg && (
+                    <Image
+                      source={require('@/assets/images/overlays/boot_sticker.png')}
+                      style={{ position: 'absolute', bottom: 4, left: 4, width: 30, height: 30, zIndex: 50 }}
+                      contentFit="contain"
+                    />
+                  )}
                 </View>
               );
             })}
           </View>
-          <Text
-            className="text-white font-mono text-sm mt-3 text-center"
-            numberOfLines={2}
-          >
-            {topItem.movies?.title || topItem.shows?.name}
-            {topItem.media_type === 'tv' && ` (S${topItem.season_number})`}
-          </Text>
           <View className="flex-row flex-wrap justify-center gap-1 mt-2">
             {/* Format Side-by-Side Coins (Deduplicated) */}
             {sorted.map((item) => (
@@ -570,15 +580,6 @@ export function StackCard({
             />
           )}
         </View>
-        <Text
-          className="text-white font-mono text-xs mt-2 text-center"
-          numberOfLines={1}
-        >
-          {topItem.movies?.title || topItem.shows?.name}
-          {topItem.media_type === 'tv' && ` (S${topItem.season_number})`}
-        </Text>
-
-        {/* Format Selectors for Digital (Deduplicated) */}
         <View className="flex-row flex-wrap justify-center gap-1 mt-2">
           {sorted.map((item) => (
             <Pressable
