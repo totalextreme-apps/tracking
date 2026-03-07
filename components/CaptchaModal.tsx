@@ -24,7 +24,7 @@ const NativeWebTurnstile = ({ siteKey, onSuccess, onError }: any) => {
                     widgetIdRef.current = turnstile.render(containerRef.current, {
                         sitekey: siteKey,
                         theme: 'dark',
-                        size: 'compact',
+                        size: 'normal',
                         callback: (token: string) => {
                             console.log('Turnstile successfully issued native token');
                             onSuccess(token);
@@ -91,11 +91,9 @@ export function CaptchaModal({ visible, onSuccess, onCancel }: CaptchaModalProps
         }
     }, [visible, siteKey]); // Changed onSuccess to siteKey to avoid effect spam but track key changes
 
-    const host = typeof window !== 'undefined' ? window.location.hostname : '';
-    const isProduction = host === 'mediatracking.app' || host === 'www.mediatracking.app';
-    const [forceBypassVisible, setForceBypassVisible] = React.useState(!isProduction);
+    const [forceBypassVisible, setForceBypassVisible] = React.useState(false);
 
-    const showBypass = Platform.OS !== 'web' || __DEV__ || !isProduction || !!turnstileError || forceBypassVisible;
+    const showBypass = Platform.OS !== 'web' || __DEV__ || forceBypassVisible;
 
     if (!visible) return null;
 
