@@ -214,10 +214,6 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
                 width: 30,
                 height: 30,
                 zIndex: 110,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.5,
-                shadowRadius: 2
               }}
               contentFit="contain"
             />

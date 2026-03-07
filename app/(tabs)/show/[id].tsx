@@ -350,14 +350,7 @@ export default function ShowDetailScreen() {
                                 <View style={{ position: 'absolute', bottom: 4, left: 4, zIndex: 9999 }}>
                                     <Image
                                         source={require('@/assets/images/overlays/boot_sticker.png')}
-                                        style={{
-                                            width: 38,
-                                            height: 38,
-                                            shadowColor: '#000',
-                                            shadowOffset: { width: 0, height: 2 },
-                                            shadowOpacity: 0.8,
-                                            shadowRadius: 4,
-                                        }}
+                                        style={{ width: 38, height: 38 }}
                                         contentFit="contain"
                                     />
                                 </View>
