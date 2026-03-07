@@ -20,8 +20,6 @@ import { useCollection, useUpdateCollectionItem } from '@/hooks/useCollection';
 import { usePersistedState } from '@/hooks/usePersistedState';
 import { getGenres, getOnDisplayItems, getStacks } from '@/lib/collection-utils';
 import type { CollectionItemWithMedia } from '@/types/database';
-import * as Sharing from 'expo-sharing';
-import ViewShot from 'react-native-view-shot';
 
 export default function HomeScreen() {
   const { userId, isLoading: authLoading, authPhase, showCaptcha, onCaptchaSuccess } = useAuth();
@@ -45,8 +43,6 @@ export default function HomeScreen() {
   const [genreFilter, setGenreFilter] = useState<string | null>(null);
   const [mediaTypeFilter, setMediaTypeFilter] = useState<'movie' | 'tv' | null>(null);
   const [isGenreDropdownOpen, setIsGenreDropdownOpen] = useState(false);
-  const [isSharing, setIsSharing] = useState(false);
-  const viewShotRef = useRef<ViewShot>(null);
   const shelfRef = useRef<ScrollView>(null);
 
   const [refreshing, setRefreshing] = useState(false);
@@ -130,23 +126,6 @@ export default function HomeScreen() {
     }
   };
 
-  const handleShare = async () => {
-    if (viewShotRef.current) {
-      try {
-        setIsSharing(true);
-        // Ensure UI updates before capture by yielding
-        await new Promise(resolve => setTimeout(resolve, 50));
-
-        const uri = await (viewShotRef.current as any).capture();
-        await Sharing.shareAsync(uri);
-      } catch (err) {
-        console.error('Capture/Share failed:', err);
-        Alert.alert('Share Error', 'Failed to generate share image.');
-      } finally {
-        setIsSharing(false);
-      }
-    }
-  };
 
   const toggleFavorite = async (item: CollectionItemWithMedia) => {
     try {
@@ -378,13 +357,6 @@ export default function HomeScreen() {
                     <Text className="text-neutral-600 font-mono text-xs opacity-50 ml-1">/ {onDisplay.length}</Text>
                   </View>
                   <View className="flex-row items-center gap-2">
-                    <Pressable
-                      onPress={() => { handleShare(); playSound('click'); }}
-                      className={`p-2 bg-neutral-900 rounded-full border border-neutral-800 active:bg-neutral-800 mr-2 ${isSharing ? 'opacity-50' : ''}`}
-                      disabled={isSharing}
-                    >
-                      <Ionicons name={isSharing ? "hourglass-outline" : "share-outline"} size={16} color="#f59e0b" />
-                    </Pressable>
                     <Pressable onPress={scrollShelfLeft} className="p-2 bg-neutral-900 rounded-full border border-neutral-800 active:bg-neutral-800">
                       <Ionicons name="chevron-back" size={16} color="#f59e0b" />
                     </Pressable>
@@ -394,32 +366,30 @@ export default function HomeScreen() {
                   </View>
                 </View>
 
-                <ViewShot ref={viewShotRef} options={{ format: 'png', quality: 0.9, result: 'tmpfile' }} style={{ backgroundColor: '#0a0a0a', width: '100%' }}>
-                  <View collapsable={false} style={{ width: windowWidth, overflow: 'hidden' }} className="relative">
-                    <Image
-                      source={thriftMode ? require('@/assets/images/thrift_background.png') : require('@/assets/images/shelf_background.png')}
-                      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.8 }}
-                      contentFit="cover"
-                    />
-                    <ScrollView
-                      ref={shelfRef}
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      contentContainerStyle={{ paddingLeft: 24, paddingRight: 40 }}
-                      className="py-4"
-                    >
-                      {onDisplay.map((item: any) => (
-                        <OnDisplayCard
-                          key={item.id}
-                          item={item}
-                          onSingleTapAction={() => navigateToDetail(item)}
-                          onLongPressAction={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); setAcquiredItem(item); }}
-                          onToggleFavorite={toggleFavorite}
-                        />
-                      ))}
-                    </ScrollView>
-                  </View>
-                </ViewShot>
+                <View className="relative">
+                  <Image
+                    source={thriftMode ? require('@/assets/images/thrift_background.png') : require('@/assets/images/shelf_background.png')}
+                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.8 }}
+                    contentFit="cover"
+                  />
+                  <ScrollView
+                    ref={shelfRef}
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={{ paddingLeft: 24, paddingRight: 40 }}
+                    className="py-4"
+                  >
+                    {onDisplay.map((item: any) => (
+                      <OnDisplayCard
+                        key={item.id}
+                        item={item}
+                        onSingleTapAction={() => navigateToDetail(item)}
+                        onLongPressAction={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); setAcquiredItem(item); }}
+                        onToggleFavorite={toggleFavorite}
+                      />
+                    ))}
+                  </ScrollView>
+                </View>
               </View>
             )}
 
