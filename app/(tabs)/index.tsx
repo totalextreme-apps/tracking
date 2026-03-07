@@ -134,20 +134,15 @@ export default function HomeScreen() {
     if (viewShotRef.current) {
       try {
         setIsSharing(true);
-        // Add a small delay for UI state to reflect isSharing
-        setTimeout(async () => {
-          try {
-            const uri = await (viewShotRef.current as any).capture();
-            await Sharing.shareAsync(uri);
-          } catch (err) {
-            console.error('Capture/Share failed:', err);
-            Alert.alert('Share Error', 'Failed to generate share image.');
-          } finally {
-            setIsSharing(false);
-          }
-        }, 150);
-      } catch (e) {
-        console.error('Failed to initiate share', e);
+        // Ensure UI updates before capture by yielding
+        await new Promise(resolve => setTimeout(resolve, 50));
+
+        const uri = await (viewShotRef.current as any).capture();
+        await Sharing.shareAsync(uri);
+      } catch (err) {
+        console.error('Capture/Share failed:', err);
+        Alert.alert('Share Error', 'Failed to generate share image.');
+      } finally {
         setIsSharing(false);
       }
     }
@@ -399,8 +394,8 @@ export default function HomeScreen() {
                   </View>
                 </View>
 
-                <ViewShot ref={viewShotRef} options={{ format: 'png', quality: 0.9 }} style={{ backgroundColor: '#0a0a0a' }}>
-                  <View className="relative">
+                <ViewShot ref={viewShotRef} options={{ format: 'png', quality: 0.9, result: 'tmpfile' }} style={{ backgroundColor: '#0a0a0a', width: '100%' }}>
+                  <View collapsable={false} style={{ width: windowWidth, overflow: 'hidden' }} className="relative">
                     <Image
                       source={thriftMode ? require('@/assets/images/thrift_background.png') : require('@/assets/images/shelf_background.png')}
                       style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.8 }}
