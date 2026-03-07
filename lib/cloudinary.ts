@@ -56,17 +56,9 @@ export async function uploadToCloudinary(fileData: Blob | string | any): Promise
     // Help convert data URLs to Blobs for better Safari/Chrome mobile support
     if (typeof fileData === 'string' && fileData.startsWith('data:')) {
         try {
-            const arr = fileData.split(',');
-            const mimeMatch = arr[0].match(/:(.*?);/);
-            const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
-            const bstr = atob(arr[1]);
-            let n = bstr.length;
-            const u8arr = new Uint8Array(n);
-            while (n--) {
-                u8arr[n] = bstr.charCodeAt(n);
-            }
-            uploadPayload = new Blob([u8arr], { type: mime });
-            console.log('Converted data URL to Blob for upload');
+            const response = await fetch(fileData);
+            uploadPayload = await response.blob();
+            console.log('Converted data URL to Blob using fetch');
         } catch (e) {
             console.error('Failed to convert data URL to blob', e);
         }
