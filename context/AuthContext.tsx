@@ -160,6 +160,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const requestCaptcha = (callback: (token: string) => void) => {
+    const host = typeof window !== 'undefined' ? window.location.hostname : '';
+    const isProduction = host === 'mediatracking.app' || host === 'www.mediatracking.app';
+
+    if (!isProduction) {
+      console.warn('AUTH: requestCaptcha bypass triggered on non-prod host.');
+      callback('manual-bypass-token');
+      return;
+    }
+
     setPendingCaptchaCallback(() => callback);
     setShowCaptcha(true);
   };
