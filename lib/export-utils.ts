@@ -8,29 +8,49 @@ export function generateCsv(items: CollectionItemWithMedia[]): string {
   const headers = [
     'TMDB ID',
     'Title',
+    'Media Type',
+    'Season',
     'Release Date',
     'Format',
     'Status',
+    'Edition',
     'Condition',
+    'Rating',
     'Notes',
     'Grail',
     'On Display',
     'Added At',
   ];
 
+  const escapeCsv = (val: string | number | boolean | null | undefined): string => {
+    if (val === null || val === undefined) return '""';
+    const s = String(val);
+    // Escape quotes by doubling them and wrap in quotes
+    return `"${s.replace(/"/g, '""')}"`;
+  };
+
   const rows = items.map((item) => {
     const movie = item.movies;
+    const show = item.shows;
+    const title = movie?.title || show?.name || '';
+    const tmdbId = movie?.tmdb_id || show?.tmdb_id || '';
+    const releaseDate = movie?.release_date || show?.first_air_date || '';
+
     return [
-      movie?.tmdb_id ?? '',
-      `"${(movie?.title ?? '').replace(/"/g, '""')}"`, // Escape quotes
-      movie?.release_date ?? '',
-      item.format,
-      item.status,
-      `"${(item.condition ?? '').replace(/"/g, '""')}"`,
-      `"${(item.notes ?? '').replace(/"/g, '""')}"`,
-      item.is_grail ? 'Yes' : 'No',
-      item.is_on_display ? 'Yes' : 'No',
-      item.created_at,
+      escapeCsv(tmdbId),
+      escapeCsv(title),
+      escapeCsv(item.media_type),
+      escapeCsv(item.season_number),
+      escapeCsv(releaseDate),
+      escapeCsv(item.format),
+      escapeCsv(item.status),
+      escapeCsv(item.edition),
+      escapeCsv(item.condition),
+      escapeCsv(item.rating),
+      escapeCsv(item.notes),
+      escapeCsv(item.is_grail ? 'Yes' : 'No'),
+      escapeCsv(item.is_on_display ? 'Yes' : 'No'),
+      escapeCsv(item.created_at),
     ].join(',');
   });
 

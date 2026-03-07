@@ -56,6 +56,7 @@ export interface CollectionItem {
   custom_poster_url: string | null;
   custom_lists: string[] | null;
   rating?: number; // 0-5
+  notes?: string | null;
   created_at: string;
 }
 
