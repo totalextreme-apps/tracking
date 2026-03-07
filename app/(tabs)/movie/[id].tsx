@@ -291,6 +291,11 @@ export default function MovieDetailScreen() {
             ? [...ownedFormats].sort((a, b) => FORMAT_PRIORITY.indexOf(a) - FORMAT_PRIORITY.indexOf(b))[0]
             : null);
 
+    const activeItem = movieItems.find((i: any) => i.format === activeFormat);
+    const isBootleg = (activeItem && localBootlegs[activeItem.id] !== undefined)
+        ? localBootlegs[activeItem.id]
+        : (activeItem?.is_bootleg || false);
+
     // Logic to toggle format
     const toggleFormat = async (format: MovieFormat) => {
         await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -506,8 +511,8 @@ export default function MovieDetailScreen() {
                                 const finalPosterUrl = customArtUrl || posterUrl;
                                 const isCustom = !!customArtUrl;
 
-                                if (activeFormat === 'VHS') return <VHSCard posterUrl={finalPosterUrl} isCustom={isCustom} style={{ width: '100%' }} />;
-                                if (activeFormat && ['DVD', 'BluRay', '4K'].includes(activeFormat)) return <GlossyCard posterUrl={finalPosterUrl} format={activeFormat as MovieFormat} isCustom={isCustom} style={{ width: '100%' }} />;
+                                if (activeFormat === 'VHS') return <VHSCard posterUrl={finalPosterUrl} isCustom={isCustom} isBootleg={isBootleg} style={{ width: '100%' }} />;
+                                if (activeFormat && ['DVD', 'BluRay', '4K'].includes(activeFormat)) return <GlossyCard posterUrl={finalPosterUrl} format={activeFormat as MovieFormat} isCustom={isCustom} isBootleg={isBootleg} style={{ width: '100%' }} />;
 
                                 const ratio = isCustom
                                     ? (activeFormat === 'VHS' ? 2 / 3.5 : (activeFormat === 'BluRay' || activeFormat === '4K') ? 0.78 : 0.71)

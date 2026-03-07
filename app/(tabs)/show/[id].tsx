@@ -76,22 +76,24 @@ export default function ShowDetailScreen() {
     const { season: seasonQuery } = useLocalSearchParams<{ season?: string }>();
     const seasonNumber = seasonQuery && seasonQuery !== 'undefined' && seasonQuery !== 'null' ? parseInt(seasonQuery, 10) : 1;
 
-    const { data: tmdbShow, isLoading: tmdbLoading } = useQuery({
-        queryKey: ['tmdb-show', showIdNum],
-        queryFn: async () => {
-            if (!showIdNum) return null;
-            return getTvShowById(showIdNum);
-        },
-        enabled: !!showIdNum,
-    });
-
-    // Find items matching this show and season
+    // Find items matching this show and season locally first
     const showItems = collection?.filter((item: any) => {
         const itemShowId = item.show_id;
-        // Try matching by internal ID, and as a fallback by TMDB ID
-        return (itemShowId === showIdNum || (item.shows?.tmdb_id === showIdNum)) &&
-            (seasonNumber === undefined || item.season_number === seasonNumber);
-    }) ?? [];
+        return (itemShowId === showIdNum || (item.shows?.id === showIdNum));
+    }).filter((item: any) => seasonNumber === undefined || item.season_number === seasonNumber) ?? [];
+
+    const showFromDb = showItems[0]?.shows;
+
+    const { data: tmdbShow, isLoading: tmdbLoading } = useQuery({
+        queryKey: ['tmdb-show', showFromDb?.tmdb_id || showIdNum],
+        queryFn: async () => {
+            const tmdbId = showFromDb?.tmdb_id || showIdNum;
+            if (!tmdbId) return null;
+            return getTvShowById(tmdbId);
+        },
+        enabled: !!collection,
+    });
+
 
     const show = showItems[0]?.shows;
     const activeShow = show || persistedShow || tmdbShow;
@@ -284,6 +286,11 @@ export default function ShowDetailScreen() {
             ? [...ownedFormats].sort((a, b) => FORMAT_PRIORITY.indexOf(a) - FORMAT_PRIORITY.indexOf(b))[0]
             : null);
 
+    const activeItem = showItems.find((i: any) => i.format === activeFormat);
+    const isBootleg = (activeItem && localBootlegs[activeItem.id] !== undefined)
+        ? localBootlegs[activeItem.id]
+        : (activeItem?.is_bootleg || false);
+
     const handleConfirmAddFormat = async () => {
         if (!pendingFormat || !activeShow) return;
         try {
@@ -333,8 +340,8 @@ export default function ShowDetailScreen() {
                         <View className="w-24 rounded-lg shadow-xl relative">
                             {(() => {
                                 const finalPosterUrl = customArtUrl || posterUrl;
-                                if (activeFormat === 'VHS') return <VHSCard posterUrl={finalPosterUrl} isCustom={!!customArtUrl} style={{ width: '100%' }} />;
-                                if (activeFormat && ['DVD', 'BluRay', '4K'].includes(activeFormat)) return <GlossyCard posterUrl={finalPosterUrl} format={activeFormat as MovieFormat} isCustom={!!customArtUrl} style={{ width: '100%' }} />;
+                                if (activeFormat === 'VHS') return <VHSCard posterUrl={finalPosterUrl} isCustom={!!customArtUrl} isBootleg={isBootleg} style={{ width: '100%' }} />;
+                                if (activeFormat && ['DVD', 'BluRay', '4K'].includes(activeFormat)) return <GlossyCard posterUrl={finalPosterUrl} format={activeFormat as MovieFormat} isCustom={!!customArtUrl} isBootleg={isBootleg} style={{ width: '100%' }} />;
                                 return <Image source={{ uri: finalPosterUrl }} style={{ width: '100%', aspectRatio: 2 / 3, borderRadius: 8 }} contentFit="cover" />;
                             })()}
                         </View>
