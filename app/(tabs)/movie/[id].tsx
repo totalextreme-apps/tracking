@@ -525,16 +525,16 @@ export default function MovieDetailScreen() {
 
                             {/* Bootleg Sticker - TOP LEVEL */}
                             {isBootleg && (
-                                <View style={{ position: 'absolute', bottom: -12, left: -12, zIndex: 9999 }}>
+                                <View style={{ position: 'absolute', bottom: 4, left: 4, zIndex: 9999 }}>
                                     <Image
                                         source={require('@/assets/images/overlays/boot_sticker.png')}
                                         style={{
-                                            width: 48,
-                                            height: 48,
+                                            width: 38,
+                                            height: 38,
                                             shadowColor: '#000',
-                                            shadowOffset: { width: 0, height: 4 },
+                                            shadowOffset: { width: 0, height: 2 },
                                             shadowOpacity: 0.8,
-                                            shadowRadius: 6,
+                                            shadowRadius: 4,
                                         }}
                                         contentFit="contain"
                                     />
@@ -714,10 +714,15 @@ export default function MovieDetailScreen() {
                                                 <Text className="text-white font-mono text-xs font-bold">{item.format}</Text>
                                             </View>
                                             <Pressable
-                                                onPress={() => {
+                                                onPress={async () => {
                                                     const isBoot = localBootlegs[item.id] !== undefined ? localBootlegs[item.id] : (item.is_bootleg || false);
-                                                    setLocalBootlegs(prev => ({ ...prev, [item.id]: !isBoot }));
+                                                    const newVal = !isBoot;
+                                                    setLocalBootlegs(prev => ({ ...prev, [item.id]: newVal }));
                                                     playSound('click');
+                                                    await updateMutation.mutateAsync({
+                                                        itemId: item.id,
+                                                        updates: { is_bootleg: newVal }
+                                                    });
                                                 }}
                                                 className={`ml-2 px-2 py-1 rounded border ${(localBootlegs[item.id] !== undefined ? localBootlegs[item.id] : (item.is_bootleg || false)) ? 'bg-red-500 border-red-400' : 'bg-neutral-800 border-neutral-700'}`}
                                             >
@@ -915,7 +920,7 @@ export default function MovieDetailScreen() {
                         </View>
                     </View>
                 </View>
-            </ScrollView>
+            </ScrollView >
 
             <Modal
                 visible={showShareModal}
@@ -957,24 +962,26 @@ export default function MovieDetailScreen() {
             </Modal>
 
             {/* EJECTING OVERLAY */}
-            {ejecting && (
-                <View className="absolute inset-0 z-[100] bg-[#0000AA] items-center justify-center">
-                    {/* Scanlines Effect */}
-                    <View className="absolute inset-0 opacity-10">
-                        {Array.from({ length: 100 }).map((_: any, i: number) => (
-                            <View key={i} className="h-[2px] w-full bg-black mb-[2px]" />
-                        ))}
-                    </View>
+            {
+                ejecting && (
+                    <View className="absolute inset-0 z-[100] bg-[#0000AA] items-center justify-center">
+                        {/* Scanlines Effect */}
+                        <View className="absolute inset-0 opacity-10">
+                            {Array.from({ length: 100 }).map((_: any, i: number) => (
+                                <View key={i} className="h-[2px] w-full bg-black mb-[2px]" />
+                            ))}
+                        </View>
 
-                    {/* Text */}
-                    <Text className="text-white font-mono text-4xl font-bold tracking-[8px] italic">
-                        {'EJECTING >>'}
-                    </Text>
-                    <Text className="text-white font-mono text-xl mt-4 opacity-80 tracking-[10px]">
-                        PLEASE WAIT...
-                    </Text>
-                </View>
-            )}
+                        {/* Text */}
+                        <Text className="text-white font-mono text-4xl font-bold tracking-[8px] italic">
+                            {'EJECTING >>'}
+                        </Text>
+                        <Text className="text-white font-mono text-xl mt-4 opacity-80 tracking-[10px]">
+                            PLEASE WAIT...
+                        </Text>
+                    </View>
+                )
+            }
 
             {/* Edition Input Modal */}
             <Modal
@@ -1030,25 +1037,27 @@ export default function MovieDetailScreen() {
             </Modal>
 
             {/* Image Crop Modal */}
-            {pendingImageUri && (
-                <ImageCropModal
-                    visible={cropModalVisible}
-                    imageUri={pendingImageUri}
-                    onClose={() => {
-                        setCropModalVisible(false);
-                        if (pendingImageUri && pendingImageUri.startsWith('blob:')) {
-                            URL.revokeObjectURL(pendingImageUri);
-                        }
-                        setPendingImageUri(null);
-                    }}
-                    onSave={handleSaveCustomArt}
-                    targetRatio={(() => {
-                        if (customArtType === 'backdrop') return 16 / 9;
-                        const ratio = activeFormat === 'VHS' ? 2 / 3.5 : (activeFormat === 'BluRay' || activeFormat === '4K') ? 0.78 : 0.71;
-                        return ratio;
-                    })()}
-                />
-            )}
-        </View>
+            {
+                pendingImageUri && (
+                    <ImageCropModal
+                        visible={cropModalVisible}
+                        imageUri={pendingImageUri}
+                        onClose={() => {
+                            setCropModalVisible(false);
+                            if (pendingImageUri && pendingImageUri.startsWith('blob:')) {
+                                URL.revokeObjectURL(pendingImageUri);
+                            }
+                            setPendingImageUri(null);
+                        }}
+                        onSave={handleSaveCustomArt}
+                        targetRatio={(() => {
+                            if (customArtType === 'backdrop') return 16 / 9;
+                            const ratio = activeFormat === 'VHS' ? 2 / 3.5 : (activeFormat === 'BluRay' || activeFormat === '4K') ? 0.78 : 0.71;
+                            return ratio;
+                        })()}
+                    />
+                )
+            }
+        </View >
     );
 }

@@ -347,16 +347,16 @@ export default function ShowDetailScreen() {
 
                             {/* Bootleg Sticker - TOP LEVEL */}
                             {isBootleg && (
-                                <View style={{ position: 'absolute', bottom: -12, left: -12, zIndex: 9999 }}>
+                                <View style={{ position: 'absolute', bottom: 4, left: 4, zIndex: 9999 }}>
                                     <Image
                                         source={require('@/assets/images/overlays/boot_sticker.png')}
                                         style={{
-                                            width: 48,
-                                            height: 48,
+                                            width: 38,
+                                            height: 38,
                                             shadowColor: '#000',
-                                            shadowOffset: { width: 0, height: 4 },
+                                            shadowOffset: { width: 0, height: 2 },
                                             shadowOpacity: 0.8,
-                                            shadowRadius: 6,
+                                            shadowRadius: 4,
                                         }}
                                         contentFit="contain"
                                     />
@@ -474,10 +474,15 @@ export default function ShowDetailScreen() {
                                             <Text className="text-white font-mono text-xs font-bold">{item.format}</Text>
                                         </View>
                                         <Pressable
-                                            onPress={() => {
+                                            onPress={async () => {
                                                 const isBoot = localBootlegs[item.id] !== undefined ? localBootlegs[item.id] : (item.is_bootleg || false);
-                                                setLocalBootlegs(prev => ({ ...prev, [item.id]: !isBoot }));
+                                                const newVal = !isBoot;
+                                                setLocalBootlegs(prev => ({ ...prev, [item.id]: newVal }));
                                                 playSound('click');
+                                                await updateMutation.mutateAsync({
+                                                    itemId: item.id,
+                                                    updates: { is_bootleg: newVal }
+                                                });
                                             }}
                                             className={`ml-2 px-2 py-1 rounded border ${(localBootlegs[item.id] !== undefined ? localBootlegs[item.id] : (item.is_bootleg || false)) ? 'bg-red-500 border-red-400' : 'bg-neutral-800 border-neutral-700'}`}
                                         >
