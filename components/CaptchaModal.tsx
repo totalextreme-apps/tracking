@@ -91,6 +91,10 @@ export function CaptchaModal({ visible, onSuccess, onCancel }: CaptchaModalProps
         }
     }, [visible, siteKey]); // Changed onSuccess to siteKey to avoid effect spam but track key changes
 
+    const host = typeof window !== 'undefined' ? window.location.hostname : '';
+    const isPreview = host.includes('vercel.app') || host.includes('staging');
+    const showBypass = Platform.OS !== 'web' || __DEV__ || isPreview;
+
     if (!visible) return null;
 
     const renderContent = () => (
@@ -128,8 +132,8 @@ export function CaptchaModal({ visible, onSuccess, onCancel }: CaptchaModalProps
                 )}
             </View>
 
-            {/* Bypass button: ONLY on native mobile (no WebView captcha) or local dev. NEVER on production web. */}
-            {(Platform.OS !== 'web' || __DEV__) && (
+            {/* Bypass button: ON native mobile, local dev, or STAGING. NEVER on production web. */}
+            {showBypass && (
                 <Pressable
                     onPress={() => {
                         console.warn('MANUAL BYPASS TRIGGERED');
