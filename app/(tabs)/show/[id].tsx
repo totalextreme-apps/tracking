@@ -340,10 +340,30 @@ export default function ShowDetailScreen() {
                         <View className="w-24 rounded-lg shadow-xl relative">
                             {(() => {
                                 const finalPosterUrl = customArtUrl || posterUrl;
-                                if (activeFormat === 'VHS') return <VHSCard posterUrl={finalPosterUrl} isCustom={!!customArtUrl} isBootleg={isBootleg} style={{ width: '100%' }} />;
-                                if (activeFormat && ['DVD', 'BluRay', '4K'].includes(activeFormat)) return <GlossyCard posterUrl={finalPosterUrl} format={activeFormat as MovieFormat} isCustom={!!customArtUrl} isBootleg={isBootleg} style={{ width: '100%' }} />;
+                                if (activeFormat === 'VHS') return <VHSCard posterUrl={finalPosterUrl} isCustom={!!customArtUrl} style={{ width: '100%' }} />;
+                                if (activeFormat && ['DVD', 'BluRay', '4K'].includes(activeFormat)) return <GlossyCard posterUrl={finalPosterUrl} format={activeFormat as MovieFormat} isCustom={!!customArtUrl} style={{ width: '100%' }} />;
                                 return <Image source={{ uri: finalPosterUrl }} style={{ width: '100%', aspectRatio: 2 / 3, borderRadius: 8 }} contentFit="cover" />;
                             })()}
+
+                            {/* Bootleg Sticker - TOP LEVEL */}
+                            {isBootleg && (
+                                <Image
+                                    source={require('@/assets/images/overlays/boot_sticker.png')}
+                                    style={{
+                                        position: 'absolute',
+                                        bottom: -10,
+                                        left: -10,
+                                        width: 40,
+                                        height: 40,
+                                        zIndex: 100,
+                                        shadowColor: '#000',
+                                        shadowOffset: { width: 0, height: 2 },
+                                        shadowOpacity: 0.5,
+                                        shadowRadius: 3
+                                    }}
+                                    contentFit="contain"
+                                />
+                            )}
                         </View>
                         <View className="flex-1 ml-4 pt-1">
                             {showItems.length > 0 && (

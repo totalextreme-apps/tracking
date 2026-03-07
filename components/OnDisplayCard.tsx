@@ -133,7 +133,6 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
             <VHSCard
               posterUrl={posterUrl}
               isCustom={!!item.custom_poster_url}
-              isBootleg={item.is_bootleg}
               style={{
                 width: 100,
                 borderWidth: isGrail ? 2 : 0,
@@ -145,7 +144,6 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
               posterUrl={posterUrl}
               format={item.format as any}
               isCustom={!!item.custom_poster_url}
-              isBootleg={item.is_bootleg}
               style={{
                 width: 100,
                 borderWidth: isGrail ? 2 : 0,
@@ -164,7 +162,7 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
               shadowOpacity: 0.7,
               shadowRadius: 20,
               elevation: 12,
-              borderWidth: !isWishlist ? 2 : 2, // Always show border for digital if not wishlist? actually let's just make it look good.
+              borderWidth: !isWishlist ? 2 : 2,
               borderColor: isGrail ? '#ffd700' : '#00ff88',
             }}
           >
@@ -187,17 +185,10 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
               style={{ position: 'absolute', bottom: 6, right: 6, width: 30, height: 18, opacity: 0.9, zIndex: 40 }}
               contentFit="contain"
             />
-            {item.is_bootleg && (
-              <Image
-                source={require('@/assets/images/overlays/boot_sticker.png')}
-                style={{ position: 'absolute', bottom: 4, left: 4, width: 30, height: 30, zIndex: 50 }}
-                contentFit="contain"
-              />
-            )}
           </View>
         )}
 
-        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 150, pointerEvents: 'none' }}>
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 150, zIndex: 100, pointerEvents: 'none' }}>
           {/* Pick sticker for owned items */}
           {item.is_on_display && !isWishlist && (
             isPhysical
@@ -208,6 +199,26 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
           {/* Grail sticker for wishlist items */}
           {item.is_grail && isWishlist && (
             <SaleSticker visible={true} size={40} />
+          )}
+
+          {/* Bootleg Sticker - TOP LEVEL */}
+          {item.is_bootleg && (
+            <Image
+              source={require('@/assets/images/overlays/boot_sticker.png')}
+              style={{
+                position: 'absolute',
+                bottom: 24,
+                left: -8,
+                width: 32,
+                height: 32,
+                zIndex: 110,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.5,
+                shadowRadius: 2
+              }}
+              contentFit="contain"
+            />
           )}
         </View>
 

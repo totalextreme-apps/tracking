@@ -7,7 +7,7 @@ import { Image } from 'expo-image';
 import { router, Stack, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Modal, Platform, Pressable, RefreshControl, ScrollView, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import { Alert, Modal, Platform, Pressable, RefreshControl, ScrollView, Text, TextInput, useWindowDimensions, View } from 'react-native';
 
 import { AcquiredModal } from '@/components/AcquiredModal';
 import { EmptyState } from '@/components/EmptyState';
@@ -134,17 +134,24 @@ export default function HomeScreen() {
     if (viewShotRef.current) {
       try {
         setIsSharing(true);
+        // Add a small delay for UI state to reflect isSharing
         setTimeout(async () => {
-          const uri = await (viewShotRef.current as any).capture();
-          await Sharing.shareAsync(uri, {
-            mimeType: 'image/jpeg',
-            dialogTitle: 'Share my collection',
-            UTI: 'public.jpeg'
-          });
-          setIsSharing(false);
-        }, 100);
+          try {
+            const uri = await (viewShotRef.current as any).capture();
+            await Sharing.shareAsync(uri, {
+              mimeType: 'image/jpeg',
+              dialogTitle: 'Share my collection',
+              UTI: 'public.jpeg'
+            });
+          } catch (err) {
+            console.error('Capture/Share failed:', err);
+            Alert.alert('Share Error', 'Failed to generate share image.');
+          } finally {
+            setIsSharing(false);
+          }
+        }, 150);
       } catch (e) {
-        console.error('Failed to share', e);
+        console.error('Failed to initiate share', e);
         setIsSharing(false);
       }
     }
@@ -286,9 +293,9 @@ export default function HomeScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#f59e0b" />
         }
       >
-        <View className="w-full max-w-7xl mx-auto px-4 md:px-8">
+        <View className="w-full max-w-7xl mx-auto">
           {/* Header/Search Bar */}
-          <View className="pt-4 pb-4 border-b border-neutral-900">
+          <View className="pt-4 pb-4 border-b border-neutral-900 px-4 md:px-8">
             <View className="flex-row items-center justify-between mb-4">
               <View className="flex-row items-center bg-neutral-950 rounded-full p-1 flex-1 mr-4">
                 <Pressable
@@ -366,7 +373,7 @@ export default function HomeScreen() {
           <View className="flex-1">
             {onDisplay.length > 0 && (
               <View className="mb-4 mt-4">
-                <View className="px-2 flex-row items-center justify-between mb-2">
+                <View className="px-4 md:px-8 flex-row items-center justify-between mb-2">
                   <View className="flex-row items-baseline gap-2">
                     <Text className="text-amber-500 font-bold text-3xl tracking-tighter uppercase" style={{ fontFamily: 'VCR_OSD_MONO' }}>
                       {thriftMode ? 'GRAILS' : 'ON DISPLAY'}
@@ -419,7 +426,7 @@ export default function HomeScreen() {
               </View>
             )}
 
-            <View className="px-2 pb-4">
+            <View className="px-4 md:px-8 pb-4">
               <View className="flex-row items-center justify-between mb-6">
                 <View className="flex-row items-baseline gap-2">
                   <Text className="text-amber-500 font-bold text-3xl tracking-tighter uppercase" style={{ fontFamily: 'VCR_OSD_MONO' }}>

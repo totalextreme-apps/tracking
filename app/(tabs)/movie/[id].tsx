@@ -511,8 +511,8 @@ export default function MovieDetailScreen() {
                                 const finalPosterUrl = customArtUrl || posterUrl;
                                 const isCustom = !!customArtUrl;
 
-                                if (activeFormat === 'VHS') return <VHSCard posterUrl={finalPosterUrl} isCustom={isCustom} isBootleg={isBootleg} style={{ width: '100%' }} />;
-                                if (activeFormat && ['DVD', 'BluRay', '4K'].includes(activeFormat)) return <GlossyCard posterUrl={finalPosterUrl} format={activeFormat as MovieFormat} isCustom={isCustom} isBootleg={isBootleg} style={{ width: '100%' }} />;
+                                if (activeFormat === 'VHS') return <VHSCard posterUrl={finalPosterUrl} isCustom={isCustom} style={{ width: '100%' }} />;
+                                if (activeFormat && ['DVD', 'BluRay', '4K'].includes(activeFormat)) return <GlossyCard posterUrl={finalPosterUrl} format={activeFormat as MovieFormat} isCustom={isCustom} style={{ width: '100%' }} />;
 
                                 const ratio = isCustom
                                     ? (activeFormat === 'VHS' ? 2 / 3.5 : (activeFormat === 'BluRay' || activeFormat === '4K') ? 0.78 : 0.71)
@@ -524,6 +524,26 @@ export default function MovieDetailScreen() {
 
                                 return <Image source={{ uri: finalPosterUrl }} style={{ width: '100%', aspectRatio: ratio, borderRadius: 8 }} contentFit="cover" />;
                             })()}
+
+                            {/* Bootleg Sticker - TOP LEVEL */}
+                            {isBootleg && (
+                                <Image
+                                    source={require('@/assets/images/overlays/boot_sticker.png')}
+                                    style={{
+                                        position: 'absolute',
+                                        bottom: -10,
+                                        left: -10,
+                                        width: 40,
+                                        height: 40,
+                                        zIndex: 100,
+                                        shadowColor: '#000',
+                                        shadowOffset: { width: 0, height: 2 },
+                                        shadowOpacity: 0.5,
+                                        shadowRadius: 3
+                                    }}
+                                    contentFit="contain"
+                                />
+                            )}
                         </View>
 
                         {/* Controls + Title Info */}

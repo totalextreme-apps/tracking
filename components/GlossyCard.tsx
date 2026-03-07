@@ -8,10 +8,9 @@ type GlossyCardProps = {
     format: MovieFormat;
     style?: any;
     isCustom?: boolean;
-    isBootleg?: boolean;
 };
 
-export function GlossyCard({ posterUrl, format, style, isCustom = false, isBootleg = false }: GlossyCardProps) {
+export function GlossyCard({ posterUrl, format, style, isCustom = false }: GlossyCardProps) {
     // Overlays for specific formats
     const overlaySource =
         format === 'DVD' ? require('@/assets/images/overlays/dvd-wrap.png') :
@@ -111,11 +110,11 @@ export function GlossyCard({ posterUrl, format, style, isCustom = false, isBootl
                 />
             )}
 
-            {/* Layer 6: Bootleg Sticker */}
-            {isBootleg && (
+            {/* Layer 5: Format Logo Corner */}
+            {logoSource && (
                 <Image
-                    source={require('@/assets/images/overlays/boot_sticker.png')}
-                    style={{ position: 'absolute', bottom: 4, left: 4, width: 30, height: 30, zIndex: 50 }}
+                    source={logoSource}
+                    style={{ position: 'absolute', bottom: 6, right: 6, width: 30, height: 18, opacity: 0.9, zIndex: 40 }}
                     contentFit="contain"
                 />
             )}

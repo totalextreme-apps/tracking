@@ -5,10 +5,9 @@ type VHSCardProps = {
     posterUrl: string | null;
     style?: any;
     isCustom?: boolean;
-    isBootleg?: boolean;
 };
 
-export function VHSCard({ posterUrl, style, isCustom = false, isBootleg = false }: VHSCardProps) {
+export function VHSCard({ posterUrl, style, isCustom = false }: VHSCardProps) {
     const aspectRatio = isCustom ? 2 / 3.5 : 2 / 3;
 
     return (
@@ -41,15 +40,6 @@ export function VHSCard({ posterUrl, style, isCustom = false, isBootleg = false 
                 style={{ position: 'absolute', bottom: 6, right: 6, width: 40, height: 25, opacity: 0.9 }}
                 contentFit="contain"
             />
-
-            {/* Layer 5: Bootleg Sticker */}
-            {isBootleg && (
-                <Image
-                    source={require('@/assets/images/overlays/boot_sticker.png')}
-                    style={{ position: 'absolute', bottom: 4, left: 4, width: 36, height: 36, zIndex: 50 }}
-                    contentFit="contain"
-                />
-            )}
         </View>
     );
 }
