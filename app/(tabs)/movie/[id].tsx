@@ -302,7 +302,7 @@ export default function MovieDetailScreen() {
             } else {
                 // Add format
                 await addMutation.mutateAsync({
-                    tmdbMovie: {
+                    tmdbItem: {
                         id: activeMovie.tmdb_id,
                         title: activeMovie.title,
                         release_date: activeMovie.release_date ?? '',
@@ -342,7 +342,7 @@ export default function MovieDetailScreen() {
         try {
             // Add the format with edition
             await addMutation.mutateAsync({
-                tmdbMovie: {
+                tmdbItem: {
                     id: activeMovie.tmdb_id,
                     title: activeMovie.title,
                     release_date: activeMovie.release_date ?? '',
@@ -614,7 +614,7 @@ export default function MovieDetailScreen() {
                 {/* Cast Section */}
                 {activeMovie.movie_cast && activeMovie.movie_cast.length > 0 && (
                     <View className="mt-8 mb-2">
-                        <Text className="text-white font-bold text-lg mb-3 font-mono">STARRING</Text>
+                        <Text className="text-amber-500 font-bold text-xl mb-3 font-mono uppercase tracking-widest" style={{ fontFamily: 'VCR_OSD_MONO' }}>STARRING</Text>
                         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                             {activeMovie.movie_cast.map((member: any) => (
                                 <View key={member.id} className="mr-4 items-center w-20">
@@ -645,7 +645,7 @@ export default function MovieDetailScreen() {
 
                 {/* Overview */}
                 <View className="mt-6">
-                    <Text className="text-white font-bold mb-2">Overview</Text>
+                    <Text className="text-amber-500 font-bold text-xl mb-2 font-mono uppercase tracking-widest" style={{ fontFamily: 'VCR_OSD_MONO' }}>Overview</Text>
                     <Text className="text-neutral-400 leading-6">
                         {tmdbMovie?.overview || (displayMovie as any)?.overview || "No overview available."}
                     </Text>
@@ -892,7 +892,7 @@ export default function MovieDetailScreen() {
                     <Text className="text-white font-mono text-lg mb-8">SHARE YOUR STACK</Text>
 
                     <ViewShot ref={viewShotRef} options={{ format: 'png', quality: 0.9 }}>
-                        <ShareableCard movie={displayMovie} items={movieItems} />
+                        <ShareableCard media={displayMovie} items={movieItems} />
                     </ViewShot>
 
                     <View className="flex-row gap-4 mt-8">

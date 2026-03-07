@@ -75,6 +75,15 @@ export default function ShowDetailScreen() {
     const { season: seasonQuery } = useLocalSearchParams<{ season?: string }>();
     const seasonNumber = seasonQuery && seasonQuery !== 'undefined' && seasonQuery !== 'null' ? parseInt(seasonQuery, 10) : 1;
 
+    const { data: tmdbShow, isLoading: tmdbLoading } = useQuery({
+        queryKey: ['tmdb-show', showIdNum],
+        queryFn: async () => {
+            if (!showIdNum) return null;
+            return getTvShowById(showIdNum);
+        },
+        enabled: !!showIdNum,
+    });
+
     // Find items matching this show and season
     const showItems = collection?.filter((item: any) => {
         const itemShowId = item.show_id;
@@ -84,7 +93,7 @@ export default function ShowDetailScreen() {
     }) ?? [];
 
     const show = showItems[0]?.shows;
-    const activeShow = show || persistedShow;
+    const activeShow = show || persistedShow || tmdbShow;
 
     const [isNotFound, setIsNotFound] = useState(false);
 
@@ -101,14 +110,6 @@ export default function ShowDetailScreen() {
         }
     }, [show, persistedShow, collection, showItems.length]);
 
-    const { data: tmdbShow } = useQuery({
-        queryKey: ['tmdb-show', activeShow?.tmdb_id],
-        queryFn: async () => {
-            if (!activeShow?.tmdb_id) return null;
-            return getTvShowById(activeShow.tmdb_id);
-        },
-        enabled: !!activeShow?.tmdb_id,
-    });
 
     const customArtUrl = showItems.find((i: any) => i.custom_poster_url)?.custom_poster_url;
     const customBackdropUrl = showItems.find((i: any) => i.custom_backdrop_url)?.custom_backdrop_url;
@@ -246,11 +247,24 @@ export default function ShowDetailScreen() {
         );
     }
 
-    if (!activeShow || !showIdNum) {
+    if ((!activeShow && tmdbLoading) || !showIdNum) {
         return (
             <View className="flex-1 bg-neutral-950 items-center justify-center">
                 <ActivityIndicator size="large" color="#f59e0b" />
-                <Text className="text-neutral-500 font-mono text-xs mt-4 uppercase tracking-widest">Loading Show...</Text>
+                <Text className="text-amber-500 font-mono text-xs mt-4 uppercase tracking-widest">Fetching Signal...</Text>
+            </View>
+        );
+    }
+
+    if (!activeShow) {
+        return (
+            <View className="flex-1 bg-neutral-950 items-center justify-center p-8">
+                <Ionicons name="alert-circle-outline" size={48} color="#ef4444" />
+                <Text className="text-white font-bold text-lg mt-4 text-center">Metadata Lost</Text>
+                <Text className="text-neutral-500 text-center mt-2">Could not synchronize metadata for this frequency.</Text>
+                <Pressable onPress={() => router.back()} className="mt-8 bg-neutral-800 px-6 py-3 rounded-lg">
+                    <Text className="text-white font-bold">RE-TUNE</Text>
+                </Pressable>
             </View>
         );
     }
@@ -359,20 +373,45 @@ export default function ShowDetailScreen() {
                 </View>
 
                 <View className="px-8 flex-row mt-6 gap-2">
-                    <Pressable
-                        onPress={async () => {
-                            const isOnDisplay = showItems.some((i: any) => i.is_on_display);
-                            await Promise.all(showItems.map((item: any) => updateMutation.mutateAsync({ itemId: item.id, updates: { is_on_display: !isOnDisplay } })));
-                            playSound('click');
-                        }}
-                        className={`flex-1 flex-row items-center justify-center p-3 rounded-lg border ${showItems.some((i: any) => i.is_on_display) ? 'bg-indigo-500/10 border-indigo-500' : 'bg-neutral-900 border-neutral-800'}`}
-                    >
-                        <Ionicons name={showItems.some((i: any) => i.is_on_display) ? "star" : "star-outline"} size={16} color={showItems.some((i: any) => i.is_on_display) ? "#6366f1" : "#404040"} />
-                        <Text className={`ml-2 font-mono text-xs font-bold tracking-widest ${showItems.some((i: any) => i.is_on_display) ? 'text-indigo-500' : 'text-neutral-600'}`}>STAFF PICK</Text>
-                    </Pressable>
-                    <Pressable onPress={deleteShow} className="bg-red-900/10 px-4 rounded-lg border border-red-900/40 items-center justify-center">
-                        <Ionicons name="trash-outline" size={20} color="#ef4444" />
-                    </Pressable>
+                    {thriftMode ? (
+                        <Pressable
+                            onPress={async () => {
+                                const isGrail = showItems.some((i: any) => i.is_grail);
+                                await Promise.all(showItems.map((item: any) =>
+                                    updateMutation.mutateAsync({ itemId: item.id, updates: { is_grail: !isGrail } })
+                                ));
+                                playSound('peel');
+                                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                            }}
+                            className={`flex-1 flex-row items-center justify-center p-3 rounded-lg border ${showItems.some((i: any) => i.is_grail) ? 'bg-amber-500/10 border-amber-500' : 'bg-neutral-900 border-neutral-800'}`}
+                        >
+                            <Ionicons name={showItems.some((i: any) => i.is_grail) ? "trophy" : "trophy-outline"} size={16} color={showItems.some((i: any) => i.is_grail) ? "#f59e0b" : "#404040"} />
+                            <Text className={`ml-2 font-mono text-xs font-bold tracking-widest ${showItems.some((i: any) => i.is_grail) ? 'text-amber-500' : 'text-neutral-600'}`}>
+                                {showItems.some((i: any) => i.is_grail) ? 'GRAIL' : 'MAKE GRAIL'}
+                            </Text>
+                        </Pressable>
+                    ) : (
+                        <Pressable
+                            onPress={async () => {
+                                const isOnDisplay = showItems.some((i: any) => i.is_on_display);
+                                await Promise.all(showItems.map((item: any) =>
+                                    updateMutation.mutateAsync({ itemId: item.id, updates: { is_on_display: !isOnDisplay } })
+                                ));
+                                playSound('click');
+                            }}
+                            className={`flex-1 flex-row items-center justify-center p-3 rounded-lg border ${showItems.some((i: any) => i.is_on_display) ? 'bg-indigo-500/10 border-indigo-500' : 'bg-neutral-900 border-neutral-800'}`}
+                        >
+                            <Ionicons name={showItems.some((i: any) => i.is_on_display) ? "star" : "star-outline"} size={16} color={showItems.some((i: any) => i.is_on_display) ? "#6366f1" : "#404040"} />
+                            <Text className={`ml-2 font-mono text-xs font-bold tracking-widest ${showItems.some((i: any) => i.is_on_display) ? 'text-indigo-500' : 'text-neutral-600'}`}>
+                                {showItems.some((i: any) => i.is_on_display) ? 'STAFF PICK' : 'MAKE STAFF PICK'}
+                            </Text>
+                        </Pressable>
+                    )}
+                    {showItems.length > 0 && (
+                        <Pressable onPress={deleteShow} className="bg-red-900/10 px-4 rounded-lg border border-red-900/40 items-center justify-center">
+                            <Ionicons name="trash-outline" size={20} color="#ef4444" />
+                        </Pressable>
+                    )}
                 </View>
 
                 {activeShow.show_cast && activeShow.show_cast.length > 0 && (
@@ -397,7 +436,7 @@ export default function ShowDetailScreen() {
                 )}
 
                 <View className="px-8 mt-6">
-                    <Text className="text-white font-bold mb-2">Overview</Text>
+                    <Text className="text-amber-500 font-bold text-xl mb-4 font-mono uppercase tracking-widest" style={{ fontFamily: 'VCR_OSD_MONO' }}>Overview</Text>
                     <Text className="text-neutral-400 leading-6">{displayShow.overview || "No overview available."}</Text>
                 </View>
 

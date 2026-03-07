@@ -346,7 +346,7 @@ export default function HomeScreen() {
               <View className="mb-4 mt-4">
                 <View className="px-6 flex-row items-center justify-between mb-2">
                   <View className="flex-row items-baseline gap-2">
-                    <Text className="text-amber-500 font-bold text-2xl tracking-tighter uppercase" style={{ fontFamily: 'VCR_OSD_MONO' }}>
+                    <Text className="text-amber-500 font-bold text-3xl tracking-tighter uppercase" style={{ fontFamily: 'VCR_OSD_MONO' }}>
                       {thriftMode ? 'GRAILS' : 'ON DISPLAY'}
                     </Text>
                     <Text className="text-neutral-600 font-mono text-xs opacity-50 ml-1">/ {onDisplay.length}</Text>
@@ -385,7 +385,7 @@ export default function HomeScreen() {
 
             <View className="px-6 pb-4">
               <View className="flex-row items-center justify-between mb-6">
-                <Text className="text-amber-500 font-bold text-2xl tracking-tighter uppercase" style={{ fontFamily: 'VCR_OSD_MONO' }}>
+                <Text className="text-amber-500 font-bold text-3xl tracking-tighter uppercase" style={{ fontFamily: 'VCR_OSD_MONO' }}>
                   {thriftMode ? 'WISH LIST' : 'THE STACKS'}
                 </Text>
 
