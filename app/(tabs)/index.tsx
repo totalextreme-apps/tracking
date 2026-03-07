@@ -7,7 +7,7 @@ import { Image } from 'expo-image';
 import { router, Stack, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Modal, Platform, Pressable, RefreshControl, ScrollView, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import { Modal, Platform, Pressable, RefreshControl, ScrollView, Text, TextInput, useWindowDimensions, View } from 'react-native';
 
 import { AcquiredModal } from '@/components/AcquiredModal';
 import { EmptyState } from '@/components/EmptyState';
@@ -270,29 +270,8 @@ export default function HomeScreen() {
         <View className="w-full">
           {/* Header/Search Bar */}
           <View className="pt-4 pb-4 border-b border-neutral-900 px-4 md:px-8 max-w-7xl mx-auto w-full">
-            <View className="flex-row items-center justify-between mb-4">
-              <View className="flex-row items-center bg-neutral-950 rounded-full p-1 flex-1 mr-4">
-                <Pressable
-                  onPress={() => { setMediaTypeFilter(null); playSound('click'); }}
-                  className={`px-4 py-2 rounded-full ${mediaTypeFilter === null ? 'bg-neutral-800' : ''}`}
-                >
-                  <Text className={`font-bold text-xs ${mediaTypeFilter === null ? 'text-amber-500' : 'text-neutral-500'}`}>ALL</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => { setMediaTypeFilter('movie'); playSound('click'); }}
-                  className={`px-4 py-2 rounded-full ${mediaTypeFilter === 'movie' ? 'bg-neutral-800' : ''}`}
-                >
-                  <Text className={`font-bold text-xs ${mediaTypeFilter === 'movie' ? 'text-amber-500' : 'text-neutral-500'}`}>FILM</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => { setMediaTypeFilter('tv'); playSound('click'); }}
-                  className={`px-4 py-2 rounded-full ${mediaTypeFilter === 'tv' ? 'bg-neutral-800' : ''}`}
-                >
-                  <Text className={`font-bold text-xs ${mediaTypeFilter === 'tv' ? 'text-amber-500' : 'text-neutral-500'}`}>TV</Text>
-                </Pressable>
-              </View>
-
-              <View className="flex-row items-center bg-neutral-900 rounded-lg border border-neutral-800 px-4 py-2.5 flex-1 ml-2">
+            <View className="flex-row items-center mb-4">
+              <View className="flex-row items-center bg-neutral-900 rounded-lg border border-neutral-800 px-4 py-2.5 flex-1">
                 <Ionicons name="search" size={16} color="#444" style={{ marginRight: 8 }} />
                 <TextInput
                   placeholder="SEARCH..."
@@ -307,8 +286,8 @@ export default function HomeScreen() {
             </View>
 
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-              {['VHS', 'DVD', 'BluRay', '4K', 'BOOTLEG'].map(f => {
-                const isSelected = formatFilter === f;
+              {['ALL', 'VHS', 'DVD', 'BluRay', '4K', 'BOOTLEG'].map(f => {
+                const isSelected = f === 'ALL' ? formatFilter === null : formatFilter === f;
                 const formatColor = f === 'VHS' ? 'bg-red-600/20 border-red-600/40' :
                   f === 'DVD' ? 'bg-purple-600/20 border-purple-600/40' :
                     f === 'BluRay' ? 'bg-blue-600/20 border-blue-600/40' :
@@ -326,23 +305,13 @@ export default function HomeScreen() {
                 return (
                   <Pressable
                     key={f}
-                    onPress={() => { setFormatFilter(isSelected ? null : f); playSound('click'); }}
+                    onPress={() => { setFormatFilter(f === 'ALL' ? null : (isSelected ? null : f)); playSound('click'); }}
                     className={`px-4 py-1.5 rounded-full border ${isSelected ? 'bg-amber-500/20 border-amber-500/50' : formatColor}`}
                   >
                     <Text className={`font-mono text-[10px] uppercase font-bold ${textStyle}`}>{f}</Text>
                   </Pressable>
                 );
               })}
-
-              <Pressable
-                onPress={() => setIsGenreDropdownOpen(true)}
-                className={`px-4 py-1.5 rounded-full border flex-row items-center gap-2 ${genreFilter ? 'bg-amber-500/20 border-amber-500/50' : 'bg-neutral-900 border-neutral-800'}`}
-              >
-                <Text className={`font-mono text-[10px] ${genreFilter ? 'text-amber-500' : 'text-neutral-500'}`}>
-                  {genreFilter || 'GENRE'}
-                </Text>
-                <Ionicons name="chevron-down" size={10} color={genreFilter ? '#f59e0b' : '#666'} />
-              </Pressable>
             </ScrollView>
           </View>
 
@@ -456,6 +425,41 @@ export default function HomeScreen() {
                       )}
                     </Pressable>
                   ))}
+
+                  <View className="h-4 w-[1px] bg-neutral-800 mx-1" />
+
+                  <Text className="text-neutral-500 font-mono text-[10px] uppercase tracking-tighter mr-1">TYPE:</Text>
+                  <View className="flex-row bg-neutral-950 rounded border border-neutral-800 p-0.5 mr-2">
+                    <Pressable
+                      onPress={() => { setMediaTypeFilter(null); playSound('click'); }}
+                      className={`px-2.5 py-1 rounded ${mediaTypeFilter === null ? 'bg-neutral-800' : ''}`}
+                    >
+                      <Text className={`font-mono text-[10px] font-bold ${mediaTypeFilter === null ? 'text-amber-500' : 'text-neutral-500'}`}>ALL</Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => { setMediaTypeFilter('movie'); playSound('click'); }}
+                      className={`px-2.5 py-1 rounded ${mediaTypeFilter === 'movie' ? 'bg-neutral-800' : ''}`}
+                    >
+                      <Text className={`font-mono text-[10px] font-bold ${mediaTypeFilter === 'movie' ? 'text-amber-500' : 'text-neutral-500'}`}>FILM</Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => { setMediaTypeFilter('tv'); playSound('click'); }}
+                      className={`px-2.5 py-1 rounded ${mediaTypeFilter === 'tv' ? 'bg-neutral-800' : ''}`}
+                    >
+                      <Text className={`font-mono text-[10px] font-bold ${mediaTypeFilter === 'tv' ? 'text-amber-500' : 'text-neutral-500'}`}>TV</Text>
+                    </Pressable>
+                  </View>
+
+                  <Text className="text-neutral-500 font-mono text-[10px] uppercase tracking-tighter mr-1">GENRE:</Text>
+                  <Pressable
+                    onPress={() => { setIsGenreDropdownOpen(true); playSound('click'); }}
+                    className={`px-3 py-1.5 rounded border flex-row items-center gap-1.5 ${genreFilter ? 'bg-amber-500/20 border-amber-500/50' : 'bg-neutral-950 border-neutral-800'}`}
+                  >
+                    <Text className={`font-mono text-[10px] font-bold ${genreFilter ? 'text-amber-500' : 'text-neutral-500'}`}>
+                      {genreFilter || 'ALL'}
+                    </Text>
+                    <Ionicons name="chevron-down" size={10} color={genreFilter ? '#f59e0b' : '#666'} />
+                  </Pressable>
                 </View>
 
                 <View className="flex-row justify-between mb-2">
