@@ -93,16 +93,7 @@ export function CaptchaModal({ visible, onSuccess, onCancel }: CaptchaModalProps
 
     const host = typeof window !== 'undefined' ? window.location.hostname : '';
     const isProduction = host === 'mediatracking.app' || host === 'www.mediatracking.app';
-    const [forceBypassVisible, setForceBypassVisible] = React.useState(false);
-
-    React.useEffect(() => {
-        if (visible && !isProduction) {
-            const timer = setTimeout(() => {
-                setForceBypassVisible(true);
-            }, 4000); // Auto-show bypass after 4s on non-prod
-            return () => clearTimeout(timer);
-        }
-    }, [visible, isProduction]);
+    const [forceBypassVisible, setForceBypassVisible] = React.useState(!isProduction);
 
     const showBypass = Platform.OS !== 'web' || __DEV__ || !isProduction || !!turnstileError || forceBypassVisible;
 
