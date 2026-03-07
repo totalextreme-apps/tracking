@@ -1,12 +1,15 @@
+import type { CollectionItemWithMedia } from '@/types/database';
 import * as Print from 'expo-print';
 import { shareAsync } from 'expo-sharing';
 import { Platform } from 'react-native';
 
 export async function printInventoryReceipt(items: CollectionItemWithMedia[]) {
     // 1. Sort items alphabetically
-    const sortedItems = [...items].sort((a, b) =>
-        (a.movies?.title || '').localeCompare(b.movies?.title || '')
-    );
+    const sortedItems = [...items].sort((a, b) => {
+        const titleA = a.movies?.title || a.shows?.name || '';
+        const titleB = b.movies?.title || b.shows?.name || '';
+        return titleA.localeCompare(titleB);
+    });
 
     // 2. Generate HTML
     const html = generateReceiptHtml(sortedItems);
@@ -41,15 +44,20 @@ function generateReceiptHtml(items: CollectionItemWithMedia[]) {
     const count = items.length;
 
     const rows = items.map(item => {
-        const title = (item.movies?.title || 'Unknown Title').toUpperCase().substring(0, 25).padEnd(25, '.');
+        const rawTitle = item.movies?.title || item.shows?.name || 'Unknown Title';
+        const seasonInfo = item.media_type === 'tv' ? ` S${item.season_number}` : '';
+        const fullTitle = `${rawTitle}${seasonInfo}`.toUpperCase();
+
+        // Take first 25 chars, pad with dots
+        const displayTitle = fullTitle.substring(0, 25).padEnd(25, '.');
         const format = (item.format || '???').toUpperCase().substring(0, 8).padEnd(8, ' ');
-        const status = item.is_grail ? '[GRAIL]' : item.is_on_display ? '[DISP]' : '      ';
+        const status = item.is_grail ? '[GRAIL]' : item.is_on_display ? '[PICK ]' : '       ';
 
         return `
         <div class="row">
-            <span class="title">${title}</span>
-            <span class="format">${format}</span>
-            <span class="status">${status}</span>
+            <span class="title-cell">${displayTitle}</span>
+            <span class="format-cell">${format}</span>
+            <span class="status-cell">${status}</span>
         </div>`;
     }).join('');
 
@@ -57,6 +65,7 @@ function generateReceiptHtml(items: CollectionItemWithMedia[]) {
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Courier+Prime&display=swap');
