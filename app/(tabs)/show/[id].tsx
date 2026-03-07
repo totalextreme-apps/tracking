@@ -49,6 +49,7 @@ export default function ShowDetailScreen() {
     const [showShareModal, setShowShareModal] = useState(false);
     const [localNotes, setLocalNotes] = useState<Record<string, string>>({});
     const [localEditions, setLocalEditions] = useState<Record<string, string>>({});
+    const [localBootlegs, setLocalBootlegs] = useState<Record<string, boolean>>({});
     const [persistedShow, setPersistedShow] = useState<any>(null);
     const viewShotRef = useRef<ViewShot>(null);
 
@@ -449,7 +450,19 @@ export default function ShowDetailScreen() {
                                     <View className={`px-2 py-1 rounded shrink-0 ${FORMAT_COLORS[item.format] || 'bg-neutral-800'}`}>
                                         <Text className="text-white font-mono text-xs font-bold">{item.format}</Text>
                                     </View>
-                                    {item.edition && <Text className="text-neutral-500 font-mono text-xs ml-2">({item.edition})</Text>}
+                                    <Pressable
+                                        onPress={() => {
+                                            const isBoot = localBootlegs[item.id] !== undefined ? localBootlegs[item.id] : (item.is_bootleg || false);
+                                            setLocalBootlegs(prev => ({ ...prev, [item.id]: !isBoot }));
+                                            playSound('click');
+                                        }}
+                                        className={`ml-2 px-2 py-1 rounded border ${(localBootlegs[item.id] !== undefined ? localBootlegs[item.id] : (item.is_bootleg || false)) ? 'bg-red-500 border-red-400' : 'bg-neutral-800 border-neutral-700'}`}
+                                    >
+                                        <Text className="text-white font-mono text-[10px] font-bold">BOOT</Text>
+                                    </Pressable>
+                                    {item.edition && (
+                                        <Text className="text-neutral-500 font-mono text-xs ml-2 flex-1" style={{ minWidth: 100 }}>({item.edition})</Text>
+                                    )}
                                 </View>
                                 <TextInput
                                     className="bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm mb-2"
@@ -468,9 +481,16 @@ export default function ShowDetailScreen() {
                                 />
                                 <Pressable
                                     onPress={async () => {
+                                        const noteToSave = localNotes[item.id] !== undefined ? localNotes[item.id] : (item.notes || '');
+                                        const editionToSave = localEditions[item.id] !== undefined ? localEditions[item.id] : (item.edition || '');
+                                        const bootToSave = localBootlegs[item.id] !== undefined ? localBootlegs[item.id] : (item.is_bootleg || false);
                                         await updateMutation.mutateAsync({
                                             itemId: item.id,
-                                            updates: { notes: localNotes[item.id] || '', edition: localEditions[item.id] || null }
+                                            updates: {
+                                                notes: noteToSave,
+                                                edition: editionToSave || null,
+                                                is_bootleg: bootToSave
+                                            }
                                         });
                                         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                                     }}

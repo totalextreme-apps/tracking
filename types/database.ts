@@ -52,7 +52,7 @@ export interface CollectionItem {
   edition: string | null;
   digital_provider: string | null;
   condition: string | null;
-  notes: string | null;
+  is_bootleg: boolean;
   custom_poster_url: string | null;
   custom_lists: string[] | null;
   rating?: number; // 0-5

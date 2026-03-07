@@ -3,6 +3,7 @@ import { TrackingLoader } from '@/components/TrackingLoader';
 import { Ionicons } from '@expo/vector-icons';
 import Slider from '@react-native-community/slider';
 import * as Haptics from 'expo-haptics';
+import { Image } from 'expo-image';
 import { router, Stack, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -283,7 +284,7 @@ export default function HomeScreen() {
           {/* Header/Search Bar */}
           <View className="px-6 pt-4 pb-4 border-b border-neutral-900">
             <View className="flex-row items-center justify-between mb-4">
-              <View className="flex-row items-center bg-neutral-950 rounded-full border border-neutral-800 p-1 flex-1 mr-4">
+              <View className="flex-row items-center bg-neutral-950 rounded-full p-1 flex-1 mr-4">
                 <Pressable
                   onPress={() => { setMediaTypeFilter(null); playSound('click'); }}
                   className={`px-4 py-2 rounded-full ${mediaTypeFilter === null ? 'bg-neutral-800' : ''}`}
@@ -319,15 +320,30 @@ export default function HomeScreen() {
             </View>
 
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-              {['VHS', 'DVD', 'BluRay', '4K'].map(f => (
-                <Pressable
-                  key={f}
-                  onPress={() => setFormatFilter(formatFilter === f ? null : f)}
-                  className={`px-4 py-1.5 rounded-full border ${formatFilter === f ? 'bg-amber-500/20 border-amber-500/50' : 'bg-neutral-900 border-neutral-800'}`}
-                >
-                  <Text className={`font-mono text-[10px] ${formatFilter === f ? 'text-amber-500' : 'text-neutral-500'}`}>{f}</Text>
-                </Pressable>
-              ))}
+              {['VHS', 'DVD', 'BluRay', '4K'].map(f => {
+                const isSelected = formatFilter === f;
+                const formatColor = f === 'VHS' ? 'bg-red-600/20 border-red-600/40' :
+                  f === 'DVD' ? 'bg-purple-600/20 border-purple-600/40' :
+                    f === 'BluRay' ? 'bg-blue-600/20 border-blue-600/40' :
+                      f === '4K' ? 'bg-yellow-600/20 border-yellow-600/40' :
+                        'bg-neutral-900 border-neutral-800';
+                const textStyle = isSelected ? 'text-amber-500' :
+                  f === 'VHS' ? 'text-red-500' :
+                    f === 'DVD' ? 'text-purple-400' :
+                      f === 'BluRay' ? 'text-blue-400' :
+                        f === '4K' ? 'text-yellow-400' :
+                          'text-neutral-500';
+
+                return (
+                  <Pressable
+                    key={f}
+                    onPress={() => { setFormatFilter(isSelected ? null : f); playSound('click'); }}
+                    className={`px-4 py-1.5 rounded-full border ${isSelected ? 'bg-amber-500/20 border-amber-500/50' : formatColor}`}
+                  >
+                    <Text className={`font-mono text-[10px] uppercase font-bold ${textStyle}`}>{f}</Text>
+                  </Pressable>
+                );
+              })}
 
               <Pressable
                 onPress={() => setIsGenreDropdownOpen(true)}
@@ -352,6 +368,15 @@ export default function HomeScreen() {
                     <Text className="text-neutral-600 font-mono text-xs opacity-50 ml-1">/ {onDisplay.length}</Text>
                   </View>
                   <View className="flex-row items-center gap-2">
+                    <Pressable
+                      onPress={() => {
+                        setShowShareModal(true);
+                        playSound('click');
+                      }}
+                      className="p-2 bg-neutral-900 rounded-full border border-neutral-800 active:bg-neutral-800 mr-2"
+                    >
+                      <Ionicons name="share-outline" size={16} color="#f59e0b" />
+                    </Pressable>
                     <Pressable onPress={scrollShelfLeft} className="p-2 bg-neutral-900 rounded-full border border-neutral-800 active:bg-neutral-800">
                       <Ionicons name="chevron-back" size={16} color="#f59e0b" />
                     </Pressable>
@@ -362,23 +387,30 @@ export default function HomeScreen() {
                 </View>
 
                 <ViewShot ref={viewShotRef} options={{ format: 'jpg', quality: 0.9 }}>
-                  <ScrollView
-                    ref={shelfRef}
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={{ paddingLeft: 24, paddingRight: 40 }}
-                    className="py-4"
-                  >
-                    {onDisplay.map((item: any) => (
-                      <OnDisplayCard
-                        key={item.id}
-                        item={item}
-                        onSingleTapAction={() => navigateToDetail(item)}
-                        onLongPressAction={() => handleLongPress(item)}
-                        onToggleFavorite={toggleFavorite}
-                      />
-                    ))}
-                  </ScrollView>
+                  <View className="relative">
+                    <Image
+                      source={thriftMode ? require('@/assets/images/thrift_background.png') : require('@/assets/images/shelf_background.png')}
+                      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.8 }}
+                      contentFit="cover"
+                    />
+                    <ScrollView
+                      ref={shelfRef}
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={{ paddingLeft: 24, paddingRight: 40 }}
+                      className="py-4"
+                    >
+                      {onDisplay.map((item: any) => (
+                        <OnDisplayCard
+                          key={item.id}
+                          item={item}
+                          onSingleTapAction={() => navigateToDetail(item)}
+                          onLongPressAction={() => handleLongPress(item)}
+                          onToggleFavorite={toggleFavorite}
+                        />
+                      ))}
+                    </ScrollView>
+                  </View>
                 </ViewShot>
               </View>
             )}

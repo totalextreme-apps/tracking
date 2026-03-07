@@ -219,6 +219,7 @@ export function useUpdateCollectionItem(userId: string | undefined) {
         status?: 'owned' | 'wishlist';
         is_on_display?: boolean;
         is_grail?: boolean;
+        is_bootleg?: boolean;
         rating?: number;
         notes?: string;
         edition?: string | null;

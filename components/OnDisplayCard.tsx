@@ -133,6 +133,7 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
             <VHSCard
               posterUrl={posterUrl}
               isCustom={!!item.custom_poster_url}
+              isBootleg={item.is_bootleg}
               style={{
                 width: 100,
                 borderWidth: isGrail ? 2 : 0,
@@ -144,6 +145,7 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
               posterUrl={posterUrl}
               format={item.format as any}
               isCustom={!!item.custom_poster_url}
+              isBootleg={item.is_bootleg}
               style={{
                 width: 100,
                 borderWidth: isGrail ? 2 : 0,
@@ -185,6 +187,13 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
               style={{ position: 'absolute', bottom: 6, right: 6, width: 30, height: 18, opacity: 0.9, zIndex: 40 }}
               contentFit="contain"
             />
+            {item.is_bootleg && (
+              <Image
+                source={require('@/assets/images/overlays/boot_sticker.png')}
+                style={{ position: 'absolute', bottom: 4, left: 4, width: 24, height: 24, zIndex: 50 }}
+                contentFit="contain"
+              />
+            )}
           </View>
         )}
 

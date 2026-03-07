@@ -393,10 +393,10 @@ export function StackCard({
               };
 
               if (isVHS) {
-                return <VHSCard key={item.id} posterUrl={url} isCustom={!!item.custom_poster_url} style={itemStyle} />;
+                return <VHSCard key={item.id} posterUrl={url} isCustom={!!item.custom_poster_url} isBootleg={item.is_bootleg} style={itemStyle} />;
               }
               if (isDisc) {
-                return <GlossyCard key={item.id} posterUrl={url} format={item.format as any} isCustom={!!item.custom_poster_url} style={itemStyle} />;
+                return <GlossyCard key={item.id} posterUrl={url} format={item.format as any} isCustom={!!item.custom_poster_url} isBootleg={item.is_bootleg} style={itemStyle} />;
               }
 
               return (
@@ -424,6 +424,13 @@ export function StackCard({
                         {(itemMedia as any).title || (itemMedia as any).name}
                       </Text>
                     </View>
+                  )}
+                  {item.is_bootleg && (
+                    <Image
+                      source={require('@/assets/images/overlays/boot_sticker.png')}
+                      style={{ position: 'absolute', bottom: 4, left: 4, width: 24, height: 24, zIndex: 50 }}
+                      contentFit="contain"
+                    />
                   )}
                 </View>
               );
