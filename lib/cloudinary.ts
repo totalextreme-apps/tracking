@@ -20,32 +20,40 @@ export async function uploadToCloudinary(fileData: Blob | string | any): Promise
         let uri = typeof fileData === 'string' ? fileData : fileData?.uri;
         if (!uri) throw new Error("No pure URI provided for native filesystem upload");
 
-        console.log('Using expo-file-system native upload for:', uri);
+        // If it's a data URL on native, FileSystem.uploadAsync won't work.
+        // We handle it with fetch if it's a data URL.
+        if (uri.startsWith('data:')) {
+            console.log('Detected data URL on native, using fetch fallback');
+        } else {
+            console.log('Using expo-file-system native upload for:', uri);
+            const uploadResult = await FileSystem.uploadAsync(uploadUrl, uri, {
+                httpMethod: 'POST',
+                uploadType: 1, // FileSystemUploadType.MULTIPART
+                fieldName: 'file',
+                mimeType: 'image/jpeg',
+                parameters: {
+                    upload_preset: UPLOAD_PRESET,
+                },
+            });
 
-        const uploadResult = await FileSystem.uploadAsync(uploadUrl, uri, {
-            httpMethod: 'POST',
-            uploadType: 1, // FileSystemUploadType.MULTIPART
-            fieldName: 'file',
-            mimeType: 'image/jpeg',
-            parameters: {
-                upload_preset: UPLOAD_PRESET,
-            },
-        });
+            if (uploadResult.status < 200 || uploadResult.status >= 300) {
+                console.error('Cloudinary native upload error:', uploadResult.body);
+                throw new Error(`Cloudinary Upload Failed (${uploadResult.status})`);
+            }
 
-        if (uploadResult.status < 200 || uploadResult.status >= 300) {
-            console.error('Cloudinary native upload error:', uploadResult.body);
-            throw new Error(`Native Cloudinary Upload Failed: ${uploadResult.status}`);
+            const data = JSON.parse(uploadResult.body);
+            return {
+                url: data.secure_url,
+                publicId: data.public_id
+            };
         }
-
-        const data = JSON.parse(uploadResult.body);
-        return {
-            url: data.secure_url,
-            publicId: data.public_id
-        };
     }
 
-    // Help convert data URLs to Blobs for better Safari/Chrome mobile support
+    // Web OR Native Data URL fallback
+    console.log('Starting fetch-based upload...');
     let uploadPayload = fileData;
+
+    // Help convert data URLs to Blobs for better Safari/Chrome mobile support
     if (typeof fileData === 'string' && fileData.startsWith('data:')) {
         try {
             const arr = fileData.split(',');
@@ -60,31 +68,27 @@ export async function uploadToCloudinary(fileData: Blob | string | any): Promise
             uploadPayload = new Blob([u8arr], { type: mime });
             console.log('Converted data URL to Blob for upload');
         } catch (e) {
-            console.error('Failed to convert data URL to blob, falling back to raw string', e);
+            console.error('Failed to convert data URL to blob', e);
         }
     }
 
     const formData = new FormData();
-    formData.append('file', uploadPayload, 'upload.jpg');
+    formData.append('file', uploadPayload);
     formData.append('upload_preset', UPLOAD_PRESET);
 
-    console.log('Sending fetch request to Cloudinary...');
-    const response = await fetch(
-        uploadUrl,
-        {
-            method: 'POST',
-            body: formData,
-        }
-    );
+    const response = await fetch(uploadUrl, {
+        method: 'POST',
+        body: formData,
+    });
 
     if (!response.ok) {
         let errorMsg = 'Failed to upload image to Cloudinary';
         try {
             const error = await response.json();
-            console.error('Cloudinary upload error response:', error);
+            console.error('Cloudinary terminal error:', error);
             errorMsg = error.error?.message || errorMsg;
         } catch (e) {
-            console.error('Failed to parse Cloudinary error JSON');
+            console.error('Could not parse error JSON');
         }
         throw new Error(errorMsg);
     }

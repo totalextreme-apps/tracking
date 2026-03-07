@@ -107,48 +107,32 @@ export default function MovieDetailScreen() {
         console.log(`Upload custom ${type} clicked`, Platform.OS);
         setCustomArtType(type);
 
-        if (Platform.OS !== 'web') {
-            // For native: use expo-image-picker
-            try {
-                const result = await ImagePicker.launchImageLibraryAsync({
-                    mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                    allowsEditing: true,
-                    aspect: type === 'poster' ? [2, 3] : [16, 9],
-                    quality: 0.8,
-                });
-
-                if (!result.canceled && result.assets[0]) {
-                    setPendingImageUri(result.assets[0].uri);
-                    setCropModalVisible(true);
-                }
-            } catch (error) {
-                console.error('ImagePicker error:', error);
-                Alert.alert('Error', 'Failed to open image library');
+        try {
+            // Request permissions first
+            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (status !== 'granted') {
+                Alert.alert('Permission Denied', 'We need permission to access your photos to upload custom art.');
+                return;
             }
-        } else {
-            // For web: trigger the hidden input
-            const input = document.getElementById('custom-art-input') as HTMLInputElement;
-            if (input) {
-                input.click();
-            }
-        }
-    };
 
-    const handleWebFileChange = (e: any) => {
-        const file = e.target?.files?.[0];
-        if (file) {
-            try {
-                console.log('File selected:', file.name, file.size);
-                // Use URL.createObjectURL instead of FileReader for better memory performance
-                const url = URL.createObjectURL(file);
-                setPendingImageUri(url);
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ['images'],
+                allowsEditing: true,
+                aspect: type === 'poster' ? [2, 3] : [16, 9],
+                quality: 0.8,
+            });
+
+            if (!result.canceled && result.assets[0]) {
+                setPendingImageUri(result.assets[0].uri);
                 setCropModalVisible(true);
-            } catch (error) {
-                console.error('File selection error:', error);
-                Alert.alert('Error', 'Failed to process image');
             }
+        } catch (error) {
+            console.error('Upload initiation error:', error);
+            Alert.alert('Error', 'Could not open image library');
         }
     };
+
+    // Removed handleWebFileChange as we now use ImagePicker for web too
 
     const handleSaveCustomArt = async (croppedDataUrl: string) => {
         if (!movieItems[0]?.id) {
@@ -466,15 +450,7 @@ export default function MovieDetailScreen() {
             <StatusBar style="light" />
             <Stack.Screen options={{ headerShown: false }} />
 
-            {Platform.OS === 'web' && (
-                <input
-                    id="custom-art-input"
-                    type="file"
-                    accept="image/*"
-                    style={{ display: 'none' }}
-                    onChange={handleWebFileChange}
-                />
-            )}
+            {/* Hidden file input replaced by ImagePicker for better mobile compatibility */}
 
             <ScrollView
                 className="flex-1"

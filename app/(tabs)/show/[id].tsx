@@ -115,42 +115,38 @@ export default function ShowDetailScreen() {
 
     const handleUploadCustomArt = async (type: 'poster' | 'backdrop' = 'poster') => {
         setCustomArtType(type);
-        if (Platform.OS !== 'web') {
-            try {
-                const result = await ImagePicker.launchImageLibraryAsync({
-                    mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                    allowsEditing: true,
-                    aspect: type === 'poster' ? [2, 3] : [16, 9],
-                    quality: 0.8,
-                });
-                if (!result.canceled && result.assets[0]) {
-                    setPendingImageUri(result.assets[0].uri);
-                    setCropModalVisible(true);
-                }
-            } catch (error) {
-                Alert.alert('Error', 'Failed to open image library');
+        try {
+            // Request permissions first
+            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (status !== 'granted') {
+                Alert.alert('Permission Denied', 'We need permission to access your photos to upload custom art.');
+                return;
             }
-        } else {
-            const input = document.getElementById('custom-art-input') as HTMLInputElement;
-            if (input) input.click();
+
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ['images'],
+                allowsEditing: true,
+                aspect: type === 'poster' ? [2, 3] : [16, 9],
+                quality: 0.8,
+            });
+
+            if (!result.canceled && result.assets[0]) {
+                setPendingImageUri(result.assets[0].uri);
+                setCropModalVisible(true);
+            }
+        } catch (error) {
+            console.error('Upload initiation error:', error);
+            Alert.alert('Error', 'Could not open image library');
         }
     };
 
-    const handleWebFileChange = (e: any) => {
-        const file = e.target?.files?.[0];
-        if (file) {
-            try {
-                const url = URL.createObjectURL(file);
-                setPendingImageUri(url);
-                setCropModalVisible(true);
-            } catch (error) {
-                Alert.alert('Error', 'Failed to process image');
-            }
-        }
-    };
+    // Removed handleWebFileChange as we now use ImagePicker for web too
 
     const handleSaveCustomArt = async (croppedDataUrl: string) => {
-        if (!showItems[0]?.id) return;
+        if (!showItems[0]?.id) {
+            Alert.alert('Error', 'Could not find collection item for upload');
+            return;
+        }
         try {
             const oldUrl = customArtType === 'poster' ? customArtUrl : customBackdropUrl;
             const { url: uploadUrl } = await uploadToCloudinary(croppedDataUrl);
@@ -165,7 +161,8 @@ export default function ShowDetailScreen() {
             setPendingImageUri(null);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         } catch (e: any) {
-            Alert.alert('Upload Error', 'Failed to save custom art');
+            console.error('Cloudinary upload failure:', e);
+            Alert.alert('Upload Error', e.message || 'Failed to save custom art');
         }
     };
 
@@ -298,9 +295,7 @@ export default function ShowDetailScreen() {
             <StatusBar style="light" />
             <Stack.Screen options={{ headerShown: false }} />
 
-            {Platform.OS === 'web' && (
-                <input id="custom-art-input" type="file" accept="image/*" style={{ display: 'none' }} onChange={handleWebFileChange} />
-            )}
+            {/* ImagePicker is now used for both web and native for better mobile browser compatibility */}
 
             <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: insets.bottom + 120, maxWidth: 1200, alignSelf: 'center', width: '100%' }}>
                 <View className="relative h-72 w-full">
