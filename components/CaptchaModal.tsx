@@ -33,6 +33,7 @@ const NativeWebTurnstile = ({ siteKey, onSuccess, onError, retryCount }: any) =>
                         theme: 'dark',
                         size: 'normal',
                         appearance: 'always',
+                        execution: 'render',
                         'refresh-expired': 'auto',
                         'retry-interval': 1500,
                         callback: (token: string) => {
@@ -89,20 +90,15 @@ export function CaptchaModal({ visible, onSuccess, onCancel }: CaptchaModalProps
     const [retryCount, setRetryCount] = React.useState(0);
     const [turnstileError, setTurnstileError] = React.useState<string | null>(null);
 
+    const host = typeof window !== 'undefined' ? window.location.hostname : '';
+
     React.useEffect(() => {
         if (visible) {
             console.log('CaptchaModal Rendering (Visible). SiteKey Length:', siteKey.length);
             console.log('Platform:', Platform.OS);
-
-            const host = typeof window !== 'undefined' ? window.location.hostname : '';
-            const isPreview = host.includes('vercel.app') && !host.includes('mediatracking.app');
-
-            // Auto-bypass in dev mode or preview environments to keep local work moving
-            if (__DEV__ || isPreview) {
-                console.warn('DEV/PREVIEW MODE: Enabling CAPTCHA Bypass option');
-            }
+            console.log('Hostname:', host);
         }
-    }, [visible, siteKey]); // Changed onSuccess to siteKey to avoid effect spam but track key changes
+    }, [visible, siteKey, host]);
 
     const [forceBypassVisible, setForceBypassVisible] = React.useState(false);
 
@@ -179,6 +175,12 @@ export function CaptchaModal({ visible, onSuccess, onCancel }: CaptchaModalProps
             <Pressable onPress={onCancel} style={styles.closeButton}>
                 <Text style={styles.closeButtonText}>Cancel</Text>
             </Pressable>
+
+            <View style={{ marginTop: 20, opacity: 0.3 }}>
+                <Text style={{ color: '#52525b', fontSize: 8, fontStyle: 'italic', textAlign: 'center' }}>
+                    DOMAIN: {host || 'LOCAL'}
+                </Text>
+            </View>
         </View>
     );
 
