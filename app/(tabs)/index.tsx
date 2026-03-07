@@ -539,6 +539,7 @@ export default function HomeScreen() {
                           onLongPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); setAcquiredItem(topItem); }}
                           width={(windowWidth - 48 - (resolvedColumns * 20)) / resolvedColumns}
                           mode={viewMode === 'list' ? 'list' : 'grid'}
+                          activeFormatFilter={formatFilter}
                         />
                         {viewMode !== 'list' && (
                           <View className="mt-3">

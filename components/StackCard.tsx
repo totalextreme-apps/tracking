@@ -55,6 +55,7 @@ type StackCardProps = {
   height?: number;
   stackOffset?: number;
   mode?: 'grid' | 'list';
+  activeFormatFilter?: string | null;
 };
 
 const DEFAULT_CARD_WIDTH = 100;
@@ -70,9 +71,27 @@ export function StackCard({
   width = DEFAULT_CARD_WIDTH,
   height = DEFAULT_CARD_HEIGHT,
   stackOffset = DEFAULT_OFFSET,
-  mode = 'grid'
+  mode = 'grid',
+  activeFormatFilter = null
 }: StackCardProps) {
-  const defaultSorted = useMemo(() => sortByQuality(stack), [stack]);
+  const defaultSorted = useMemo(() => {
+    const qualitySorted = sortByQuality(stack);
+    if (!activeFormatFilter) return qualitySorted;
+
+    const matching = [];
+    const others = [];
+    for (const item of qualitySorted) {
+      if (activeFormatFilter === 'BOOTLEG' && item.is_bootleg) {
+        matching.push(item);
+      } else if (item.format === activeFormatFilter) {
+        matching.push(item);
+      } else {
+        others.push(item);
+      }
+    }
+    return [...matching, ...others];
+  }, [stack, activeFormatFilter]);
+
   const [activeId, setActiveId] = useState<string | null>(null);
   const lastTapRef = useRef<number>(0);
   const { playSound } = useSound();
