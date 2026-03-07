@@ -216,7 +216,11 @@ export default function HomeScreen() {
         if (!matchesTitle && !matchesCast) return false;
       }
       if (formatFilter) {
-        if (!stack.some((item: any) => item?.format === formatFilter)) return false;
+        if (formatFilter === 'BOOTLEG') {
+          if (!stack.some((item: any) => item?.is_bootleg)) return false;
+        } else {
+          if (!stack.some((item: any) => item?.format === formatFilter)) return false;
+        }
       }
       if (genreFilter) {
         if (!media.genres?.some((g: any) => g?.name === genreFilter)) return false;
@@ -333,19 +337,21 @@ export default function HomeScreen() {
             </View>
 
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-              {['VHS', 'DVD', 'BluRay', '4K'].map(f => {
+              {['VHS', 'DVD', 'BluRay', '4K', 'BOOTLEG'].map(f => {
                 const isSelected = formatFilter === f;
                 const formatColor = f === 'VHS' ? 'bg-red-600/20 border-red-600/40' :
                   f === 'DVD' ? 'bg-purple-600/20 border-purple-600/40' :
                     f === 'BluRay' ? 'bg-blue-600/20 border-blue-600/40' :
                       f === '4K' ? 'bg-yellow-600/20 border-yellow-600/40' :
-                        'bg-neutral-900 border-neutral-800';
+                        f === 'BOOTLEG' ? 'bg-orange-600/20 border-orange-600/40' :
+                          'bg-neutral-900 border-neutral-800';
                 const textStyle = isSelected ? 'text-amber-500' :
                   f === 'VHS' ? 'text-red-500' :
                     f === 'DVD' ? 'text-purple-400' :
                       f === 'BluRay' ? 'text-blue-400' :
                         f === '4K' ? 'text-yellow-400' :
-                          'text-neutral-500';
+                          f === 'BOOTLEG' ? 'text-orange-400' :
+                            'text-neutral-500';
 
                 return (
                   <Pressable
@@ -466,8 +472,7 @@ export default function HomeScreen() {
                     { id: 'recent', label: 'RECENT' },
                     { id: 'title', label: 'NAME' },
                     { id: 'release', label: 'YEAR' },
-                    { id: 'rating', label: 'RATING' },
-                    { id: 'bootleg', label: 'BOOTLEG' }
+                    { id: 'rating', label: 'RATING' }
                   ].map((s: any) => (
                     <Pressable
                       key={s.id}
