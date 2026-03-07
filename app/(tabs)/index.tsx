@@ -293,9 +293,9 @@ export default function HomeScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#f59e0b" />
         }
       >
-        <View className="w-full max-w-7xl mx-auto">
+        <View className="w-full">
           {/* Header/Search Bar */}
-          <View className="pt-4 pb-4 border-b border-neutral-900 px-4 md:px-8">
+          <View className="pt-4 pb-4 border-b border-neutral-900 px-4 md:px-8 max-w-7xl mx-auto w-full">
             <View className="flex-row items-center justify-between mb-4">
               <View className="flex-row items-center bg-neutral-950 rounded-full p-1 flex-1 mr-4">
                 <Pressable
@@ -373,7 +373,7 @@ export default function HomeScreen() {
           <View className="flex-1">
             {onDisplay.length > 0 && (
               <View className="mb-4 mt-4">
-                <View className="px-4 md:px-8 flex-row items-center justify-between mb-2">
+                <View className="px-4 md:px-8 flex-row items-center justify-between mb-2 max-w-7xl mx-auto w-full">
                   <View className="flex-row items-baseline gap-2">
                     <Text className="text-amber-500 font-bold text-3xl tracking-tighter uppercase" style={{ fontFamily: 'VCR_OSD_MONO' }}>
                       {thriftMode ? 'GRAILS' : 'ON DISPLAY'}
@@ -426,7 +426,7 @@ export default function HomeScreen() {
               </View>
             )}
 
-            <View className="px-4 md:px-8 pb-4">
+            <View className="px-4 md:px-8 pb-4 max-w-7xl mx-auto w-full">
               <View className="flex-row items-center justify-between mb-6">
                 <View className="flex-row items-baseline gap-2">
                   <Text className="text-amber-500 font-bold text-3xl tracking-tighter uppercase" style={{ fontFamily: 'VCR_OSD_MONO' }}>

@@ -463,8 +463,6 @@ export default function MovieDetailScreen() {
                 contentContainerStyle={{
                     paddingBottom: insets.bottom + 120,
                     paddingHorizontal: 0,
-                    maxWidth: 1200,
-                    alignSelf: 'center',
                     width: '100%'
                 }}
             >
@@ -503,7 +501,7 @@ export default function MovieDetailScreen() {
                     </Pressable>
                 </View>
 
-                <View className="px-8 -mt-20">
+                <View className="max-w-7xl mx-auto w-full px-4 md:px-8 -mt-20">
                     <View className="flex-row items-start">
                         {/* Poster */}
                         <View className="w-24 rounded-lg shadow-xl relative" style={{ elevation: 12, shadowColor: '#000', shadowOpacity: 0.6, shadowRadius: 12 }}>
@@ -527,22 +525,20 @@ export default function MovieDetailScreen() {
 
                             {/* Bootleg Sticker - TOP LEVEL */}
                             {isBootleg && (
-                                <Image
-                                    source={require('@/assets/images/overlays/boot_sticker.png')}
-                                    style={{
-                                        position: 'absolute',
-                                        bottom: -10,
-                                        left: -10,
-                                        width: 40,
-                                        height: 40,
-                                        zIndex: 100,
-                                        shadowColor: '#000',
-                                        shadowOffset: { width: 0, height: 2 },
-                                        shadowOpacity: 0.5,
-                                        shadowRadius: 3
-                                    }}
-                                    contentFit="contain"
-                                />
+                                <View style={{ position: 'absolute', bottom: -12, left: -12, zIndex: 9999 }}>
+                                    <Image
+                                        source={require('@/assets/images/overlays/boot_sticker.png')}
+                                        style={{
+                                            width: 48,
+                                            height: 48,
+                                            shadowColor: '#000',
+                                            shadowOffset: { width: 0, height: 4 },
+                                            shadowOpacity: 0.8,
+                                            shadowRadius: 6,
+                                        }}
+                                        contentFit="contain"
+                                    />
+                                </View>
                             )}
                         </View>
 
@@ -599,323 +595,324 @@ export default function MovieDetailScreen() {
                             </Text>
                         </View>
                     </View>
-                </View>     {/* Actions Bar (Full width style from attachment 2) */}
-                <View className="px-8 flex-row mt-6 gap-2">
-                    {thriftMode ? (
+                    {/* Actions Bar (Full width style from attachment 2) */}
+                    <View className="max-w-7xl mx-auto w-full px-4 md:px-8 flex-row mt-6 gap-2">
+                        {thriftMode ? (
+                            <Pressable
+                                onPress={toggleGrail}
+                                className={`flex-1 flex-row items-center justify-center p-3 rounded-lg border ${isGrail ? 'bg-amber-500/10 border-amber-500' : 'bg-neutral-900 border-neutral-800'}`}
+                            >
+                                <Ionicons name={isGrail ? "trophy" : "trophy-outline"} size={16} color={isGrail ? "#f59e0b" : "#404040"} />
+                                <Text className={`ml-2 font-mono text-xs font-bold tracking-widest ${isGrail ? 'text-amber-500' : 'text-neutral-600'}`}>
+                                    {isGrail ? 'GRAIL' : 'MAKE GRAIL'}
+                                </Text>
+                            </Pressable>
+                        ) : (
+                            <Pressable
+                                onPress={async () => {
+                                    const isOnDisplay = movieItems.some((i: any) => i.is_on_display);
+                                    await Promise.all(movieItems.map((item: any) =>
+                                        updateMutation.mutateAsync({ itemId: item.id, updates: { is_on_display: !isOnDisplay } })
+                                    ));
+                                    playSound('click');
+                                }}
+                                className={`flex-1 flex-row items-center justify-center p-3 rounded-lg border ${movieItems.some((i: any) => i.is_on_display) ? 'bg-indigo-500/10 border-indigo-500' : 'bg-neutral-900 border-neutral-800'}`}
+                            >
+                                <Ionicons name={movieItems.some((i: any) => i.is_on_display) ? "star" : "star-outline"} size={16} color={movieItems.some((i: any) => i.is_on_display) ? "#6366f1" : "#404040"} />
+                                <Text className={`ml-2 font-mono text-xs font-bold tracking-widest ${movieItems.some((i: any) => i.is_on_display) ? 'text-indigo-500' : 'text-neutral-600'}`}>
+                                    {movieItems.some((i: any) => i.is_on_display) ? 'STAFF PICK' : 'MAKE STAFF PICK'}
+                                </Text>
+                            </Pressable>
+                        )}
+
                         <Pressable
-                            onPress={toggleGrail}
-                            className={`flex-1 flex-row items-center justify-center p-3 rounded-lg border ${isGrail ? 'bg-amber-500/10 border-amber-500' : 'bg-neutral-900 border-neutral-800'}`}
+                            onPress={deleteMovie}
+                            className="bg-red-900/10 px-4 rounded-lg border border-red-900/40 items-center justify-center"
                         >
-                            <Ionicons name={isGrail ? "trophy" : "trophy-outline"} size={16} color={isGrail ? "#f59e0b" : "#404040"} />
-                            <Text className={`ml-2 font-mono text-xs font-bold tracking-widest ${isGrail ? 'text-amber-500' : 'text-neutral-600'}`}>
-                                {isGrail ? 'GRAIL' : 'MAKE GRAIL'}
-                            </Text>
+                            <Ionicons name="trash-outline" size={20} color="#ef4444" />
                         </Pressable>
-                    ) : (
-                        <Pressable
-                            onPress={async () => {
-                                const isOnDisplay = movieItems.some((i: any) => i.is_on_display);
-                                await Promise.all(movieItems.map((item: any) =>
-                                    updateMutation.mutateAsync({ itemId: item.id, updates: { is_on_display: !isOnDisplay } })
-                                ));
-                                playSound('click');
-                            }}
-                            className={`flex-1 flex-row items-center justify-center p-3 rounded-lg border ${movieItems.some((i: any) => i.is_on_display) ? 'bg-indigo-500/10 border-indigo-500' : 'bg-neutral-900 border-neutral-800'}`}
-                        >
-                            <Ionicons name={movieItems.some((i: any) => i.is_on_display) ? "star" : "star-outline"} size={16} color={movieItems.some((i: any) => i.is_on_display) ? "#6366f1" : "#404040"} />
-                            <Text className={`ml-2 font-mono text-xs font-bold tracking-widest ${movieItems.some((i: any) => i.is_on_display) ? 'text-indigo-500' : 'text-neutral-600'}`}>
-                                {movieItems.some((i: any) => i.is_on_display) ? 'STAFF PICK' : 'MAKE STAFF PICK'}
-                            </Text>
-                        </Pressable>
-                    )}
-
-                    <Pressable
-                        onPress={deleteMovie}
-                        className="bg-red-900/10 px-4 rounded-lg border border-red-900/40 items-center justify-center"
-                    >
-                        <Ionicons name="trash-outline" size={20} color="#ef4444" />
-                    </Pressable>
-                </View>
-
-                {/* Cast Section */}
-                {activeMovie.movie_cast && activeMovie.movie_cast.length > 0 && (
-                    <View className="mt-8 mb-2">
-                        <Text className="text-amber-500 font-bold text-xl mb-3 font-mono uppercase tracking-widest" style={{ fontFamily: 'VCR_OSD_MONO' }}>STARRING</Text>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                            {activeMovie.movie_cast.map((member: any) => (
-                                <View key={member.id} className="mr-4 items-center w-20">
-                                    <View className="w-16 h-16 rounded-full overflow-hidden bg-neutral-800 mb-2 border border-neutral-700">
-                                        {member.profile_path ? (
-                                            <Image
-                                                source={{ uri: `https://image.tmdb.org/t/p/w185${member.profile_path}` }}
-                                                style={{ width: '100%', height: '100%' }}
-                                                contentFit="cover"
-                                            />
-                                        ) : (
-                                            <View className="flex-1 items-center justify-center">
-                                                <Ionicons name="person" size={24} color="#525252" />
-                                            </View>
-                                        )}
-                                    </View>
-                                    <Text className="text-white text-[10px] text-center font-bold leading-3 mb-0.5" numberOfLines={2}>
-                                        {member.name}
-                                    </Text>
-                                    <Text className="text-neutral-500 text-[9px] text-center leading-3" numberOfLines={2}>
-                                        {member.character}
-                                    </Text>
-                                </View>
-                            ))}
-                        </ScrollView>
                     </View>
-                )}
 
-                {/* Overview */}
-                <View className="mt-6">
-                    <Text className="text-amber-500 font-bold text-xl mb-2 font-mono uppercase tracking-widest" style={{ fontFamily: 'VCR_OSD_MONO' }}>Overview</Text>
-                    <Text className="text-neutral-400 leading-6">
-                        {tmdbMovie?.overview || (displayMovie as any)?.overview || "No overview available."}
-                    </Text>
-                </View>
-
-                {/* Rating Section */}
-                <View className="mt-6">
-                    <Text className="text-white font-bold mb-2">Rating</Text>
-                    <View className="flex-row gap-2">
-                        {[1, 2, 3, 4, 5].map((star) => {
-                            const currentRating = movieItems[0]?.rating || 0;
-                            return (
-                                <Pressable
-                                    key={star}
-                                    onPress={async () => {
-                                        playSound('click');
-                                        // Update all formats? Or just the first one?
-                                        // Ideally rating is per movie in this app model
-                                        await Promise.all(movieItems.map((item: any) =>
-                                            updateMutation.mutateAsync({ itemId: item.id, updates: { rating: star } })
-                                        ));
-                                    }}
-                                >
-                                    <Ionicons
-                                        name={star <= currentRating ? "star" : "star-outline"}
-                                        size={28}
-                                        color={star <= currentRating ? "#f59e0b" : "#525252"}
-                                    />
-                                </Pressable>
-                            );
-                        })}
-                    </View>
-                </View>
-
-                {/* Format Notes Section */}
-                {
-                    ownedFormats.length > 0 && (
-                        <View className="mt-6">
-                            <Text className="text-white font-bold mb-2">Format Notes</Text>
-                            {movieItems.map((item: any) => (
-                                <View key={item.id} className="mb-4">
-                                    <View className="flex-row items-center flex-wrap mb-2">
-                                        <View className={`px-2 py-1 rounded shrink-0 ${FORMAT_COLORS[item.format] || 'bg-neutral-800'}`}>
-                                            <Text className="text-white font-mono text-xs font-bold">{item.format}</Text>
-                                        </View>
-                                        <Pressable
-                                            onPress={() => {
-                                                const isBoot = localBootlegs[item.id] !== undefined ? localBootlegs[item.id] : (item.is_bootleg || false);
-                                                setLocalBootlegs(prev => ({ ...prev, [item.id]: !isBoot }));
-                                                playSound('click');
-                                            }}
-                                            className={`ml-2 px-2 py-1 rounded border ${(localBootlegs[item.id] !== undefined ? localBootlegs[item.id] : (item.is_bootleg || false)) ? 'bg-red-500 border-red-400' : 'bg-neutral-800 border-neutral-700'}`}
-                                        >
-                                            <Text className="text-white font-mono text-[10px] font-bold">BOOT</Text>
-                                        </Pressable>
-                                        {item.edition && (
-                                            <Text className="text-neutral-500 font-mono text-xs ml-2 flex-1" style={{ minWidth: 100 }}>({item.edition})</Text>
-                                        )}
-                                    </View>
-                                    <TextInput
-                                        nativeID={`edition-input-${item.id}`}
-                                        {...({ name: `edition-${item.id}` } as any)}
-                                        className="bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm mb-2"
-                                        placeholder="Edition (Theatrical, Unrated, Director's Cut, etc.)"
-                                        placeholderTextColor="#525252"
-                                        value={localEditions[item.id] !== undefined ? localEditions[item.id] : (item.edition || '')}
-                                        onChangeText={(text) => setLocalEditions(prev => ({ ...prev, [item.id]: text }))}
-                                        autoCapitalize="words"
-                                        autoCorrect={false}
-                                    />
-                                    <TextInput
-                                        nativeID={`notes-input-${item.id}`}
-                                        {...({ name: `notes-${item.id}` } as any)}
-                                        className="bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm min-h-[80px]"
-                                        placeholder={`Add notes for your ${item.format} copy...`}
-                                        placeholderTextColor="#525252"
-                                        multiline
-                                        value={localNotes[item.id] !== undefined ? localNotes[item.id] : (item.notes || '')}
-                                        onChangeText={(text) => setLocalNotes(prev => ({ ...prev, [item.id]: text }))}
-                                    />
-                                    <Pressable
-                                        disabled={updateMutation.isPending}
-                                        onPress={async () => {
-                                            const noteToSave = localNotes[item.id] !== undefined ? localNotes[item.id] : (item.notes || '');
-                                            const editionToSave = localEditions[item.id] !== undefined ? localEditions[item.id] : (item.edition || '');
-                                            const bootToSave = localBootlegs[item.id] !== undefined ? localBootlegs[item.id] : (item.is_bootleg || false);
-                                            await updateMutation.mutateAsync({
-                                                itemId: item.id,
-                                                updates: {
-                                                    notes: noteToSave,
-                                                    edition: editionToSave || null,
-                                                    is_bootleg: bootToSave
-                                                }
-                                            });
-                                            playSound('click');
-                                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                                        }}
-                                        className={`mt-2 self-end px-4 py-2 rounded-lg border flex-row items-center ${updateMutation.isPending ? 'bg-neutral-800 border-neutral-700' : 'bg-amber-600/10 border-amber-600/50'}`}
-                                    >
-                                        {updateMutation.isPending ? (
-                                            <ActivityIndicator size="small" color="#f59e0b" style={{ marginRight: 8, transform: [{ scale: 0.8 }] }} />
-                                        ) : null}
-                                        <Text className="text-amber-500 font-mono text-xs font-bold">
-                                            {updateMutation.isPending ? 'SAVING...' : `SAVE ${item.format}`}
-                                        </Text>
-                                    </Pressable>
-                                </View>
-                            ))}
-                        </View>
-                    )
-                }
-
-                {/* Curated Stacks Section */}
-                {
-                    ownedFormats.length > 0 && (
-                        <View className="mt-8">
-                            <Text className="text-white font-bold mb-3">Curated Stacks</Text>
-                            <View className="flex-row flex-wrap gap-2 mb-2">
-                                {getCustomLists(collection).map(listName => {
-                                    const isInStack = movieItems.some((i: any) => i.custom_lists?.includes(listName));
-                                    return (
-                                        <Pressable
-                                            key={listName}
-                                            onPress={() => handleToggleStack(listName)}
-                                            className={`px-3 py-1.5 border rounded-full flex-row items-center gap-1 ${isInStack ? 'bg-amber-600/20 border-amber-500' : 'bg-neutral-900 border-neutral-700'}`}
-                                        >
-                                            <Ionicons name={isInStack ? 'checkmark' : 'add'} size={14} color={isInStack ? '#f59e0b' : '#a3a3a3'} />
-                                            <Text className={`font-mono text-xs ${isInStack ? 'text-amber-500 font-bold' : 'text-neutral-400'}`}>
-                                                {listName}
-                                            </Text>
-                                        </Pressable>
-                                    );
-                                })}
-
-                                <Pressable
-                                    onPress={() => {
-                                        playSound('click');
-                                        setShowNewStackInput(!showNewStackInput);
-                                    }}
-                                    className={`px-3 py-1.5 border rounded-full flex-row items-center gap-1 ${showNewStackInput ? 'bg-neutral-800 border-neutral-600' : 'bg-neutral-900 border-neutral-700 border-dashed'}`}
-                                >
-                                    <Ionicons name={showNewStackInput ? 'close' : 'add'} size={14} color={showNewStackInput ? '#fff' : '#a3a3a3'} />
-                                    <Text className={`font-mono text-xs ${showNewStackInput ? 'text-white' : 'text-neutral-500'}`}>
-                                        {showNewStackInput ? 'CANCEL' : 'NEW STACK'}
-                                    </Text>
-                                </Pressable>
-                            </View>
-
-                            {showNewStackInput && (
-                                <View className="flex-row items-center gap-2 mt-2">
-                                    <TextInput
-                                        className="flex-1 bg-neutral-900 text-white px-3 py-2 rounded-lg border border-neutral-800 font-mono text-sm"
-                                        placeholder="Stack Name..."
-                                        placeholderTextColor="#525252"
-                                        value={newStackName}
-                                        onChangeText={setNewStackName}
-                                        autoFocus
-                                        onSubmitEditing={handleCreateStack}
-                                        returnKeyType="done"
-                                    />
-                                    <Pressable
-                                        onPress={handleCreateStack}
-                                        disabled={!newStackName.trim() || updateMutation.isPending}
-                                        className={`px-4 py-2 rounded-lg border ${newStackName.trim() ? 'bg-amber-600/10 border-amber-600/50' : 'bg-neutral-900 border-neutral-800'}`}
-                                    >
-                                        <Text className={`font-mono text-xs font-bold ${newStackName.trim() ? 'text-amber-500' : 'text-neutral-600'}`}>
-                                            SAVE
-                                        </Text>
-                                    </Pressable>
-                                </View>
-                            )}
-                        </View>
-                    )
-                }
-
-                {/* Owned Formats Section */}
-                {
-                    movieItems.length > 0 && (
-                        <View className="mt-8">
-                            <Text className="text-white font-bold mb-3">Owned Formats</Text>
-                            <View className="gap-2">
-                                {movieItems.map((item: any) => (
-                                    <View key={item.id} className="flex-row items-center justify-between bg-neutral-900 p-3 rounded-lg border border-neutral-800">
-                                        <View className="flex-1 flex-row items-center flex-wrap gap-2 mr-2">
-                                            <Pressable
-                                                className="flex-row items-center gap-2 active:opacity-70"
-                                                onPress={() => {
-                                                    setSelectedFormat(item.format);
-                                                    playSound('click');
-                                                }}
-                                            >
-                                                <View style={{
-                                                    borderWidth: activeFormat === item.format ? 2 : 0,
-                                                    borderColor: '#fff',
-                                                    borderRadius: 6,
-                                                    padding: activeFormat === item.format ? 1 : 0,
-                                                }}>
-                                                    <View className={`px-2 py-1 rounded shrink-0 ${FORMAT_COLORS[item.format] || 'bg-neutral-800'}`}>
-                                                        <Text className="text-white font-mono text-xs font-bold">{item.format}</Text>
-                                                    </View>
+                    {/* Cast Section */}
+                    {activeMovie.movie_cast && activeMovie.movie_cast.length > 0 && (
+                        <View className="mt-8 mb-2">
+                            <Text className="text-amber-500 font-bold text-xl mb-3 font-mono uppercase tracking-widest" style={{ fontFamily: 'VCR_OSD_MONO' }}>STARRING</Text>
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                                {activeMovie.movie_cast.map((member: any) => (
+                                    <View key={member.id} className="mr-4 items-center w-20">
+                                        <View className="w-16 h-16 rounded-full overflow-hidden bg-neutral-800 mb-2 border border-neutral-700">
+                                            {member.profile_path ? (
+                                                <Image
+                                                    source={{ uri: `https://image.tmdb.org/t/p/w185${member.profile_path}` }}
+                                                    style={{ width: '100%', height: '100%' }}
+                                                    contentFit="cover"
+                                                />
+                                            ) : (
+                                                <View className="flex-1 items-center justify-center">
+                                                    <Ionicons name="person" size={24} color="#525252" />
                                                 </View>
-                                            </Pressable>
-                                            {item.edition && (
-                                                <Text className="text-neutral-400 font-mono text-sm flex-1" numberOfLines={2}>({item.edition})</Text>
                                             )}
                                         </View>
+                                        <Text className="text-white text-[10px] text-center font-bold leading-3 mb-0.5" numberOfLines={2}>
+                                            {member.name}
+                                        </Text>
+                                        <Text className="text-neutral-500 text-[9px] text-center leading-3" numberOfLines={2}>
+                                            {member.character}
+                                        </Text>
+                                    </View>
+                                ))}
+                            </ScrollView>
+                        </View>
+                    )}
+
+                    {/* Overview */}
+                    <View className="mt-6">
+                        <Text className="text-amber-500 font-bold text-xl mb-2 font-mono uppercase tracking-widest" style={{ fontFamily: 'VCR_OSD_MONO' }}>Overview</Text>
+                        <Text className="text-neutral-400 leading-6">
+                            {tmdbMovie?.overview || (displayMovie as any)?.overview || "No overview available."}
+                        </Text>
+                    </View>
+
+                    {/* Rating Section */}
+                    <View className="mt-6">
+                        <Text className="text-white font-bold mb-2">Rating</Text>
+                        <View className="flex-row gap-2">
+                            {[1, 2, 3, 4, 5].map((star) => {
+                                const currentRating = movieItems[0]?.rating || 0;
+                                return (
+                                    <Pressable
+                                        key={star}
+                                        onPress={async () => {
+                                            playSound('click');
+                                            // Update all formats? Or just the first one?
+                                            // Ideally rating is per movie in this app model
+                                            await Promise.all(movieItems.map((item: any) =>
+                                                updateMutation.mutateAsync({ itemId: item.id, updates: { rating: star } })
+                                            ));
+                                        }}
+                                    >
+                                        <Ionicons
+                                            name={star <= currentRating ? "star" : "star-outline"}
+                                            size={28}
+                                            color={star <= currentRating ? "#f59e0b" : "#525252"}
+                                        />
+                                    </Pressable>
+                                );
+                            })}
+                        </View>
+                    </View>
+
+                    {/* Format Notes Section */}
+                    {
+                        ownedFormats.length > 0 && (
+                            <View className="mt-6">
+                                <Text className="text-white font-bold mb-2">Format Notes</Text>
+                                {movieItems.map((item: any) => (
+                                    <View key={item.id} className="mb-4">
+                                        <View className="flex-row items-center flex-wrap mb-2">
+                                            <View className={`px-2 py-1 rounded shrink-0 ${FORMAT_COLORS[item.format] || 'bg-neutral-800'}`}>
+                                                <Text className="text-white font-mono text-xs font-bold">{item.format}</Text>
+                                            </View>
+                                            <Pressable
+                                                onPress={() => {
+                                                    const isBoot = localBootlegs[item.id] !== undefined ? localBootlegs[item.id] : (item.is_bootleg || false);
+                                                    setLocalBootlegs(prev => ({ ...prev, [item.id]: !isBoot }));
+                                                    playSound('click');
+                                                }}
+                                                className={`ml-2 px-2 py-1 rounded border ${(localBootlegs[item.id] !== undefined ? localBootlegs[item.id] : (item.is_bootleg || false)) ? 'bg-red-500 border-red-400' : 'bg-neutral-800 border-neutral-700'}`}
+                                            >
+                                                <Text className="text-white font-mono text-[10px] font-bold">BOOT</Text>
+                                            </Pressable>
+                                            {item.edition && (
+                                                <Text className="text-neutral-500 font-mono text-xs ml-2 flex-1" style={{ minWidth: 100 }}>({item.edition})</Text>
+                                            )}
+                                        </View>
+                                        <TextInput
+                                            nativeID={`edition-input-${item.id}`}
+                                            {...({ name: `edition-${item.id}` } as any)}
+                                            className="bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm mb-2"
+                                            placeholder="Edition (Theatrical, Unrated, Director's Cut, etc.)"
+                                            placeholderTextColor="#525252"
+                                            value={localEditions[item.id] !== undefined ? localEditions[item.id] : (item.edition || '')}
+                                            onChangeText={(text) => setLocalEditions(prev => ({ ...prev, [item.id]: text }))}
+                                            autoCapitalize="words"
+                                            autoCorrect={false}
+                                        />
+                                        <TextInput
+                                            nativeID={`notes-input-${item.id}`}
+                                            {...({ name: `notes-${item.id}` } as any)}
+                                            className="bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm min-h-[80px]"
+                                            placeholder={`Add notes for your ${item.format} copy...`}
+                                            placeholderTextColor="#525252"
+                                            multiline
+                                            value={localNotes[item.id] !== undefined ? localNotes[item.id] : (item.notes || '')}
+                                            onChangeText={(text) => setLocalNotes(prev => ({ ...prev, [item.id]: text }))}
+                                        />
                                         <Pressable
+                                            disabled={updateMutation.isPending}
                                             onPress={async () => {
-                                                await deleteMutation.mutateAsync(item.id);
+                                                const noteToSave = localNotes[item.id] !== undefined ? localNotes[item.id] : (item.notes || '');
+                                                const editionToSave = localEditions[item.id] !== undefined ? localEditions[item.id] : (item.edition || '');
+                                                const bootToSave = localBootlegs[item.id] !== undefined ? localBootlegs[item.id] : (item.is_bootleg || false);
+                                                await updateMutation.mutateAsync({
+                                                    itemId: item.id,
+                                                    updates: {
+                                                        notes: noteToSave,
+                                                        edition: editionToSave || null,
+                                                        is_bootleg: bootToSave
+                                                    }
+                                                });
                                                 playSound('click');
                                                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                                             }}
-                                            className="bg-red-900/20 px-3 py-1 rounded border border-red-900/50"
+                                            className={`mt-2 self-end px-4 py-2 rounded-lg border flex-row items-center ${updateMutation.isPending ? 'bg-neutral-800 border-neutral-700' : 'bg-amber-600/10 border-amber-600/50'}`}
                                         >
-                                            <Text className="text-red-400 font-mono text-xs">Remove</Text>
+                                            {updateMutation.isPending ? (
+                                                <ActivityIndicator size="small" color="#f59e0b" style={{ marginRight: 8, transform: [{ scale: 0.8 }] }} />
+                                            ) : null}
+                                            <Text className="text-amber-500 font-mono text-xs font-bold">
+                                                {updateMutation.isPending ? 'SAVING...' : `SAVE ${item.format}`}
+                                            </Text>
                                         </Pressable>
                                     </View>
                                 ))}
                             </View>
+                        )
+                    }
+
+                    {/* Curated Stacks Section */}
+                    {
+                        ownedFormats.length > 0 && (
+                            <View className="mt-8">
+                                <Text className="text-white font-bold mb-3">Curated Stacks</Text>
+                                <View className="flex-row flex-wrap gap-2 mb-2">
+                                    {getCustomLists(collection).map(listName => {
+                                        const isInStack = movieItems.some((i: any) => i.custom_lists?.includes(listName));
+                                        return (
+                                            <Pressable
+                                                key={listName}
+                                                onPress={() => handleToggleStack(listName)}
+                                                className={`px-3 py-1.5 border rounded-full flex-row items-center gap-1 ${isInStack ? 'bg-amber-600/20 border-amber-500' : 'bg-neutral-900 border-neutral-700'}`}
+                                            >
+                                                <Ionicons name={isInStack ? 'checkmark' : 'add'} size={14} color={isInStack ? '#f59e0b' : '#a3a3a3'} />
+                                                <Text className={`font-mono text-xs ${isInStack ? 'text-amber-500 font-bold' : 'text-neutral-400'}`}>
+                                                    {listName}
+                                                </Text>
+                                            </Pressable>
+                                        );
+                                    })}
+
+                                    <Pressable
+                                        onPress={() => {
+                                            playSound('click');
+                                            setShowNewStackInput(!showNewStackInput);
+                                        }}
+                                        className={`px-3 py-1.5 border rounded-full flex-row items-center gap-1 ${showNewStackInput ? 'bg-neutral-800 border-neutral-600' : 'bg-neutral-900 border-neutral-700 border-dashed'}`}
+                                    >
+                                        <Ionicons name={showNewStackInput ? 'close' : 'add'} size={14} color={showNewStackInput ? '#fff' : '#a3a3a3'} />
+                                        <Text className={`font-mono text-xs ${showNewStackInput ? 'text-white' : 'text-neutral-500'}`}>
+                                            {showNewStackInput ? 'CANCEL' : 'NEW STACK'}
+                                        </Text>
+                                    </Pressable>
+                                </View>
+
+                                {showNewStackInput && (
+                                    <View className="flex-row items-center gap-2 mt-2">
+                                        <TextInput
+                                            className="flex-1 bg-neutral-900 text-white px-3 py-2 rounded-lg border border-neutral-800 font-mono text-sm"
+                                            placeholder="Stack Name..."
+                                            placeholderTextColor="#525252"
+                                            value={newStackName}
+                                            onChangeText={setNewStackName}
+                                            autoFocus
+                                            onSubmitEditing={handleCreateStack}
+                                            returnKeyType="done"
+                                        />
+                                        <Pressable
+                                            onPress={handleCreateStack}
+                                            disabled={!newStackName.trim() || updateMutation.isPending}
+                                            className={`px-4 py-2 rounded-lg border ${newStackName.trim() ? 'bg-amber-600/10 border-amber-600/50' : 'bg-neutral-900 border-neutral-800'}`}
+                                        >
+                                            <Text className={`font-mono text-xs font-bold ${newStackName.trim() ? 'text-amber-500' : 'text-neutral-600'}`}>
+                                                SAVE
+                                            </Text>
+                                        </Pressable>
+                                    </View>
+                                )}
+                            </View>
+                        )
+                    }
+
+                    {/* Owned Formats Section */}
+                    {
+                        movieItems.length > 0 && (
+                            <View className="mt-8">
+                                <Text className="text-white font-bold mb-3">Owned Formats</Text>
+                                <View className="gap-2">
+                                    {movieItems.map((item: any) => (
+                                        <View key={item.id} className="flex-row items-center justify-between bg-neutral-900 p-3 rounded-lg border border-neutral-800">
+                                            <View className="flex-1 flex-row items-center flex-wrap gap-2 mr-2">
+                                                <Pressable
+                                                    className="flex-row items-center gap-2 active:opacity-70"
+                                                    onPress={() => {
+                                                        setSelectedFormat(item.format);
+                                                        playSound('click');
+                                                    }}
+                                                >
+                                                    <View style={{
+                                                        borderWidth: activeFormat === item.format ? 2 : 0,
+                                                        borderColor: '#fff',
+                                                        borderRadius: 6,
+                                                        padding: activeFormat === item.format ? 1 : 0,
+                                                    }}>
+                                                        <View className={`px-2 py-1 rounded shrink-0 ${FORMAT_COLORS[item.format] || 'bg-neutral-800'}`}>
+                                                            <Text className="text-white font-mono text-xs font-bold">{item.format}</Text>
+                                                        </View>
+                                                    </View>
+                                                </Pressable>
+                                                {item.edition && (
+                                                    <Text className="text-neutral-400 font-mono text-sm flex-1" numberOfLines={2}>({item.edition})</Text>
+                                                )}
+                                            </View>
+                                            <Pressable
+                                                onPress={async () => {
+                                                    await deleteMutation.mutateAsync(item.id);
+                                                    playSound('click');
+                                                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                                                }}
+                                                className="bg-red-900/20 px-3 py-1 rounded border border-red-900/50"
+                                            >
+                                                <Text className="text-red-400 font-mono text-xs">Remove</Text>
+                                            </Pressable>
+                                        </View>
+                                    ))}
+                                </View>
+                            </View>
+                        )
+                    }
+
+
+                    {/* Add Format Section */}
+                    <View className="mt-8">
+                        <Text className="text-white font-bold mb-3">Add Format</Text>
+                        <View className="flex-row flex-wrap gap-2">
+                            {FORMATS.map(fmt => {
+                                const isOwned = ownedFormats.includes(fmt);
+                                const baseColor = FORMAT_COLORS[fmt] || 'bg-neutral-800';
+
+                                return (
+                                    <Pressable
+                                        key={fmt}
+                                        onPress={() => handleFormatPress(fmt)}
+                                        className={`px-4 py-2 border rounded-full ${baseColor} border-neutral-700`}
+                                    >
+                                        <Text className="text-white font-mono font-bold">
+                                            {fmt}
+                                        </Text>
+                                    </Pressable>
+                                );
+                            })}
                         </View>
-                    )
-                }
-
-
-                {/* Add Format Section */}
-                <View className="mt-8">
-                    <Text className="text-white font-bold mb-3">Add Format</Text>
-                    <View className="flex-row flex-wrap gap-2">
-                        {FORMATS.map(fmt => {
-                            const isOwned = ownedFormats.includes(fmt);
-                            const baseColor = FORMAT_COLORS[fmt] || 'bg-neutral-800';
-
-                            return (
-                                <Pressable
-                                    key={fmt}
-                                    onPress={() => handleFormatPress(fmt)}
-                                    className={`px-4 py-2 border rounded-full ${baseColor} border-neutral-700`}
-                                >
-                                    <Text className="text-white font-mono font-bold">
-                                        {fmt}
-                                    </Text>
-                                </Pressable>
-                            );
-                        })}
                     </View>
                 </View>
             </ScrollView>

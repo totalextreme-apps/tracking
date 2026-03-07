@@ -319,7 +319,7 @@ export default function ShowDetailScreen() {
 
             {/* ImagePicker is now used for both web and native for better mobile browser compatibility */}
 
-            <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: insets.bottom + 120, maxWidth: 1200, alignSelf: 'center', width: '100%' }}>
+            <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: insets.bottom + 120, width: '100%' }}>
                 <View className="relative h-72 w-full">
                     {(customBackdropUrl || backdropUrl) ? (
                         <Image source={{ uri: customBackdropUrl || backdropUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
@@ -335,7 +335,7 @@ export default function ShowDetailScreen() {
                     </Pressable>
                 </View>
 
-                <View className="px-8 -mt-20">
+                <View className="max-w-7xl mx-auto w-full px-4 md:px-8 -mt-20">
                     <View className="flex-row items-start">
                         <View className="w-24 rounded-lg shadow-xl relative">
                             {(() => {
@@ -347,22 +347,20 @@ export default function ShowDetailScreen() {
 
                             {/* Bootleg Sticker - TOP LEVEL */}
                             {isBootleg && (
-                                <Image
-                                    source={require('@/assets/images/overlays/boot_sticker.png')}
-                                    style={{
-                                        position: 'absolute',
-                                        bottom: -10,
-                                        left: -10,
-                                        width: 40,
-                                        height: 40,
-                                        zIndex: 100,
-                                        shadowColor: '#000',
-                                        shadowOffset: { width: 0, height: 2 },
-                                        shadowOpacity: 0.5,
-                                        shadowRadius: 3
-                                    }}
-                                    contentFit="contain"
-                                />
+                                <View style={{ position: 'absolute', bottom: -12, left: -12, zIndex: 9999 }}>
+                                    <Image
+                                        source={require('@/assets/images/overlays/boot_sticker.png')}
+                                        style={{
+                                            width: 48,
+                                            height: 48,
+                                            shadowColor: '#000',
+                                            shadowOffset: { width: 0, height: 4 },
+                                            shadowOpacity: 0.8,
+                                            shadowRadius: 6,
+                                        }}
+                                        contentFit="contain"
+                                    />
+                                </View>
                             )}
                         </View>
                         <View className="flex-1 ml-4 pt-1">
@@ -398,180 +396,179 @@ export default function ShowDetailScreen() {
                             </Text>
                         </View>
                     </View>
-                </View>
-
-                <View className="px-8 flex-row mt-6 gap-2">
-                    {thriftMode ? (
-                        <Pressable
-                            onPress={async () => {
-                                const isGrail = showItems.some((i: any) => i.is_grail);
-                                await Promise.all(showItems.map((item: any) =>
-                                    updateMutation.mutateAsync({ itemId: item.id, updates: { is_grail: !isGrail } })
-                                ));
-                                playSound('peel');
-                                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                            }}
-                            className={`flex-1 flex-row items-center justify-center p-3 rounded-lg border ${showItems.some((i: any) => i.is_grail) ? 'bg-amber-500/10 border-amber-500' : 'bg-neutral-900 border-neutral-800'}`}
-                        >
-                            <Ionicons name={showItems.some((i: any) => i.is_grail) ? "trophy" : "trophy-outline"} size={16} color={showItems.some((i: any) => i.is_grail) ? "#f59e0b" : "#404040"} />
-                            <Text className={`ml-2 font-mono text-xs font-bold tracking-widest ${showItems.some((i: any) => i.is_grail) ? 'text-amber-500' : 'text-neutral-600'}`}>
-                                {showItems.some((i: any) => i.is_grail) ? 'GRAIL' : 'MAKE GRAIL'}
-                            </Text>
-                        </Pressable>
-                    ) : (
-                        <Pressable
-                            onPress={async () => {
-                                const isOnDisplay = showItems.some((i: any) => i.is_on_display);
-                                await Promise.all(showItems.map((item: any) =>
-                                    updateMutation.mutateAsync({ itemId: item.id, updates: { is_on_display: !isOnDisplay } })
-                                ));
-                                playSound('click');
-                            }}
-                            className={`flex-1 flex-row items-center justify-center p-3 rounded-lg border ${showItems.some((i: any) => i.is_on_display) ? 'bg-indigo-500/10 border-indigo-500' : 'bg-neutral-900 border-neutral-800'}`}
-                        >
-                            <Ionicons name={showItems.some((i: any) => i.is_on_display) ? "star" : "star-outline"} size={16} color={showItems.some((i: any) => i.is_on_display) ? "#6366f1" : "#404040"} />
-                            <Text className={`ml-2 font-mono text-xs font-bold tracking-widest ${showItems.some((i: any) => i.is_on_display) ? 'text-indigo-500' : 'text-neutral-600'}`}>
-                                {showItems.some((i: any) => i.is_on_display) ? 'STAFF PICK' : 'MAKE STAFF PICK'}
-                            </Text>
-                        </Pressable>
-                    )}
-                    {showItems.length > 0 && (
-                        <Pressable onPress={deleteShow} className="bg-red-900/10 px-4 rounded-lg border border-red-900/40 items-center justify-center">
-                            <Ionicons name="trash-outline" size={20} color="#ef4444" />
-                        </Pressable>
-                    )}
-                </View>
-
-                {activeShow.show_cast && activeShow.show_cast.length > 0 && (
-                    <View className="mt-8 mb-2 px-8">
-                        <Text className="text-white font-bold text-lg mb-3 font-mono">STARRING</Text>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                            {activeShow.show_cast.map((member: any) => (
-                                <View key={member.id} className="mr-4 items-center w-20">
-                                    <View className="w-16 h-16 rounded-full overflow-hidden bg-neutral-800 mb-2 border border-neutral-700">
-                                        {member.profile_path ? (
-                                            <Image source={{ uri: `https://image.tmdb.org/t/p/w185${member.profile_path}` }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
-                                        ) : (
-                                            <View className="flex-1 items-center justify-center"><Ionicons name="person" size={24} color="#525252" /></View>
-                                        )}
-                                    </View>
-                                    <Text className="text-white text-[10px] text-center font-bold leading-3 mb-0.5" numberOfLines={2}>{member.name}</Text>
-                                    <Text className="text-neutral-500 text-[9px] text-center leading-3" numberOfLines={2}>{member.character}</Text>
-                                </View>
-                            ))}
-                        </ScrollView>
-                    </View>
-                )}
-
-                <View className="px-8 mt-6">
-                    <Text className="text-amber-500 font-bold text-xl mb-4 font-mono uppercase tracking-widest" style={{ fontFamily: 'VCR_OSD_MONO' }}>Overview</Text>
-                    <Text className="text-neutral-400 leading-6">{displayShow.overview || "No overview available."}</Text>
-                </View>
-
-                {ownedFormats.length > 0 && (
-                    <View className="px-8 mt-8">
-                        <Text className="text-white font-bold mb-3">Format Notes</Text>
-                        {showItems.map((item: any) => (
-                            <View key={item.id} className="mb-4">
-                                <View className="flex-row items-center flex-wrap mb-2">
-                                    <View className={`px-2 py-1 rounded shrink-0 ${FORMAT_COLORS[item.format] || 'bg-neutral-800'}`}>
-                                        <Text className="text-white font-mono text-xs font-bold">{item.format}</Text>
-                                    </View>
-                                    <Pressable
-                                        onPress={() => {
-                                            const isBoot = localBootlegs[item.id] !== undefined ? localBootlegs[item.id] : (item.is_bootleg || false);
-                                            setLocalBootlegs(prev => ({ ...prev, [item.id]: !isBoot }));
-                                            playSound('click');
-                                        }}
-                                        className={`ml-2 px-2 py-1 rounded border ${(localBootlegs[item.id] !== undefined ? localBootlegs[item.id] : (item.is_bootleg || false)) ? 'bg-red-500 border-red-400' : 'bg-neutral-800 border-neutral-700'}`}
-                                    >
-                                        <Text className="text-white font-mono text-[10px] font-bold">BOOT</Text>
-                                    </Pressable>
-                                    {item.edition && (
-                                        <Text className="text-neutral-500 font-mono text-xs ml-2 flex-1" style={{ minWidth: 100 }}>({item.edition})</Text>
-                                    )}
-                                </View>
-                                <TextInput
-                                    className="bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm mb-2"
-                                    placeholder="Edition (e.g. Special Edition)"
-                                    placeholderTextColor="#525252"
-                                    value={localEditions[item.id] !== undefined ? localEditions[item.id] : (item.edition || '')}
-                                    onChangeText={(text) => setLocalEditions(prev => ({ ...prev, [item.id]: text }))}
-                                />
-                                <TextInput
-                                    className="bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm min-h-[80px]"
-                                    placeholder="Add notes..."
-                                    placeholderTextColor="#525252"
-                                    multiline
-                                    value={localNotes[item.id] !== undefined ? localNotes[item.id] : (item.notes || '')}
-                                    onChangeText={(text) => setLocalNotes(prev => ({ ...prev, [item.id]: text }))}
-                                />
-                                <Pressable
-                                    onPress={async () => {
-                                        const noteToSave = localNotes[item.id] !== undefined ? localNotes[item.id] : (item.notes || '');
-                                        const editionToSave = localEditions[item.id] !== undefined ? localEditions[item.id] : (item.edition || '');
-                                        const bootToSave = localBootlegs[item.id] !== undefined ? localBootlegs[item.id] : (item.is_bootleg || false);
-                                        await updateMutation.mutateAsync({
-                                            itemId: item.id,
-                                            updates: {
-                                                notes: noteToSave,
-                                                edition: editionToSave || null,
-                                                is_bootleg: bootToSave
-                                            }
-                                        });
-                                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                                    }}
-                                    className="mt-2 self-end px-4 py-2 bg-amber-600/10 border border-amber-600/50 rounded-lg"
-                                >
-                                    <Text className="text-amber-500 font-mono text-xs font-bold">SAVE {item.format}</Text>
-                                </Pressable>
-                            </View>
-                        ))}
-                    </View>
-                )}
-
-                <View className="px-8 mt-8">
-                    <Text className="text-white font-bold mb-3">Curated Stacks</Text>
-                    <View className="flex-row flex-wrap gap-2 mb-2">
-                        {getCustomLists(collection).map(listName => {
-                            const isInStack = showItems.some((i: any) => i.custom_lists?.includes(listName));
-                            return (
-                                <Pressable key={listName} onPress={() => handleToggleStack(listName)} className={`px-3 py-1.5 border rounded-full flex-row items-center gap-1 ${isInStack ? 'bg-amber-600/20 border-amber-500' : 'bg-neutral-900 border-neutral-700'}`}>
-                                    <Ionicons name={isInStack ? 'checkmark' : 'add'} size={14} color={isInStack ? '#f59e0b' : '#a3a3a3'} />
-                                    <Text className={`font-mono text-xs ${isInStack ? 'text-amber-500 font-bold' : 'text-neutral-400'}`}>{listName}</Text>
-                                </Pressable>
-                            );
-                        })}
-                        <Pressable onPress={() => setShowNewStackInput(!showNewStackInput)} className="px-3 py-1.5 border border-dashed border-neutral-700 rounded-full flex-row items-center gap-1">
-                            <Ionicons name="add" size={14} color="#a3a3a3" />
-                            <Text className="font-mono text-xs text-neutral-400">NEW STACK</Text>
-                        </Pressable>
-                    </View>
-                    {showNewStackInput && (
-                        <View className="flex-row gap-2 mt-2">
-                            <TextInput
-                                className="flex-1 bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm"
-                                placeholder="STACK NAME..."
-                                placeholderTextColor="#525252"
-                                value={newStackName}
-                                onChangeText={setNewStackName}
-                                autoFocus
-                            />
-                            <Pressable onPress={handleCreateStack} className="bg-amber-600 px-6 rounded-lg items-center justify-center">
-                                <Text className="text-white font-bold font-mono text-sm">ADD</Text>
+                    <View className="flex-row mt-6 gap-2">
+                        {thriftMode ? (
+                            <Pressable
+                                onPress={async () => {
+                                    const isGrail = showItems.some((i: any) => i.is_grail);
+                                    await Promise.all(showItems.map((item: any) =>
+                                        updateMutation.mutateAsync({ itemId: item.id, updates: { is_grail: !isGrail } })
+                                    ));
+                                    playSound('peel');
+                                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                                }}
+                                className={`flex-1 flex-row items-center justify-center p-3 rounded-lg border ${showItems.some((i: any) => i.is_grail) ? 'bg-amber-500/10 border-amber-500' : 'bg-neutral-900 border-neutral-800'}`}
+                            >
+                                <Ionicons name={showItems.some((i: any) => i.is_grail) ? "trophy" : "trophy-outline"} size={16} color={showItems.some((i: any) => i.is_grail) ? "#f59e0b" : "#404040"} />
+                                <Text className={`ml-2 font-mono text-xs font-bold tracking-widest ${showItems.some((i: any) => i.is_grail) ? 'text-amber-500' : 'text-neutral-600'}`}>
+                                    {showItems.some((i: any) => i.is_grail) ? 'GRAIL' : 'MAKE GRAIL'}
+                                </Text>
                             </Pressable>
+                        ) : (
+                            <Pressable
+                                onPress={async () => {
+                                    const isOnDisplay = showItems.some((i: any) => i.is_on_display);
+                                    await Promise.all(showItems.map((item: any) =>
+                                        updateMutation.mutateAsync({ itemId: item.id, updates: { is_on_display: !isOnDisplay } })
+                                    ));
+                                    playSound('click');
+                                }}
+                                className={`flex-1 flex-row items-center justify-center p-3 rounded-lg border ${showItems.some((i: any) => i.is_on_display) ? 'bg-indigo-500/10 border-indigo-500' : 'bg-neutral-900 border-neutral-800'}`}
+                            >
+                                <Ionicons name={showItems.some((i: any) => i.is_on_display) ? "star" : "star-outline"} size={16} color={showItems.some((i: any) => i.is_on_display) ? "#6366f1" : "#404040"} />
+                                <Text className={`ml-2 font-mono text-xs font-bold tracking-widest ${showItems.some((i: any) => i.is_on_display) ? 'text-indigo-500' : 'text-neutral-600'}`}>
+                                    {showItems.some((i: any) => i.is_on_display) ? 'STAFF PICK' : 'MAKE STAFF PICK'}
+                                </Text>
+                            </Pressable>
+                        )}
+                        {showItems.length > 0 && (
+                            <Pressable onPress={deleteShow} className="bg-red-900/10 px-4 rounded-lg border border-red-900/40 items-center justify-center">
+                                <Ionicons name="trash-outline" size={20} color="#ef4444" />
+                            </Pressable>
+                        )}
+                    </View>
+
+                    {activeShow.show_cast && activeShow.show_cast.length > 0 && (
+                        <View className="mt-8 mb-2">
+                            <Text className="text-white font-bold text-lg mb-3 font-mono">STARRING</Text>
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                                {activeShow.show_cast.map((member: any) => (
+                                    <View key={member.id} className="mr-4 items-center w-20">
+                                        <View className="w-16 h-16 rounded-full overflow-hidden bg-neutral-800 mb-2 border border-neutral-700">
+                                            {member.profile_path ? (
+                                                <Image source={{ uri: `https://image.tmdb.org/t/p/w185${member.profile_path}` }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                                            ) : (
+                                                <View className="flex-1 items-center justify-center"><Ionicons name="person" size={24} color="#525252" /></View>
+                                            )}
+                                        </View>
+                                        <Text className="text-white text-[10px] text-center font-bold leading-3 mb-0.5" numberOfLines={2}>{member.name}</Text>
+                                        <Text className="text-neutral-500 text-[9px] text-center leading-3" numberOfLines={2}>{member.character}</Text>
+                                    </View>
+                                ))}
+                            </ScrollView>
                         </View>
                     )}
-                </View>
 
-                <View className="px-8 mt-8">
-                    <Text className="text-white font-bold mb-3">Add Format</Text>
-                    <View className="flex-row flex-wrap gap-2">
-                        {FORMATS.map(fmt => (
-                            <Pressable key={fmt} onPress={() => { setPendingFormat(fmt); setEditionInput(''); setShowEditionModal(true); }} className={`px-4 py-2 border rounded-full ${FORMAT_COLORS[fmt] || 'bg-neutral-800'} border-neutral-700`}>
-                                <Text className="text-white font-mono font-bold">{fmt}</Text>
+                    <View className="mt-6">
+                        <Text className="text-amber-500 font-bold text-xl mb-4 font-mono uppercase tracking-widest" style={{ fontFamily: 'VCR_OSD_MONO' }}>Overview</Text>
+                        <Text className="text-neutral-400 leading-6">{displayShow.overview || "No overview available."}</Text>
+                    </View>
+
+                    {ownedFormats.length > 0 && (
+                        <View className="mt-8">
+                            <Text className="text-white font-bold mb-3">Format Notes</Text>
+                            {showItems.map((item: any) => (
+                                <View key={item.id} className="mb-4">
+                                    <View className="flex-row items-center flex-wrap mb-2">
+                                        <View className={`px-2 py-1 rounded shrink-0 ${FORMAT_COLORS[item.format] || 'bg-neutral-800'}`}>
+                                            <Text className="text-white font-mono text-xs font-bold">{item.format}</Text>
+                                        </View>
+                                        <Pressable
+                                            onPress={() => {
+                                                const isBoot = localBootlegs[item.id] !== undefined ? localBootlegs[item.id] : (item.is_bootleg || false);
+                                                setLocalBootlegs(prev => ({ ...prev, [item.id]: !isBoot }));
+                                                playSound('click');
+                                            }}
+                                            className={`ml-2 px-2 py-1 rounded border ${(localBootlegs[item.id] !== undefined ? localBootlegs[item.id] : (item.is_bootleg || false)) ? 'bg-red-500 border-red-400' : 'bg-neutral-800 border-neutral-700'}`}
+                                        >
+                                            <Text className="text-white font-mono text-[10px] font-bold">BOOT</Text>
+                                        </Pressable>
+                                        {item.edition && (
+                                            <Text className="text-neutral-500 font-mono text-xs ml-2 flex-1" style={{ minWidth: 100 }}>({item.edition})</Text>
+                                        )}
+                                    </View>
+                                    <TextInput
+                                        className="bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm mb-2"
+                                        placeholder="Edition (e.g. Special Edition)"
+                                        placeholderTextColor="#525252"
+                                        value={localEditions[item.id] !== undefined ? localEditions[item.id] : (item.edition || '')}
+                                        onChangeText={(text) => setLocalEditions(prev => ({ ...prev, [item.id]: text }))}
+                                    />
+                                    <TextInput
+                                        className="bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm min-h-[80px]"
+                                        placeholder="Add notes..."
+                                        placeholderTextColor="#525252"
+                                        multiline
+                                        value={localNotes[item.id] !== undefined ? localNotes[item.id] : (item.notes || '')}
+                                        onChangeText={(text) => setLocalNotes(prev => ({ ...prev, [item.id]: text }))}
+                                    />
+                                    <Pressable
+                                        onPress={async () => {
+                                            const noteToSave = localNotes[item.id] !== undefined ? localNotes[item.id] : (item.notes || '');
+                                            const editionToSave = localEditions[item.id] !== undefined ? localEditions[item.id] : (item.edition || '');
+                                            const bootToSave = localBootlegs[item.id] !== undefined ? localBootlegs[item.id] : (item.is_bootleg || false);
+                                            await updateMutation.mutateAsync({
+                                                itemId: item.id,
+                                                updates: {
+                                                    notes: noteToSave,
+                                                    edition: editionToSave || null,
+                                                    is_bootleg: bootToSave
+                                                }
+                                            });
+                                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                                        }}
+                                        className="mt-2 self-end px-4 py-2 bg-amber-600/10 border border-amber-600/50 rounded-lg"
+                                    >
+                                        <Text className="text-amber-500 font-mono text-xs font-bold">SAVE {item.format}</Text>
+                                    </Pressable>
+                                </View>
+                            ))}
+                        </View>
+                    )}
+
+                    <View className="mt-8">
+                        <Text className="text-white font-bold mb-3">Curated Stacks</Text>
+                        <View className="flex-row flex-wrap gap-2 mb-2">
+                            {getCustomLists(collection).map(listName => {
+                                const isInStack = showItems.some((i: any) => i.custom_lists?.includes(listName));
+                                return (
+                                    <Pressable key={listName} onPress={() => handleToggleStack(listName)} className={`px-3 py-1.5 border rounded-full flex-row items-center gap-1 ${isInStack ? 'bg-amber-600/20 border-amber-500' : 'bg-neutral-900 border-neutral-700'}`}>
+                                        <Ionicons name={isInStack ? 'checkmark' : 'add'} size={14} color={isInStack ? '#f59e0b' : '#a3a3a3'} />
+                                        <Text className={`font-mono text-xs ${isInStack ? 'text-amber-500 font-bold' : 'text-neutral-400'}`}>{listName}</Text>
+                                    </Pressable>
+                                );
+                            })}
+                            <Pressable onPress={() => setShowNewStackInput(!showNewStackInput)} className="px-3 py-1.5 border border-dashed border-neutral-700 rounded-full flex-row items-center gap-1">
+                                <Ionicons name="add" size={14} color="#a3a3a3" />
+                                <Text className="font-mono text-xs text-neutral-400">NEW STACK</Text>
                             </Pressable>
-                        ))}
+                        </View>
+                        {showNewStackInput && (
+                            <View className="flex-row gap-2 mt-2">
+                                <TextInput
+                                    className="flex-1 bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm"
+                                    placeholder="STACK NAME..."
+                                    placeholderTextColor="#525252"
+                                    value={newStackName}
+                                    onChangeText={setNewStackName}
+                                    autoFocus
+                                />
+                                <Pressable onPress={handleCreateStack} className="bg-amber-600 px-6 rounded-lg items-center justify-center">
+                                    <Text className="text-white font-bold font-mono text-sm">ADD</Text>
+                                </Pressable>
+                            </View>
+                        )}
+                    </View>
+
+                    <View className="mt-8">
+                        <Text className="text-white font-bold mb-3">Add Format</Text>
+                        <View className="flex-row flex-wrap gap-2">
+                            {FORMATS.map(fmt => (
+                                <Pressable key={fmt} onPress={() => { setPendingFormat(fmt); setEditionInput(''); setShowEditionModal(true); }} className={`px-4 py-2 border rounded-full ${FORMAT_COLORS[fmt] || 'bg-neutral-800'} border-neutral-700`}>
+                                    <Text className="text-white font-mono font-bold">{fmt}</Text>
+                                </Pressable>
+                            ))}
+                        </View>
                     </View>
                 </View>
             </ScrollView>
