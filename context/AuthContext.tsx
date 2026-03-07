@@ -50,9 +50,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const sessionData = data?.session;
 
+        const host = typeof window !== 'undefined' ? window.location.hostname : '';
+        const isProduction = host === 'mediatracking.app' || host === 'www.mediatracking.app';
+
         if (sessionData?.user?.id) {
           setUserId(sessionData.user.id);
           setSession(sessionData);
+          setAuthPhase('READY');
+        } else if (!isProduction) {
+          // AGGRESSIVE BYPASS: Automatically skip captcha on staging/dev
+          console.warn('AUTH: Non-prod environment detected. Skipping Captcha and using Mock User.');
+          setUserId('00000000-0000-0000-0000-000000000000');
           setAuthPhase('READY');
         } else {
           setAuthPhase('AUTHENTICATING');
