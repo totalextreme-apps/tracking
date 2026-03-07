@@ -243,15 +243,24 @@ export function StackCard({
         {/* Thumbnail Section */}
         <View style={{ height: '100%', aspectRatio, backgroundColor: '#262626' }}>
           {topItem.format === 'VHS' ? (
-            <VHSCard posterUrl={posterUrl} isCustom={!!topItem.custom_poster_url} style={{ width: '100%', height: '100%' }} />
+            <VHSCard posterUrl={posterUrl} isCustom={!!topItem.custom_poster_url} isBootleg={topItem.is_bootleg} style={{ width: '100%', height: '100%' }} />
           ) : ['DVD', 'BluRay', '4K'].includes(topItem.format) ? (
-            <GlossyCard posterUrl={posterUrl} format={topItem.format as any} isCustom={!!topItem.custom_poster_url} style={{ width: '100%', height: '100%' }} />
+            <GlossyCard posterUrl={posterUrl} format={topItem.format as any} isCustom={!!topItem.custom_poster_url} isBootleg={topItem.is_bootleg} style={{ width: '100%', height: '100%' }} />
           ) : posterUrl ? (
-            <Image
-              source={{ uri: posterUrl }}
-              style={{ width: '100%', height: '100%' }}
-              contentFit="cover"
-            />
+            <View style={{ width: '100%', height: '100%' }}>
+              <Image
+                source={{ uri: posterUrl }}
+                style={{ width: '100%', height: '100%' }}
+                contentFit="cover"
+              />
+              {topItem.is_bootleg && (
+                <Image
+                  source={require('@/assets/images/overlays/boot_sticker.png')}
+                  style={{ position: 'absolute', bottom: 2, left: 2, width: 20, height: 20, zIndex: 50 }}
+                  contentFit="contain"
+                />
+              )}
+            </View>
           ) : (
             <View className="flex-1 items-center justify-center">
               <Text className="text-neutral-600 text-[10px] font-mono p-1 text-center">
