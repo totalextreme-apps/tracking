@@ -40,8 +40,10 @@ export default function CuratedStackScreen() {
     const stacks = getStacks(stackItems, thriftMode, 'title', 'asc');
     const isEmpty = stacks.length === 0;
 
-    const handleRemoveItem = (movieId: number) => {
-        setConfirmMovieId(movieId);
+    const handleRemoveItem = (id: number | null | undefined) => {
+        if (id) {
+            setConfirmMovieId(id);
+        }
     };
 
     const doRemove = async () => {
@@ -152,7 +154,7 @@ export default function CuratedStackScreen() {
 
                             {/* Remove button */}
                             <Pressable
-                                onPress={() => handleRemoveItem(stack[0].movie_id)}
+                                onPress={() => handleRemoveItem(stack[0].movie_id ?? stack[0].show_id)}
                                 disabled={removeMutation.isPending}
                                 className="ml-2 w-9 h-9 items-center justify-center rounded-md bg-neutral-900 border border-neutral-800 active:opacity-60"
                                 hitSlop={8}

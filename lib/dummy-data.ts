@@ -10,8 +10,10 @@ export const createMovie = (overrides: Partial<Movie> = {}): Movie => ({
   backdrop_path: null,
   release_date: null,
   primary_color: null,
+  genres: null,
+  movie_cast: null,
   ...overrides,
-});
+} as Movie);
 
 export const createCollectionItem = (
   movie: Movie,
@@ -29,8 +31,18 @@ export const createCollectionItem = (
   notes: null,
   created_at: new Date().toISOString(),
   movies: movie,
+  shows: null,
+  media_type: 'movie',
+  show_id: null,
+  season_number: null,
+  edition: null,
+  custom_poster_url: null,
+  custom_backdrop_url: null,
+  custom_lists: null,
+  is_bootleg: false,
+  rating: null,
   ...overrides,
-});
+} as unknown as CollectionItemWithMedia);
 
 export const getPosterUrl = (path: string | null, size = 'w342') =>
   path ? `${TMDB_IMAGE_BASE}/${size}${path}` : null;

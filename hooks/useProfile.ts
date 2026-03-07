@@ -30,7 +30,7 @@ export function useProfile(userId: string | null) {
             if (!userId) throw new Error('No user');
             const { data, error } = await supabase
                 .from('profiles')
-                .upsert({ id: userId, ...updates, updated_at: new Date().toISOString() })
+                .upsert({ id: userId, ...updates, updated_at: new Date().toISOString() } as any)
                 .select()
                 .single();
 
