@@ -20,6 +20,7 @@ import { useCollection, useUpdateCollectionItem } from '@/hooks/useCollection';
 import { usePersistedState } from '@/hooks/usePersistedState';
 import { getGenres, getOnDisplayItems, getStacks } from '@/lib/collection-utils';
 import type { CollectionItemWithMedia } from '@/types/database';
+import * as Sharing from 'expo-sharing';
 import ViewShot from 'react-native-view-shot';
 
 export default function HomeScreen() {
@@ -44,7 +45,7 @@ export default function HomeScreen() {
   const [genreFilter, setGenreFilter] = useState<string | null>(null);
   const [mediaTypeFilter, setMediaTypeFilter] = useState<'movie' | 'tv' | null>(null);
   const [isGenreDropdownOpen, setIsGenreDropdownOpen] = useState(false);
-  const [showShareModal, setShowShareModal] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
   const viewShotRef = useRef<ViewShot>(null);
   const shelfRef = useRef<ScrollView>(null);
 
@@ -94,72 +95,9 @@ export default function HomeScreen() {
     }, 1500);
   };
 
-  const onDisplay = thriftMode
-    ? collection?.filter((item: any) => item && item.is_grail) ?? []
-    : getOnDisplayItems(collection);
-
-  const genres = getGenres(collection);
-  const stacks = getStacks(collection, thriftMode, sortBy, sortOrder);
-
-  // Filter Logic
-  let filteredStacks = stacks || [];
-  if (searchQuery || formatFilter || genreFilter || mediaTypeFilter) {
-    filteredStacks = filteredStacks.filter((stack: any) => {
-      if (!stack || !stack[0]) return false;
-      const media = stack[0].movies || stack[0].shows;
-      if (!media) return false;
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase().replace(/[^a-z0-9]/g, '');
-        const title = (stack[0].movies?.title || stack[0].shows?.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-        const matchesTitle = title.includes(query);
-        const cast = (stack[0].movies?.movie_cast || stack[0].shows?.show_cast || []);
-        const matchesCast = cast.some((c: any) => c?.name?.toLowerCase().replace(/[^a-z0-9]/g, '').includes(query));
-        if (!matchesTitle && !matchesCast) return false;
-      }
-      if (formatFilter) {
-        const hasFormat = stack.some((item: any) => item?.format === formatFilter);
-        if (!hasFormat) return false;
-      }
-      if (genreFilter) {
-        const hasGenre = media.genres?.some((g: any) => g?.name === genreFilter);
-        if (!hasGenre) return false;
-      }
-      if (mediaTypeFilter) {
-        if (stack[0].media_type !== mediaTypeFilter) return false;
-      }
-      return true;
-    });
-  }
-
-  const hasCollection = (collection?.length ?? 0) > 0;
-  const isEmpty = !hasCollection && onDisplay.length === 0;
-
-  const handleLongPress = (item: CollectionItemWithMedia) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    setAcquiredItem(item);
-  };
-
-  const toggleFavorite = async (item: CollectionItemWithMedia) => {
-    try {
-      const isWishlist = item.status === 'wishlist';
-      const updates = isWishlist
-        ? { is_grail: !item.is_grail }
-        : { is_on_display: !item.is_on_display };
-
-      await updateMutation.mutateAsync({
-        itemId: item.id,
-        updates
-      });
-      if (refetch) refetch();
-    } catch (e) {
-      console.error('Failed to toggle status', e);
-    }
-  };
-
   const scrollShelfRight = () => {
     if (shelfRef.current) {
       playSound('click');
-      // On web we use current scroll position to increment
       if (Platform.OS === 'web') {
         (shelfRef.current as any).scrollTo({ x: (shelfRef.current as any).scrollLeft + 400, animated: true });
       } else {
@@ -192,6 +130,43 @@ export default function HomeScreen() {
     }
   };
 
+  const handleShare = async () => {
+    if (viewShotRef.current) {
+      try {
+        setIsSharing(true);
+        setTimeout(async () => {
+          const uri = await (viewShotRef.current as any).capture();
+          await Sharing.shareAsync(uri, {
+            mimeType: 'image/jpeg',
+            dialogTitle: 'Share my collection',
+            UTI: 'public.jpeg'
+          });
+          setIsSharing(false);
+        }, 100);
+      } catch (e) {
+        console.error('Failed to share', e);
+        setIsSharing(false);
+      }
+    }
+  };
+
+  const toggleFavorite = async (item: CollectionItemWithMedia) => {
+    try {
+      const isWishlist = item.status === 'wishlist';
+      const updates = isWishlist
+        ? { is_grail: !item.is_grail }
+        : { is_on_display: !item.is_on_display };
+
+      await updateMutation.mutateAsync({
+        itemId: item.id,
+        updates
+      });
+      if (refetch) refetch();
+    } catch (e) {
+      console.error('Failed to toggle status', e);
+    }
+  };
+
   const navigateToDetail = (item: CollectionItemWithMedia) => {
     if (item.media_type === 'tv') {
       const showId = item.show_id || item.shows?.id;
@@ -212,6 +187,41 @@ export default function HomeScreen() {
     }
   };
 
+  const onDisplay = thriftMode
+    ? collection?.filter((item: any) => item && item.is_grail) ?? []
+    : getOnDisplayItems(collection);
+
+  const genres = getGenres(collection);
+  const stacks = getStacks(collection, thriftMode, sortBy, sortOrder);
+
+  let filteredStacks = stacks || [];
+  if (searchQuery || formatFilter || genreFilter || mediaTypeFilter) {
+    filteredStacks = filteredStacks.filter((stack: any) => {
+      if (!stack || !stack[0]) return false;
+      const media = stack[0].movies || stack[0].shows;
+      if (!media) return false;
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const title = (stack[0].movies?.title || stack[0].shows?.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const matchesTitle = title.includes(query);
+        const cast = (stack[0].movies?.movie_cast || stack[0].shows?.show_cast || []);
+        const matchesCast = cast.some((c: any) => c?.name?.toLowerCase().replace(/[^a-z0-9]/g, '').includes(query));
+        if (!matchesTitle && !matchesCast) return false;
+      }
+      if (formatFilter) {
+        if (!stack.some((item: any) => item?.format === formatFilter)) return false;
+      }
+      if (genreFilter) {
+        if (!media.genres?.some((g: any) => g?.name === genreFilter)) return false;
+      }
+      if (mediaTypeFilter && stack[0].media_type !== mediaTypeFilter) return false;
+      return true;
+    });
+  }
+
+  const hasCollection = (collection?.length ?? 0) > 0;
+  const isEmpty = !hasCollection && onDisplay.length === 0;
+
   if (authPhase === 'checking' || authLoading) {
     return (
       <View className="flex-1 bg-black items-center justify-center">
@@ -225,7 +235,7 @@ export default function HomeScreen() {
       <View className="flex-1 bg-neutral-950 items-center justify-center p-6">
         <Text className="text-amber-500 font-mono text-xl mb-4 italic">SIGNAL LOST</Text>
         <Text className="text-neutral-500 font-mono text-center">Enable Anonymous Auth or check your network connection.</Text>
-        <Pressable onPress={() => onRefresh()} className="bg-neutral-900 px-6 py-3 rounded-md mt-8 border border-neutral-800 active:bg-neutral-800">
+        <Pressable onPress={onRefresh} className="bg-neutral-900 px-6 py-3 rounded-md mt-8 border border-neutral-800 active:bg-neutral-800">
           <Text className="text-white font-mono text-xs tracking-widest uppercase">RETRY FETCH</Text>
         </Pressable>
       </View>
@@ -245,7 +255,7 @@ export default function HomeScreen() {
       <View className="flex-1 bg-neutral-950 items-center justify-center p-6">
         <Text className="text-red-500 font-mono text-xl mb-4 italic">LOAD TIMEOUT</Text>
         <Text className="text-neutral-500 font-mono text-center mb-8">The tapes are stuck! Check your connection or retry.</Text>
-        <Pressable onPress={() => onRefresh()} className="bg-neutral-900 border border-neutral-800 px-8 py-3 rounded active:bg-neutral-800">
+        <Pressable onPress={onRefresh} className="bg-neutral-900 border border-neutral-800 px-8 py-3 rounded active:bg-neutral-800">
           <Text className="text-white font-mono uppercase tracking-widest text-xs">TRY AGAIN</Text>
         </Pressable>
       </View>
@@ -257,7 +267,7 @@ export default function HomeScreen() {
       <View className="flex-1 bg-neutral-950 items-center justify-center p-6">
         <Text className="text-red-500 font-mono text-xl mb-4">COLLECTION ERROR</Text>
         <Text className="text-neutral-400 font-mono text-center">We couldn't retrieve your collection.</Text>
-        <Pressable onPress={() => onRefresh()} className="bg-neutral-900 px-6 py-3 rounded-md mt-6 border border-neutral-800">
+        <Pressable onPress={onRefresh} className="bg-neutral-900 px-6 py-3 rounded-md mt-6 border border-neutral-800">
           <Text className="text-white font-mono text-xs uppercase tracking-widest">RETRY FETCH</Text>
         </Pressable>
       </View>
@@ -269,20 +279,16 @@ export default function HomeScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <StatusBar style="light" />
 
-      <View className="flex-1">
-        <ScrollView
-          className="flex-1"
-          contentContainerStyle={{ paddingBottom: 100 }}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor="#f59e0b"
-            />
-          }
-        >
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ paddingBottom: 100 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#f59e0b" />
+        }
+      >
+        <View className="w-full max-w-7xl mx-auto px-4 md:px-8">
           {/* Header/Search Bar */}
-          <View className="px-6 pt-4 pb-4 border-b border-neutral-900">
+          <View className="pt-4 pb-4 border-b border-neutral-900">
             <View className="flex-row items-center justify-between mb-4">
               <View className="flex-row items-center bg-neutral-950 rounded-full p-1 flex-1 mr-4">
                 <Pressable
@@ -360,7 +366,7 @@ export default function HomeScreen() {
           <View className="flex-1">
             {onDisplay.length > 0 && (
               <View className="mb-4 mt-4">
-                <View className="px-6 flex-row items-center justify-between mb-2">
+                <View className="px-2 flex-row items-center justify-between mb-2">
                   <View className="flex-row items-baseline gap-2">
                     <Text className="text-amber-500 font-bold text-3xl tracking-tighter uppercase" style={{ fontFamily: 'VCR_OSD_MONO' }}>
                       {thriftMode ? 'GRAILS' : 'ON DISPLAY'}
@@ -369,13 +375,11 @@ export default function HomeScreen() {
                   </View>
                   <View className="flex-row items-center gap-2">
                     <Pressable
-                      onPress={() => {
-                        setShowShareModal(true);
-                        playSound('click');
-                      }}
-                      className="p-2 bg-neutral-900 rounded-full border border-neutral-800 active:bg-neutral-800 mr-2"
+                      onPress={() => { handleShare(); playSound('click'); }}
+                      className={`p-2 bg-neutral-900 rounded-full border border-neutral-800 active:bg-neutral-800 mr-2 ${isSharing ? 'opacity-50' : ''}`}
+                      disabled={isSharing}
                     >
-                      <Ionicons name="share-outline" size={16} color="#f59e0b" />
+                      <Ionicons name={isSharing ? "hourglass-outline" : "share-outline"} size={16} color="#f59e0b" />
                     </Pressable>
                     <Pressable onPress={scrollShelfLeft} className="p-2 bg-neutral-900 rounded-full border border-neutral-800 active:bg-neutral-800">
                       <Ionicons name="chevron-back" size={16} color="#f59e0b" />
@@ -386,7 +390,7 @@ export default function HomeScreen() {
                   </View>
                 </View>
 
-                <ViewShot ref={viewShotRef} options={{ format: 'jpg', quality: 0.9 }}>
+                <ViewShot ref={viewShotRef} options={{ format: 'jpg', quality: 0.9 }} style={{ backgroundColor: '#0a0a0a' }}>
                   <View className="relative">
                     <Image
                       source={thriftMode ? require('@/assets/images/thrift_background.png') : require('@/assets/images/shelf_background.png')}
@@ -405,7 +409,7 @@ export default function HomeScreen() {
                           key={item.id}
                           item={item}
                           onSingleTapAction={() => navigateToDetail(item)}
-                          onLongPressAction={() => handleLongPress(item)}
+                          onLongPressAction={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); setAcquiredItem(item); }}
                           onToggleFavorite={toggleFavorite}
                         />
                       ))}
@@ -415,60 +419,62 @@ export default function HomeScreen() {
               </View>
             )}
 
-            <View className="px-6 pb-4">
+            <View className="px-2 pb-4">
               <View className="flex-row items-center justify-between mb-6">
-                <Text className="text-amber-500 font-bold text-3xl tracking-tighter uppercase" style={{ fontFamily: 'VCR_OSD_MONO' }}>
-                  {thriftMode ? 'WISH LIST' : 'THE STACKS'}
-                </Text>
+                <View className="flex-row items-baseline gap-2">
+                  <Text className="text-amber-500 font-bold text-3xl tracking-tighter uppercase" style={{ fontFamily: 'VCR_OSD_MONO' }}>
+                    {thriftMode ? 'WISH LIST' : 'THE STACKS'}
+                  </Text>
+                  <Text className="text-neutral-600 font-mono text-xs opacity-50 ml-1">
+                    / {thriftMode ? collection?.filter((i: any) => i.status === 'wishlist').length : filteredStacks.length}
+                  </Text>
+                </View>
 
                 <View className="flex-row bg-neutral-900 rounded-md p-1 border border-neutral-800">
                   <Pressable
-                    onPress={() => { setViewMode('grid2'); setNumColumns(2); playSound('click'); }}
-                    className={`p-1.5 rounded ${numColumns === 2 ? 'bg-neutral-800' : ''}`}
+                    onPress={() => { setViewMode('list'); playSound('click'); }}
+                    className={`p-1.5 rounded ${viewMode === 'list' ? 'bg-neutral-800' : ''}`}
                   >
-                    <Ionicons name="apps-outline" size={14} color={numColumns === 2 ? '#fff' : '#666'} />
+                    <Ionicons name="list-outline" size={14} color={viewMode === 'list' ? '#fff' : '#666'} />
+                  </Pressable>
+                  <Pressable
+                    onPress={() => { setViewMode('grid2'); setNumColumns(2); playSound('click'); }}
+                    className={`p-1.5 rounded ${viewMode === 'grid2' || (viewMode === 'custom' && numColumns === 2) ? 'bg-neutral-800' : ''}`}
+                  >
+                    <Ionicons name="apps-outline" size={14} color={(viewMode === 'grid2' || (viewMode === 'custom' && numColumns === 2)) ? '#fff' : '#666'} />
                   </Pressable>
                   <Pressable
                     onPress={() => { setViewMode('grid4'); setNumColumns(4); playSound('click'); }}
-                    className={`p-1.5 rounded ${numColumns === 4 ? 'bg-neutral-800' : ''}`}
+                    className={`p-1.5 rounded ${viewMode === 'grid4' || (viewMode === 'custom' && numColumns === 4) ? 'bg-neutral-800' : ''}`}
                   >
-                    <Ionicons name="grid-outline" size={14} color={numColumns === 4 ? '#fff' : '#666'} />
-                  </Pressable>
-                  <Pressable
-                    onPress={() => { setViewMode('custom'); playSound('click'); }}
-                    className={`p-1.5 rounded ${viewMode === 'custom' ? 'bg-neutral-800' : ''}`}
-                  >
-                    <Ionicons name="options-outline" size={14} color={viewMode === 'custom' ? '#fff' : '#666'} />
+                    <Ionicons name="grid-outline" size={14} color={(viewMode === 'grid4' || (viewMode === 'custom' && numColumns === 4)) ? '#fff' : '#666'} />
                   </Pressable>
                 </View>
               </View>
 
-              {/* Always show slider on desktop if we have room, or persistent on mobile if requested */}
-              {(viewMode === 'custom' || (isDesktop && numColumns > 1)) && (
-                <View className="bg-neutral-900 mb-8 p-4 rounded-xl border border-neutral-800">
-                  <View className="flex-row justify-between mb-2">
-                    <Text className="text-neutral-400 font-mono text-[9px] tracking-widest">DENSITY: {numColumns} COLUMNS</Text>
-                    <Pressable onPress={() => { setNumColumns(2); setViewMode('grid2'); playSound('click'); }}>
-                      <Text className="text-amber-500/50 font-mono text-[9px]">RESET</Text>
-                    </Pressable>
-                  </View>
-                  <Slider
-                    style={{ width: '100%', height: 30 }}
-                    minimumValue={1}
-                    maximumValue={isDesktop ? 8 : 4}
-                    step={1}
-                    value={numColumns}
-                    onValueChange={(val) => {
-                      setNumColumns(val);
-                      setViewMode('custom');
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    }}
-                    minimumTrackTintColor="#f59e0b"
-                    maximumTrackTintColor="#333"
-                    thumbTintColor="#f59e0b"
-                  />
+              <View className="bg-neutral-900 mb-8 p-4 rounded-xl border border-neutral-800">
+                <View className="flex-row justify-between mb-2">
+                  <Text className="text-neutral-400 font-mono text-[9px] tracking-widest">DENSITY: {numColumns} COLUMNS</Text>
+                  <Pressable onPress={() => { setNumColumns(2); setViewMode('grid2'); playSound('click'); }}>
+                    <Text className="text-amber-500/50 font-mono text-[9px]">RESET</Text>
+                  </Pressable>
                 </View>
-              )}
+                <Slider
+                  style={{ width: '100%', height: 30 }}
+                  minimumValue={1}
+                  maximumValue={isDesktop ? 8 : 4}
+                  step={1}
+                  value={numColumns}
+                  onValueChange={(val) => {
+                    setNumColumns(val);
+                    setViewMode('custom');
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }}
+                  minimumTrackTintColor="#f59e0b"
+                  maximumTrackTintColor="#333"
+                  thumbTintColor="#f59e0b"
+                />
+              </View>
 
               {isEmpty ? (
                 <EmptyState />
@@ -490,23 +496,26 @@ export default function HomeScreen() {
                           stack={stack}
                           onPress={() => navigateToDetail(topItem)}
                           onToggleFavorite={toggleFavorite}
-                          onLongPress={() => handleLongPress(topItem)}
+                          onLongPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); setAcquiredItem(topItem); }}
                           width={(windowWidth - 48 - (resolvedColumns * 20)) / resolvedColumns}
+                          mode={viewMode === 'list' ? 'list' : 'grid'}
                         />
-                        <View className="mt-3">
-                          <Text
-                            className="text-white font-medium text-[11px] uppercase tracking-wide"
-                            numberOfLines={1}
-                            style={{ fontFamily: 'VCR_OSD_MONO' }}
-                          >
-                            {topItem.movies?.title || topItem.shows?.name}
-                          </Text>
-                          {topItem.media_type === 'tv' && (
-                            <Text className="text-neutral-500 font-mono text-[9px] mt-0.5">
-                              SEASON {topItem.season_number}
+                        {viewMode !== 'list' && (
+                          <View className="mt-3">
+                            <Text
+                              className="text-white font-medium text-[11px] uppercase tracking-wide"
+                              numberOfLines={1}
+                              style={{ fontFamily: 'VCR_OSD_MONO' }}
+                            >
+                              {topItem.movies?.title || topItem.shows?.name}
                             </Text>
-                          )}
-                        </View>
+                            {topItem.media_type === 'tv' && (
+                              <Text className="text-neutral-500 font-mono text-[9px] mt-0.5">
+                                SEASON {topItem.season_number}
+                              </Text>
+                            )}
+                          </View>
+                        )}
                       </View>
                     );
                   })}
@@ -514,15 +523,26 @@ export default function HomeScreen() {
               )}
             </View>
           </View>
-        </ScrollView>
-      </View>
+        </View>
+      </ScrollView>
 
       {acquiredItem && (
         <AcquiredModal
           item={acquiredItem}
           visible={!!acquiredItem}
           onClose={() => setAcquiredItem(null)}
-          onAcquired={handleAcquire}
+          onAcquired={async () => {
+            if (!acquiredItem) return;
+            try {
+              await updateMutation.mutateAsync({
+                itemId: acquiredItem.id,
+                updates: { status: 'owned' }
+              });
+              if (refetch) refetch();
+            } catch (e) {
+              console.error('Failed to acquire', e);
+            }
+          }}
         />
       )}
 

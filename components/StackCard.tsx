@@ -428,7 +428,7 @@ export function StackCard({
                   {item.is_bootleg && (
                     <Image
                       source={require('@/assets/images/overlays/boot_sticker.png')}
-                      style={{ position: 'absolute', bottom: 4, left: 4, width: 24, height: 24, zIndex: 50 }}
+                      style={{ position: 'absolute', bottom: 4, left: 4, width: 30, height: 30, zIndex: 50 }}
                       contentFit="contain"
                     />
                   )}
@@ -537,6 +537,15 @@ export function StackCard({
             style={{ position: 'absolute', bottom: 6, right: 6, width: 40, height: 25, opacity: 0.9 }}
             contentFit="contain"
           />
+
+          {/* Bootleg Sticker for Digital Grid */}
+          {topItem.is_bootleg && (
+            <Image
+              source={require('@/assets/images/overlays/boot_sticker.png')}
+              style={{ position: 'absolute', bottom: 4, left: 4, width: 30, height: 30, zIndex: 50 }}
+              contentFit="contain"
+            />
+          )}
         </View>
         <Text
           className="text-white font-mono text-xs mt-2 text-center"

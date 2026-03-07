@@ -190,7 +190,7 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
             {item.is_bootleg && (
               <Image
                 source={require('@/assets/images/overlays/boot_sticker.png')}
-                style={{ position: 'absolute', bottom: 4, left: 4, width: 24, height: 24, zIndex: 50 }}
+                style={{ position: 'absolute', bottom: 4, left: 4, width: 30, height: 30, zIndex: 50 }}
                 contentFit="contain"
               />
             )}
