@@ -460,6 +460,37 @@ export default function HomeScreen() {
               </View>
 
               <View className="bg-neutral-900 mb-8 p-4 rounded-xl border border-neutral-800">
+                <View className="flex-row items-center gap-2 mb-6 flex-wrap">
+                  <Text className="text-neutral-500 font-mono text-[10px] uppercase tracking-tighter mr-1">SORT:</Text>
+                  {[
+                    { id: 'recent', label: 'RECENT' },
+                    { id: 'title', label: 'NAME' },
+                    { id: 'release', label: 'YEAR' },
+                    { id: 'rating', label: 'RATING' }
+                  ].map((s: any) => (
+                    <Pressable
+                      key={s.id}
+                      onPress={() => {
+                        if (sortBy === s.id) {
+                          setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                        } else {
+                          setSortBy(s.id);
+                          setSortOrder(s.id === 'title' || s.id === 'release' ? 'asc' : 'desc');
+                        }
+                        playSound('click');
+                      }}
+                      className={`px-3 py-1.5 rounded border flex-row items-center gap-1.5 ${sortBy === s.id ? 'bg-amber-500/20 border-amber-500/50' : 'bg-neutral-950 border-neutral-800'}`}
+                    >
+                      <Text className={`font-mono text-[10px] font-bold ${sortBy === s.id ? 'text-amber-500' : 'text-neutral-500'}`}>
+                        {s.label}
+                      </Text>
+                      {sortBy === s.id && (
+                        <Ionicons name={sortOrder === 'asc' ? 'chevron-up' : 'chevron-down'} size={10} color="#f59e0b" />
+                      )}
+                    </Pressable>
+                  ))}
+                </View>
+
                 <View className="flex-row justify-between mb-2">
                   <Text className="text-neutral-400 font-mono text-[9px] tracking-widest">DENSITY: {numColumns} COLUMNS</Text>
                   <Pressable onPress={() => { setNumColumns(2); setViewMode('grid2'); playSound('click'); }}>
