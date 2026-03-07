@@ -15,6 +15,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { BootlegSticker } from './BootlegSticker';
 import { GlossyCard } from './GlossyCard';
 import { NowStreamingSticker } from './NowStreamingSticker';
 import { SaleSticker } from './SaleSticker';
@@ -272,13 +273,7 @@ export function StackCard({
                 style={{ width: '100%', height: '100%' }}
                 contentFit="cover"
               />
-              {topItem.is_bootleg && (
-                <Image
-                  source={require('@/assets/images/overlays/boot_sticker.png')}
-                  style={{ position: 'absolute', bottom: 2, left: 2, width: 20, height: 20, zIndex: 50 }}
-                  contentFit="contain"
-                />
-              )}
+              {topItem.is_bootleg && <BootlegSticker size={20} />}
             </View>
           ) : (
             <View className="flex-1 items-center justify-center">
@@ -456,13 +451,7 @@ export function StackCard({
                       </Text>
                     </View>
                   )}
-                  {item.is_bootleg && (
-                    <Image
-                      source={require('@/assets/images/overlays/boot_sticker.png')}
-                      style={{ position: 'absolute', bottom: 4, left: 4, width: 30, height: 30, zIndex: 50 }}
-                      contentFit="contain"
-                    />
-                  )}
+                  {item.is_bootleg && <BootlegSticker size={30} />}
                 </View>
               );
             })}

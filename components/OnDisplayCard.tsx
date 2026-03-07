@@ -12,6 +12,7 @@ import Animated, {
   withSequence,
   withSpring
 } from 'react-native-reanimated';
+import { BootlegSticker } from './BootlegSticker';
 import { GlossyCard } from './GlossyCard';
 import { NowStreamingSticker } from './NowStreamingSticker';
 import { SaleSticker } from './SaleSticker';
@@ -204,20 +205,7 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
           )}
 
           {/* Bootleg Sticker - Digital ONLY */}
-          {!isPhysical && item.is_bootleg && (
-            <Image
-              source={require('@/assets/images/overlays/boot_sticker.png')}
-              style={{
-                position: 'absolute',
-                bottom: 4,
-                left: 4,
-                width: 30,
-                height: 30,
-                zIndex: 110,
-              }}
-              contentFit="contain"
-            />
-          )}
+          {!isPhysical && item.is_bootleg && <BootlegSticker size={30} />}
         </View>
 
         <View style={{ height: 'auto', minHeight: 30, width: 100, marginTop: 12, alignItems: 'center', justifyContent: 'flex-start' }}>

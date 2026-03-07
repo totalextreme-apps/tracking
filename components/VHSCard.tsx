@@ -1,5 +1,6 @@
 import { Image } from 'expo-image';
 import { View } from 'react-native';
+import { BootlegSticker } from './BootlegSticker';
 
 type VHSCardProps = {
     posterUrl: string | null;
@@ -36,13 +37,7 @@ export function VHSCard({ posterUrl, style, isCustom = false, isBootleg = false 
             />
 
             {/* Layer 5: Bootleg Sticker */}
-            {isBootleg && (
-                <Image
-                    source={require('@/assets/images/overlays/boot_sticker.png')}
-                    style={{ position: 'absolute', bottom: 4, left: 4, width: 30, height: 30, zIndex: 100 }}
-                    contentFit="contain"
-                />
-            )}
+            {isBootleg && <BootlegSticker size={30} />}
         </View>
     );
 }
