@@ -466,7 +466,8 @@ export default function HomeScreen() {
                     { id: 'recent', label: 'RECENT' },
                     { id: 'title', label: 'NAME' },
                     { id: 'release', label: 'YEAR' },
-                    { id: 'rating', label: 'RATING' }
+                    { id: 'rating', label: 'RATING' },
+                    { id: 'bootleg', label: 'BOOTLEG' }
                   ].map((s: any) => (
                     <Pressable
                       key={s.id}

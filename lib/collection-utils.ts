@@ -47,7 +47,7 @@ export function getWishlistItems(collection: CollectionItemWithMedia[] | undefin
   return collection.filter((item) => item.status === 'wishlist');
 }
 
-export type SortOption = 'recent' | 'title' | 'release' | 'rating';
+export type SortOption = 'recent' | 'title' | 'release' | 'rating' | 'bootleg';
 export type SortOrder = 'asc' | 'desc';
 
 export function getStacks(
@@ -114,6 +114,16 @@ export function getStacks(
         const ratingA = itemA.rating ?? 0;
         const ratingB = itemB.rating ?? 0;
         comparison = ratingA - ratingB;
+        break;
+      case 'bootleg':
+        const isBootA = a.some(i => i.is_bootleg) ? 1 : 0;
+        const isBootB = b.some(i => i.is_bootleg) ? 1 : 0;
+        comparison = isBootA - isBootB;
+        if (comparison === 0) {
+          const titleAStr = itemA.movies?.title ?? itemA.shows?.name ?? '';
+          const titleBStr = itemB.movies?.title ?? itemB.shows?.name ?? '';
+          comparison = titleAStr.localeCompare(titleBStr);
+        }
         break;
       case 'recent':
       default:

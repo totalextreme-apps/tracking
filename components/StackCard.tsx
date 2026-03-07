@@ -298,6 +298,9 @@ export function StackCard({
                   <Text style={{ fontSize: 7, fontWeight: 'bold', color: 'white', fontFamily: 'SpaceMono' }}>
                     {item.format}
                   </Text>
+                  {item.is_bootleg && (
+                    <Image source={require('@/assets/images/overlays/boot_sticker.png')} style={{ width: 10, height: 10, marginLeft: 2 }} contentFit="contain" />
+                  )}
                 </View>
               </View>
             ))}
@@ -467,6 +470,9 @@ export function StackCard({
                 <Text className="text-white font-mono text-[10px] font-bold">
                   {item.format}
                 </Text>
+                {item.is_bootleg && (
+                  <Image source={require('@/assets/images/overlays/boot_sticker.png')} style={{ width: 12, height: 12, marginLeft: 2 }} contentFit="contain" />
+                )}
                 {item.edition && (
                   <Text className="text-white/60 font-mono text-[9px]">
                     •
@@ -579,6 +585,9 @@ export function StackCard({
               <Text className="text-white font-mono text-[10px] font-bold">
                 {item.format}
               </Text>
+              {item.is_bootleg && (
+                <Image source={require('@/assets/images/overlays/boot_sticker.png')} style={{ width: 12, height: 12, marginLeft: 2 }} contentFit="contain" />
+              )}
               {item.edition && (
                 <Text className="text-white/60 font-mono text-[9px]">
                   •
