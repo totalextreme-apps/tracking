@@ -35,7 +35,7 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
   const isPhysical = item.format !== 'Digital';
   const isWishlist = item.status === 'wishlist';
   const isGrail = item.is_grail;
-  const tmdbPosterUrl = getPosterUrl(media.poster_path);
+  const tmdbPosterUrl = getPosterUrl(media?.poster_path);
   const posterUrl = item.custom_poster_url || tmdbPosterUrl;
 
   const tiltX = useSharedValue(0);
@@ -198,7 +198,7 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
 
           {/* Grail sticker for wishlist items */}
           {item.is_grail && isWishlist && (
-            <SaleSticker visible={true} size={40} label="GRAIL" /> // Assuming SaleSticker can take a label or just using it for the "Wanted" look
+            <SaleSticker visible={true} size={40} />
           )}
         </View>
 

@@ -33,6 +33,7 @@ export function StatsSection({ collection }: StatsSectionProps) {
     const formatData = useMemo(() => {
         const counts: Record<string, number> = {};
         collection.forEach(item => {
+            if (!item) return;
             const fmt = item.format || 'Unknown';
             counts[fmt] = (counts[fmt] || 0) + 1;
         });
@@ -58,6 +59,7 @@ export function StatsSection({ collection }: StatsSectionProps) {
     const genreData = useMemo(() => {
         const counts: Record<string, number> = {};
         collection.forEach(item => {
+            if (!item) return;
             const genres = item.movies?.genres || item.shows?.genres || [];
             if (genres.length === 0) {
                 counts['Uncategorized'] = (counts['Uncategorized'] || 0) + 1;

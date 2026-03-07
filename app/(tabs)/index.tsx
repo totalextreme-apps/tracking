@@ -94,7 +94,7 @@ export default function HomeScreen() {
   };
 
   const onDisplay = thriftMode
-    ? collection?.filter((item: any) => item.is_grail) ?? []
+    ? collection?.filter((item: any) => item && item.is_grail) ?? []
     : getOnDisplayItems(collection);
 
   const genres = getGenres(collection);
@@ -104,22 +104,23 @@ export default function HomeScreen() {
   let filteredStacks = stacks || [];
   if (searchQuery || formatFilter || genreFilter || mediaTypeFilter) {
     filteredStacks = filteredStacks.filter((stack: any) => {
-      const media = stack[0]?.movies || stack[0]?.shows;
+      if (!stack || !stack[0]) return false;
+      const media = stack[0].movies || stack[0].shows;
       if (!media) return false;
       if (searchQuery) {
         const query = searchQuery.toLowerCase().replace(/[^a-z0-9]/g, '');
-        const title = (stack[0]?.movies?.title || stack[0]?.shows?.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const title = (stack[0].movies?.title || stack[0].shows?.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
         const matchesTitle = title.includes(query);
-        const cast = (stack[0]?.movies?.movie_cast || stack[0]?.shows?.show_cast || []);
-        const matchesCast = cast.some((c: any) => c.name.toLowerCase().replace(/[^a-z0-9]/g, '').includes(query));
+        const cast = (stack[0].movies?.movie_cast || stack[0].shows?.show_cast || []);
+        const matchesCast = cast.some((c: any) => c?.name?.toLowerCase().replace(/[^a-z0-9]/g, '').includes(query));
         if (!matchesTitle && !matchesCast) return false;
       }
       if (formatFilter) {
-        const hasFormat = stack.some((item: any) => item.format === formatFilter);
+        const hasFormat = stack.some((item: any) => item?.format === formatFilter);
         if (!hasFormat) return false;
       }
       if (genreFilter) {
-        const hasGenre = media.genres?.some((g: any) => g.name === genreFilter);
+        const hasGenre = media.genres?.some((g: any) => g?.name === genreFilter);
         if (!hasGenre) return false;
       }
       if (mediaTypeFilter) {
@@ -428,38 +429,42 @@ export default function HomeScreen() {
                 <EmptyState />
               ) : (
                 <View className="flex-row flex-wrap" style={{ marginHorizontal: -10 }}>
-                  {filteredStacks.map((stack: any, idx: number) => (
-                    <View
-                      key={`${stack[0].media_type}-${stack[0].movie_id}-${stack[0].show_id}-${idx}`}
-                      style={{
-                        width: `${100 / resolvedColumns}%`,
-                        paddingHorizontal: 10,
-                        marginBottom: 32
-                      }}
-                    >
-                      <StackCard
-                        stack={stack}
-                        onPress={() => navigateToDetail(stack[0])}
-                        onToggleFavorite={toggleFavorite}
-                        onLongPress={() => handleLongPress(stack[0])}
-                        width={(windowWidth - 48 - (resolvedColumns * 20)) / resolvedColumns}
-                      />
-                      <View className="mt-3">
-                        <Text
-                          className="text-white font-medium text-[11px] uppercase tracking-wide"
-                          numberOfLines={1}
-                          style={{ fontFamily: 'VCR_OSD_MONO' }}
-                        >
-                          {stack[0].movies?.title || stack[0].shows?.name}
-                        </Text>
-                        {stack[0].media_type === 'tv' && (
-                          <Text className="text-neutral-500 font-mono text-[9px] mt-0.5">
-                            SEASON {stack[0].season_number}
+                  {filteredStacks.map((stack: any, idx: number) => {
+                    if (!stack || !stack[0]) return null;
+                    const topItem = stack[0];
+                    return (
+                      <View
+                        key={`${topItem.media_type}-${topItem.movie_id}-${topItem.show_id}-${idx}`}
+                        style={{
+                          width: `${100 / resolvedColumns}%`,
+                          paddingHorizontal: 10,
+                          marginBottom: 32
+                        }}
+                      >
+                        <StackCard
+                          stack={stack}
+                          onPress={() => navigateToDetail(topItem)}
+                          onToggleFavorite={toggleFavorite}
+                          onLongPress={() => handleLongPress(topItem)}
+                          width={(windowWidth - 48 - (resolvedColumns * 20)) / resolvedColumns}
+                        />
+                        <View className="mt-3">
+                          <Text
+                            className="text-white font-medium text-[11px] uppercase tracking-wide"
+                            numberOfLines={1}
+                            style={{ fontFamily: 'VCR_OSD_MONO' }}
+                          >
+                            {topItem.movies?.title || topItem.shows?.name}
                           </Text>
-                        )}
+                          {topItem.media_type === 'tv' && (
+                            <Text className="text-neutral-500 font-mono text-[9px] mt-0.5">
+                              SEASON {topItem.season_number}
+                            </Text>
+                          )}
+                        </View>
                       </View>
-                    </View>
-                  ))}
+                    );
+                  })}
                 </View>
               )}
             </View>

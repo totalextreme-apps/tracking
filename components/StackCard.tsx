@@ -133,7 +133,7 @@ export function StackCard({
   const isWishlist = topItem.status === 'wishlist';
   const isGrail = topItem.is_grail;
   const isOnDisplay = topItem.is_on_display;
-  const tmdbPosterUrl = getPosterUrl(media.poster_path);
+  const tmdbPosterUrl = getPosterUrl(media?.poster_path);
   const hasCustomPoster = sorted.some(i => !!i.custom_poster_url);
   const posterUrl = sorted.find(i => !!i.custom_poster_url)?.custom_poster_url || tmdbPosterUrl;
 
@@ -374,7 +374,7 @@ export function StackCard({
               const offset = idx * stackOffset;
               const itemMedia = item.movies || item.shows;
               if (!itemMedia) return null;
-              const url = item.custom_poster_url || getPosterUrl(itemMedia.poster_path);
+              const url = item.custom_poster_url || getPosterUrl(itemMedia?.poster_path);
               const isVHS = item.format === 'VHS';
               const isDisc = ['DVD', 'BluRay', '4K'].includes(item.format);
 

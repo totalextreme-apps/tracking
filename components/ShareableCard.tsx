@@ -11,7 +11,7 @@ type ShareableCardProps = {
 export function ShareableCard({ media, items }: ShareableCardProps) {
     if (!media) return null;
     const customPoster = items.find(i => i.custom_poster_url)?.custom_poster_url;
-    const posterUrl = customPoster || getPosterUrl(media.poster_path);
+    const posterUrl = customPoster || getPosterUrl(media?.poster_path);
 
     return (
         <View className="bg-neutral-950 p-6 items-center justify-center w-[320px] aspect-[9/16] border-8 border-white overflow-hidden relative">

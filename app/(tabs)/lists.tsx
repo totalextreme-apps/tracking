@@ -126,7 +126,7 @@ export default function ListsScreen() {
                 ) : (
                     customLists.map((listName) => {
                         const stackItems: CollectionItemWithMedia[] = collection?.filter(
-                            (item: CollectionItemWithMedia) => item.custom_lists?.includes(listName)
+                            (item: CollectionItemWithMedia) => item && item.custom_lists?.includes(listName)
                         ) || [];
 
                         const itemCount = stackItems.length;

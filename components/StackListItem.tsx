@@ -31,7 +31,7 @@ export function StackListItem({ stack, onPress, onAcquiredPress }: StackListItem
     const topItem = sorted[0];
     const media = topItem.movies || topItem.shows;
     if (!media) return null;
-    const posterUrl = topItem.custom_poster_url || getPosterUrl(media.poster_path, 'w92');
+    const posterUrl = topItem.custom_poster_url || getPosterUrl(media?.poster_path, 'w92');
 
     const handlePress = () => {
         Haptics.selectionAsync();
