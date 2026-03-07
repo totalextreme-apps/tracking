@@ -85,12 +85,14 @@ export function useAddToCollection(userId: string | undefined) {
       status = 'owned',
       edition = null,
       seasonNumber = null,
+      isBootleg = false,
     }: {
       tmdbItem: TmdbMediaResult;
       formats: MovieFormat[];
       status?: 'owned' | 'wishlist';
       edition?: string | null;
       seasonNumber?: number | null;
+      isBootleg?: boolean;
     }) => {
       if (!userId) {
         console.error('useAddToCollection: No userId provided');
@@ -185,6 +187,7 @@ export function useAddToCollection(userId: string | undefined) {
         format,
         status,
         edition: edition || null,
+        is_bootleg: isBootleg,
       }));
 
       const { error: itemError } = await supabase

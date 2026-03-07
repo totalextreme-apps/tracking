@@ -41,6 +41,7 @@ export default function AddScreen() {
   const [selectedSeasons, setSelectedSeasons] = useState<number[]>([]);
   const [status, setStatus] = useState<'owned' | 'wishlist'>('owned');
   const [edition, setEdition] = useState('');
+  const [isBootleg, setIsBootleg] = useState(false);
   const [triedToSubmit, setTriedToSubmit] = useState(false);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
 
@@ -64,6 +65,7 @@ export default function AddScreen() {
       setSelectedFormats([]);
       setSelectedSeasons([]);
       setEdition('');
+      setIsBootleg(false);
       setStatus('owned');
       setTriedToSubmit(false);
     }, [])
@@ -194,6 +196,7 @@ export default function AddScreen() {
             formats: selectedFormats,
             status,
             edition: edition.trim() || null,
+            isBootleg,
             seasonNumber: season,
           });
         }
@@ -203,6 +206,7 @@ export default function AddScreen() {
           formats: selectedFormats,
           status,
           edition: edition.trim() || null,
+          isBootleg,
         });
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -472,6 +476,20 @@ export default function AddScreen() {
                 autoCapitalize="words"
                 autoCorrect={false}
               />
+
+              {/* Bootleg Toggle */}
+              <View className="flex-row items-center justify-between bg-neutral-800 px-4 py-3 rounded-lg mb-6">
+                <Text className="text-white font-mono text-sm">IS THIS A BOOTLEG?</Text>
+                <Pressable
+                  onPress={() => {
+                    setIsBootleg(!isBootleg);
+                    Haptics.selectionAsync();
+                  }}
+                  className={`w-12 h-6 rounded-full justify-center px-1 ${isBootleg ? 'bg-red-600' : 'bg-neutral-700'}`}
+                >
+                  <View className={`w-4 h-4 rounded-full bg-white transition-all ${isBootleg ? 'translate-x-6' : 'translate-x-0'}`} />
+                </Pressable>
+              </View>
 
               {/* ADD Button */}
               <Pressable
