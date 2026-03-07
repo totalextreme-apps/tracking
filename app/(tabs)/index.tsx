@@ -138,11 +138,7 @@ export default function HomeScreen() {
         setTimeout(async () => {
           try {
             const uri = await (viewShotRef.current as any).capture();
-            await Sharing.shareAsync(uri, {
-              mimeType: 'image/jpeg',
-              dialogTitle: 'Share my collection',
-              UTI: 'public.jpeg'
-            });
+            await Sharing.shareAsync(uri);
           } catch (err) {
             console.error('Capture/Share failed:', err);
             Alert.alert('Share Error', 'Failed to generate share image.');
@@ -403,7 +399,7 @@ export default function HomeScreen() {
                   </View>
                 </View>
 
-                <ViewShot ref={viewShotRef} options={{ format: 'jpg', quality: 0.9 }} style={{ backgroundColor: '#0a0a0a' }}>
+                <ViewShot ref={viewShotRef} options={{ format: 'png', quality: 0.9 }} style={{ backgroundColor: '#0a0a0a' }}>
                   <View className="relative">
                     <Image
                       source={thriftMode ? require('@/assets/images/thrift_background.png') : require('@/assets/images/shelf_background.png')}
