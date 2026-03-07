@@ -7,7 +7,7 @@ interface CaptchaModalProps {
     onCancel: () => void;
 }
 
-const NativeWebTurnstile = ({ siteKey, onSuccess, onError }: any) => {
+const NativeWebTurnstile = ({ siteKey, onSuccess, onError, retryCount }: any) => {
     const containerRef = React.useRef<any>(null);
     const widgetIdRef = React.useRef<any>(null);
 
@@ -18,13 +18,23 @@ const NativeWebTurnstile = ({ siteKey, onSuccess, onError }: any) => {
 
         const initTurnstile = () => {
             const turnstile = (window as any).turnstile;
-            if (turnstile && containerRef.current && !widgetIdRef.current) {
+            if (turnstile && containerRef.current) {
                 try {
                     if (interval) clearInterval(interval);
+
+                    // If we already have a widget, reset it instead of re-rendering
+                    if (widgetIdRef.current) {
+                        turnstile.reset(widgetIdRef.current);
+                        return;
+                    }
+
                     widgetIdRef.current = turnstile.render(containerRef.current, {
                         sitekey: siteKey,
                         theme: 'dark',
                         size: 'normal',
+                        appearance: 'always',
+                        'refresh-expired': 'auto',
+                        'retry-interval': 1500,
                         callback: (token: string) => {
                             console.log('Turnstile successfully issued native token');
                             onSuccess(token);
@@ -35,6 +45,7 @@ const NativeWebTurnstile = ({ siteKey, onSuccess, onError }: any) => {
                         }
                     });
                 } catch (e) {
+                    console.error('Turnstile Render Catch:', e);
                     onError(String(e));
                 }
             }
@@ -50,11 +61,13 @@ const NativeWebTurnstile = ({ siteKey, onSuccess, onError }: any) => {
             if (interval) clearInterval(interval);
             const turnstile = (window as any).turnstile;
             if (widgetIdRef.current && turnstile) {
-                turnstile.remove(widgetIdRef.current);
+                try {
+                    turnstile.remove(widgetIdRef.current);
+                } catch (e) { /* ignore */ }
                 widgetIdRef.current = null;
             }
         };
-    }, [siteKey]);
+    }, [siteKey, retryCount]); // Include retryCount to trigger re-init/reset
 
     if (Platform.OS !== 'web') return null;
 
@@ -109,6 +122,7 @@ export function CaptchaModal({ visible, onSuccess, onCancel }: CaptchaModalProps
                     <View style={{ width: '100%', minHeight: 140, alignItems: 'center', justifyContent: 'center' }}>
                         <NativeWebTurnstile
                             siteKey={siteKey}
+                            retryCount={retryCount}
                             onSuccess={(token: string) => {
                                 setTurnstileError(null);
                                 onSuccess(token);
