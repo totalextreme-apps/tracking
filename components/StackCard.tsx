@@ -410,6 +410,9 @@ export function StackCard({
               const isVHS = item.format === 'VHS';
               const isDisc = ['DVD', 'BluRay', '4K'].includes(item.format);
 
+              // Fix: If this is the top item and it's a wishlist item, skip rendering the physical card overlay.
+              // We want to show the underlying "Wishlist Placeholder" (View at line 180) which has the correct
+              // dashed border (or Yellow Grail border) and opacity styling.
               if (idx === 0 && isWishlist) return null;
 
               const itemStyle = {
@@ -421,12 +424,26 @@ export function StackCard({
                 zIndex: sorted.length - idx,
               };
 
-              const cardContent = isVHS ? (
-                <VHSCard posterUrl={url} isCustom={!!item.custom_poster_url} isBootleg={false} style={{ width: '100%', height: '100%' }} />
-              ) : isDisc ? (
-                <GlossyCard posterUrl={url} format={item.format as any} isCustom={!!item.custom_poster_url} isBootleg={false} style={{ width: '100%', height: '100%' }} />
-              ) : (
-                <View className="bg-neutral-900 rounded-xl overflow-hidden" style={{ width: '100%', height: '100%' }}>
+              if (isVHS) {
+                return <VHSCard key={item.id} posterUrl={url} isCustom={!!item.custom_poster_url} isBootleg={item.is_bootleg} style={itemStyle} />;
+              }
+              if (isDisc) {
+                return <GlossyCard key={item.id} posterUrl={url} format={item.format as any} isCustom={!!item.custom_poster_url} isBootleg={item.is_bootleg} style={itemStyle} />;
+              }
+
+              return (
+                <View
+                  key={item.id}
+                  className="absolute bg-neutral-900 rounded-xl overflow-hidden"
+                  style={{
+                    ...itemStyle,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 2, height: 4 },
+                    shadowOpacity: 0.4,
+                    shadowRadius: 8,
+                    elevation: 8,
+                  }}
+                >
                   {url ? (
                     <Image
                       source={{ uri: url }}
@@ -440,19 +457,7 @@ export function StackCard({
                       </Text>
                     </View>
                   )}
-                </View>
-              );
-
-              return (
-                <View key={item.id} style={itemStyle}>
-                  {cardContent}
-                  {item.is_bootleg && (
-                    <Image
-                      source={require('@/assets/images/overlays/boot_sticker.png')}
-                      style={{ position: 'absolute', bottom: 4, left: 4, width: 30, height: 30, zIndex: 9999 }}
-                      contentFit="contain"
-                    />
-                  )}
+                  {item.is_bootleg && <BootlegSticker size={30} />}
                 </View>
               );
             })}
@@ -556,22 +561,8 @@ export function StackCard({
           />
 
           {/* Bootleg Sticker for Digital Grid */}
-          {topItem.is_bootleg && (
-            <Image
-              source={require('@/assets/images/overlays/boot_sticker.png')}
-              style={{ position: 'absolute', bottom: 4, left: 4, width: 30, height: 30, zIndex: 9999 }}
-              contentFit="contain"
-            />
-          )}
+          {topItem.is_bootleg && <BootlegSticker size={30} />}
         </View>
-        {/* Bootleg sticker rendered OUTSIDE overflow-hidden for Digital */}
-        {topItem.is_bootleg && (
-          <Image
-            source={require('@/assets/images/overlays/boot_sticker.png')}
-            style={{ position: 'absolute', bottom: 4, left: 4, width: 30, height: 30, zIndex: 9999 }}
-            contentFit="contain"
-          />
-        )}
         <View className="flex-row flex-wrap justify-center gap-1 mt-2">
           {sorted.map((item) => (
             <Pressable

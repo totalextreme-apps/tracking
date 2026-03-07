@@ -187,6 +187,7 @@ export function useAddToCollection(userId: string | undefined) {
         format,
         status,
         edition: edition || null,
+        is_bootleg: !!isBootleg,
       }));
 
       const { data: insertedItems, error: itemError } = await supabase
@@ -199,15 +200,6 @@ export function useAddToCollection(userId: string | undefined) {
           throw new Error('You already own this format/season. Fill in the Edition field to add another copy.');
         }
         throw itemError;
-      }
-
-      // If bootleg is toggled, update the newly inserted items
-      if (isBootleg && insertedItems && insertedItems.length > 0) {
-        const ids = insertedItems.map((i: any) => i.id);
-        await (supabase as any)
-          .from('collection_items')
-          .update({ is_bootleg: true })
-          .in('id', ids);
       }
 
       return { internalId };
