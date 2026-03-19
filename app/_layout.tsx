@@ -20,6 +20,7 @@ import { AuthErrorBanner } from '@/components/AuthErrorBanner';
 import { DesktopBlocker } from '@/components/DesktopBlocker';
 import { GlobalHeader } from '@/components/GlobalHeader';
 import { OnboardingModal } from '@/components/OnboardingModal';
+import { AppTour } from '@/components/AppTour'; // Added AppTour import
 import { StaticOverlay } from '@/components/StaticOverlay';
 import { useColorScheme } from '@/components/useColorScheme';
 import { AuthProvider } from '@/context/AuthContext';
@@ -29,6 +30,7 @@ import { ThriftModeProvider } from '@/context/ThriftModeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { Image } from 'expo-image'; // Added Image import for pointerEvents fix
 
 
 export {
@@ -180,7 +182,7 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
                 </Stack>
               </View>
               <StaticOverlay visible={showStatic} />
-              {!isDesktop && <OnboardingModal key={onboardingKey} />}
+              <AppTour />
               {Platform.OS === 'web' && (
                 <>
                   <Analytics />
