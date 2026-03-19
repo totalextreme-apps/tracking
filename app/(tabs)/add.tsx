@@ -55,6 +55,7 @@ export default function AddScreen() {
 
   // Prevent rapid multiple scans using ref for immediate blocking
   const isProcessingScan = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Reset all search/form state every time this screen comes into focus
   useFocusEffect(
@@ -80,8 +81,10 @@ export default function AddScreen() {
     setIsScanning(false);
     setIsLookingUp(true);
 
+    abortControllerRef.current = new AbortController();
+
     try {
-      const title = await lookupUPC(data);
+      const title = await lookupUPC(data, abortControllerRef.current.signal);
       if (title) {
         setQuery(title);
       } else {
@@ -91,10 +94,13 @@ export default function AddScreen() {
           [{ text: 'OK', onPress: () => (isProcessingScan.current = false) }]
         );
       }
-    } catch (e) {
-      Alert.alert('Error', 'Failed to lookup barcode');
+    } catch (e: any) {
+      if (e.name !== 'AbortError') {
+        Alert.alert('Error', 'Failed to lookup barcode');
+      }
     } finally {
       setIsLookingUp(false);
+      abortControllerRef.current = null;
     }
   };
 
@@ -127,17 +133,27 @@ export default function AddScreen() {
 
   const handleManualBarcode = async (code: string) => {
     setIsLookingUp(true);
+    abortControllerRef.current = new AbortController();
     try {
-      const title = await lookupUPC(code);
+      const title = await lookupUPC(code, abortControllerRef.current.signal);
       if (title) {
         setQuery(title);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
-    } catch (e) {
+    } catch (e: any) {
       // Silently fail — user can keep typing
     } finally {
       setIsLookingUp(false);
+      abortControllerRef.current = null;
     }
+  };
+
+  const cancelLookup = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    setIsLookingUp(false);
+    isProcessingScan.current = false;
   };
 
   const handleSelectItem = async (item: TmdbMediaResult) => {
@@ -296,16 +312,21 @@ export default function AddScreen() {
             autoCorrect={false}
             returnKeyType="search"
           />
-          <Pressable
-            onPress={startScanning}
-            className="bg-neutral-900 w-12 items-center justify-center rounded-lg border border-neutral-800"
-          >
-            {isLookingUp ? (
-              <ActivityIndicator size="small" color="#f59e0b" />
-            ) : (
+          {isLookingUp ? (
+            <Pressable
+              onPress={cancelLookup}
+              className="bg-neutral-900 w-12 items-center justify-center rounded-lg border border-red-900/50"
+            >
+              <FontAwesome name="times" size={20} color="#ef4444" />
+            </Pressable>
+          ) : (
+            <Pressable
+              onPress={startScanning}
+              className="bg-neutral-900 w-12 items-center justify-center rounded-lg border border-neutral-800"
+            >
               <FontAwesome name="barcode" size={20} color="#f59e0b" />
-            )}
-          </Pressable>
+            </Pressable>
+          )}
         </View>
 
         {/* Item Selected: Show Add Form */}
