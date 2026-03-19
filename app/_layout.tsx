@@ -19,7 +19,6 @@ import 'react-native-reanimated';
 import { AuthErrorBanner } from '@/components/AuthErrorBanner';
 import { DesktopBlocker } from '@/components/DesktopBlocker';
 import { GlobalHeader } from '@/components/GlobalHeader';
-import { OnboardingModal } from '@/components/OnboardingModal';
 import { AppTour } from '@/components/AppTour'; // Added AppTour import
 import { StaticOverlay } from '@/components/StaticOverlay';
 import { useColorScheme } from '@/components/useColorScheme';
