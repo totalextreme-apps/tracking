@@ -220,8 +220,17 @@ export default function ShowDetailScreen() {
                 playSound('eject');
                 await new Promise(resolve => setTimeout(resolve, 2000));
                 await Promise.all(showItems.map((item: any) => deleteMutation.mutateAsync(item.id)));
-                if (refetch) refetch();
-                router.back();
+                if (refetch) await refetch();
+
+                setEjecting(false);
+
+                if (fromStack) {
+                    router.replace(`/stack/${fromStack}` as any);
+                } else if (router.canGoBack()) {
+                    router.back();
+                } else {
+                    router.replace('/(tabs)/home' as any);
+                }
             } catch (e) {
                 setEjecting(false);
                 Alert.alert('Error', 'Could not delete show');

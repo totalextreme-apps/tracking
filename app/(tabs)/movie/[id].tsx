@@ -423,8 +423,17 @@ export default function MovieDetailScreen() {
                 await Promise.all(movieItems.map((item: any) => deleteMutation.mutateAsync(item.id)));
                 if (refetch) refetch();
 
-                // Navigate back after eject
-                router.back();
+                // Clear eject state before navigating
+                setEjecting(false);
+
+                // Navigate back safely
+                if (fromStack) {
+                    router.replace(`/stack/${fromStack}` as any);
+                } else if (router.canGoBack()) {
+                    router.back();
+                } else {
+                    router.replace('/(tabs)/home' as any);
+                }
             } catch (e) {
                 setEjecting(false);
                 console.error('Error deleting movie:', e);
@@ -878,6 +887,17 @@ export default function MovieDetailScreen() {
                                                     await deleteMutation.mutateAsync(item.id);
                                                     playSound('click');
                                                     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                                                    
+                                                    // Auto-pop if that was the last format we owned!
+                                                    if (movieItems.length <= 1) {
+                                                        if (fromStack) {
+                                                            router.replace(`/stack/${fromStack}` as any);
+                                                        } else if (router.canGoBack()) {
+                                                            router.back();
+                                                        } else {
+                                                            router.replace('/(tabs)/home' as any);
+                                                        }
+                                                    }
                                                 }}
                                                 className="bg-red-900/20 px-3 py-1 rounded border border-red-900/50"
                                             >

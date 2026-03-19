@@ -204,8 +204,8 @@ export function useAddToCollection(userId: string | undefined) {
 
       return { internalId };
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['collection', userId] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['collection', userId] });
     },
   });
 }
@@ -244,8 +244,8 @@ export function useUpdateCollectionItem(userId: string | undefined) {
       if (error) throw error;
       return { itemId };
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['collection'] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['collection'] });
     },
   });
 }
@@ -342,8 +342,8 @@ export function useRenameCustomList(userId: string | undefined) {
       const firstError = results.find((r: any) => r.error)?.error;
       if (firstError) throw firstError;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['collection'] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['collection'] });
     },
   });
 }
@@ -364,8 +364,8 @@ export function useDeleteCollectionItem(userId: string | undefined) {
       if (error) throw error;
       return itemId;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['collection'] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['collection'] });
     },
   });
 }
@@ -447,8 +447,8 @@ export function useRefreshLibrary(userId: string | undefined) {
         await new Promise(r => setTimeout(r, 250));
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['collection'] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['collection'] });
     },
   });
 
