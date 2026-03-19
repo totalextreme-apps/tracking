@@ -172,11 +172,13 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
                   onDismiss={() => setAuthError(null)}
                 />
               )}
-              <Stack>
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen name="auth" options={{ presentation: 'modal', headerShown: false }} />
-                <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-              </Stack>
+              <View style={{ flex: 1, paddingTop: isDesktop ? 80 : 0 }}>
+                <Stack>
+                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                  <Stack.Screen name="auth" options={{ presentation: 'modal', headerShown: false }} />
+                  <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+                </Stack>
+              </View>
               <StaticOverlay visible={showStatic} />
               {!isDesktop && <OnboardingModal key={onboardingKey} />}
               {Platform.OS === 'web' && (

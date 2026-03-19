@@ -355,6 +355,7 @@ export default function MovieDetailScreen() {
                     poster_path: activeMovie.poster_path,
                     backdrop_path: activeMovie.backdrop_path,
                     overview: (activeMovie as any).overview ?? '',
+                    media_type: 'movie',
                 } as any,
                 formats: [pendingFormat as MovieFormat],
                 status: 'owned',

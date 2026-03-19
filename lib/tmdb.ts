@@ -91,13 +91,13 @@ export async function searchMedia(query: string, page = 1): Promise<TmdbSearchRe
 
   for (const item of data.results) {
     if (item.media_type === 'movie' || item.media_type === 'tv') {
-      mediaResults.set(`${item.media_type}-${item.id}`, item);
+      mediaResults.set(`${item.media_type}-${item.id}`, { ...item, isDirectMatch: true });
     } else if (item.media_type === 'person') {
       if (!personIdToFetch) personIdToFetch = item.id;
       if (item.known_for) {
         for (const kf of item.known_for) {
           if (kf.media_type === 'movie' || kf.media_type === 'tv') {
-            mediaResults.set(`${kf.media_type}-${kf.id}`, kf);
+            mediaResults.set(`${kf.media_type}-${kf.id}`, { ...kf, isDirectMatch: true });
           }
         }
       }
@@ -110,20 +110,53 @@ export async function searchMedia(query: string, page = 1): Promise<TmdbSearchRe
       const movieCredits = await tmdbFetch<any>(`/person/${personIdToFetch}/movie_credits`);
       const tvCredits = await tmdbFetch<any>(`/person/${personIdToFetch}/tv_credits`);
 
-      // Combine and add
+      // Combine and add — these are NOT direct title matches
       const movies = [...(movieCredits.cast || []), ...(movieCredits.crew || [])];
       const tvs = [...(tvCredits.cast || []), ...(tvCredits.crew || [])];
 
-      for (const m of movies) mediaResults.set(`movie-${m.id}`, { ...m, media_type: 'movie' });
-      for (const t of tvs) mediaResults.set(`tv-${t.id}`, { ...t, media_type: 'tv' });
+      for (const m of movies) {
+        const key = `movie-${m.id}`;
+        if (!mediaResults.has(key)) {
+          mediaResults.set(key, { ...m, media_type: 'movie', isDirectMatch: false });
+        }
+      }
+      for (const t of tvs) {
+        const key = `tv-${t.id}`;
+        if (!mediaResults.has(key)) {
+          mediaResults.set(key, { ...t, media_type: 'tv', isDirectMatch: false });
+        }
+      }
     } catch (e) {
       console.warn('Failed to fetch person credits', e);
     }
   }
 
   const finalResults = Array.from(mediaResults.values())
-    .sort((a: any, b: any) => (b.popularity || 0) - (a.popularity || 0))
-    .slice(0, 20);
+    .sort((a: any, b: any) => {
+      const queryLower = query.toLowerCase();
+      const titleA = (a.title || a.name || '').toLowerCase();
+      const titleB = (b.title || b.name || '').toLowerCase();
+
+      // Score 1: Exact Match (Massive weight)
+      const exactA = titleA === queryLower ? 1 : 0;
+      const exactB = titleB === queryLower ? 1 : 0;
+      if (exactA !== exactB) return exactB - exactA;
+
+      // Score 2: Starts With (High weight)
+      const startsA = titleA.startsWith(queryLower) ? 1 : 0;
+      const startsB = titleB.startsWith(queryLower) ? 1 : 0;
+      if (startsA !== startsB) return startsB - startsA;
+
+      // Score 3: Direct Match from Multi-Search (Medium weight)
+      if (a.isDirectMatch && !b.isDirectMatch) return -1;
+      if (!a.isDirectMatch && b.isDirectMatch) return 1;
+
+      // Score 4: Popularity (Tie breaker)
+      const popA = a.popularity || 0;
+      const popB = b.popularity || 0;
+      return popB - popA;
+    })
+    .slice(0, 40);
 
   return {
     page: data.page,
