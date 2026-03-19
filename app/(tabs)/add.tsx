@@ -562,14 +562,14 @@ export default function AddScreen() {
                 })}
                 <View className="h-8" />
               </View>
-            ) : debouncedQuery.length >= 2 && !searchQuery.isFetching ? (
+            ) : debouncedQuery.trim().length > 0 && !searchQuery.isFetching ? (
               <View className="py-12 items-center">
                 <Text className="text-neutral-500 font-mono">No results</Text>
               </View>
             ) : (
               <View className="py-12 items-center">
                 <Text className="text-neutral-600 font-mono text-center">
-                  Type at least 2 characters to search
+                  Type at least 1 character to search
                 </Text>
               </View>
             )}

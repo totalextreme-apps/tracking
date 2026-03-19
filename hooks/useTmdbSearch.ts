@@ -5,6 +5,6 @@ export function useTmdbSearch(query: string) {
   return useQuery({
     queryKey: ['tmdb', 'search', query],
     queryFn: () => searchMedia(query),
-    enabled: query.length >= 2,
+    enabled: query.trim().length > 0,
   });
 }

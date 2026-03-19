@@ -56,7 +56,19 @@ export async function searchMedia(query: string, page = 1): Promise<TmdbSearchRe
   const encoded = encodeURIComponent(query);
   let data = await tmdbFetch<any>(`/search/multi?query=${encoded}&page=${page}`);
 
-  // Forgiving Search Fallback: TMDB is notoriously bad at dealing with merged words (e.g., 'bladerunner' or 'spiderman')
+  // Special handling for single-character searches which are often buried in multi-search
+  if (query.trim().length === 1 && page === 1) {
+    try {
+      const movieSearch = await tmdbFetch<any>(`/search/movie?query=${encoded}&page=1`);
+      const tvSearch = await tmdbFetch<any>(`/search/tv?query=${encoded}&page=1`);
+      if (movieSearch.results) data.results.push(...movieSearch.results.map((r: any) => ({ ...r, media_type: 'movie' })));
+      if (tvSearch.results) data.results.push(...tvSearch.results.map((r: any) => ({ ...r, media_type: 'tv' })));
+    } catch (e) {
+      console.warn('Failed to fetch specific results for short query', e);
+    }
+  }
+
+  // Forgiving Search Fallback: If results are very low and it looks like a typo/crunched word
   if ((!data.results || data.results.length < 3) && !query.includes(' ')) {
     const camelSplit = query.replace(/([a-z])([A-Z])/g, '$1 $2');
     let fallbackData = null;
