@@ -34,6 +34,12 @@ export function QuickActionModal({
   const [selectedFormat, setSelectedFormat] = useState<MovieFormat | null>(null);
   const [edition, setEdition] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [localRating, setLocalRating] = useState<number | null>(item?.rating || null);
+
+  // Sync localRating if item changes
+  useRef(() => {
+    setLocalRating(item?.rating || null);
+  });
 
   const updateMutation = useUpdateCollectionItem(userId);
   const addMutation = useAddToCollection(userId);
@@ -93,6 +99,7 @@ export function QuickActionModal({
   };
 
   const handleRate = async (star: number) => {
+    setLocalRating(star); // Optimistic immediate update
     playSound('click');
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     try {
@@ -101,6 +108,7 @@ export function QuickActionModal({
       ));
     } catch (e) {
       Alert.alert('Error', 'Failed to save rating');
+      setLocalRating(item?.rating || null); // Revert on failure
     }
   };
 
@@ -159,7 +167,7 @@ export function QuickActionModal({
           <Text className="text-neutral-400 font-mono text-xs mb-2">QUICK RATING</Text>
           <View className="flex-row gap-2">
             {[1, 2, 3, 4, 5].map((star) => {
-              const currentRating = item.rating || 0;
+              const currentRating = localRating || 0;
               return (
                 <Pressable key={star} onPress={() => handleRate(star)} className="p-1">
                   <Ionicons
@@ -304,10 +312,18 @@ export function QuickActionModal({
       >
         <Pressable
           onPress={(e) => e.stopPropagation()}
-          className="bg-neutral-900 rounded-t-3xl p-6 w-full max-w-lg mx-auto border-t border-neutral-800"
+          className="bg-neutral-900 rounded-t-3xl p-6 w-full max-w-lg mx-auto border-t border-neutral-800 relative"
         >
           <View className="w-12 h-1 bg-neutral-700 rounded-full mx-auto mb-6" />
           
+          <Pressable 
+            onPress={handleClose} 
+            className="absolute top-5 right-5 p-2 bg-neutral-800 rounded-full border border-neutral-700 active:bg-neutral-700 z-10"
+            hitSlop={10}
+          >
+            <Ionicons name="close" size={20} color="#a3a3a3" />
+          </Pressable>
+
           <ConfettiCannon
             ref={confettiRef}
             count={80}
@@ -316,7 +332,7 @@ export function QuickActionModal({
             autoStart={false}
           />
 
-          <Text className="text-white text-xl font-bold mb-1" numberOfLines={1}>
+          <Text className="text-white text-xl font-bold mb-1 pr-10" numberOfLines={1}>
             {(media as any)?.title || (media as any)?.name}
           </Text>
           <Text className="text-neutral-500 font-mono text-xs mb-6">

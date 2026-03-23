@@ -27,9 +27,10 @@ type OnDisplayCardProps = {
   onSingleTapAction?: () => void;
   onLongPressAction?: () => void;
   onToggleFavorite?: (item: CollectionItemWithMedia) => void;
+  onRatePress?: (rating: number) => void;
 };
 
-export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPressAction, onToggleFavorite }: OnDisplayCardProps) {
+export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPressAction, onToggleFavorite, onRatePress }: OnDisplayCardProps) {
   const { playSound } = useSound();
   const media = item.movies || item.shows;
   if (!media) return null;
@@ -214,11 +215,15 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
           <View className="flex-row">
             {item.rating ? (
               [...Array(5)].map((_, i) => (
-                <FontAwesome key={i} name={i < item.rating! ? 'star' : 'star-o'} size={8} color={i < item.rating! ? '#f59e0b' : '#404040'} style={{ marginRight: 1 }} />
+                <Pressable key={i} onPress={(e) => { e.stopPropagation(); onRatePress?.(i + 1); }} hitSlop={5}>
+                  <FontAwesome name={i < item.rating! ? 'star' : 'star-o'} size={8} color={i < item.rating! ? '#f59e0b' : '#404040'} style={{ marginRight: 1 }} />
+                </Pressable>
               ))
             ) : (
               [...Array(5)].map((_, i) => (
-                <FontAwesome key={i} name="star-o" size={8} color="#404040" style={{ marginRight: 1 }} />
+                <Pressable key={i} onPress={(e) => { e.stopPropagation(); onRatePress?.(i + 1); }} hitSlop={5}>
+                  <FontAwesome name="star-o" size={8} color="#404040" style={{ marginRight: 1 }} />
+                </Pressable>
               ))
             )}
           </View>

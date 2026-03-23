@@ -52,6 +52,7 @@ type StackCardProps = {
   onLongPress?: (item: CollectionItemWithMedia) => void;
   onPress?: () => void;
   onToggleFavorite?: (item: CollectionItemWithMedia) => void;
+  onRatePress?: (rating: number) => void;
   width?: number;
   height?: number;
   stackOffset?: number;
@@ -69,6 +70,7 @@ export function StackCard({
   onLongPress,
   onPress: onCardPress,
   onToggleFavorite,
+  onRatePress,
   width = DEFAULT_CARD_WIDTH,
   height = DEFAULT_CARD_HEIGHT,
   stackOffset = DEFAULT_OFFSET,
@@ -294,11 +296,15 @@ export function StackCard({
           <View className="flex-row mb-1">
              {topItem.rating ? (
                [...Array(5)].map((_, i) => (
-                 <FontAwesome key={i} name={i < topItem.rating! ? 'star' : 'star-o'} size={12} color={i < topItem.rating! ? '#f59e0b' : '#404040'} style={{ marginRight: 2 }} />
+                 <Pressable key={i} onPress={(e) => { e.stopPropagation(); onRatePress?.(i + 1); }} hitSlop={5}>
+                   <FontAwesome name={i < topItem.rating! ? 'star' : 'star-o'} size={12} color={i < topItem.rating! ? '#f59e0b' : '#404040'} style={{ marginRight: 2 }} />
+                 </Pressable>
                ))
              ) : (
                [...Array(5)].map((_, i) => (
-                 <FontAwesome key={i} name="star-o" size={12} color="#404040" style={{ marginRight: 2 }} />
+                 <Pressable key={i} onPress={(e) => { e.stopPropagation(); onRatePress?.(i + 1); }} hitSlop={5}>
+                   <FontAwesome name="star-o" size={12} color="#404040" style={{ marginRight: 2 }} />
+                 </Pressable>
                ))
              )}
           </View>

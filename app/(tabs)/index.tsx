@@ -130,6 +130,25 @@ export default function HomeScreen() {
     }
   };
 
+  const handleGridRate = async (item: CollectionItemWithMedia, rating: number) => {
+    if (!item || !collection) return;
+    playSound('click');
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      const isMovie = item.media_type === 'movie';
+      const relatedItems = collection.filter((i: any) => {
+        if (isMovie) return i.movie_id === item.movie_id;
+        return i.show_id === item.show_id && i.season_number === item.season_number;
+      });
+      await Promise.all(relatedItems.map((i: any) => 
+        updateMutation.mutateAsync({ itemId: i.id, updates: { rating } })
+      ));
+      if (refetch) refetch();
+    } catch (e) {
+      console.error('Failed to save rating', e);
+    }
+  };
+
   const navigateToDetail = (item: CollectionItemWithMedia) => {
     if (item.media_type === 'tv') {
       const showId = item.show_id || item.shows?.id;
@@ -295,6 +314,7 @@ export default function HomeScreen() {
                         onSingleTapAction={() => navigateToDetail(item)}
                         onLongPressAction={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); setQuickActionItem(item); }}
                         onToggleFavorite={toggleFavorite}
+                        onRatePress={(rating) => handleGridRate(item, rating)}
                       />
                     ))}
                   </ScrollView>
@@ -493,6 +513,7 @@ export default function HomeScreen() {
                           onPress={() => navigateToDetail(topItem)}
                           onToggleFavorite={toggleFavorite}
                           onLongPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); setQuickActionItem(topItem); }}
+                          onRatePress={(rating) => handleGridRate(topItem, rating)}
                           width={(windowWidth - 48 - (resolvedColumns * 20)) / resolvedColumns}
                           mode={viewMode === 'list' ? 'list' : 'grid'}
                           activeFormatFilter={formatFilter}
@@ -502,11 +523,15 @@ export default function HomeScreen() {
                             <View className="flex-row mb-1">
                               {topItem.rating ? (
                                 [...Array(5)].map((_, i) => (
-                                  <FontAwesome key={i} name={i < topItem.rating! ? 'star' : 'star-o'} size={10} color={i < topItem.rating! ? '#f59e0b' : '#333'} style={{ marginRight: 2 }} />
+                                  <Pressable key={i} onPress={(e) => { e.stopPropagation(); handleGridRate(topItem, i + 1); }} hitSlop={5}>
+                                    <FontAwesome name={i < topItem.rating! ? 'star' : 'star-o'} size={10} color={i < topItem.rating! ? '#f59e0b' : '#333'} style={{ marginRight: 2 }} />
+                                  </Pressable>
                                 ))
                               ) : (
                                 [...Array(5)].map((_, i) => (
-                                  <FontAwesome key={i} name="star-o" size={10} color="#333" style={{ marginRight: 2 }} />
+                                  <Pressable key={i} onPress={(e) => { e.stopPropagation(); handleGridRate(topItem, i + 1); }} hitSlop={5}>
+                                    <FontAwesome name="star-o" size={10} color="#333" style={{ marginRight: 2 }} />
+                                  </Pressable>
                                 ))
                               )}
                             </View>
