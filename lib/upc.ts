@@ -67,27 +67,38 @@ export async function lookupUPC(upc: string, signal?: AbortSignal): Promise<stri
 function cleanTitle(title: string): string {
     if (!title) return '';
 
-    // Remove common VHS/DVD eBay listing garbage
-    let clean = title
-        .replace(/\b(VHS|DVD|Blu-?ray|4K|Ultra HD|Widescreen|Edition|Brand New|New Sealed|Sealed|Tape|Tapes|Cassette|Movie|Movies|Build Your Own|Pick & Choose|Updated|Lot)\b/gi, '')
-        // Clean out specific parts like "part 1 & 2"
-        .replace(/\bpart\s+\d+(\s*&\s*\d+)?\b/gi, '')
-        // Remove literal characters often used for emphasis
-        .replace(/[!]/g, '')
-        .replace(/\[.*?\]/g, '')
-        // Remove trailing dates like 8/25
-        .replace(/\d{1,2}\/\d{1,2}/g, '')
-        .trim();
-        
-    // Default parenthesis stripping:
-    // Removing all parentheses can backfire for titles like "(500) Days of Summer"
-    // Let's only strip parentheses if they contain formats or are trailing.
-    clean = clean.replace(/\((VHS|DVD|Widescreen|Blu-ray|Sealed|New|Cassette)\)/gi, '');
+    let clean = title;
 
-    clean = clean.replace(/\s+/g, ' ')
-        .trim()
-        .replace(/[:,-]+$/, '')
-        .trim();
+    // 1. Remove common VHS/DVD eBay/Amazon listing garbage
+    const garbageRegex = /\b(VHS|DVD|Blu-?ray|4K|Ultra HD|Widescreen|Full Screen|Edition|Brand New|New Sealed|Sealed|Tape|Tapes|Cassette|Movie|Movies|Build Your Own|Pick & Choose|Updated|Lot|Digital(?: Code| Copy| HD)?|No Digital Code|\d+-Disc(?: Set)?|Disc(?: Set)?|Set)\b/gi;
+    clean = clean.replace(garbageRegex, '');
+
+    // 2. Remove "part 1 & 2"
+    clean = clean.replace(/\bpart\s+\d+(\s*&\s*\d+)?\b/gi, '');
+
+    // 3. Remove typical Studio / Genre trash usually appended at the end
+    const studioRegex = /(?:Lions Gate|Lionsgate|Sony Pictures|Warner Bros|Universal Studios|Paramount|Disney|Twentieth Century Fox|20th Century Fox)\s*(?:Sci-Fi|Fantasy|Horror|Comedy|Action|Drama|Thriller|&|\s|-)*$/gi;
+    clean = clean.replace(studioRegex, '');
+
+    // 4. Remove literal characters often used for emphasis or stray tags
+    clean = clean.replace(/\[.*?\]/g, '');
+    clean = clean.replace(/[!]/g, '');
+
+    // 5. Remove trailing dates like 8/25
+    clean = clean.replace(/\b\d{1,2}\/\d{1,2}\b/g, '');
+
+    // 6. Clean up orphaned punctuation inside parentheses, e.g., ( + ) or ( / , ) or ()
+    clean = clean.replace(/\([\s\-\/+,&]*\)/g, '');
+
+    // 7. Clean up parenthesis that only have leftover junk after previous replaces
+    // e.g., "( Set- )" - specific fallback just in case
+    clean = clean.replace(/\(\s*(?:set|-)+\s*\)/gi, '');
+
+    // 8. Clean multiple spaces
+    clean = clean.replace(/\s+/g, ' ').trim();
+
+    // 9. Clean trailing punctuation like:, - /
+    clean = clean.replace(/[:,\-\/]+$/, '').trim();
 
     // If the UPC API returned a string of purely numbers that looks like a UPC/EAN (5+ digits), reject it.
     // We allow short numbers like "451", "1917" or "2001" because they might be valid titles, 

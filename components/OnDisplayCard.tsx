@@ -5,6 +5,7 @@ import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useEffect, useRef } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 import Animated, {
   interpolate,
   useAnimatedStyle,
@@ -208,17 +209,29 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
           {!isPhysical && item.is_bootleg && <BootlegSticker size={30} />}
         </View>
 
-        <View style={{ height: 'auto', minHeight: 30, width: 100, marginTop: 12, alignItems: 'center', justifyContent: 'flex-start' }}>
-          <View className="flex-row gap-1 mt-1">
-            <View className="px-2 py-1 rounded bg-amber-900/80">
-              <Text className="font-mono text-[9px] text-amber-200 uppercase">
+        <View style={{ height: 'auto', minHeight: 18, width: 100, marginTop: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          {/* STAR RATING LEFT */}
+          <View className="flex-row">
+            {item.rating ? (
+              [...Array(5)].map((_, i) => (
+                <FontAwesome key={i} name={i < item.rating! ? 'star' : 'star-o'} size={8} color={i < item.rating! ? '#f59e0b' : '#404040'} style={{ marginRight: 1 }} />
+              ))
+            ) : (
+              <View style={{ width: 45 }} />
+            )}
+          </View>
+          
+          {/* LABELS RIGHT */}
+          <View className="flex-row gap-0.5 justify-end items-center shrink">
+            <View className="px-1 py-0.5 rounded bg-amber-900/80">
+              <Text className="font-mono text-[7px] text-amber-200 uppercase whitespace-nowrap" numberOfLines={1}>
                 {isPhysical ? item.format : (item.digital_provider || 'Digital')}
               </Text>
             </View>
             {item.media_type === 'tv' && (
-              <View className="px-2 py-1 rounded bg-blue-900/80">
-                <Text className="font-mono text-[9px] text-blue-200">
-                  SEASON {item.season_number}
+              <View className="px-1 py-0.5 rounded bg-blue-900/80">
+                <Text className="font-mono text-[7px] text-blue-200 whitespace-nowrap" numberOfLines={1}>
+                  S{item.season_number}
                 </Text>
               </View>
             )}

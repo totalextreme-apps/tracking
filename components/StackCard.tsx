@@ -291,9 +291,15 @@ export function StackCard({
         </View>
         {/* Info Section */}
         <View className="flex-1 px-3 py-1 justify-center">
-          <Text className="text-white font-bold text-sm leading-4" numberOfLines={1}>
-            {(topItem.movies?.title || topItem.shows?.name || '').toUpperCase()}
-          </Text>
+          <View className="flex-row mb-1">
+             {topItem.rating ? (
+               [...Array(5)].map((_, i) => (
+                 <FontAwesome key={i} name={i < topItem.rating! ? 'star' : 'star-o'} size={12} color={i < topItem.rating! ? '#f59e0b' : '#404040'} style={{ marginRight: 2 }} />
+               ))
+             ) : (
+                <Text className="text-neutral-500 font-mono text-[10px]">UNRATED</Text>
+             )}
+          </View>
           <Text className="text-neutral-500 font-mono text-[10px] my-0.5">
             {topItem.movies?.release_date?.substring(0, 4) || topItem.shows?.first_air_date?.substring(0, 4) || '????'}
             {topItem.media_type === 'tv' && ` • S${topItem.season_number}`}
@@ -462,8 +468,16 @@ export function StackCard({
               );
             })}
           </View>
-          <View className="flex-row flex-wrap justify-center gap-1 mt-2">
-            {/* Format Side-by-Side Coins (Deduplicated) */}
+          <View className="flex-row w-[100%] justify-between items-center mt-2 px-1">
+            <View className="flex-row">
+               {topItem.rating ? (
+                 [...Array(5)].map((_, i) => (
+                   <FontAwesome key={i} name={i < topItem.rating! ? 'star' : 'star-o'} size={8} color={i < topItem.rating! ? '#f59e0b' : '#333'} style={{ marginRight: 1 }} />
+                 ))
+               ) : <View style={{ width: 45 }} />}
+            </View>
+            <View className="flex-row flex-wrap justify-end gap-1 shrink">
+              {/* Format Side-by-Side Coins (Deduplicated) */}
             {sorted.map((item) => (
               <Pressable
                 key={item.id}
@@ -487,6 +501,7 @@ export function StackCard({
                 )}
               </Pressable>
             ))}
+            </View>
           </View>
         </View>
       </AnimatedPressable>
@@ -563,7 +578,15 @@ export function StackCard({
           {/* Bootleg Sticker for Digital Grid */}
           {topItem.is_bootleg && <BootlegSticker size={30} />}
         </View>
-        <View className="flex-row flex-wrap justify-center gap-1 mt-2">
+        <View className="flex-row w-[100%] justify-between items-center mt-2 px-1">
+          <View className="flex-row">
+             {topItem.rating ? (
+               [...Array(5)].map((_, i) => (
+                 <FontAwesome key={i} name={i < topItem.rating! ? 'star' : 'star-o'} size={8} color={i < topItem.rating! ? '#f59e0b' : '#333'} style={{ marginRight: 1 }} />
+               ))
+             ) : <View style={{ width: 45 }} />}
+          </View>
+          <View className="flex-row flex-wrap justify-end gap-1 shrink">
           {sorted.map((item) => (
             <Pressable
               key={item.id}
@@ -587,6 +610,7 @@ export function StackCard({
               )}
             </Pressable>
           ))}
+          </View>
         </View>
 
         {/* Digital Provider Badge - ONLY show if exists and is not just "Digital" */}
