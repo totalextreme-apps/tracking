@@ -297,7 +297,9 @@ export function StackCard({
                  <FontAwesome key={i} name={i < topItem.rating! ? 'star' : 'star-o'} size={12} color={i < topItem.rating! ? '#f59e0b' : '#404040'} style={{ marginRight: 2 }} />
                ))
              ) : (
-                <Text className="text-neutral-500 font-mono text-[10px]">UNRATED</Text>
+               [...Array(5)].map((_, i) => (
+                 <FontAwesome key={i} name="star-o" size={12} color="#404040" style={{ marginRight: 2 }} />
+               ))
              )}
           </View>
           <Text className="text-neutral-500 font-mono text-[10px] my-0.5">
@@ -468,14 +470,7 @@ export function StackCard({
               );
             })}
           </View>
-          <View className="flex-row w-[100%] justify-between items-center mt-2 px-1">
-            <View className="flex-row">
-               {topItem.rating ? (
-                 [...Array(5)].map((_, i) => (
-                   <FontAwesome key={i} name={i < topItem.rating! ? 'star' : 'star-o'} size={8} color={i < topItem.rating! ? '#f59e0b' : '#333'} style={{ marginRight: 1 }} />
-                 ))
-               ) : <View style={{ width: 45 }} />}
-            </View>
+          <View className="flex-row w-[100%] justify-end items-center mt-2 px-1">
             <View className="flex-row flex-wrap justify-end gap-1 shrink">
               {/* Format Side-by-Side Coins (Deduplicated) */}
             {sorted.map((item) => (
@@ -578,14 +573,7 @@ export function StackCard({
           {/* Bootleg Sticker for Digital Grid */}
           {topItem.is_bootleg && <BootlegSticker size={30} />}
         </View>
-        <View className="flex-row w-[100%] justify-between items-center mt-2 px-1">
-          <View className="flex-row">
-             {topItem.rating ? (
-               [...Array(5)].map((_, i) => (
-                 <FontAwesome key={i} name={i < topItem.rating! ? 'star' : 'star-o'} size={8} color={i < topItem.rating! ? '#f59e0b' : '#333'} style={{ marginRight: 1 }} />
-               ))
-             ) : <View style={{ width: 45 }} />}
-          </View>
+        <View className="flex-row w-[100%] justify-end items-center mt-2 px-1">
           <View className="flex-row flex-wrap justify-end gap-1 shrink">
           {sorted.map((item) => (
             <Pressable

@@ -217,7 +217,9 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
                 <FontAwesome key={i} name={i < item.rating! ? 'star' : 'star-o'} size={8} color={i < item.rating! ? '#f59e0b' : '#404040'} style={{ marginRight: 1 }} />
               ))
             ) : (
-              <View style={{ width: 45 }} />
+              [...Array(5)].map((_, i) => (
+                <FontAwesome key={i} name="star-o" size={8} color="#404040" style={{ marginRight: 1 }} />
+              ))
             )}
           </View>
           

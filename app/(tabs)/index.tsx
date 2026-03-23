@@ -8,6 +8,7 @@ import { router, Stack, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Modal, Platform, Pressable, RefreshControl, ScrollView, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { EmptyState } from '@/components/EmptyState';
 import { OnDisplayCard } from '@/components/OnDisplayCard';
 import { QuickActionModal } from '@/components/QuickActionModal';
@@ -497,17 +498,21 @@ export default function HomeScreen() {
                           activeFormatFilter={formatFilter}
                         />
                         {viewMode !== 'list' && (
-                          <View className="mt-3">
-                            <Text
-                              className="text-white font-medium text-[11px] uppercase tracking-wide"
-                              numberOfLines={1}
-                              style={{ fontFamily: 'VCR_OSD_MONO' }}
-                            >
-                              {topItem.movies?.title || topItem.shows?.name}
-                            </Text>
+                          <View className="mt-2 pl-1">
+                            <View className="flex-row mb-1">
+                              {topItem.rating ? (
+                                [...Array(5)].map((_, i) => (
+                                  <FontAwesome key={i} name={i < topItem.rating! ? 'star' : 'star-o'} size={10} color={i < topItem.rating! ? '#f59e0b' : '#333'} style={{ marginRight: 2 }} />
+                                ))
+                              ) : (
+                                [...Array(5)].map((_, i) => (
+                                  <FontAwesome key={i} name="star-o" size={10} color="#333" style={{ marginRight: 2 }} />
+                                ))
+                              )}
+                            </View>
                             {topItem.media_type === 'tv' && (
-                              <Text className="text-neutral-500 font-mono text-[9px] mt-0.5">
-                                SEASON {topItem.season_number}
+                              <Text className="text-neutral-500 font-mono text-[9px]">
+                                S{topItem.season_number}
                               </Text>
                             )}
                           </View>
