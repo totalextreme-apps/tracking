@@ -8,10 +8,9 @@ import { router, Stack, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Modal, Platform, Pressable, RefreshControl, ScrollView, Text, TextInput, useWindowDimensions, View } from 'react-native';
-
-import { AcquiredModal } from '@/components/AcquiredModal';
 import { EmptyState } from '@/components/EmptyState';
 import { OnDisplayCard } from '@/components/OnDisplayCard';
+import { QuickActionModal } from '@/components/QuickActionModal';
 import { StackCard } from '@/components/StackCard';
 import { useAuth } from '@/context/AuthContext';
 import { useSound } from '@/context/SoundContext';
@@ -28,7 +27,7 @@ export default function HomeScreen() {
 
   const { data: collection, isLoading: collectionLoading, isError: collectionError, refetch } = useCollection(userId) as any;
   const updateMutation = useUpdateCollectionItem(userId);
-  const [acquiredItem, setAcquiredItem] = useState<CollectionItemWithMedia | null>(null);
+  const [quickActionItem, setQuickActionItem] = useState<CollectionItemWithMedia | null>(null);
 
   const [sortBy, setSortBy] = useState<'recent' | 'title' | 'release' | 'rating'>('recent');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -112,20 +111,6 @@ export default function HomeScreen() {
       }
     }
   };
-
-  const handleAcquire = async () => {
-    if (!acquiredItem) return;
-    try {
-      await updateMutation.mutateAsync({
-        itemId: acquiredItem.id,
-        updates: { status: 'owned' }
-      });
-      if (refetch) refetch();
-    } catch (e) {
-      console.error('Failed to acquire', e);
-    }
-  };
-
 
   const toggleFavorite = async (item: CollectionItemWithMedia) => {
     try {
@@ -277,7 +262,7 @@ export default function HomeScreen() {
                     <Text className="text-amber-500 font-bold text-3xl tracking-tighter uppercase" style={{ fontFamily: 'VCR_OSD_MONO' }}>
                       {thriftMode ? 'GRAILS' : 'ON DISPLAY'}
                     </Text>
-                    <Text className="text-neutral-600 font-mono text-xs opacity-50 ml-1">/ {onDisplay.length}</Text>
+                    <Text className="text-neutral-500 font-mono text-xs ml-1">/ {onDisplay.length}</Text>
                   </View>
                   <View className="flex-row items-center gap-2">
                     <Pressable onPress={scrollShelfLeft} className="p-2 bg-neutral-900 rounded-full border border-neutral-800 active:bg-neutral-800">
@@ -307,7 +292,7 @@ export default function HomeScreen() {
                         key={item.id}
                         item={item}
                         onSingleTapAction={() => navigateToDetail(item)}
-                        onLongPressAction={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); setAcquiredItem(item); }}
+                        onLongPressAction={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); setQuickActionItem(item); }}
                         onToggleFavorite={toggleFavorite}
                       />
                     ))}
@@ -322,7 +307,7 @@ export default function HomeScreen() {
                   <Text className="text-amber-500 font-bold text-3xl tracking-tighter uppercase" style={{ fontFamily: 'VCR_OSD_MONO' }}>
                     {thriftMode ? 'WISH LIST' : 'THE STACKS'}
                   </Text>
-                  <Text className="text-neutral-600 font-mono text-xs opacity-50 ml-1">
+                  <Text className="text-neutral-500 font-mono text-xs ml-1">
                     / {thriftMode ? collection?.filter((i: any) => i.status === 'wishlist').length : filteredStacks.length}
                   </Text>
                 </View>
@@ -506,7 +491,7 @@ export default function HomeScreen() {
                           stack={stack}
                           onPress={() => navigateToDetail(topItem)}
                           onToggleFavorite={toggleFavorite}
-                          onLongPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); setAcquiredItem(topItem); }}
+                          onLongPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); setQuickActionItem(topItem); }}
                           width={(windowWidth - 48 - (resolvedColumns * 20)) / resolvedColumns}
                           mode={viewMode === 'list' ? 'list' : 'grid'}
                           activeFormatFilter={formatFilter}
@@ -537,23 +522,13 @@ export default function HomeScreen() {
         </View>
       </ScrollView>
 
-      {acquiredItem && (
-        <AcquiredModal
-          item={acquiredItem}
-          visible={!!acquiredItem}
-          onClose={() => setAcquiredItem(null)}
-          onAcquired={async () => {
-            if (!acquiredItem) return;
-            try {
-              await updateMutation.mutateAsync({
-                itemId: acquiredItem.id,
-                updates: { status: 'owned' }
-              });
-              if (refetch) refetch();
-            } catch (e) {
-              console.error('Failed to acquire', e);
-            }
-          }}
+      {quickActionItem && (
+        <QuickActionModal
+          item={quickActionItem}
+          visible={!!quickActionItem}
+          collection={collection || []}
+          userId={userId}
+          onClose={() => setQuickActionItem(null)}
         />
       )}
 
