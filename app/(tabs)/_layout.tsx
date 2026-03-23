@@ -54,8 +54,10 @@ export default function TabLayout() {
           bottom: 0,
           left: 0,
           right: 0,
-          elevation: 0,
+          elevation: 10,
+          zIndex: 100,
         },
+        tabBarHideOnKeyboard: false,
         tabBarBackground: () => (
           <RNView style={{ flex: 1, backgroundColor: '#000000', borderTopWidth: 1, borderTopColor: '#262626' }} />
         ),

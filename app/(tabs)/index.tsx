@@ -268,52 +268,6 @@ export default function HomeScreen() {
         }
       >
         <View className="w-full">
-          {/* Header/Search Bar */}
-          <View className="pt-4 pb-4 border-b border-neutral-900 px-4 md:px-8 max-w-7xl mx-auto w-full">
-            <View className="flex-row items-center mb-4">
-              <View className="flex-row items-center bg-neutral-900 rounded-lg border border-neutral-800 px-4 py-2.5 flex-1">
-                <Ionicons name="search" size={16} color="#444" style={{ marginRight: 8 }} />
-                <TextInput
-                  placeholder="SEARCH..."
-                  placeholderTextColor="#333"
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  className="flex-1 text-white font-mono text-xs"
-                  autoCapitalize="none"
-                  style={{ padding: 0 }}
-                />
-              </View>
-            </View>
-
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-              {['ALL', 'VHS', 'DVD', 'BluRay', '4K', 'BOOTLEG'].map(f => {
-                const isSelected = f === 'ALL' ? formatFilter === null : formatFilter === f;
-                const formatColor = f === 'VHS' ? 'bg-red-600/20 border-red-600/40' :
-                  f === 'DVD' ? 'bg-purple-600/20 border-purple-600/40' :
-                    f === 'BluRay' ? 'bg-blue-600/20 border-blue-600/40' :
-                      f === '4K' ? 'bg-yellow-600/20 border-yellow-600/40' :
-                        f === 'BOOTLEG' ? 'bg-orange-600/20 border-orange-600/40' :
-                          'bg-neutral-900 border-neutral-800';
-                const textStyle = isSelected ? 'text-amber-500' :
-                  f === 'VHS' ? 'text-red-500' :
-                    f === 'DVD' ? 'text-purple-400' :
-                      f === 'BluRay' ? 'text-blue-400' :
-                        f === '4K' ? 'text-yellow-400' :
-                          f === 'BOOTLEG' ? 'text-orange-400' :
-                            'text-neutral-500';
-
-                return (
-                  <Pressable
-                    key={f}
-                    onPress={() => { setFormatFilter(f === 'ALL' ? null : (isSelected ? null : f)); playSound('click'); }}
-                    className={`px-4 py-1.5 rounded-full border ${isSelected ? 'bg-amber-500/20 border-amber-500/50' : formatColor}`}
-                  >
-                    <Text className={`font-mono text-[10px] uppercase font-bold ${textStyle}`}>{f}</Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          </View>
 
           <View className="flex-1">
             {onDisplay.length > 0 && (
@@ -393,6 +347,53 @@ export default function HomeScreen() {
                     <Ionicons name="grid-outline" size={14} color={(viewMode === 'grid4' || (viewMode === 'custom' && numColumns === 4)) ? '#fff' : '#666'} />
                   </Pressable>
                 </View>
+              </View>
+
+              {/* Header/Search Bar */}
+              <View className="pb-6 w-full">
+                <View className="flex-row items-center mb-4">
+                  <View className="flex-row items-center bg-neutral-900 rounded-lg border border-neutral-800 px-4 py-2.5 flex-1">
+                    <Ionicons name="search" size={16} color="#444" style={{ marginRight: 8 }} />
+                    <TextInput
+                      placeholder="SEARCH..."
+                      placeholderTextColor="#333"
+                      value={searchQuery}
+                      onChangeText={setSearchQuery}
+                      className="flex-1 text-white font-mono text-xs"
+                      autoCapitalize="none"
+                      style={{ padding: 0 }}
+                    />
+                  </View>
+                </View>
+
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                  {['ALL', 'VHS', 'DVD', 'BluRay', '4K', 'BOOTLEG'].map(f => {
+                    const isSelected = f === 'ALL' ? formatFilter === null : formatFilter === f;
+                    const formatColor = f === 'VHS' ? 'bg-red-600/20 border-red-600/40' :
+                      f === 'DVD' ? 'bg-purple-600/20 border-purple-600/40' :
+                        f === 'BluRay' ? 'bg-blue-600/20 border-blue-600/40' :
+                          f === '4K' ? 'bg-yellow-600/20 border-yellow-600/40' :
+                            f === 'BOOTLEG' ? 'bg-orange-600/20 border-orange-600/40' :
+                              'bg-neutral-900 border-neutral-800';
+                    const textStyle = isSelected ? 'text-amber-500' :
+                      f === 'VHS' ? 'text-red-500' :
+                        f === 'DVD' ? 'text-purple-400' :
+                          f === 'BluRay' ? 'text-blue-400' :
+                            f === '4K' ? 'text-yellow-400' :
+                              f === 'BOOTLEG' ? 'text-orange-400' :
+                                'text-neutral-500';
+
+                    return (
+                      <Pressable
+                        key={f}
+                        onPress={() => { setFormatFilter(f === 'ALL' ? null : (isSelected ? null : f)); playSound('click'); }}
+                        className={`px-4 py-1.5 rounded-full border ${isSelected ? 'bg-amber-500/20 border-amber-500/50' : formatColor}`}
+                      >
+                        <Text className={`font-mono text-[10px] uppercase font-bold ${textStyle}`}>{f}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
               </View>
 
               <View className="bg-neutral-900 mb-8 p-4 rounded-xl border border-neutral-800">

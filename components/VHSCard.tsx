@@ -36,6 +36,13 @@ export function VHSCard({ posterUrl, style, isCustom = false, isBootleg = false 
                 contentFit="fill"
             />
 
+            {/* Layer 4: Format Logo Corner */}
+            <Image
+                source={require('@/assets/images/overlays/formats/VHS.png')}
+                style={{ position: 'absolute', bottom: 6, right: 6, width: 30, height: 18, opacity: 0.9, zIndex: 40 }}
+                contentFit="contain"
+            />
+
             {/* Layer 5: Bootleg Sticker */}
             {isBootleg && <BootlegSticker size={30} />}
         </View>
