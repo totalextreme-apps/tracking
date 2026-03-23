@@ -398,7 +398,7 @@ export default function AddScreen() {
                       className={`px-3 py-2 rounded ${isSelected ? 'bg-amber-600' : 'bg-neutral-800'}`}
                     >
                       <Text className={`font-mono text-sm ${isSelected ? 'text-white' : 'text-neutral-400'}`}>
-                        {f}
+                        {f === 'BluRay' ? 'Blu-ray' : f}
                       </Text>
                     </Pressable>
                   );

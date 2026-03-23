@@ -232,7 +232,7 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
           <View className="flex-row gap-0.5 justify-end items-center shrink">
             <View className="px-1 py-0.5 rounded bg-amber-900/80">
               <Text className="font-mono text-[7px] text-amber-200 uppercase whitespace-nowrap" numberOfLines={1}>
-                {isPhysical ? item.format : (item.digital_provider || 'Digital')}
+                {isPhysical ? (item.format === 'BluRay' ? 'Blu-ray' : item.format) : (item.digital_provider || 'Digital')}
               </Text>
             </View>
             {item.media_type === 'tv' && (

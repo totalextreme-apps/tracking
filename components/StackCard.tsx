@@ -330,7 +330,7 @@ export function StackCard({
                   }}
                 >
                   <Text style={{ fontSize: 7, fontWeight: 'bold', color: 'white', fontFamily: 'SpaceMono' }}>
-                    {item.format}
+                    {item.format === 'BluRay' ? 'Blu-ray' : item.format}
                   </Text>
                   {item.is_bootleg && (
                     <Image source={require('@/assets/images/overlays/boot_sticker.png')} style={{ width: 10, height: 10, marginLeft: 2 }} contentFit="contain" />
@@ -490,7 +490,7 @@ export function StackCard({
                 className={`px-2 py-0.5 rounded flex-row items-center gap-1 ${FORMAT_COLORS[item.format] || 'bg-neutral-700'}`}
               >
                 <Text className="text-white font-mono text-[10px] font-bold">
-                  {item.format}
+                  {item.format === 'BluRay' ? 'Blu-ray' : item.format}
                 </Text>
                 {item.is_bootleg && (
                   <Image source={require('@/assets/images/overlays/boot_sticker.png')} style={{ width: 12, height: 12, marginLeft: 2 }} contentFit="contain" />
@@ -592,7 +592,7 @@ export function StackCard({
               className={`px-2 py-0.5 rounded flex-row items-center gap-1 ${FORMAT_COLORS[item.format] || 'bg-neutral-700'}`}
             >
               <Text className="text-white font-mono text-[10px] font-bold">
-                {item.format}
+                {item.format === 'BluRay' ? 'Blu-ray' : item.format}
               </Text>
               {item.is_bootleg && (
                 <Image source={require('@/assets/images/overlays/boot_sticker.png')} style={{ width: 12, height: 12, marginLeft: 2 }} contentFit="contain" />

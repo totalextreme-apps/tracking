@@ -714,7 +714,7 @@ export default function MovieDetailScreen() {
                                     <View key={item.id} className="mb-4">
                                         <View className="flex-row items-center flex-wrap mb-2">
                                             <View className={`px-2 py-1 rounded shrink-0 ${FORMAT_COLORS[item.format] || 'bg-neutral-800'}`}>
-                                                <Text className="text-white font-mono text-xs font-bold">{item.format}</Text>
+                                                <Text className="text-white font-mono text-xs font-bold">{item.format === 'BluRay' ? 'Blu-ray' : item.format}</Text>
                                             </View>
                                             <Pressable
                                                 onPress={async () => {
@@ -779,7 +779,7 @@ export default function MovieDetailScreen() {
                                                 <ActivityIndicator size="small" color="#f59e0b" style={{ marginRight: 8, transform: [{ scale: 0.8 }] }} />
                                             ) : null}
                                             <Text className="text-amber-500 font-mono text-xs font-bold">
-                                                {updateMutation.isPending ? 'SAVING...' : `SAVE ${item.format}`}
+                                                {updateMutation.isPending ? 'SAVING...' : `SAVE ${item.format === 'BluRay' ? 'Blu-ray' : item.format}`}
                                             </Text>
                                         </Pressable>
                                     </View>
@@ -874,7 +874,7 @@ export default function MovieDetailScreen() {
                                                         padding: activeFormat === item.format ? 1 : 0,
                                                     }}>
                                                         <View className={`px-2 py-1 rounded shrink-0 ${FORMAT_COLORS[item.format] || 'bg-neutral-800'}`}>
-                                                            <Text className="text-white font-mono text-xs font-bold">{item.format}</Text>
+                                                            <Text className="text-white font-mono text-xs font-bold">{item.format === 'BluRay' ? 'Blu-ray' : item.format}</Text>
                                                         </View>
                                                     </View>
                                                 </Pressable>
@@ -926,7 +926,7 @@ export default function MovieDetailScreen() {
                                         className={`px-4 py-2 border rounded-full ${baseColor} border-neutral-700`}
                                     >
                                         <Text className="text-white font-mono font-bold">
-                                            {fmt}
+                                            {fmt === 'BluRay' ? 'Blu-ray' : fmt}
                                         </Text>
                                     </Pressable>
                                 );

@@ -228,7 +228,7 @@ export function QuickActionModal({
               onPress={() => setSelectedFormat(fmt)}
               className="bg-neutral-800 border border-neutral-700 w-[48%] py-3 rounded-lg items-center"
             >
-              <Text className="text-white font-mono font-bold">{fmt}</Text>
+              <Text className="text-white font-mono font-bold">{fmt === 'BluRay' ? 'Blu-ray' : fmt}</Text>
             </Pressable>
           ))}
         </View>
@@ -236,7 +236,7 @@ export function QuickActionModal({
         <View>
           <Text className="text-neutral-400 font-mono text-xs mb-2">FORMAT</Text>
           <View className="bg-neutral-800 py-3 px-4 rounded-lg mb-4 flex-row justify-between items-center">
-            <Text className="text-white font-mono font-bold">{selectedFormat}</Text>
+            <Text className="text-white font-mono font-bold">{selectedFormat === 'BluRay' ? 'Blu-ray' : selectedFormat}</Text>
             <Pressable onPress={() => setSelectedFormat(null)}>
               <Text className="text-amber-500 font-mono text-xs">CHANGE</Text>
             </Pressable>
@@ -282,7 +282,7 @@ export function QuickActionModal({
           {relatedItems.map(i => (
             <View key={i.id} className="bg-neutral-800 border border-neutral-700 p-3 rounded-lg mb-2 flex-row justify-between items-center">
               <View>
-                <Text className="text-white font-mono font-bold">{i.format}</Text>
+                <Text className="text-white font-mono font-bold">{i.format === 'BluRay' ? 'Blu-ray' : i.format}</Text>
                 {i.edition && <Text className="text-neutral-500 font-mono text-xs mt-0.5">{i.edition}</Text>}
               </View>
               <Pressable

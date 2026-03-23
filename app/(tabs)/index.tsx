@@ -395,7 +395,9 @@ export default function HomeScreen() {
                         onPress={() => { setFormatFilter(f === 'ALL' ? null : (isSelected ? null : f)); playSound('click'); }}
                         className={`px-4 py-1.5 rounded-full border ${isSelected ? 'bg-amber-500/20 border-amber-500/50' : formatColor}`}
                       >
-                        <Text className={`font-mono text-[10px] uppercase font-bold ${textStyle}`}>{f}</Text>
+                        <Text className={`font-mono text-[10px] uppercase font-bold ${textStyle}`}>
+                          {f === 'BluRay' ? 'Blu-ray' : f}
+                        </Text>
                       </Pressable>
                     );
                   })}

@@ -155,7 +155,7 @@ export default function ListsScreen() {
                                             </Text>
                                             {Object.entries(formatCounts).map(([fmt, count]) => (
                                                 <View key={fmt} className={`px-1.5 py-0.5 rounded ${FORMAT_COLORS[fmt] || 'bg-neutral-700'}`}>
-                                                    <Text className="text-white font-mono text-[9px] font-bold">{count} {fmt}</Text>
+                                                    <Text className="text-white font-mono text-[9px] font-bold">{count} {fmt === 'BluRay' ? 'Blu-ray' : fmt}</Text>
                                                 </View>
                                             ))}
                                         </View>
