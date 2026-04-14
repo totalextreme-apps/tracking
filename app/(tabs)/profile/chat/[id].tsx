@@ -34,8 +34,8 @@ export default function ChatScreen() {
 
   return (
     <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 20}
       className="flex-1 bg-black"
     >
       <StatusBar style="light" />
@@ -107,7 +107,7 @@ export default function ChatScreen() {
       </ScrollView>
 
       {/* Input Area */}
-      <View className="p-4 py-6 bg-black border-t border-neutral-900 flex-row items-center gap-3">
+      <View className="p-4 pb-10 bg-black border-t border-neutral-900 flex-row items-center gap-3">
          <TextInput
            className="flex-1 bg-neutral-900 text-white p-3 px-4 rounded-full font-mono text-sm border border-neutral-800"
            placeholder="Type a message..."
