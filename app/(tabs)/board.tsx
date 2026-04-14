@@ -12,6 +12,7 @@ import { ConfirmModal } from '@/components/ConfirmModal';
 // A retro corkboard background for the Bulletin Board
 // You can replace this with an actual image asset of a corkboard if desired.
 const CORK_BACKGROUND = 'https://www.transparenttextures.com/patterns/cork-board.png';
+import { getPosterUrl } from '@/lib/dummy-data';
 
 export default function BulletinBoardScreen() {
   const { userId } = useAuth();
@@ -401,8 +402,12 @@ export default function BulletinBoardScreen() {
                     onPress={() => router.push(`/profile/${post.user_id}`)}
                     className="flex-row items-center mb-3 mt-2"
                   >
-                    <View className="w-8 h-8 rounded-full bg-neutral-200 border border-neutral-300 items-center justify-center mr-2">
-                       <Ionicons name="person" size={14} color="#525252" />
+                    <View className="w-8 h-8 rounded-full bg-neutral-200 border border-neutral-300 items-center justify-center mr-2 overflow-hidden">
+                       {post.profiles?.avatar_url ? (
+                         <Image source={{ uri: post.profiles.avatar_url }} className="w-full h-full" />
+                       ) : (
+                         <Ionicons name="person" size={14} color="#525252" />
+                       )}
                     </View>
                     <View>
                       <Text className="font-bold text-neutral-900 font-mono text-sm">
@@ -434,12 +439,28 @@ export default function BulletinBoardScreen() {
 
                   {/* Attached Media Context */}
                   {(post.movies || post.shows) && (
-                    <View className="flex-row items-center bg-black/5 p-2 rounded mb-3 border border-black/10">
-                      <Ionicons name="film-outline" size={16} color="#525252" className="mr-2" />
-                      <Text className="font-mono text-xs text-neutral-700 flex-1" numberOfLines={1}>
-                        Attached: {post.movies?.title || post.shows?.name}
-                      </Text>
-                    </View>
+                    <Pressable 
+                      onPress={() => {
+                        const mediaId = post.movies?.id || post.shows?.id;
+                        const mediaType = post.movies ? 'movie' : 'show';
+                        router.push(`/(tabs)/${mediaType}/${mediaId}`);
+                      }}
+                      className="flex-row items-center bg-black/5 p-2 rounded mb-3 border border-black/10"
+                    >
+                      <Image 
+                        source={{ uri: getPosterUrl((post.movies?.poster_path || post.shows?.poster_path) || null) || '' }} 
+                        className="w-10 h-14 rounded mr-3 bg-neutral-200"
+                      />
+                      <View className="flex-1">
+                        <Text className="font-mono text-[10px] text-neutral-500 uppercase font-bold mb-0.5">
+                          {post.movies ? 'MOVIE' : 'TV SHOW'}
+                        </Text>
+                        <Text className="font-mono text-xs text-neutral-900" numberOfLines={1}>
+                          {post.movies?.title || post.shows?.name}
+                        </Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={16} color="#525252" />
+                    </Pressable>
                   )}
 
                   {/* Rating snippet */}

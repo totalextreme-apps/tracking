@@ -132,7 +132,15 @@ export default function TabLayout() {
         options={{
           headerShown: false,
           title: profile?.username || 'Profile',
-          tabBarIcon: ({ color }) => <TabBarIcon name="user" color={color} />,
+          tabBarIcon: ({ color }) => (
+            profile?.avatar_url ? (
+              <RNView style={{ width: 24, height: 24, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: color, marginBottom: -3 }}>
+                <Image source={{ uri: profile.avatar_url }} style={{ width: '100%', height: '100%' }} />
+              </RNView>
+            ) : (
+              <TabBarIcon name="user" color={color} />
+            )
+          ),
         }}
         listeners={{
           tabPress: () => {
