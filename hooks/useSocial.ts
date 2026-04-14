@@ -110,6 +110,29 @@ export const useSearchUsers = (query: string) => {
   });
 };
 
+// 5b. Suggested Users
+export const useSuggestedUsers = (currentUserId?: string) => {
+  return useQuery({
+    queryKey: ['users', 'suggested', currentUserId],
+    queryFn: async () => {
+      let q = supabase
+        .from('profiles')
+        .select('*')
+        .limit(5);
+        
+      if (currentUserId) {
+         q = q.neq('id', currentUserId);
+      }
+      
+      const { data, error } = await q;
+
+      if (error) throw error;
+      return data as Profile[];
+    },
+    enabled: true,
+  });
+};
+
 // 6. Fetch Bulletin Feed (Posts from people you follow + your own)
 export const useBulletinFeed = (userId?: string) => {
   return useQuery({

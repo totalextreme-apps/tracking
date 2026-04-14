@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TextInput, Pressable, ActivityIndicator, ImageBackground } from 'react-native';
+import { View, Text, ScrollView, TextInput, Pressable, ActivityIndicator, ImageBackground, Image } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
-import { useBulletinFeed, useSearchUsers, useCreatePost } from '@/hooks/useSocial';
+import { useBulletinFeed, useSearchUsers, useCreatePost, useSuggestedUsers } from '@/hooks/useSocial';
 import { StatusBar } from 'expo-status-bar';
 
 // A retro corkboard background for the Bulletin Board
@@ -18,6 +18,7 @@ export default function BulletinBoardScreen() {
 
   const { data: feed, isLoading: feedLoading } = useBulletinFeed(userId);
   const { data: searchResults, isLoading: searchLoading } = useSearchUsers(searchQuery);
+  const { data: suggestedUsers } = useSuggestedUsers(userId);
   const createPostMutation = useCreatePost(userId);
 
   const handlePost = () => {
@@ -112,6 +113,31 @@ export default function BulletinBoardScreen() {
               ) : (
                 <Text className="text-neutral-500 font-mono text-sm">No members found.</Text>
               )}
+            </View>
+          )}
+
+          {/* Suggested Users Horizontal Strip */}
+          {searchQuery.length <= 2 && suggestedUsers && suggestedUsers.length > 0 && (
+            <View className="mb-6 bg-black/60 p-4 rounded-lg border border-neutral-800">
+              <Text className="text-amber-500 font-bold mb-3 font-mono">RECOMMENDED MEMBERS</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {suggestedUsers.map(user => (
+                  <Pressable 
+                    key={user.id} 
+                    onPress={() => router.push(`/profile/${user.id}`)}
+                    className="mr-3 bg-neutral-900 rounded border border-neutral-800 p-3 items-center w-28"
+                  >
+                    <View className="w-10 h-10 rounded-full overflow-hidden bg-neutral-800 items-center justify-center mb-2">
+                        {user.avatar_url ? (
+                            <Image source={{ uri: user.avatar_url as string }} className="w-full h-full" />
+                        ) : (
+                            <Ionicons name="person" size={16} color="#737373" />
+                        )}
+                    </View>
+                    <Text className="text-white font-mono text-[10px] font-bold text-center" numberOfLines={1}>{user.username || 'Anonymous'}</Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
             </View>
           )}
 
