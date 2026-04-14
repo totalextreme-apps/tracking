@@ -23,27 +23,33 @@ ALTER TABLE post_comments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 
 -- Post Comments Policies
+DROP POLICY IF EXISTS "Anyone can read post comments" ON post_comments;
 CREATE POLICY "Anyone can read post comments"
   ON post_comments FOR SELECT
   USING (true);
 
+DROP POLICY IF EXISTS "Users can create post comments" ON post_comments;
 CREATE POLICY "Users can create post comments"
   ON post_comments FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update own post comments" ON post_comments;
 CREATE POLICY "Users can update own post comments"
   ON post_comments FOR UPDATE
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can delete own post comments" ON post_comments;
 CREATE POLICY "Users can delete own post comments"
   ON post_comments FOR DELETE
   USING (auth.uid() = user_id);
 
 -- Notifications Policies
+DROP POLICY IF EXISTS "Users can see own notifications" ON notifications;
 CREATE POLICY "Users can see own notifications"
   ON notifications FOR SELECT
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update own notifications (mark as read)" ON notifications;
 CREATE POLICY "Users can update own notifications (mark as read)"
   ON notifications FOR UPDATE
   USING (auth.uid() = user_id);
