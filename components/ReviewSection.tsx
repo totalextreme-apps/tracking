@@ -40,7 +40,7 @@ export function ReviewSection({ movieId, showId, collectionItemId, initialRating
     return (
       <Pressable 
         onPress={() => setIsEditing(true)}
-        className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 flex-row items-center justify-between mb-6"
+        className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 flex-row items-center justify-between mx-4 md:mx-8 mt-4 mb-4"
       >
         <View className="flex-row items-center">
             <View className="bg-amber-500/10 p-2 rounded-full mr-3">
@@ -58,7 +58,7 @@ export function ReviewSection({ movieId, showId, collectionItemId, initialRating
 
   if (isEditing) {
     return (
-      <View className="bg-yellow-100/90 rounded p-4 mb-6 shadow-xl border border-neutral-300">
+      <View className="bg-yellow-100/90 rounded p-4 mx-4 md:mx-8 mt-4 mb-4 shadow-xl border border-neutral-300">
         <View className="flex-row items-center justify-between mb-4">
             <View className="flex-row items-center">
                 <View className="bg-red-500 w-3 h-3 rounded-full mr-2" />
@@ -109,7 +109,7 @@ export function ReviewSection({ movieId, showId, collectionItemId, initialRating
 
   // Already has review, show "Edit" option
   return (
-    <View className="mb-6">
+    <View className="mx-4 md:mx-8 mt-4 mb-4">
         <View className="bg-amber-500/5 p-4 rounded-xl border border-amber-500/10">
             <View className="flex-row items-center justify-between mb-2">
                 <View className="flex-row items-center">

@@ -87,6 +87,7 @@ export const useToggleFollow = (currentUserId?: string) => {
     onSuccess: (_, { targetUserId }) => {
       queryClient.invalidateQueries({ queryKey: ['following', currentUserId] });
       queryClient.invalidateQueries({ queryKey: ['followers', targetUserId] });
+      queryClient.invalidateQueries({ queryKey: ['users', 'suggested'] });
     },
   });
 };
@@ -115,16 +116,28 @@ export const useSuggestedUsers = (currentUserId?: string) => {
   return useQuery({
     queryKey: ['users', 'suggested', currentUserId],
     queryFn: async () => {
-      let q = supabase
+      // 1. Get current follows
+      const { data: following } = await supabase
+        .from('follows')
+        .select('following_id')
+        .eq('follower_id', currentUserId || '00000000-0000-0000-0000-000000000000');
+        
+      const followingIds = (following as any[])?.map(f => f.following_id) || [];
+      
+      // 2. Fetch people not followed
+      let query = supabase
         .from('profiles')
-        .select('*')
-        .limit(5);
+        .select('*');
         
       if (currentUserId) {
-         q = q.neq('id', currentUserId);
+        query = query.neq('id', currentUserId);
       }
       
-      const { data, error } = await q;
+      if (followingIds.length > 0) {
+        query = query.not('id', 'in', `(${followingIds.join(',')})`);
+      }
+      
+      const { data, error } = await query.limit(10);
 
       if (error) throw error;
       return data as Profile[];

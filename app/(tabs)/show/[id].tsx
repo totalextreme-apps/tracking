@@ -445,7 +445,7 @@ export default function ShowDetailScreen() {
                             </Text>
                         </View>
                     </View>
-                    <View className="flex-row mt-6 gap-2">
+                    <View className="flex-row mt-4 gap-2">
                         {thriftMode ? (
                             <Pressable
                                 onPress={async () => {
@@ -499,8 +499,8 @@ export default function ShowDetailScreen() {
                     </View>
 
                     {activeShow.show_cast && activeShow.show_cast.length > 0 && (
-                        <View className="mt-8 mb-2">
-                            <Text className="text-white font-bold text-lg mb-3 font-mono">STARRING</Text>
+                        <View className="mt-6 mb-2">
+                            <Text className="text-amber-500 font-bold text-xl mb-3 font-mono uppercase tracking-widest" style={{ fontFamily: 'VCR_OSD_MONO' }}>STARRING</Text>
                             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                                 {activeShow.show_cast.map((member: any) => (
                                     <View key={member.id} className="mr-4 items-center w-20">
@@ -519,13 +519,13 @@ export default function ShowDetailScreen() {
                         </View>
                     )}
 
-                    <View className="mt-6">
-                        <Text className="text-amber-500 font-bold text-xl mb-4 font-mono uppercase tracking-widest" style={{ fontFamily: 'VCR_OSD_MONO' }}>Overview</Text>
+                    <View className="mt-4">
+                        <Text className="text-amber-500 font-bold text-xl mb-2 font-mono uppercase tracking-widest" style={{ fontFamily: 'VCR_OSD_MONO' }}>Overview</Text>
                         <Text className="text-neutral-400 leading-6">{displayShow.overview || "No overview available."}</Text>
                     </View>
 
                     {ownedFormats.length > 0 && !isReadOnly && (
-                        <View className="mt-8">
+                        <View className="mt-6">
                             <Text className="text-white font-bold mb-3">Format Notes</Text>
                             {showItems.map((item: any) => (
                                 <View key={item.id} className="mb-4">

@@ -631,7 +631,7 @@ export default function MovieDetailScreen() {
                         </View>
                     </View>
                     {/* Actions Bar (Full width style from attachment 2) */}
-                    <View className="max-w-7xl mx-auto w-full px-4 md:px-8 flex-row mt-6 gap-2">
+                    <View className="max-w-7xl mx-auto w-full px-4 md:px-8 flex-row mt-4 gap-2">
                         {!isReadOnly && (
                             <>
                                 {thriftMode ? (
@@ -694,7 +694,7 @@ export default function MovieDetailScreen() {
 
                     {/* Cast Section */}
                     {activeMovie.movie_cast && activeMovie.movie_cast.length > 0 && (
-                        <View className="mt-8 mb-2">
+                        <View className="mt-4 mb-2 px-4 md:px-8">
                             <Text className="text-amber-500 font-bold text-xl mb-3 font-mono uppercase tracking-widest" style={{ fontFamily: 'VCR_OSD_MONO' }}>STARRING</Text>
                             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                                 {activeMovie.movie_cast.map((member: any) => (
