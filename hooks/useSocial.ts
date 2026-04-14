@@ -307,3 +307,64 @@ export const useCreateComment = (userId?: string) => {
     },
   });
 };
+
+// 10. Community Social Feed (Combined Activities)
+export const useCommunityFeed = (userId?: string) => {
+  return useQuery({
+    queryKey: ['community_feed', userId],
+    queryFn: async () => {
+      if (!userId) return [];
+      
+      const { data: follows } = await supabase
+        .from('follows')
+        .select('following_id')
+        .eq('follower_id', userId);
+        
+      const followingIds = follows?.map((f: any) => f.following_id) || [];
+      if (followingIds.length === 0) return [];
+
+      // Fetch bulletin posts from people you follow
+      const { data: posts, error: postErr } = await supabase
+        .from('bulletin_posts')
+        .select(`
+          *,
+          profiles(*),
+          movies(*),
+          shows(*)
+        `)
+        .in('user_id', followingIds)
+        .order('created_at', { ascending: false })
+        .limit(25);
+
+      if (postErr) throw postErr;
+
+      // Fetch collection additions from people you follow
+      const { data: updates, error: updateErr } = await supabase
+        .from('collection_items')
+        .select(`
+          *,
+          movies (*),
+          shows (*),
+          profiles:user_id (username, avatar_url)
+        `)
+        .in('user_id', followingIds)
+        .eq('status', 'owned')
+        .order('created_at', { ascending: false })
+        .limit(25) as any;
+
+      if (updateErr) throw updateErr;
+
+      // Interleave and sort by date
+      const activity = [
+        ...(posts || []).map((p: any) => ({ ...p, activity_type: 'post' })),
+        ...(updates || []).map((u: any) => ({ ...u, activity_type: 'update' }))
+      ];
+      
+      return activity.sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+    },
+    enabled: !!userId,
+  });
+};
+

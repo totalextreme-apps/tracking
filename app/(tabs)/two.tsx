@@ -329,6 +329,31 @@ export default function SettingsScreen() {
         {/* SETTINGS LIST */}
         <View className="mb-8">
           <Text className="text-amber-500/90 font-mono text-sm font-bold tracking-widest mb-3">
+            SOCIAL
+          </Text>
+          <View
+            className="bg-[#2B4A8C] mb-8 border-2"
+            style={{
+              borderTopColor: '#ffffff',
+              borderLeftColor: '#ffffff',
+              borderBottomColor: '#525252',
+              borderRightColor: '#525252',
+              borderWidth: 2,
+            }}
+          >
+            <Pressable
+              onPress={() => router.push('/(tabs)/profile/feed')}
+              className="p-4 flex-row items-center justify-between active:bg-[#1a3366]"
+            >
+              <View className="flex-row items-center">
+                <View className="w-8 items-center"><FontAwesome name="users" size={14} color="#FFE92F" /></View>
+                <Text className="font-mono text-sm font-bold" style={{ color: '#FFE92F' }}>Followed Members & Activity</Text>
+              </View>
+              <FontAwesome name="chevron-right" size={10} color="white" />
+            </Pressable>
+          </View>
+
+          <Text className="text-amber-500/90 font-mono text-sm font-bold tracking-widest mb-3">
             SETTINGS
           </Text>
 

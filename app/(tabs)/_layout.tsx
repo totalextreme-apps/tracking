@@ -206,6 +206,13 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="profile/feed"
+        options={{
+          headerShown: false,
+          href: null,
+        }}
+      />
+      <Tabs.Screen
         name="stack/[name]"
         options={{
           headerShown: false,
