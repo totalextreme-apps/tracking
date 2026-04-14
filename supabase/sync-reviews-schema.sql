@@ -12,9 +12,7 @@ BEGIN
     UPDATE public.collection_items
     SET 
       rating = NEW.rating,
-      notes = NEW.content -- Use 'notes' or 'review'? User said rating and review. 
-      -- Let's use 'notes' as the reviews field for now or keep a separate 'review' column if preferred.
-      -- The existing schema has 'notes'. Let's add 'review' properly.
+      review = NEW.content
     WHERE id = NEW.collection_item_id;
   END IF;
   
