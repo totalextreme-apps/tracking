@@ -213,6 +213,20 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="profile/messages"
+        options={{
+          headerShown: false,
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="profile/chat/[id]"
+        options={{
+          headerShown: false,
+          href: null,
+        }}
+      />
+      <Tabs.Screen
         name="stack/[name]"
         options={{
           headerShown: false,

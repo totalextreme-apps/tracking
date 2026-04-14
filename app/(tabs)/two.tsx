@@ -343,11 +343,21 @@ export default function SettingsScreen() {
           >
             <Pressable
               onPress={() => router.push('/(tabs)/profile/feed')}
-              className="p-4 flex-row items-center justify-between active:bg-[#1a3366]"
+              className="p-4 flex-row items-center justify-between border-b-2 border-white/20 active:bg-[#1a3366]"
             >
               <View className="flex-row items-center">
                 <View className="w-8 items-center"><FontAwesome name="users" size={14} color="#FFE92F" /></View>
                 <Text className="font-mono text-sm font-bold" style={{ color: '#FFE92F' }}>Followed Members & Activity</Text>
+              </View>
+              <FontAwesome name="chevron-right" size={10} color="white" />
+            </Pressable>
+            <Pressable
+              onPress={() => router.push('/(tabs)/profile/messages')}
+              className="p-4 flex-row items-center justify-between active:bg-[#1a3366]"
+            >
+              <View className="flex-row items-center">
+                <View className="w-8 items-center"><FontAwesome name="envelope" size={14} color="#FFE92F" /></View>
+                <Text className="font-mono text-sm font-bold" style={{ color: '#FFE92F' }}>Private Messages (Inbox)</Text>
               </View>
               <FontAwesome name="chevron-right" size={10} color="white" />
             </Pressable>

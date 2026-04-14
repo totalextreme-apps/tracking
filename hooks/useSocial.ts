@@ -368,3 +368,91 @@ export const useCommunityFeed = (userId?: string) => {
   });
 };
 
+// 11. Fetch Conversations List
+export const useConversations = (userId?: string) => {
+  return useQuery({
+    queryKey: ['conversations', userId],
+    queryFn: async () => {
+      if (!userId) return [];
+      
+      // Get all messages where I am sender or receiver
+      const { data, error } = await supabase
+        .from('messages')
+        .select(`
+          *,
+          sender:sender_id(id, username, avatar_url),
+          receiver:receiver_id(id, username, avatar_url)
+        `)
+        .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Group by distinct partner
+      const conversations: Record<string, any> = {};
+      data.forEach((msg: any) => {
+        const partner = msg.sender_id === userId ? msg.receiver : msg.sender;
+        if (!partner) return;
+        if (!conversations[partner.id]) {
+          conversations[partner.id] = {
+            partner,
+            lastMessage: msg,
+            unreadCount: (!msg.is_read && msg.receiver_id === userId) ? 1 : 0
+          };
+        } else if (!msg.is_read && msg.receiver_id === userId) {
+          conversations[partner.id].unreadCount++;
+        }
+      });
+
+      return Object.values(conversations);
+    },
+    enabled: !!userId,
+  });
+};
+
+// 12. Fetch Individual Chat
+export const useChat = (myId?: string, otherId?: string) => {
+  return useQuery({
+    queryKey: ['chat', myId, otherId],
+    queryFn: async () => {
+      if (!myId || !otherId) return [];
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .or(`and(sender_id.eq.${myId},receiver_id.eq.${otherId}),and(sender_id.eq.${otherId},receiver_id.eq.${myId})`)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!myId && !!otherId,
+    refetchInterval: 3000,
+  });
+};
+
+// 13. Send Message
+export const useSendMessage = (myId?: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ receiverId, content }: { receiverId: string, content: string }) => {
+      if (!myId) throw new Error('Not logged in');
+      const { data, error } = await supabase
+        .from('messages')
+        .insert({
+          sender_id: myId,
+          receiver_id: receiverId,
+          content
+        } as any)
+        .select()
+        .single() as any;
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_, { receiverId }) => {
+      queryClient.invalidateQueries({ queryKey: ['chat', myId, receiverId] });
+      queryClient.invalidateQueries({ queryKey: ['conversations', myId] });
+    }
+  });
+};
+
+

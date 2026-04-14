@@ -150,15 +150,25 @@ export default function UserProfileScreen() {
 
           {/* Follow Button */}
           {!isOwnProfile && (
-            <Pressable 
-              onPress={handleToggleFollow}
-              disabled={toggleFollowMutation.isPending}
-              className={`mt-6 px-10 py-3 rounded-full border-2 ${isFollowing ? 'border-neutral-700 bg-transparent' : 'border-amber-500 bg-amber-500/20'}`}
-            >
-              <Text className={`font-mono font-bold text-sm ${isFollowing ? 'text-neutral-400' : 'text-amber-500'}`}>
-                {isFollowing ? 'UNFOLLOW' : 'FOLLOW'}
-              </Text>
-            </Pressable>
+            <View className="flex-row gap-3 mt-6">
+              <Pressable 
+                onPress={handleToggleFollow}
+                disabled={toggleFollowMutation.isPending}
+                className={`flex-1 py-3 rounded-full border-2 items-center ${isFollowing ? 'border-neutral-700 bg-transparent' : 'border-amber-500 bg-amber-500/10'}`}
+              >
+                <Text className={`font-mono font-bold text-sm ${isFollowing ? 'text-neutral-400' : 'text-amber-500'}`}>
+                  {isFollowing ? 'UNFOLLOW' : 'FOLLOW'}
+                </Text>
+              </Pressable>
+              
+              <Pressable 
+                onPress={() => router.push(`/(tabs)/profile/chat/${id}`)}
+                className="flex-1 py-3 rounded-full border-2 border-neutral-700 bg-neutral-900 items-center justify-center flex-row gap-2"
+              >
+                <Ionicons name="chatbubble-ellipses-outline" size={16} color="#f59e0b" />
+                <Text className="font-mono font-bold text-sm text-amber-500">MESSAGE</Text>
+              </Pressable>
+            </View>
           )}
         </View>
 
