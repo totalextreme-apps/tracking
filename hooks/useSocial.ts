@@ -344,6 +344,88 @@ export const useDeleteComment = (userId?: string) => {
 };
 
 
+// --- POST COMMENTS ---
+
+export const usePostComments = (postId?: string) => {
+  return useQuery({
+    queryKey: ['post-comments', postId],
+    queryFn: async () => {
+      if (!postId) return [];
+      const { data, error } = await supabase
+        .from('post_comments')
+        .select(`
+          *,
+          profiles:user_id (id, username, avatar_url)
+        `)
+        .eq('post_id', postId)
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!postId,
+  });
+};
+
+export const useCreatePostComment = (userId?: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ postId, content }: { postId: string; content: string }) => {
+      if (!userId) throw new Error('Not logged in');
+      const { data, error } = await (supabase.from('post_comments') as any)
+        .insert({
+          user_id: userId,
+          post_id: postId,
+          content
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_, { postId }) => {
+      queryClient.invalidateQueries({ queryKey: ['post-comments', postId] });
+    }
+  });
+};
+
+// --- NOTIFICATIONS ---
+
+export const useNotifications = (userId?: string) => {
+  return useQuery({
+    queryKey: ['notifications', userId],
+    queryFn: async () => {
+      if (!userId) return [];
+      const { data, error } = await supabase
+        .from('notifications')
+        .select(`
+          *,
+          actor:actor_id (id, username, avatar_url)
+        `)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!userId,
+    refetchInterval: 10000, // Poll every 10s
+  });
+};
+
+export const useMarkNotificationRead = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await (supabase.from('notifications') as any)
+        .update({ is_read: true })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    }
+  });
+};
+
 // 10. Community Social Feed (Combined Activities)
 export const useCommunityFeed = (userId?: string) => {
   return useQuery({

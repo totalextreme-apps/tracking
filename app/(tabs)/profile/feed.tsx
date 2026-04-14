@@ -5,12 +5,18 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
 import { useCommunityFeed, useFollowing, useSearchUsers, useToggleFollow, useSuggestedUsers } from '@/hooks/useSocial';
 import { getPosterUrl } from '@/lib/dummy-data';
+import { PostCommentSection } from '@/components/PostCommentSection';
 import { StatusBar } from 'expo-status-bar';
 
 export default function SocialFeedScreen() {
   const { userId } = useAuth();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
+  const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({});
+  
+  const toggleComments = (id: string) => {
+    setExpandedComments(prev => ({ ...prev, [id]: !prev[id] }));
+  };
   
   const { data: feed, isLoading: feedLoading } = useCommunityFeed(userId ?? undefined);
   const { data: following } = useFollowing(userId ?? undefined);
@@ -220,6 +226,23 @@ export default function SocialFeedScreen() {
                   {isPost ? (
                     <View className="bg-neutral-900/50 p-4 rounded-lg border border-neutral-800">
                       <Text className="text-neutral-300 font-mono text-sm leading-5 italic">"{item.content}"</Text>
+                      
+                      <View className="flex-row items-center mt-3 gap-4">
+                        <Pressable 
+                          onPress={() => toggleComments(item.id)}
+                          className="flex-row items-center gap-1.5"
+                        >
+                          <Ionicons name="chatbubble-outline" size={14} color={expandedComments[item.id] ? "#f59e0b" : "#525252"} />
+                          <Text className={`font-mono text-[10px] uppercase font-bold ${expandedComments[item.id] ? 'text-amber-500' : 'text-neutral-600'}`}>
+                            {expandedComments[item.id] ? 'Hide Replies' : 'Reply'}
+                          </Text>
+                        </Pressable>
+                      </View>
+
+                      {expandedComments[item.id] && (
+                        <PostCommentSection postId={item.id} />
+                      )}
+
                       {(item.movies || item.shows) && (
                         <Pressable 
                           onPress={() => {
@@ -227,7 +250,7 @@ export default function SocialFeedScreen() {
                             const type = item.movies ? 'movie' : 'show';
                             router.push(`/(tabs)/${type}/${mId}`);
                           }}
-                          className="flex-row items-center mt-3 bg-black/40 p-2 rounded border border-neutral-800"
+                          className="flex-row items-center mt-4 bg-black/40 p-2 rounded border border-neutral-800"
                         >
                           <Image 
                             source={{ uri: getPosterUrl(item.movies?.poster_path || item.shows?.poster_path) || '' }} 

@@ -8,6 +8,7 @@ import { useSound } from '@/context/SoundContext';
 import { useThriftMode } from '@/context/ThriftModeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
+import { useNotifications } from '@/hooks/useSocial';
 import { View as RNView } from 'react-native';
 
 const logoSource = Platform.OS === 'web'
@@ -31,6 +32,8 @@ export default function TabLayout() {
   const { playSound } = useSound();
   const { userId } = useAuth();
   const { data: profile } = useProfile(userId ?? null);
+  const { data: notifications } = useNotifications(userId ?? undefined);
+  const unreadCount = notifications?.filter((n: any) => !n.is_read).length || 0;
 
   const handleToggleThrift = (value: boolean) => {
     playSound('tv_off');
@@ -133,13 +136,32 @@ export default function TabLayout() {
           headerShown: false,
           title: profile?.username || 'Profile',
           tabBarIcon: ({ color }) => (
-            profile?.avatar_url ? (
-              <RNView style={{ width: 24, height: 24, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: color, marginBottom: -3 }}>
-                <Image source={{ uri: profile.avatar_url }} style={{ width: '100%', height: '100%' }} />
-              </RNView>
-            ) : (
-              <TabBarIcon name="user" color={color} />
-            )
+            <RNView>
+              {profile?.avatar_url ? (
+                <RNView style={{ width: 24, height: 24, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: color, marginBottom: -3 }}>
+                  <Image source={{ uri: profile.avatar_url }} style={{ width: '100%', height: '100%' }} />
+                </RNView>
+              ) : (
+                <TabBarIcon name="user" color={color} />
+              )}
+              {unreadCount > 0 && (
+                <RNView 
+                  style={{ 
+                    position: 'absolute', 
+                    top: -4, 
+                    right: -4, 
+                    backgroundColor: '#f59e0b', 
+                    borderRadius: 6, 
+                    minWidth: 12, 
+                    height: 12, 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    borderWidth: 1.5,
+                    borderColor: '#000'
+                  }} 
+                />
+              )}
+            </RNView>
           ),
         }}
         listeners={{
@@ -221,6 +243,13 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="profile/chat/[id]"
+        options={{
+          headerShown: false,
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="profile/notifications"
         options={{
           headerShown: false,
           href: null,

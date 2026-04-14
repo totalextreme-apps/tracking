@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, Pressable } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, Pressable, TextInput } from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useProfile, useFollowers, useFollowing, useToggleFollow } from '@/hooks/useSocial';
@@ -12,6 +12,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { getPosterUrl } from '@/lib/dummy-data';
 import { StatusBar } from 'expo-status-bar';
 
+type TabType = 'grails' | 'collection' | 'wishlist' | 'analytics';
+type SortOption = 'added' | 'name' | 'format' | 'year';
+
 export default function UserProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { userId: currentUserId } = useAuth();
@@ -22,47 +25,62 @@ export default function UserProfileScreen() {
   const { data: following } = useFollowing(id);
   const { data: collection, isLoading: collectionLoading } = useCollection(id);
   
-  const [activeTab, setActiveTab] = useState<'grails' | 'collection' | 'wishlist' | 'analytics'>('grails');
-  const [sortBy, setSortBy] = useState<'added' | 'name' | 'format' | 'year'>('added');
+  const [activeTab, setActiveTab] = useState<TabType>('grails');
+  const [sortBy, setSortBy] = useState<SortOption>('added');
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const sortedCollection = useMemo(() => {
-    if (!collection) return [];
-    let items = [...collection];
-    if (sortBy === 'name') {
-      items.sort((a, b) => (a.movies?.title || a.shows?.name || '').localeCompare(b.movies?.title || b.shows?.name || ''));
-    } else if (sortBy === 'format') {
-      items.sort((a, b) => (a.format || '').localeCompare(b.format || ''));
-    } else if (sortBy === 'year') {
-      items.sort((a, b) => {
-        const yearA = a.movies?.release_date || a.shows?.first_air_date || '0000';
-        const yearB = b.movies?.release_date || b.shows?.first_air_date || '0000';
-        return yearB.localeCompare(yearA);
-      });
+  const filterAndSortItems = (items: any[]) => {
+    let result = [...(items || [])];
+
+    if (searchQuery) {
+       const q = searchQuery.toLowerCase();
+       result = result.filter(item => 
+         item.movies?.title?.toLowerCase().includes(q) || 
+         item.shows?.name?.toLowerCase().includes(q) ||
+         item.edition?.toLowerCase().includes(q)
+       );
     }
-    return items;
-  }, [collection, sortBy]);
 
-  const stackedCollection = useMemo(() => {
-    const owned = sortedCollection.filter((i: any) => i.status === 'owned');
-    const stacks: Record<string, any[]> = {};
-    owned.forEach(item => {
-      const key = item.movies ? `movie-${item.movie_id}` : `show-${item.show_id}-${item.season_number || 1}`;
-      if (!stacks[key]) stacks[key] = [];
-      stacks[key].push(item);
+    result.sort((a, b) => {
+      if (sortBy === 'name') {
+        const titleA = (a.movies?.title || a.shows?.name || '').toLowerCase();
+        const titleB = (b.movies?.title || b.shows?.name || '').toLowerCase();
+        return titleA.localeCompare(titleB);
+      }
+      if (sortBy === 'year') {
+        const yearA = parseInt((a.movies?.release_date || a.shows?.first_air_date || '0').slice(0, 4));
+        const yearB = parseInt((b.movies?.release_date || b.shows?.first_air_date || '0').slice(0, 4));
+        return yearB - yearA;
+      }
+      if (sortBy === 'format') {
+        return (a.format || '').localeCompare(b.format || '');
+      }
+      return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
     });
-    return Object.values(stacks);
-  }, [sortedCollection]);
 
-  const stackedWishlist = useMemo(() => {
-    const wishlist = sortedCollection.filter((i: any) => i.status === 'wishlist');
-    const stacks: Record<string, any[]> = {};
-    wishlist.forEach(item => {
-      const key = item.movies ? `movie-${item.movie_id}` : `show-${item.show_id}-${item.season_number || 1}`;
-      if (!stacks[key]) stacks[key] = [];
-      stacks[key].push(item);
+    return result;
+  };
+
+  const stackItems = (items: any[]) => {
+    const sorted = filterAndSortItems(items);
+    const stacks: any[][] = [];
+    const seen = new Set();
+
+    sorted.forEach((item: any) => {
+      const itemId = item.movie_id || item.show_id;
+      if (seen.has(itemId)) return;
+      
+      const itemGroup = sorted.filter((i: any) => (i.movie_id || i.show_id) === itemId);
+      stacks.push(itemGroup);
+      seen.add(itemId);
     });
-    return Object.values(stacks);
-  }, [sortedCollection]);
+
+    return stacks;
+  };
+
+  const grails = filterAndSortItems(collection?.filter((item: any) => item.is_grail) || []);
+  const stackedCollection = stackItems(collection?.filter((item: any) => item.status === 'owned') || []);
+  const stackedWishlist = stackItems(collection?.filter((item: any) => item.status === 'wishlist') || []);
 
   const toggleFollowMutation = useToggleFollow(currentUserId);
   const isFollowing = currentUserId && followers?.some((f: any) => f.follower_id === currentUserId);
@@ -93,9 +111,8 @@ export default function UserProfileScreen() {
     );
   }
 
-  const grails = collection?.filter((item: any) => item.is_grail) || [];
   const totalItems = collection?.length || 0;
-  const totalGrails = grails.length;
+  const totalGrails = collection?.filter((i: any) => i.is_grail).length || 0;
   const uniqueFormats = new Set(collection?.map((i: any) => i.format)).size || 0;
 
   return (
@@ -103,7 +120,6 @@ export default function UserProfileScreen() {
       <StatusBar style="light" />
       <Stack.Screen options={{ headerShown: false }} />
       
-      {/* Header Area */}
       <View className="pt-16 pb-4 bg-black border-b border-neutral-800 flex-row items-center justify-between px-4">
         <Pressable onPress={() => router.back()} className="p-2">
           <Ionicons name="arrow-back" size={24} color="#f59e0b" />
@@ -115,7 +131,6 @@ export default function UserProfileScreen() {
       </View>
 
       <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 60 }}>
-        {/* User Card */}
         <View className="items-center mt-6 px-4">
           <MemberCard
              userId={id}
@@ -132,7 +147,6 @@ export default function UserProfileScreen() {
             </Text>
           )}
 
-          {/* Social Stats */}
           <View className="flex-row items-center gap-8 mt-6">
             <View className="items-center">
               <Text className="text-white font-bold text-lg font-mono">{totalItems}</Text>
@@ -148,59 +162,87 @@ export default function UserProfileScreen() {
             </View>
           </View>
 
-          {/* Follow Button */}
           {!isOwnProfile && (
-            <View className="flex-row gap-3 mt-6">
+            <View className="flex-row gap-3 mt-8 px-6 w-full max-w-sm">
               <Pressable 
                 onPress={handleToggleFollow}
                 disabled={toggleFollowMutation.isPending}
-                className={`flex-1 py-3 rounded-full border-2 items-center ${isFollowing ? 'border-neutral-700 bg-transparent' : 'border-amber-500 bg-amber-500/10'}`}
+                className={`flex-1 flex-row h-12 rounded-xl border-2 items-center justify-center ${isFollowing ? 'border-neutral-800 bg-neutral-900/40' : 'border-amber-500 bg-amber-500/10'}`}
               >
-                <Text className={`font-mono font-bold text-sm ${isFollowing ? 'text-neutral-400' : 'text-amber-500'}`}>
+                <Ionicons 
+                  name={isFollowing ? "person-remove-outline" : "person-add-outline"} 
+                  size={16} 
+                  color={isFollowing ? "#525252" : "#f59e0b"} 
+                  className="mr-2"
+                />
+                <Text className={`font-mono font-bold text-xs tracking-tighter ${isFollowing ? 'text-neutral-500' : 'text-amber-500'}`}>
                   {isFollowing ? 'UNFOLLOW' : 'FOLLOW'}
                 </Text>
               </Pressable>
               
               <Pressable 
                 onPress={() => router.push(`/(tabs)/profile/chat/${id}`)}
-                className="flex-1 py-3 rounded-full border-2 border-neutral-700 bg-neutral-900 items-center justify-center flex-row gap-2"
+                className="flex-1 flex-row h-12 rounded-xl border-2 border-neutral-800 bg-neutral-900 items-center justify-center gap-2"
               >
-                <Ionicons name="chatbubble-ellipses-outline" size={16} color="#f59e0b" />
-                <Text className="font-mono font-bold text-sm text-amber-500">MESSAGE</Text>
+                <Ionicons name="chatbubbles-outline" size={16} color="#f59e0b" />
+                <Text className="font-mono font-bold text-xs tracking-tighter text-amber-500">MESSAGE</Text>
               </Pressable>
             </View>
           )}
         </View>
 
-        {/* Profile Tabs Config */}
         <View className="flex-row border-b border-neutral-800 mt-8 mb-4">
-          <Pressable 
-            onPress={() => setActiveTab('grails')} 
-            className={`flex-1 py-3 items-center border-b-2 ${activeTab === 'grails' ? 'border-amber-500' : 'border-transparent'}`}
-          >
+          <Pressable onPress={() => setActiveTab('grails')} className={`flex-1 py-3 items-center border-b-2 ${activeTab === 'grails' ? 'border-amber-500' : 'border-transparent'}`}>
             <Text className={`font-mono text-[10px] font-bold ${activeTab === 'grails' ? 'text-amber-500' : 'text-neutral-500'}`}>GRAILS</Text>
           </Pressable>
-          <Pressable 
-            onPress={() => setActiveTab('collection')} 
-            className={`flex-1 py-3 items-center border-b-2 ${activeTab === 'collection' ? 'border-white' : 'border-transparent'}`}
-          >
+          <Pressable onPress={() => setActiveTab('collection')} className={`flex-1 py-3 items-center border-b-2 ${activeTab === 'collection' ? 'border-white' : 'border-transparent'}`}>
             <Text className={`font-mono text-[10px] font-bold ${activeTab === 'collection' ? 'text-white' : 'text-neutral-500'}`}>COLLECTION</Text>
           </Pressable>
-          <Pressable 
-            onPress={() => setActiveTab('wishlist')} 
-            className={`flex-1 py-3 items-center border-b-2 ${activeTab === 'wishlist' ? 'border-pink-500' : 'border-transparent'}`}
-          >
+          <Pressable onPress={() => setActiveTab('wishlist')} className={`flex-1 py-3 items-center border-b-2 ${activeTab === 'wishlist' ? 'border-pink-500' : 'border-transparent'}`}>
             <Text className={`font-mono text-[10px] font-bold ${activeTab === 'wishlist' ? 'text-pink-500' : 'text-neutral-500'}`}>WISHLIST</Text>
           </Pressable>
-          <Pressable 
-            onPress={() => setActiveTab('analytics')} 
-            className={`flex-1 py-3 items-center border-b-2 ${activeTab === 'analytics' ? 'border-blue-500' : 'border-transparent'}`}
-          >
+          <Pressable onPress={() => setActiveTab('analytics')} className={`flex-1 py-3 items-center border-b-2 ${activeTab === 'analytics' ? 'border-blue-500' : 'border-transparent'}`}>
             <Text className={`font-mono text-[10px] font-bold ${activeTab === 'analytics' ? 'text-blue-500' : 'text-neutral-500'}`}>STATS</Text>
           </Pressable>
         </View>
 
-        {/* Tab View Logic */}
+        {activeTab !== 'analytics' && (
+          <View className="px-4">
+            <View className="flex-row items-center bg-neutral-900 rounded-lg p-2 px-3 border border-neutral-800 mb-4">
+              <Ionicons name="search" size={16} color="#737373" />
+              <TextInput
+                className="flex-1 text-white ml-2 font-mono text-sm"
+                placeholder={`Search ${activeTab}...`}
+                placeholderTextColor="#525252"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+              {searchQuery.length > 0 && (
+                <Pressable onPress={() => setSearchQuery('')}>
+                  <Ionicons name="close-circle" size={16} color="#525252" />
+                </Pressable>
+              )}
+            </View>
+
+            <View className="flex-row items-center justify-between mb-6">
+              <Text className="text-neutral-600 font-mono text-[9px] uppercase font-bold tracking-widest">Sort Protocol</Text>
+              <View className="flex-row gap-2">
+                {(['added', 'name', 'format', 'year'] as SortOption[]).map((opt) => (
+                  <Pressable 
+                    key={opt}
+                    onPress={() => setSortBy(opt)} 
+                    className={`px-2 py-1 rounded border ${sortBy === opt ? 'bg-amber-500 border-amber-600' : 'bg-neutral-900 border-neutral-800'}`}
+                  >
+                    <Text className={`font-mono text-[8px] font-bold ${sortBy === opt ? 'text-black' : 'text-neutral-500'}`}>
+                      {opt.toUpperCase()}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          </View>
+        )}
+
         <View className="px-4">
           {collectionLoading ? (
             <ActivityIndicator color="#f59e0b" className="mt-8" />
@@ -226,16 +268,9 @@ export default function UserProfileScreen() {
                             className="w-[31%] mb-4"
                           >
                             <View className="relative">
-                              <Image 
-                                source={{ uri: posterUrl as string }} 
-                                className="w-full aspect-[2/3] rounded border border-neutral-800"
-                              />
+                              <Image source={{ uri: posterUrl as string }} className="w-full aspect-[2/3] rounded border border-neutral-800" />
                               {formatSource && (
-                                <Image 
-                                  source={formatSource} 
-                                  style={{ position: 'absolute', bottom: 4, right: 4, width: 24, height: 14 }} 
-                                  contentFit="contain" 
-                                />
+                                <Image source={formatSource} style={{ position: 'absolute', bottom: 4, right: 4, width: 24, height: 14 }} contentFit="contain" />
                               )}
                             </View>
                             <Text className="text-white font-mono text-[9px] mt-1 text-center" numberOfLines={1}>
@@ -255,23 +290,6 @@ export default function UserProfileScreen() {
 
               {activeTab === 'collection' && (
                 <View>
-                  {/* Sort Selection */}
-                  <View className="flex-row items-center justify-end mb-4 gap-4">
-                    <Text className="text-neutral-500 font-mono text-[10px] uppercase font-bold">Sort By:</Text>
-                    <Pressable onPress={() => setSortBy('added')} className={`px-2 py-1 rounded ${sortBy === 'added' ? 'bg-amber-500' : 'bg-neutral-800'}`}>
-                      <Text className={`font-mono text-[9px] font-bold ${sortBy === 'added' ? 'text-black' : 'text-neutral-400'}`}>RECENT</Text>
-                    </Pressable>
-                    <Pressable onPress={() => setSortBy('name')} className={`px-2 py-1 rounded ${sortBy === 'name' ? 'bg-amber-500' : 'bg-neutral-800'}`}>
-                      <Text className={`font-mono text-[9px] font-bold ${sortBy === 'name' ? 'text-black' : 'text-neutral-400'}`}>A-Z</Text>
-                    </Pressable>
-                    <Pressable onPress={() => setSortBy('format')} className={`px-2 py-1 rounded ${sortBy === 'format' ? 'bg-amber-500' : 'bg-neutral-800'}`}>
-                      <Text className={`font-mono text-[9px] font-bold ${sortBy === 'format' ? 'text-black' : 'text-neutral-400'}`}>FORMAT</Text>
-                    </Pressable>
-                    <Pressable onPress={() => setSortBy('year')} className={`px-2 py-1 rounded ${sortBy === 'year' ? 'bg-amber-500' : 'bg-neutral-800'}`}>
-                      <Text className={`font-mono text-[9px] font-bold ${sortBy === 'year' ? 'text-black' : 'text-neutral-400'}`}>YEAR</Text>
-                    </Pressable>
-                  </View>
-
                   {stackedCollection.length > 0 ? (
                     <View className="flex-row flex-wrap">
                       {stackedCollection.map((stack: any) => (
