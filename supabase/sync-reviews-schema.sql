@@ -34,6 +34,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS on_bulletin_post_sync ON public.bulletin_posts;
+
 CREATE TRIGGER on_bulletin_post_sync
   AFTER INSERT OR UPDATE ON public.bulletin_posts
   FOR EACH ROW
