@@ -18,7 +18,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useSound } from '@/context/SoundContext';
 import { useThriftMode } from '@/context/ThriftModeContext';
 import { useAddToCollection, useCollection, useDeleteCollectionItem, useUpdateCollectionItem } from '@/hooks/useCollection';
-import { useCreatePost } from '@/hooks/useSocial';
+import { useCreatePost, useItemComments, useCreateComment } from '@/hooks/useSocial';
 import { deleteFromCloudinary, uploadToCloudinary } from '@/lib/cloudinary';
 import { getCustomLists } from '@/lib/collection-utils';
 
@@ -41,7 +41,7 @@ const FORMAT_COLORS: Record<string, string> = {
 };
 
 export default function MovieDetailScreen() {
-    const { id, fromStack } = useLocalSearchParams<{ id: string; fromStack?: string }>();
+    const { id, fromStack, ownerId } = useLocalSearchParams<{ id: string; fromStack?: string; ownerId?: string }>();
     const router = useRouter();
     const { userId } = useAuth();
     const { thriftMode } = useThriftMode();
@@ -94,7 +94,10 @@ export default function MovieDetailScreen() {
     // We use the main collection query and filter. 
     // In a generic app we might want a specific query for just this movie, 
     // but since we load the whole collection on home, this is cached and fast.
-    const { data: collection, refetch } = useCollection(userId);
+    const targetUserId = ownerId && typeof ownerId === 'string' ? ownerId : userId;
+    const isReadOnly = !!ownerId && ownerId !== userId;
+    
+    const { data: collection, refetch } = useCollection(targetUserId);
     const updateMutation = useUpdateCollectionItem(userId);
     const deleteMutation = useDeleteCollectionItem(userId);
     const addMutation = useAddToCollection(userId);
@@ -103,6 +106,22 @@ export default function MovieDetailScreen() {
 
     const movieItems = collection?.filter((item: any) => item.movie_id === movieId) ?? [];
     const movie = movieItems[0]?.movies;
+
+    // Comments State
+    const commentActiveItem = movieItems[0];
+    const { data: comments, isLoading: commentsLoading } = useItemComments(commentActiveItem?.id);
+    const createCommentMutation = useCreateComment(userId);
+    const [commentText, setCommentText] = useState('');
+    
+    const handleAddComment = () => {
+        if (!commentText.trim() || !commentActiveItem?.id) return;
+        createCommentMutation.mutate({
+            collectionItemId: commentActiveItem.id,
+            content: commentText
+        }, {
+            onSuccess: () => setCommentText('')
+        });
+    };
 
     console.log('Movie items count:', movieItems.length, 'Formats:', movieItems.map((i: any) => i.format));
 
@@ -570,7 +589,7 @@ export default function MovieDetailScreen() {
                         {/* Controls + Title Info */}
                         <View className="flex-1 ml-4 pt-1">
                             {/* Art Controls (Matching Attachment 2) */}
-                            {movieItems.length > 0 && (
+                            {movieItems.length > 0 && !isReadOnly && (
                                 <View className="flex-row items-center gap-2 mb-3 flex-wrap">
                                     <View className="flex-row items-center">
                                         <Pressable
@@ -622,49 +641,53 @@ export default function MovieDetailScreen() {
                     </View>
                     {/* Actions Bar (Full width style from attachment 2) */}
                     <View className="max-w-7xl mx-auto w-full px-4 md:px-8 flex-row mt-6 gap-2">
-                        {thriftMode ? (
-                            <Pressable
-                                onPress={toggleGrail}
-                                className={`flex-1 flex-row items-center justify-center p-3 rounded-lg border ${isGrail ? 'bg-amber-500/10 border-amber-500' : 'bg-neutral-900 border-neutral-800'}`}
-                            >
-                                <Ionicons name={isGrail ? "trophy" : "trophy-outline"} size={16} color={isGrail ? "#f59e0b" : "#404040"} />
-                                <Text className={`ml-2 font-mono text-xs font-bold tracking-widest ${isGrail ? 'text-amber-500' : 'text-neutral-600'}`}>
-                                    {isGrail ? 'GRAIL' : 'MAKE GRAIL'}
-                                </Text>
-                            </Pressable>
-                        ) : (
-                            <Pressable
-                                onPress={async () => {
-                                    const isOnDisplay = movieItems.some((i: any) => i.is_on_display);
-                                    await Promise.all(movieItems.map((item: any) =>
-                                        updateMutation.mutateAsync({ itemId: item.id, updates: { is_on_display: !isOnDisplay } })
-                                    ));
-                                    playSound('click');
-                                }}
-                                className={`flex-1 flex-row items-center justify-center p-3 rounded-lg border ${movieItems.some((i: any) => i.is_on_display) ? 'bg-indigo-500/10 border-indigo-500' : 'bg-neutral-900 border-neutral-800'}`}
-                            >
-                                <Ionicons name={movieItems.some((i: any) => i.is_on_display) ? "star" : "star-outline"} size={16} color={movieItems.some((i: any) => i.is_on_display) ? "#6366f1" : "#404040"} />
-                                <Text className={`ml-2 font-mono text-xs font-bold tracking-widest ${movieItems.some((i: any) => i.is_on_display) ? 'text-indigo-500' : 'text-neutral-600'}`}>
-                                    {movieItems.some((i: any) => i.is_on_display) ? 'STAFF PICK' : 'MAKE STAFF PICK'}
-                                </Text>
-                            </Pressable>
-                        )}
+                        {!isReadOnly && (
+                            <>
+                                {thriftMode ? (
+                                    <Pressable
+                                        onPress={toggleGrail}
+                                        className={`flex-1 flex-row items-center justify-center p-3 rounded-lg border ${isGrail ? 'bg-amber-500/10 border-amber-500' : 'bg-neutral-900 border-neutral-800'}`}
+                                    >
+                                        <Ionicons name={isGrail ? "trophy" : "trophy-outline"} size={16} color={isGrail ? "#f59e0b" : "#404040"} />
+                                        <Text className={`ml-2 font-mono text-xs font-bold tracking-widest ${isGrail ? 'text-amber-500' : 'text-neutral-600'}`}>
+                                            {isGrail ? 'GRAIL' : 'MAKE GRAIL'}
+                                        </Text>
+                                    </Pressable>
+                                ) : (
+                                    <Pressable
+                                        onPress={async () => {
+                                            const isOnDisplay = movieItems.some((i: any) => i.is_on_display);
+                                            await Promise.all(movieItems.map((item: any) =>
+                                                updateMutation.mutateAsync({ itemId: item.id, updates: { is_on_display: !isOnDisplay } })
+                                            ));
+                                            playSound('click');
+                                        }}
+                                        className={`flex-1 flex-row items-center justify-center p-3 rounded-lg border ${movieItems.some((i: any) => i.is_on_display) ? 'bg-indigo-500/10 border-indigo-500' : 'bg-neutral-900 border-neutral-800'}`}
+                                    >
+                                        <Ionicons name={movieItems.some((i: any) => i.is_on_display) ? "star" : "star-outline"} size={16} color={movieItems.some((i: any) => i.is_on_display) ? "#6366f1" : "#404040"} />
+                                        <Text className={`ml-2 font-mono text-xs font-bold tracking-widest ${movieItems.some((i: any) => i.is_on_display) ? 'text-indigo-500' : 'text-neutral-600'}`}>
+                                            {movieItems.some((i: any) => i.is_on_display) ? 'STAFF PICK' : 'MAKE STAFF PICK'}
+                                        </Text>
+                                    </Pressable>
+                                )}
 
-                        <Pressable
-                            onPress={deleteMovie}
-                            className="bg-red-900/10 px-4 rounded-lg border border-red-900/40 items-center justify-center"
-                        >
-                            <Ionicons name="trash-outline" size={20} color="#ef4444" />
-                        </Pressable>
+                                <Pressable
+                                    onPress={deleteMovie}
+                                    className="bg-red-900/10 px-4 rounded-lg border border-red-900/40 items-center justify-center"
+                                >
+                                    <Ionicons name="trash-outline" size={20} color="#ef4444" />
+                                </Pressable>
 
-                        {/* PIN TO BULLETIN BOARD */}
-                        {!thriftMode && (
-                            <Pressable 
-                                onPress={() => setShowPostModal(true)}
-                                className="bg-amber-600/10 px-4 rounded-lg border border-amber-600/40 items-center justify-center"
-                            >
-                                <Ionicons name="pin" size={20} color="#f59e0b" />
-                            </Pressable>
+                                {/* PIN TO BULLETIN BOARD */}
+                                {!thriftMode && (
+                                    <Pressable 
+                                        onPress={() => setShowPostModal(true)}
+                                        className="bg-amber-600/10 px-4 rounded-lg border border-amber-600/40 items-center justify-center"
+                                    >
+                                        <Ionicons name="pin" size={20} color="#f59e0b" />
+                                    </Pressable>
+                                )}
+                            </>
                         )}
                     </View>
 
@@ -717,7 +740,9 @@ export default function MovieDetailScreen() {
                                 return (
                                     <Pressable
                                         key={star}
+                                        disabled={isReadOnly}
                                         onPress={async () => {
+                                            if (isReadOnly) return;
                                             playSound('click');
                                             // Update all formats? Or just the first one?
                                             // Ideally rating is per movie in this app model
@@ -822,7 +847,7 @@ export default function MovieDetailScreen() {
 
                     {/* Curated Stacks Section */}
                     {
-                        ownedFormats.length > 0 && (
+                        ownedFormats.length > 0 && !isReadOnly && (
                             <View className="mt-8">
                                 <Text className="text-white font-bold mb-3">Curated Stacks</Text>
                                 <View className="flex-row flex-wrap gap-2 mb-2">
@@ -914,27 +939,29 @@ export default function MovieDetailScreen() {
                                                     <Text className="text-neutral-400 font-mono text-sm flex-1" numberOfLines={2}>({item.edition})</Text>
                                                 )}
                                             </View>
-                                            <Pressable
-                                                onPress={async () => {
-                                                    await deleteMutation.mutateAsync(item.id);
-                                                    playSound('click');
-                                                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                                                    
-                                                    // Auto-pop if that was the last format we owned!
-                                                    if (movieItems.length <= 1) {
-                                                        if (fromStack) {
-                                                            router.replace(`/stack/${fromStack}` as any);
-                                                        } else if (router.canGoBack()) {
-                                                            router.back();
-                                                        } else {
-                                                            router.replace('/(tabs)/home' as any);
+                                            {!isReadOnly && (
+                                                <Pressable
+                                                    onPress={async () => {
+                                                        await deleteMutation.mutateAsync(item.id);
+                                                        playSound('click');
+                                                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                                                        
+                                                        // Auto-pop if that was the last format we owned!
+                                                        if (movieItems.length <= 1) {
+                                                            if (fromStack) {
+                                                                router.replace(`/stack/${fromStack}` as any);
+                                                            } else if (router.canGoBack()) {
+                                                                router.back();
+                                                            } else {
+                                                                router.replace('/(tabs)/home' as any);
+                                                            }
                                                         }
-                                                    }
-                                                }}
-                                                className="bg-red-900/20 px-3 py-1 rounded border border-red-900/50"
-                                            >
-                                                <Text className="text-red-400 font-mono text-xs">Remove</Text>
-                                            </Pressable>
+                                                    }}
+                                                    className="bg-red-900/20 px-3 py-1 rounded border border-red-900/50"
+                                                >
+                                                    <Text className="text-red-400 font-mono text-xs">Remove</Text>
+                                                </Pressable>
+                                            )}
                                         </View>
                                     ))}
                                 </View>
@@ -944,8 +971,9 @@ export default function MovieDetailScreen() {
 
 
                     {/* Add Format Section */}
-                    <View className="mt-8">
-                        <Text className="text-white font-bold mb-3">Add Format</Text>
+                    {!isReadOnly && (
+                        <View className="mt-8">
+                            <Text className="text-white font-bold mb-3">Add Format</Text>
                         <View className="flex-row flex-wrap gap-2">
                             {FORMATS.map(fmt => {
                                 const isOwned = ownedFormats.includes(fmt);
@@ -960,9 +988,69 @@ export default function MovieDetailScreen() {
                                         <Text className="text-white font-mono font-bold">
                                             {fmt === 'BluRay' ? 'Blu-ray' : fmt}
                                         </Text>
-                                    </Pressable>
+                                </Pressable>
                                 );
                             })}
+                        </View>
+                    </View>
+                )}
+
+                {/* Comments Section */}
+                    <View className="mt-12 bg-neutral-900 border border-neutral-800 rounded-xl p-4 shadow-xl mb-12">
+                        <Text className="text-amber-500 font-bold text-lg mb-4 font-mono uppercase tracking-widest" style={{ fontFamily: 'VCR_OSD_MONO' }}>
+                            Discussion
+                        </Text>
+                        
+                        {commentsLoading ? (
+                            <ActivityIndicator color="#f59e0b" />
+                        ) : comments && comments.length > 0 ? (
+                            comments.map((comment: any) => (
+                                <View key={comment.id} className="flex-row mb-4 bg-black/40 p-3 rounded-lg border border-neutral-800">
+                                    <View className="w-8 h-8 rounded-full overflow-hidden bg-neutral-800 items-center justify-center mr-3 border border-neutral-700">
+                                        {comment.profiles?.avatar_url ? (
+                                            <Image source={{ uri: comment.profiles.avatar_url }} className="w-full h-full" />
+                                        ) : (
+                                            <Ionicons name="person" size={16} color="#737373" />
+                                        )}
+                                    </View>
+                                    <View className="flex-1">
+                                        <View className="flex-row justify-between items-center mb-1">
+                                            <Text className="text-white font-bold font-mono text-xs">
+                                                {comment.profiles?.username || 'Anonymous'}
+                                            </Text>
+                                            <Text className="text-neutral-500 text-[10px] font-mono">
+                                                {new Date(comment.created_at).toLocaleDateString()}
+                                            </Text>
+                                        </View>
+                                        <Text className="text-neutral-300 font-mono text-sm leading-5">
+                                            {comment.content}
+                                        </Text>
+                                    </View>
+                                </View>
+                            ))
+                        ) : (
+                            <Text className="text-neutral-500 font-mono text-center mb-4 text-sm mt-2">
+                                No comments structurally retained on this track. Be the first to catalog!
+                            </Text>
+                        )}
+                        
+                        {/* New Comment Input */}
+                        <View className="mt-2 flex-row flex-end">
+                            <TextInput
+                                className="flex-1 bg-neutral-950 border border-neutral-800 rounded-lg p-3 text-white font-mono min-h-[44px]"
+                                placeholder="Write a comment..."
+                                placeholderTextColor="#525252"
+                                value={commentText}
+                                onChangeText={setCommentText}
+                                multiline
+                            />
+                            <Pressable 
+                                onPress={handleAddComment}
+                                disabled={createCommentMutation.isPending || !commentText.trim()}
+                                className={`ml-2 bg-amber-600 items-center justify-center px-4 rounded-lg flex-row shadow-lg shadow-amber-900/20 ${!commentText.trim() ? 'opacity-50' : ''}`}
+                            >
+                                <Ionicons name="send" size={16} color="#fff" />
+                            </Pressable>
                         </View>
                     </View>
                 </View>

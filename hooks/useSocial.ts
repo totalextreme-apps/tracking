@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import type { Profile, Follow, BulletinPostWithMedia } from '@/types/database';
+import type { Profile, Follow, BulletinPostWithMedia, ItemCommentWithProfile } from '@/types/database';
 
 // 1. Fetch Profile
 export const useProfile = (userId?: string) => {
@@ -200,6 +200,55 @@ export const useCreatePost = (userId?: string) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bulletin', userId] });
+    },
+  });
+};
+
+// 8. Fetch Item Comments
+export const useItemComments = (collectionItemId?: string) => {
+  return useQuery({
+    queryKey: ['item-comments', collectionItemId],
+    queryFn: async () => {
+      if (!collectionItemId) return [];
+      const { data, error } = await supabase
+        .from('item_comments')
+        .select(`
+          *,
+          profiles(*)
+        `)
+        .eq('collection_item_id', collectionItemId)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      return data as ItemCommentWithProfile[];
+    },
+    enabled: !!collectionItemId,
+  });
+};
+
+// 9. Create Item Comment
+export const useCreateComment = (userId?: string) => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ collectionItemId, content }: { collectionItemId: string; content: string }) => {
+      if (!userId) throw new Error('Not logged in');
+      
+      const { error, data } = await supabase
+        .from('item_comments')
+        .insert({
+          user_id: userId,
+          collection_item_id: collectionItemId,
+          content
+        } as any)
+        .select()
+        .single() as any;
+        
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_, { collectionItemId }) => {
+      queryClient.invalidateQueries({ queryKey: ['item-comments', collectionItemId] });
     },
   });
 };

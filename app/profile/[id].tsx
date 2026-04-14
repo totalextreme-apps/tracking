@@ -18,6 +18,8 @@ export default function UserProfileScreen() {
   const { data: following } = useFollowing(id);
   const { data: collection, isLoading: collectionLoading } = useCollection(id);
   
+  const [activeTab, setActiveTab] = React.useState<'grails' | 'collection' | 'wishlist'>('grails');
+
   const toggleFollowMutation = useToggleFollow(currentUserId);
   const isFollowing = currentUserId && followers?.some((f: any) => f.follower_id === currentUserId);
   const isOwnProfile = currentUserId === id;
@@ -115,34 +117,123 @@ export default function UserProfileScreen() {
           )}
         </View>
 
-        {/* User's Grails showcase */}
-        <View className="mt-10 px-4">
-          <Text className="text-neutral-500 font-bold font-mono tracking-widest mb-4">
-            SHOWCASE GRAILS
-          </Text>
-          
+        {/* Profile Tabs Config */}
+        <View className="flex-row border-b border-neutral-800 mt-8 mb-4">
+          <Pressable 
+            onPress={() => setActiveTab('grails')} 
+            className={`flex-1 py-3 items-center border-b-2 ${activeTab === 'grails' ? 'border-amber-500' : 'border-transparent'}`}
+          >
+            <Text className={`font-mono text-xs font-bold ${activeTab === 'grails' ? 'text-amber-500' : 'text-neutral-500'}`}>GRAILS</Text>
+          </Pressable>
+          <Pressable 
+            onPress={() => setActiveTab('collection')} 
+            className={`flex-1 py-3 items-center border-b-2 ${activeTab === 'collection' ? 'border-white' : 'border-transparent'}`}
+          >
+            <Text className={`font-mono text-xs font-bold ${activeTab === 'collection' ? 'text-white' : 'text-neutral-500'}`}>COLLECTION</Text>
+          </Pressable>
+          <Pressable 
+            onPress={() => setActiveTab('wishlist')} 
+            className={`flex-1 py-3 items-center border-b-2 ${activeTab === 'wishlist' ? 'border-pink-500' : 'border-transparent'}`}
+          >
+            <Text className={`font-mono text-xs font-bold ${activeTab === 'wishlist' ? 'text-pink-500' : 'text-neutral-500'}`}>WISHLIST</Text>
+          </Pressable>
+        </View>
+
+        {/* Tab View Logic */}
+        <View className="px-4">
           {collectionLoading ? (
-            <ActivityIndicator color="#f59e0b" />
-          ) : grails.length > 0 ? (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="pl-1 py-2">
-              {grails.slice(0, 5).map((item: any) => {
-                const posterUrl = getPosterUrl(item.movies?.poster_path || item.shows?.poster_path);
-                return (
-                  <View key={item.id} className="mr-4 w-28">
-                    <Image 
-                      source={{ uri: posterUrl as string }} 
-                      className="w-28 h-40 rounded border border-neutral-800"
-                    />
-                    <Text className="text-white font-mono text-xs mt-2 numberOfLines={1}">
-                      {item.movies?.title || item.shows?.name}
-                    </Text>
-                  </View>
-                );
-              })}
-            </ScrollView>
+            <ActivityIndicator color="#f59e0b" className="mt-8" />
           ) : (
-            <View className="bg-neutral-900 border border-neutral-800 rounded-lg p-6 items-center border-dashed">
-              <Text className="text-neutral-500 font-mono text-center">No Grails on display.</Text>
+            <View>
+              {activeTab === 'grails' && (
+                <View>
+                  {grails.length > 0 ? (
+                    <View className="flex-row flex-wrap justify-between">
+                      {grails.map((item: any) => {
+                        const posterUrl = getPosterUrl(item.movies?.poster_path || item.shows?.poster_path);
+                        const isMovie = !!item.movies;
+                        return (
+                          <Pressable 
+                            key={item.id} 
+                            onPress={() => router.push({ pathname: isMovie ? `/movie/${item.movie_id}` as any : `/show/${item.show_id}` as any, params: { ownerId: id } })}
+                            className="w-[31%] mb-4"
+                          >
+                            <Image 
+                              source={{ uri: posterUrl as string }} 
+                              className="w-full aspect-[2/3] rounded border border-neutral-800"
+                            />
+                            <Text className="text-white font-mono text-[9px] mt-1 text-center" numberOfLines={1}>
+                              {item.movies?.title || item.shows?.name}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  ) : (
+                    <View className="bg-neutral-900 border border-neutral-800 rounded-lg p-6 items-center border-dashed">
+                      <Text className="text-neutral-500 font-mono text-center">No Grails on display.</Text>
+                    </View>
+                  )}
+                </View>
+              )}
+
+              {activeTab === 'collection' && (
+                <View>
+                  {collection?.filter((i: any) => i.status === 'owned').length! > 0 ? (
+                    <View className="flex-row flex-wrap justify-between">
+                      {collection?.filter((i: any) => i.status === 'owned').map((item: any) => {
+                        const posterUrl = getPosterUrl(item.movies?.poster_path || item.shows?.poster_path);
+                        const isMovie = !!item.movies;
+                        return (
+                          <Pressable 
+                            key={item.id} 
+                            onPress={() => router.push({ pathname: isMovie ? `/movie/${item.movie_id}` as any : `/show/${item.show_id}` as any, params: { ownerId: id } })}
+                            className="w-[23%] mb-3"
+                          >
+                            <Image 
+                              source={{ uri: posterUrl as string }} 
+                              className="w-full aspect-[2/3] rounded border border-neutral-800"
+                            />
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  ) : (
+                    <View className="p-6 items-center border-dashed border border-neutral-800 rounded-lg">
+                      <Text className="text-neutral-500 font-mono text-center">Collection is empty.</Text>
+                    </View>
+                  )}
+                </View>
+              )}
+
+              {activeTab === 'wishlist' && (
+               <View>
+                  {collection?.filter((i: any) => i.status === 'wishlist').length! > 0 ? (
+                    <View className="flex-row flex-wrap justify-between">
+                      {collection?.filter((i: any) => i.status === 'wishlist').map((item: any) => {
+                        const posterUrl = getPosterUrl(item.movies?.poster_path || item.shows?.poster_path);
+                        const isMovie = !!item.movies;
+                        return (
+                          <Pressable 
+                            key={item.id} 
+                            onPress={() => router.push({ pathname: isMovie ? `/movie/${item.movie_id}` as any : `/show/${item.show_id}` as any, params: { ownerId: id } })}
+                            className="w-[23%] mb-3"
+                          >
+                            <Image 
+                              source={{ uri: posterUrl as string }} 
+                              className="w-full aspect-[2/3] rounded border border-neutral-800 opacity-60"
+                            />
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  ) : (
+                    <View className="p-6 items-center border-dashed border border-neutral-800 rounded-lg">
+                      <Text className="text-neutral-500 font-mono text-center">Wishlist is empty.</Text>
+                    </View>
+                  )}
+                </View>
+              )}
             </View>
           )}
         </View>

@@ -17,7 +17,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useSound } from '@/context/SoundContext';
 import { useThriftMode } from '@/context/ThriftModeContext';
 import { useAddToCollection, useCollection, useDeleteCollectionItem, useUpdateCollectionItem } from '@/hooks/useCollection';
-import { useCreatePost } from '@/hooks/useSocial';
+import { useCreatePost, useItemComments, useCreateComment } from '@/hooks/useSocial';
 import { deleteFromCloudinary, uploadToCloudinary } from '@/lib/cloudinary';
 import { getCustomLists } from '@/lib/collection-utils';
 
@@ -39,7 +39,7 @@ const FORMAT_COLORS: Record<string, string> = {
 };
 
 export default function ShowDetailScreen() {
-    const { id, fromStack } = useLocalSearchParams<{ id: string; fromStack?: string }>();
+    const { id, fromStack, ownerId } = useLocalSearchParams<{ id: string; fromStack?: string; ownerId?: string }>();
     const router = useRouter();
     const { userId } = useAuth();
     const { thriftMode } = useThriftMode();
@@ -89,7 +89,10 @@ export default function ShowDetailScreen() {
         });
     };
 
-    const { data: collection, refetch } = useCollection(userId);
+    const targetUserId = ownerId && typeof ownerId === 'string' ? ownerId : userId;
+    const isReadOnly = !!ownerId && ownerId !== userId;
+    
+    const { data: collection, refetch } = useCollection(targetUserId);
     const updateMutation = useUpdateCollectionItem(userId);
     const deleteMutation = useDeleteCollectionItem(userId);
     const addMutation = useAddToCollection(userId);
@@ -99,11 +102,30 @@ export default function ShowDetailScreen() {
     const { season: seasonQuery } = useLocalSearchParams<{ season?: string }>();
     const seasonNumber = seasonQuery && seasonQuery !== 'undefined' && seasonQuery !== 'null' ? parseInt(seasonQuery, 10) : 1;
 
+    const createCommentMutation = useCreateComment(userId);
+    const [commentText, setCommentText] = useState('');
+    
+
+
     // Find items matching this show and season locally first
     const showItems = collection?.filter((item: any) => {
         const itemShowId = item.show_id;
         return (itemShowId === showIdNum || (item.shows?.id === showIdNum));
     }).filter((item: any) => seasonNumber === undefined || item.season_number === seasonNumber) ?? [];
+
+    const commentActiveItem = showItems[0];
+    const { data: comments, isLoading: commentsLoading } = useItemComments(commentActiveItem?.id);
+    
+    // Create comment handler
+    const handleAddComment = () => {
+        if (!commentText.trim() || !commentActiveItem?.id) return;
+        createCommentMutation.mutate({
+            collectionItemId: commentActiveItem.id,
+            content: commentText
+        }, {
+            onSuccess: () => setCommentText('')
+        });
+    };
 
     const showFromDb = showItems[0]?.shows;
 
@@ -473,7 +495,7 @@ export default function ShowDetailScreen() {
                                 </Text>
                             </Pressable>
                         )}
-                        {showItems.length > 0 && (
+                        {showItems.length > 0 && !isReadOnly && (
                             <>
                                 <Pressable onPress={deleteShow} className="bg-red-900/10 px-4 rounded-lg border border-red-900/40 items-center justify-center">
                                     <Ionicons name="trash-outline" size={20} color="#ef4444" />
@@ -517,7 +539,7 @@ export default function ShowDetailScreen() {
                         <Text className="text-neutral-400 leading-6">{displayShow.overview || "No overview available."}</Text>
                     </View>
 
-                    {ownedFormats.length > 0 && (
+                    {ownedFormats.length > 0 && !isReadOnly && (
                         <View className="mt-8">
                             <Text className="text-white font-bold mb-3">Format Notes</Text>
                             {showItems.map((item: any) => (
@@ -584,8 +606,9 @@ export default function ShowDetailScreen() {
                         </View>
                     )}
 
-                    <View className="mt-8">
-                        <Text className="text-white font-bold mb-3">Curated Stacks</Text>
+                    {!isReadOnly && (
+                        <View className="mt-8">
+                            <Text className="text-white font-bold mb-3">Curated Stacks</Text>
                         <View className="flex-row flex-wrap gap-2 mb-2">
                             {getCustomLists(collection).map(listName => {
                                 const isInStack = showItems.some((i: any) => i.custom_lists?.includes(listName));
@@ -617,15 +640,77 @@ export default function ShowDetailScreen() {
                             </View>
                         )}
                     </View>
+                    )}
 
-                    <View className="mt-8">
-                        <Text className="text-white font-bold mb-3">Add Format</Text>
-                        <View className="flex-row flex-wrap gap-2">
-                            {FORMATS.map(fmt => (
-                                <Pressable key={fmt} onPress={() => { setPendingFormat(fmt); setEditionInput(''); setShowEditionModal(true); }} className={`px-4 py-2 border rounded-full ${FORMAT_COLORS[fmt] || 'bg-neutral-800'} border-neutral-700`}>
-                                    <Text className="text-white font-mono font-bold">{fmt === 'BluRay' ? 'Blu-ray' : fmt}</Text>
-                                </Pressable>
-                            ))}
+                    {!isReadOnly && (
+                        <View className="mt-8">
+                            <Text className="text-white font-bold mb-3">Add Format</Text>
+                            <View className="flex-row flex-wrap gap-2">
+                                {FORMATS.map(fmt => (
+                                    <Pressable key={fmt} onPress={() => { setPendingFormat(fmt); setEditionInput(''); setShowEditionModal(true); }} className={`px-4 py-2 border rounded-full ${FORMAT_COLORS[fmt] || 'bg-neutral-800'} border-neutral-700`}>
+                                        <Text className="text-white font-mono font-bold">{fmt === 'BluRay' ? 'Blu-ray' : fmt}</Text>
+                                    </Pressable>
+                                ))}
+                            </View>
+                        </View>
+                    )}
+                    
+                    {/* Comments Section */}
+                    <View className="mt-12 bg-neutral-900 border border-neutral-800 rounded-xl p-4 shadow-xl mb-12">
+                        <Text className="text-amber-500 font-bold text-lg mb-4 font-mono uppercase tracking-widest" style={{ fontFamily: 'VCR_OSD_MONO' }}>
+                            Discussion
+                        </Text>
+                        
+                        {commentsLoading ? (
+                            <ActivityIndicator color="#f59e0b" />
+                        ) : comments && comments.length > 0 ? (
+                            comments.map((comment: any) => (
+                                <View key={comment.id} className="flex-row mb-4 bg-black/40 p-3 rounded-lg border border-neutral-800">
+                                    <View className="w-8 h-8 rounded-full overflow-hidden bg-neutral-800 items-center justify-center mr-3 border border-neutral-700">
+                                        {comment.profiles?.avatar_url ? (
+                                            <Image source={{ uri: comment.profiles.avatar_url }} className="w-full h-full" />
+                                        ) : (
+                                            <Ionicons name="person" size={16} color="#737373" />
+                                        )}
+                                    </View>
+                                    <View className="flex-1">
+                                        <View className="flex-row justify-between items-center mb-1">
+                                            <Text className="text-white font-bold font-mono text-xs">
+                                                {comment.profiles?.username || 'Anonymous'}
+                                            </Text>
+                                            <Text className="text-neutral-500 text-[10px] font-mono">
+                                                {new Date(comment.created_at).toLocaleDateString()}
+                                            </Text>
+                                        </View>
+                                        <Text className="text-neutral-300 font-mono text-sm leading-5">
+                                            {comment.content}
+                                        </Text>
+                                    </View>
+                                </View>
+                            ))
+                        ) : (
+                            <Text className="text-neutral-500 font-mono text-center mb-4 text-sm mt-2">
+                                No comments structurally retained on this track. Be the first to catalog!
+                            </Text>
+                        )}
+                        
+                        {/* New Comment Input */}
+                        <View className="mt-2 flex-row flex-end">
+                            <TextInput
+                                className="flex-1 bg-neutral-950 border border-neutral-800 rounded-lg p-3 text-white font-mono min-h-[44px]"
+                                placeholder="Write a comment..."
+                                placeholderTextColor="#525252"
+                                value={commentText}
+                                onChangeText={setCommentText}
+                                multiline
+                            />
+                            <Pressable 
+                                onPress={handleAddComment}
+                                disabled={createCommentMutation.isPending || !commentText.trim()}
+                                className={`ml-2 bg-amber-600 items-center justify-center px-4 rounded-lg flex-row shadow-lg shadow-amber-900/20 ${!commentText.trim() ? 'opacity-50' : ''}`}
+                            >
+                                <Ionicons name="send" size={16} color="#fff" />
+                            </Pressable>
                         </View>
                     </View>
                 </View>

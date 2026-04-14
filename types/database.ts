@@ -82,6 +82,18 @@ export interface BulletinPost {
   created_at: string;
 }
 
+export interface ItemComment {
+  id: string;
+  collection_item_id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+}
+
+export interface ItemCommentWithProfile extends ItemComment {
+  profiles: Profile | null;
+}
+
 export interface BulletinPostWithMedia extends BulletinPost {
   profiles: Profile | null;
   movies: Movie | null;
@@ -129,6 +141,14 @@ export interface Database {
           created_at?: string;
         };
         Update: Partial<Omit<BulletinPost, 'id' | 'user_id'>>;
+      };
+      item_comments: {
+        Row: ItemComment;
+        Insert: Omit<ItemComment, 'id' | 'created_at'> & {
+          id?: string;
+          created_at?: string;
+        };
+        Update: Partial<Omit<ItemComment, 'id' | 'user_id' | 'collection_item_id'>>;
       };
     };
   };
