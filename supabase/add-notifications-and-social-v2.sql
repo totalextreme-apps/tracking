@@ -60,6 +60,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS on_message_created ON messages;
 CREATE TRIGGER on_message_created
   AFTER INSERT ON messages
   FOR EACH ROW
@@ -83,6 +84,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS on_item_comment_created ON item_comments;
 CREATE TRIGGER on_item_comment_created
   AFTER INSERT ON item_comments
   FOR EACH ROW
@@ -106,6 +108,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS on_post_comment_created ON post_comments;
 CREATE TRIGGER on_post_comment_created
   AFTER INSERT ON post_comments
   FOR EACH ROW
