@@ -204,6 +204,61 @@ export const useCreatePost = (userId?: string) => {
   });
 };
 
+// 7b. Update Post Mutation
+export const useUpdatePost = (userId?: string) => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ postId, content, rating, movie_id, show_id }: { 
+      postId: string;
+      content: string; 
+      rating?: number;
+      movie_id?: number;
+      show_id?: number;
+    }) => {
+      if (!userId) throw new Error('Not logged in');
+      
+      const { error, data } = await (supabase
+        .from('bulletin_posts') as any)
+        .update({
+          content,
+          rating,
+          movie_id,
+          show_id
+        })
+        .eq('id', postId);
+        
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bulletin', userId] });
+    },
+  });
+};
+
+// 7c. Delete Post Mutation
+export const useDeletePost = (userId?: string) => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (postId: string) => {
+      if (!userId) throw new Error('Not logged in');
+      
+      const { error } = await supabase
+        .from('bulletin_posts')
+        .delete()
+        .eq('id', postId)
+        .eq('user_id', userId);
+        
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bulletin', userId] });
+    },
+  });
+};
+
 // 8. Fetch Item Comments
 export const useItemComments = (collectionItemId?: string) => {
   return useQuery({

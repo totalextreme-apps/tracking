@@ -4,6 +4,8 @@ import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useProfile, useFollowers, useFollowing, useToggleFollow } from '@/hooks/useSocial';
 import { useCollection } from '@/hooks/useCollection';
 import { useAuth } from '@/context/AuthContext';
+import { MemberCard } from '@/components/MemberCard';
+import { StatsSection } from '@/components/StatsSection';
 import { Ionicons } from '@expo/vector-icons';
 import { getPosterUrl } from '@/lib/dummy-data';
 import { StatusBar } from 'expo-status-bar';
@@ -18,7 +20,7 @@ export default function UserProfileScreen() {
   const { data: following } = useFollowing(id);
   const { data: collection, isLoading: collectionLoading } = useCollection(id);
   
-  const [activeTab, setActiveTab] = React.useState<'grails' | 'collection' | 'wishlist'>('grails');
+  const [activeTab, setActiveTab] = React.useState<'grails' | 'collection' | 'wishlist' | 'analytics'>('grails');
 
   const toggleFollowMutation = useToggleFollow(currentUserId);
   const isFollowing = currentUserId && followers?.some((f: any) => f.follower_id === currentUserId);
@@ -51,6 +53,8 @@ export default function UserProfileScreen() {
 
   const grails = collection?.filter((item: any) => item.is_grail) || [];
   const totalItems = collection?.length || 0;
+  const totalGrails = grails.length;
+  const uniqueFormats = new Set(collection?.map((i: any) => i.format)).size || 0;
 
   return (
     <View className="flex-1 bg-neutral-950">
@@ -70,15 +74,14 @@ export default function UserProfileScreen() {
 
       <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 60 }}>
         {/* User Card */}
-        <View className="items-center mt-6">
-          <View className="w-24 h-24 rounded-full bg-neutral-900 border-2 border-neutral-700 items-center justify-center overflow-hidden mb-3">
-            {profile.avatar_url ? (
-               <Image source={{ uri: profile.avatar_url as string }} className="w-full h-full" />
-            ) : (
-               <Ionicons name="person" size={48} color="#525252" />
-            )}
-          </View>
-          <Text className="text-amber-500 font-bold text-2xl font-mono">
+        <View className="items-center mt-6 px-4">
+          <MemberCard
+             userId={id}
+             profile={profile}
+             onEditPress={() => console.log('Edit profile pressed')}
+             onAvatarPress={() => console.log('Avatar pressed')}
+          />
+          <Text className="text-amber-500 font-bold text-2xl font-mono mt-6">
             {profile.username || 'Anonymous User'}
           </Text>
           {profile.bio && (
@@ -123,19 +126,25 @@ export default function UserProfileScreen() {
             onPress={() => setActiveTab('grails')} 
             className={`flex-1 py-3 items-center border-b-2 ${activeTab === 'grails' ? 'border-amber-500' : 'border-transparent'}`}
           >
-            <Text className={`font-mono text-xs font-bold ${activeTab === 'grails' ? 'text-amber-500' : 'text-neutral-500'}`}>GRAILS</Text>
+            <Text className={`font-mono text-[10px] font-bold ${activeTab === 'grails' ? 'text-amber-500' : 'text-neutral-500'}`}>GRAILS</Text>
           </Pressable>
           <Pressable 
             onPress={() => setActiveTab('collection')} 
             className={`flex-1 py-3 items-center border-b-2 ${activeTab === 'collection' ? 'border-white' : 'border-transparent'}`}
           >
-            <Text className={`font-mono text-xs font-bold ${activeTab === 'collection' ? 'text-white' : 'text-neutral-500'}`}>COLLECTION</Text>
+            <Text className={`font-mono text-[10px] font-bold ${activeTab === 'collection' ? 'text-white' : 'text-neutral-500'}`}>COLLECTION</Text>
           </Pressable>
           <Pressable 
             onPress={() => setActiveTab('wishlist')} 
             className={`flex-1 py-3 items-center border-b-2 ${activeTab === 'wishlist' ? 'border-pink-500' : 'border-transparent'}`}
           >
-            <Text className={`font-mono text-xs font-bold ${activeTab === 'wishlist' ? 'text-pink-500' : 'text-neutral-500'}`}>WISHLIST</Text>
+            <Text className={`font-mono text-[10px] font-bold ${activeTab === 'wishlist' ? 'text-pink-500' : 'text-neutral-500'}`}>WISHLIST</Text>
+          </Pressable>
+          <Pressable 
+            onPress={() => setActiveTab('analytics')} 
+            className={`flex-1 py-3 items-center border-b-2 ${activeTab === 'analytics' ? 'border-blue-500' : 'border-transparent'}`}
+          >
+            <Text className={`font-mono text-[10px] font-bold ${activeTab === 'analytics' ? 'text-blue-500' : 'text-neutral-500'}`}>STATS</Text>
           </Pressable>
         </View>
 
@@ -232,6 +241,26 @@ export default function UserProfileScreen() {
                       <Text className="text-neutral-500 font-mono text-center">Wishlist is empty.</Text>
                     </View>
                   )}
+                </View>
+              )}
+
+              {activeTab === 'analytics' && (
+                <View>
+                  <View className="flex-row gap-3 mb-6">
+                    <View className="flex-1 bg-neutral-900 p-3 rounded-lg border border-neutral-800 items-center">
+                      <Text className="text-2xl font-bold text-white font-mono">{totalItems}</Text>
+                      <Text className="text-[10px] text-neutral-500 font-bold tracking-widest uppercase mt-1">Movies</Text>
+                    </View>
+                    <View className="flex-1 bg-neutral-900 p-3 rounded-lg border border-neutral-800 items-center">
+                      <Text className="text-2xl font-bold text-amber-500 font-mono">{totalGrails}</Text>
+                      <Text className="text-[10px] text-neutral-500 font-bold tracking-widest uppercase mt-1">Grails</Text>
+                    </View>
+                    <View className="flex-1 bg-neutral-900 p-3 rounded-lg border border-neutral-800 items-center">
+                      <Text className="text-2xl font-bold text-white font-mono">{uniqueFormats}</Text>
+                      <Text className="text-[10px] text-neutral-500 font-bold tracking-widest uppercase mt-1">Formats</Text>
+                    </View>
+                  </View>
+                  <StatsSection collection={collection} />
                 </View>
               )}
             </View>

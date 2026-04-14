@@ -6,6 +6,8 @@ import { Image, Platform } from 'react-native';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useSound } from '@/context/SoundContext';
 import { useThriftMode } from '@/context/ThriftModeContext';
+import { useAuth } from '@/context/AuthContext';
+import { useProfile } from '@/hooks/useProfile';
 import { View as RNView } from 'react-native';
 
 const logoSource = Platform.OS === 'web'
@@ -27,6 +29,8 @@ export default function TabLayout() {
   const colorScheme = useColorScheme();
   const { thriftMode, setThriftMode } = useThriftMode();
   const { playSound } = useSound();
+  const { userId } = useAuth();
+  const { data: profile } = useProfile(userId ?? null);
 
   const handleToggleThrift = (value: boolean) => {
     playSound('tv_off');
@@ -127,8 +131,8 @@ export default function TabLayout() {
         name="two"
         options={{
           headerShown: false,
-          title: 'Settings',
-          tabBarIcon: ({ color }) => <TabBarIcon name="cog" color={color} />,
+          title: profile?.username || 'Profile',
+          tabBarIcon: ({ color }) => <TabBarIcon name="user" color={color} />,
         }}
         listeners={{
           tabPress: () => {
@@ -174,6 +178,13 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="show/[id]"
+        options={{
+          headerShown: false,
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="profile/[id]"
         options={{
           headerShown: false,
           href: null,

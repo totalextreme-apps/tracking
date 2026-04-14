@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TextInput, Pressable, ActivityIndicator, ImageBackground, Image } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, ScrollView, TextInput, Pressable, ActivityIndicator, ImageBackground, Image, Alert } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
-import { useBulletinFeed, useSearchUsers, useCreatePost, useSuggestedUsers } from '@/hooks/useSocial';
+import { useBulletinFeed, useSearchUsers, useCreatePost, useSuggestedUsers, useUpdatePost, useDeletePost } from '@/hooks/useSocial';
 import { StatusBar } from 'expo-status-bar';
+import { searchMedia, TmdbMediaResult, getMovieById, getTvShowById } from '@/lib/tmdb';
+import { supabase } from '@/lib/supabase';
+import { ConfirmModal } from '@/components/ConfirmModal';
 
 // A retro corkboard background for the Bulletin Board
 // You can replace this with an actual image asset of a corkboard if desired.
@@ -15,17 +18,150 @@ export default function BulletinBoardScreen() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [postContent, setPostContent] = useState('');
+  const [rating, setRating] = useState<number | undefined>(undefined);
+  
+  // Editing State
+  const [editingPostId, setEditingPostId] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+
+  // Media Search State
+  const [mediaQuery, setMediaQuery] = useState('');
+  const [mediaResults, setMediaResults] = useState<TmdbMediaResult[]>([]);
+  const [selectedMedia, setSelectedMedia] = useState<TmdbMediaResult | null>(null);
+  const [isSearchingMedia, setIsSearchingMedia] = useState(false);
 
   const { data: feed, isLoading: feedLoading } = useBulletinFeed(userId);
   const { data: searchResults, isLoading: searchLoading } = useSearchUsers(searchQuery);
   const { data: suggestedUsers } = useSuggestedUsers(userId);
+  
   const createPostMutation = useCreatePost(userId);
+  const updatePostMutation = useUpdatePost(userId);
+  const deletePostMutation = useDeletePost(userId);
 
-  const handlePost = () => {
+  // Debounced TMDB Search with native setTimeout
+  useEffect(() => {
+    if (!mediaQuery.trim()) {
+      setMediaResults([]);
+      return;
+    }
+    
+    const handler = setTimeout(async () => {
+      setIsSearchingMedia(true);
+      try {
+        const res = await searchMedia(mediaQuery);
+        setMediaResults(res.results.slice(0, 5));
+      } catch (e) {
+        console.error('Media search error:', e);
+      } finally {
+        setIsSearchingMedia(false);
+      }
+    }, 500);
+
+    return () => clearTimeout(handler);
+  }, [mediaQuery]);
+
+  const bridgeMediaToDb = async (media: TmdbMediaResult) => {
+    try {
+      const type = media.media_type;
+      let fullDetails = media;
+      
+      // Fetch details if genres missing
+      if (!media.genres) {
+        if (type === 'movie') fullDetails = await getMovieById(media.id);
+        else fullDetails = await getTvShowById(media.id);
+      }
+
+      if (type === 'movie') {
+        const payload = {
+          tmdb_id: fullDetails.id,
+          title: fullDetails.title,
+          poster_path: fullDetails.poster_path,
+          backdrop_path: fullDetails.backdrop_path,
+          release_date: fullDetails.release_date,
+          genres: fullDetails.genres,
+        } as any;
+        const { data, error } = await supabase.from('movies').upsert(payload, { onConflict: 'tmdb_id' }).select().single();
+        if (error) throw error;
+        return { type: 'movie', id: (data as any).id };
+      } else {
+        const payload = {
+          tmdb_id: fullDetails.id,
+          name: fullDetails.name,
+          poster_path: fullDetails.poster_path,
+          backdrop_path: fullDetails.backdrop_path,
+          first_air_date: fullDetails.first_air_date,
+          genres: fullDetails.genres,
+        } as any;
+        const { data, error } = await supabase.from('shows').upsert(payload, { onConflict: 'tmdb_id' }).select().single();
+        if (error) throw error;
+        return { type: 'show', id: (data as any).id };
+      }
+    } catch (e) {
+      console.error('Bridge failed:', e);
+      return null;
+    }
+  };
+
+  const resetPostState = () => {
+    setPostContent('');
+    setRating(undefined);
+    setEditingPostId(null);
+    setMediaQuery('');
+    setMediaResults([]);
+    setSelectedMedia(null);
+  };
+
+  const handlePost = async () => {
     if (!postContent.trim()) return;
-    createPostMutation.mutate({ content: postContent }, {
-      onSuccess: () => setPostContent('')
-    });
+
+    let mediaRefs: { movie_id?: number; show_id?: number } = {};
+    if (selectedMedia) {
+      const bridged = await bridgeMediaToDb(selectedMedia);
+      if (bridged) {
+        if (bridged.type === 'movie') mediaRefs.movie_id = bridged.id;
+        else mediaRefs.show_id = bridged.id;
+      }
+    }
+
+    if (editingPostId) {
+      updatePostMutation.mutate({
+        postId: editingPostId,
+        content: postContent,
+        rating,
+        ...mediaRefs
+      }, {
+        onSuccess: resetPostState
+      });
+    } else {
+      createPostMutation.mutate({ 
+        content: postContent,
+        rating,
+        ...mediaRefs
+      }, {
+        onSuccess: resetPostState
+      });
+    }
+  };
+
+  const startEditing = (post: any) => {
+    setEditingPostId(post.id);
+    setPostContent(post.content);
+    setRating(post.rating);
+    if (post.movies) {
+      setSelectedMedia({ ...post.movies, media_type: 'movie' } as any);
+    } else if (post.shows) {
+      setSelectedMedia({ ...post.shows, media_type: 'tv' } as any);
+    } else {
+      setSelectedMedia(null);
+    }
+  };
+
+  const handleDelete = () => {
+    if (showDeleteConfirm) {
+      deletePostMutation.mutate(showDeleteConfirm, {
+        onSuccess: () => setShowDeleteConfirm(null)
+      });
+    }
   };
 
   return (
@@ -37,6 +173,17 @@ export default function BulletinBoardScreen() {
       <StatusBar style="light" />
       <Stack.Screen options={{ headerShown: false }} />
       
+      <ConfirmModal
+        visible={!!showDeleteConfirm}
+        title="Delete Post?"
+        message="Are you sure you want to remove this post from the board?"
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        destructive
+        onConfirm={handleDelete}
+        onCancel={() => setShowDeleteConfirm(null)}
+      />
+
       <View className="flex-1 bg-black/40">
         <View className="pt-16 pb-4 px-4 bg-black/80 border-b border-neutral-800">
           <Text className="text-amber-500 font-bold text-2xl font-mono tracking-widest text-center">
@@ -62,11 +209,21 @@ export default function BulletinBoardScreen() {
         <ScrollView className="flex-1 px-4" contentContainerStyle={{ paddingBottom: 100, paddingTop: 16 }}>
           
           {/* Quick Post Area */}
-          <View className="bg-yellow-100/90 rounded p-3 mb-6 shadow-xl" style={{ transform: [{ rotate: '-1deg' }] }}>
+          <View className="bg-yellow-100/90 rounded p-3 mb-6 shadow-xl" style={{ transform: [{ rotate: editingPostId ? '0deg' : '-1deg' }] }}>
             <View className="flex-row items-center justify-between mb-2">
-              <View className="bg-red-500 w-3 h-3 rounded-full" />
-              <Text className="font-mono text-xs font-bold text-neutral-800">NEW NOTE</Text>
+              <View className="flex-row items-center">
+                <View className="bg-red-500 w-3 h-3 rounded-full mr-2" />
+                <Text className="font-mono text-xs font-bold text-neutral-800 uppercase">
+                  {editingPostId ? 'EDITING NOTE' : 'NEW NOTE'}
+                </Text>
+              </View>
+              {editingPostId && (
+                <Pressable onPress={resetPostState} className="bg-neutral-800/10 px-2 py-1 rounded">
+                   <Text className="font-mono text-[10px] text-neutral-600">CANCEL</Text>
+                </Pressable>
+              )}
             </View>
+
             <TextInput
               className="font-mono text-sm text-neutral-900 min-h-[60px]"
               placeholder="Write a recommendation or review..."
@@ -75,14 +232,87 @@ export default function BulletinBoardScreen() {
               value={postContent}
               onChangeText={setPostContent}
             />
-            <View className="items-end mt-2">
+
+            {/* Rating Stars */}
+            <View className="flex-row items-center mt-2 mb-3 border-t border-black/5 pt-2">
+              <Text className="text-[10px] font-mono font-bold text-neutral-500 mr-2 uppercase">Rating:</Text>
+              {[1, 2, 3, 4, 5].map(star => (
+                <Pressable key={star} onPress={() => setRating(star === rating ? undefined : star)} className="mr-1">
+                  <Ionicons 
+                    name={star <= (rating || 0) ? "star" : "star-outline"} 
+                    size={16} 
+                    color={star <= (rating || 0) ? '#f59e0b' : '#78716c'} 
+                  />
+                </Pressable>
+              ))}
+            </View>
+
+            {/* Attached Media */}
+            <View className="border-t border-black/5 pt-2">
+              <Text className="text-[10px] font-mono font-bold text-neutral-500 mb-2 uppercase">ATTACH MEDIA:</Text>
+              
+              {selectedMedia ? (
+                <View className="flex-row items-center bg-black/10 p-2 rounded justify-between mb-2">
+                  <View className="flex-row items-center flex-1">
+                    <Ionicons name="film-outline" size={14} color="#171717" className="mr-2" />
+                    <Text className="font-mono text-xs text-neutral-900 flex-1" numberOfLines={1}>
+                      {selectedMedia.title || selectedMedia.name}
+                    </Text>
+                  </View>
+                  <Pressable onPress={() => setSelectedMedia(null)}>
+                    <Ionicons name="close-circle" size={18} color="#ef4444" />
+                  </Pressable>
+                </View>
+              ) : (
+                <View>
+                  <View className="flex-row items-center bg-black/5 rounded px-2 border border-black/10">
+                    <Ionicons name="search" size={14} color="#78716c" />
+                    <TextInput
+                      className="flex-1 font-mono text-xs text-neutral-800 p-2"
+                      placeholder="Search films to attach..."
+                      value={mediaQuery}
+                      onChangeText={setMediaQuery}
+                      placeholderTextColor="#78716c"
+                    />
+                  </View>
+                  
+                  {isSearchingMedia && <ActivityIndicator size="small" color="#525252" className="mt-2" />}
+                  
+                  {mediaResults.length > 0 && (
+                    <View className="mt-2 bg-white/50 rounded overflow-hidden">
+                      {mediaResults.map(item => (
+                        <Pressable 
+                          key={`${item.media_type}-${item.id}`} 
+                          onPress={() => {
+                            setSelectedMedia(item);
+                            setMediaQuery('');
+                            setMediaResults([]);
+                          }}
+                          className="p-2 border-b border-black/5 flex-row items-center"
+                        >
+                          <Ionicons name="film" size={12} color="#525252" className="mr-2" />
+                          <Text className="font-mono text-[10px] text-neutral-800 flex-1" numberOfLines={1}>
+                            {item.title || item.name} ({new Date(item.release_date || item.first_air_date || '').getFullYear() || 'N/A'})
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              ) }
+            </View>
+
+            <View className="items-end mt-4">
               <Pressable 
                 onPress={handlePost}
-                disabled={createPostMutation.isPending || !postContent.trim()}
-                className={`px-4 py-2 bg-neutral-900 rounded ${!postContent.trim() ? 'opacity-50' : ''}`}
+                disabled={createPostMutation.isPending || updatePostMutation.isPending || !postContent.trim()}
+                className={`px-6 py-2 bg-neutral-900 rounded ${!postContent.trim() ? 'opacity-50' : ''}`}
               >
                 <Text className="text-white font-mono font-bold text-xs">
-                  {createPostMutation.isPending ? 'PINNING...' : 'PIN TO BOARD'}
+                  {editingPostId 
+                    ? (updatePostMutation.isPending ? 'UPDATING...' : 'UPDATE PIN') 
+                    : (createPostMutation.isPending ? 'PINNING...' : 'PIN TO BOARD')
+                  }
                 </Text>
               </Pressable>
             </View>
@@ -182,6 +412,24 @@ export default function BulletinBoardScreen() {
                         {new Date(post.created_at).toLocaleDateString()}
                       </Text>
                     </View>
+                    
+                    {/* Actions if owner */}
+                    {post.user_id === userId && (
+                      <View className="flex-row ml-auto">
+                        <Pressable 
+                          onPress={() => startEditing(post)}
+                          className="p-1 mr-2"
+                        >
+                          <Ionicons name="pencil" size={14} color="#525252" />
+                        </Pressable>
+                        <Pressable 
+                          onPress={() => setShowDeleteConfirm(post.id)}
+                          className="p-1"
+                        >
+                          <Ionicons name="trash" size={14} color="#ef4444" />
+                        </Pressable>
+                      </View>
+                    )}
                   </Pressable>
 
                   {/* Attached Media Context */}
