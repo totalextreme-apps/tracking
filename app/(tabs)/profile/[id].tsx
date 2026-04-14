@@ -1,11 +1,13 @@
-import React from 'react';
-import { View, Text, ScrollView, Image, ActivityIndicator, Pressable } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { View, Text, ScrollView, ActivityIndicator, Pressable } from 'react-native';
+import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useProfile, useFollowers, useFollowing, useToggleFollow } from '@/hooks/useSocial';
 import { useCollection } from '@/hooks/useCollection';
 import { useAuth } from '@/context/AuthContext';
 import { MemberCard } from '@/components/MemberCard';
 import { StatsSection } from '@/components/StatsSection';
+import { StackCard } from '@/components/StackCard';
 import { Ionicons } from '@expo/vector-icons';
 import { getPosterUrl } from '@/lib/dummy-data';
 import { StatusBar } from 'expo-status-bar';
@@ -20,7 +22,47 @@ export default function UserProfileScreen() {
   const { data: following } = useFollowing(id);
   const { data: collection, isLoading: collectionLoading } = useCollection(id);
   
-  const [activeTab, setActiveTab] = React.useState<'grails' | 'collection' | 'wishlist' | 'analytics'>('grails');
+  const [activeTab, setActiveTab] = useState<'grails' | 'collection' | 'wishlist' | 'analytics'>('grails');
+  const [sortBy, setSortBy] = useState<'added' | 'name' | 'format' | 'year'>('added');
+
+  const sortedCollection = useMemo(() => {
+    if (!collection) return [];
+    let items = [...collection];
+    if (sortBy === 'name') {
+      items.sort((a, b) => (a.movies?.title || a.shows?.name || '').localeCompare(b.movies?.title || b.shows?.name || ''));
+    } else if (sortBy === 'format') {
+      items.sort((a, b) => (a.format || '').localeCompare(b.format || ''));
+    } else if (sortBy === 'year') {
+      items.sort((a, b) => {
+        const yearA = a.movies?.release_date || a.shows?.first_air_date || '0000';
+        const yearB = b.movies?.release_date || b.shows?.first_air_date || '0000';
+        return yearB.localeCompare(yearA);
+      });
+    }
+    return items;
+  }, [collection, sortBy]);
+
+  const stackedCollection = useMemo(() => {
+    const owned = sortedCollection.filter((i: any) => i.status === 'owned');
+    const stacks: Record<string, any[]> = {};
+    owned.forEach(item => {
+      const key = item.movies ? `movie-${item.movie_id}` : `show-${item.show_id}-${item.season_number || 1}`;
+      if (!stacks[key]) stacks[key] = [];
+      stacks[key].push(item);
+    });
+    return Object.values(stacks);
+  }, [sortedCollection]);
+
+  const stackedWishlist = useMemo(() => {
+    const wishlist = sortedCollection.filter((i: any) => i.status === 'wishlist');
+    const stacks: Record<string, any[]> = {};
+    wishlist.forEach(item => {
+      const key = item.movies ? `movie-${item.movie_id}` : `show-${item.show_id}-${item.season_number || 1}`;
+      if (!stacks[key]) stacks[key] = [];
+      stacks[key].push(item);
+    });
+    return Object.values(stacks);
+  }, [sortedCollection]);
 
   const toggleFollowMutation = useToggleFollow(currentUserId);
   const isFollowing = currentUserId && followers?.some((f: any) => f.follower_id === currentUserId);
@@ -161,16 +203,31 @@ export default function UserProfileScreen() {
                       {grails.map((item: any) => {
                         const posterUrl = getPosterUrl(item.movies?.poster_path || item.shows?.poster_path);
                         const isMovie = !!item.movies;
+                        const formatSource = item.format === '4K' ? require('@/assets/images/overlays/formats/4K Ultra.png') :
+                                            item.format === 'BluRay' ? require('@/assets/images/overlays/formats/BluRay.png') :
+                                            item.format === 'DVD' ? require('@/assets/images/overlays/formats/DVD.png') :
+                                            item.format === 'VHS' ? require('@/assets/images/overlays/formats/VHS.png') :
+                                            item.format === 'Digital' ? require('@/assets/images/overlays/formats/Digital.png') : null;
+                        
                         return (
                           <Pressable 
                             key={item.id} 
                             onPress={() => router.push({ pathname: isMovie ? `/movie/${item.movie_id}` as any : `/show/${item.show_id}` as any, params: { ownerId: id } })}
                             className="w-[31%] mb-4"
                           >
-                            <Image 
-                              source={{ uri: posterUrl as string }} 
-                              className="w-full aspect-[2/3] rounded border border-neutral-800"
-                            />
+                            <View className="relative">
+                              <Image 
+                                source={{ uri: posterUrl as string }} 
+                                className="w-full aspect-[2/3] rounded border border-neutral-800"
+                              />
+                              {formatSource && (
+                                <Image 
+                                  source={formatSource} 
+                                  style={{ position: 'absolute', bottom: 4, right: 4, width: 24, height: 14 }} 
+                                  contentFit="contain" 
+                                />
+                              )}
+                            </View>
                             <Text className="text-white font-mono text-[9px] mt-1 text-center" numberOfLines={1}>
                               {item.movies?.title || item.shows?.name}
                             </Text>
@@ -188,24 +245,42 @@ export default function UserProfileScreen() {
 
               {activeTab === 'collection' && (
                 <View>
-                  {collection?.filter((i: any) => i.status === 'owned').length! > 0 ? (
-                    <View className="flex-row flex-wrap justify-between">
-                      {collection?.filter((i: any) => i.status === 'owned').map((item: any) => {
-                        const posterUrl = getPosterUrl(item.movies?.poster_path || item.shows?.poster_path);
-                        const isMovie = !!item.movies;
-                        return (
-                          <Pressable 
-                            key={item.id} 
-                            onPress={() => router.push({ pathname: isMovie ? `/movie/${item.movie_id}` as any : `/show/${item.show_id}` as any, params: { ownerId: id } })}
-                            className="w-[23%] mb-3"
-                          >
-                            <Image 
-                              source={{ uri: posterUrl as string }} 
-                              className="w-full aspect-[2/3] rounded border border-neutral-800"
-                            />
-                          </Pressable>
-                        );
-                      })}
+                  {/* Sort Selection */}
+                  <View className="flex-row items-center justify-end mb-4 gap-4">
+                    <Text className="text-neutral-500 font-mono text-[10px] uppercase font-bold">Sort By:</Text>
+                    <Pressable onPress={() => setSortBy('added')} className={`px-2 py-1 rounded ${sortBy === 'added' ? 'bg-amber-500' : 'bg-neutral-800'}`}>
+                      <Text className={`font-mono text-[9px] font-bold ${sortBy === 'added' ? 'text-black' : 'text-neutral-400'}`}>RECENT</Text>
+                    </Pressable>
+                    <Pressable onPress={() => setSortBy('name')} className={`px-2 py-1 rounded ${sortBy === 'name' ? 'bg-amber-500' : 'bg-neutral-800'}`}>
+                      <Text className={`font-mono text-[9px] font-bold ${sortBy === 'name' ? 'text-black' : 'text-neutral-400'}`}>A-Z</Text>
+                    </Pressable>
+                    <Pressable onPress={() => setSortBy('format')} className={`px-2 py-1 rounded ${sortBy === 'format' ? 'bg-amber-500' : 'bg-neutral-800'}`}>
+                      <Text className={`font-mono text-[9px] font-bold ${sortBy === 'format' ? 'text-black' : 'text-neutral-400'}`}>FORMAT</Text>
+                    </Pressable>
+                    <Pressable onPress={() => setSortBy('year')} className={`px-2 py-1 rounded ${sortBy === 'year' ? 'bg-amber-500' : 'bg-neutral-800'}`}>
+                      <Text className={`font-mono text-[9px] font-bold ${sortBy === 'year' ? 'text-black' : 'text-neutral-400'}`}>YEAR</Text>
+                    </Pressable>
+                  </View>
+
+                  {stackedCollection.length > 0 ? (
+                    <View className="flex-row flex-wrap">
+                      {stackedCollection.map((stack: any) => (
+                        <View key={stack[0].id} style={{ width: '25%', padding: 4 }}>
+                          <StackCard 
+                            stack={stack} 
+                            width={80} 
+                            height={120}
+                            onPress={() => {
+                              const item = stack[0];
+                              const isMovie = !!item.movies;
+                              router.push({ 
+                                pathname: isMovie ? `/movie/${item.movie_id}` as any : `/show/${item.show_id}` as any, 
+                                params: { ownerId: id } 
+                              });
+                            }}
+                          />
+                        </View>
+                      ))}
                     </View>
                   ) : (
                     <View className="p-6 items-center border-dashed border border-neutral-800 rounded-lg">
@@ -216,25 +291,26 @@ export default function UserProfileScreen() {
               )}
 
               {activeTab === 'wishlist' && (
-               <View>
-                  {collection?.filter((i: any) => i.status === 'wishlist').length! > 0 ? (
-                    <View className="flex-row flex-wrap justify-between">
-                      {collection?.filter((i: any) => i.status === 'wishlist').map((item: any) => {
-                        const posterUrl = getPosterUrl(item.movies?.poster_path || item.shows?.poster_path);
-                        const isMovie = !!item.movies;
-                        return (
-                          <Pressable 
-                            key={item.id} 
-                            onPress={() => router.push({ pathname: isMovie ? `/movie/${item.movie_id}` as any : `/show/${item.show_id}` as any, params: { ownerId: id } })}
-                            className="w-[23%] mb-3"
-                          >
-                            <Image 
-                              source={{ uri: posterUrl as string }} 
-                              className="w-full aspect-[2/3] rounded border border-neutral-800 opacity-60"
-                            />
-                          </Pressable>
-                        );
-                      })}
+                <View>
+                  {stackedWishlist.length > 0 ? (
+                    <View className="flex-row flex-wrap">
+                      {stackedWishlist.map((stack: any) => (
+                        <View key={stack[0].id} style={{ width: '25%', padding: 4 }}>
+                          <StackCard 
+                            stack={stack} 
+                            width={80} 
+                            height={120}
+                            onPress={() => {
+                              const item = stack[0];
+                              const isMovie = !!item.movies;
+                              router.push({ 
+                                pathname: isMovie ? `/movie/${item.movie_id}` as any : `/show/${item.show_id}` as any, 
+                                params: { ownerId: id } 
+                              });
+                            }}
+                          />
+                        </View>
+                      ))}
                     </View>
                   ) : (
                     <View className="p-6 items-center border-dashed border border-neutral-800 rounded-lg">
