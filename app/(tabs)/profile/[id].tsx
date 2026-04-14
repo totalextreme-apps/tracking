@@ -108,8 +108,8 @@ export default function UserProfileScreen() {
         <Pressable onPress={() => router.back()} className="p-2">
           <Ionicons name="arrow-back" size={24} color="#f59e0b" />
         </Pressable>
-        <Text className="text-white font-bold text-lg font-mono">
-          PROFILE
+        <Text className="text-white font-bold text-lg font-mono uppercase" numberOfLines={1}>
+          {profile.username ? `${profile.username} PROFILE` : 'PROFILE'}
         </Text>
         <View className="w-8" />
       </View>
