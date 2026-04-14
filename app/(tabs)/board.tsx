@@ -9,14 +9,13 @@ import { searchMedia, TmdbMediaResult, getMovieById, getTvShowById } from '@/lib
 import { supabase } from '@/lib/supabase';
 import { ConfirmModal } from '@/components/ConfirmModal';
 
-// A retro corkboard background for the Bulletin Board
-// You can replace this with an actual image asset of a corkboard if desired.
 const CORK_BACKGROUND = 'https://www.transparenttextures.com/patterns/cork-board.png';
 import { getPosterUrl } from '@/lib/dummy-data';
 
 export default function BulletinBoardScreen() {
   const { userId } = useAuth();
   const router = useRouter();
+  const scrollViewRef = React.useRef<ScrollView>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [postContent, setPostContent] = useState('');
   const [rating, setRating] = useState<number | undefined>(undefined);
@@ -155,6 +154,9 @@ export default function BulletinBoardScreen() {
     } else {
       setSelectedMedia(null);
     }
+    
+    // Scroll to top so user sees the edit form
+    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
   };
 
   const handleDelete = () => {
@@ -207,7 +209,11 @@ export default function BulletinBoardScreen() {
           </View>
         </View>
 
-        <ScrollView className="flex-1 px-4" contentContainerStyle={{ paddingBottom: 100, paddingTop: 16 }}>
+        <ScrollView 
+          ref={scrollViewRef}
+          className="flex-1 px-4" 
+          contentContainerStyle={{ paddingBottom: 100, paddingTop: 16 }}
+        >
           
           {/* Quick Post Area */}
           <View className="bg-yellow-100/90 rounded p-3 mb-6 shadow-xl" style={{ transform: [{ rotate: editingPostId ? '0deg' : '-1deg' }] }}>
@@ -423,15 +429,17 @@ export default function BulletinBoardScreen() {
                       <View className="flex-row ml-auto">
                         <Pressable 
                           onPress={() => startEditing(post)}
-                          className="p-1 mr-2"
+                          className="p-3 mr-2 bg-neutral-200/50 rounded-full"
+                          hitSlop={15}
                         >
-                          <Ionicons name="pencil" size={14} color="#525252" />
+                          <Ionicons name="pencil" size={18} color="#525252" />
                         </Pressable>
                         <Pressable 
                           onPress={() => setShowDeleteConfirm(post.id)}
-                          className="p-1"
+                          className="p-3 bg-red-100/50 rounded-full"
+                          hitSlop={15}
                         >
-                          <Ionicons name="trash" size={14} color="#ef4444" />
+                          <Ionicons name="trash" size={18} color="#ef4444" />
                         </Pressable>
                       </View>
                     )}
