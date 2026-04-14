@@ -681,6 +681,34 @@ export default function MovieDetailScreen() {
                         )}
                     </View>
 
+                    {/* Rating and Review from Stack */}
+                    {activeItem && (activeItem.rating || activeItem.review) && (
+                        <View className="mb-6 bg-amber-500/5 p-4 rounded-xl border border-amber-500/10">
+                            <View className="flex-row items-center mb-2">
+                                <View className="bg-amber-500 px-2 py-0.5 rounded-sm mr-2">
+                                    <Text className="text-black font-bold font-mono text-[9px] uppercase tracking-tighter">Your Appraisal</Text>
+                                </View>
+                                {activeItem.rating && (
+                                    <View className="flex-row">
+                                        {[1, 2, 3, 4, 5].map(star => (
+                                            <Ionicons 
+                                                key={star} 
+                                                name="star" 
+                                                size={12} 
+                                                color={star <= activeItem.rating ? '#f59e0b' : '#333'} 
+                                            />
+                                        ))}
+                                    </View>
+                                )}
+                            </View>
+                            {activeItem.review && (
+                                <Text className="text-neutral-400 font-mono text-xs italic leading-5">
+                                    "{activeItem.review}"
+                                </Text>
+                            )}
+                        </View>
+                    )}
+
                     {/* Cast Section */}
                     {activeMovie.movie_cast && activeMovie.movie_cast.length > 0 && (
                         <View className="mt-8 mb-2">

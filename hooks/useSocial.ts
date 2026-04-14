@@ -200,6 +200,8 @@ export const useCreatePost = (userId?: string) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bulletin', userId] });
+      queryClient.invalidateQueries({ queryKey: ['bulletin_feed'] });
+      queryClient.invalidateQueries({ queryKey: ['collection'] });
     },
   });
 };
@@ -209,9 +211,9 @@ export const useUpdatePost = (userId?: string) => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ postId, content, rating, movie_id, show_id }: { 
+    mutationFn: async ({ postId, ...updates }: { 
       postId: string;
-      content: string; 
+      content?: string; 
       rating?: number;
       movie_id?: number;
       show_id?: number;
@@ -220,19 +222,19 @@ export const useUpdatePost = (userId?: string) => {
       
       const { error, data } = await (supabase
         .from('bulletin_posts') as any)
-        .update({
-          content,
-          rating,
-          movie_id,
-          show_id
-        })
-        .eq('id', postId);
+        .update(updates)
+        .eq('id', postId)
+        .eq('user_id', userId)
+        .select()
+        .single();
         
       if (error) throw error;
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bulletin', userId] });
+      queryClient.invalidateQueries({ queryKey: ['bulletin_feed'] });
+      queryClient.invalidateQueries({ queryKey: ['collection'] });
     },
   });
 };

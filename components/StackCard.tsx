@@ -446,6 +446,12 @@ export function StackCard({
                   </Pressable>
                 ))}
               </View>
+              {topItem.rating && (
+                <View className="flex-row items-center ml-2 bg-black/60 px-1.5 py-0.5 rounded-sm">
+                   <FontAwesome name="star" size={8} color="#f59e0b" />
+                   <Text className="text-amber-500 font-mono text-[9px] font-bold ml-1">{topItem.rating}</Text>
+                </View>
+              )}
             </View>
           </View>
         </AnimatedPressable>
@@ -501,6 +507,12 @@ export function StackCard({
               </Text>
               {topItem.is_bootleg && <Image source={require('@/assets/images/overlays/boot_sticker.png')} style={{ width: 12, height: 12 }} contentFit="contain" />}
             </View>
+            {topItem.rating && (
+              <View className="flex-row items-center ml-2 bg-black/60 px-1.5 py-0.5 rounded-sm">
+                 <FontAwesome name="star" size={8} color="#f59e0b" />
+                 <Text className="text-amber-500 font-mono text-[9px] font-bold ml-1">{topItem.rating}</Text>
+              </View>
+            )}
           </View>
         </View>
       </AnimatedPressable>
@@ -611,6 +623,12 @@ export function StackCard({
             <Text className="text-emerald-200 font-mono text-[10px]">
               {topItem.digital_provider}
             </Text>
+          </View>
+        )}
+        {topItem.rating && (
+          <View className="flex-row items-center ml-2 bg-black/60 px-1.5 py-0.5 rounded-sm border border-emerald-500/30">
+             <FontAwesome name="star" size={8} color="#f59e0b" />
+             <Text className="text-amber-500 font-mono text-[9px] font-bold ml-1">{topItem.rating}</Text>
           </View>
         )}
       </View>

@@ -641,6 +641,33 @@ export default function ShowDetailScreen() {
                     
                     {commentActiveItem?.id && (
                         <View className="px-4 md:px-8 mb-12">
+                            {/* Rating and Review from Stack */}
+                            {commentActiveItem && (commentActiveItem.rating || commentActiveItem.review) && (
+                                <View className="mb-6 bg-amber-500/5 p-4 rounded-xl border border-amber-500/10">
+                                    <View className="flex-row items-center mb-2">
+                                        <View className="bg-amber-500 px-2 py-0.5 rounded-sm mr-2">
+                                            <Text className="text-black font-bold font-mono text-[9px] uppercase tracking-tighter">Your Appraisal</Text>
+                                        </View>
+                                        {commentActiveItem.rating && (
+                                            <View className="flex-row">
+                                                {[1, 2, 3, 4, 5].map(star => (
+                                                    <Ionicons 
+                                                        key={star} 
+                                                        name="star" 
+                                                        size={12} 
+                                                        color={star <= commentActiveItem.rating ? '#f59e0b' : '#333'} 
+                                                    />
+                                                ))}
+                                            </View>
+                                        )}
+                                    </View>
+                                    {commentActiveItem.review && (
+                                        <Text className="text-neutral-400 font-mono text-xs italic leading-5">
+                                            "{commentActiveItem.review}"
+                                        </Text>
+                                    )}
+                                </View>
+                            )}
                             <CommentSection collectionItemId={commentActiveItem.id} />
                         </View>
                     )}
