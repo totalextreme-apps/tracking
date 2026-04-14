@@ -431,7 +431,7 @@ export default function BulletinBoardScreen() {
                         {post.profiles?.username || 'Unknown Member'}
                       </Text>
                       <Text className="text-neutral-500 font-mono text-[10px]">
-                        {new Date(post.created_at).toLocaleDateString()}
+                        {new Date(post.created_at).toLocaleDateString()} at {new Date(post.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </Text>
                     </View>
                     
