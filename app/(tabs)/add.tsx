@@ -19,7 +19,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/context/AuthContext';
-import { useAddToCollection } from '@/hooks/useCollection';
+import { useAddToCollection, useUpdateCollectionItem } from '@/hooks/useCollection';
 import { useTmdbSearch } from '@/hooks/useTmdbSearch';
 import { getPosterUrl } from '@/lib/dummy-data';
 import { getTvShowById, type TmdbMediaResult } from '@/lib/tmdb';
@@ -47,6 +47,7 @@ export default function AddScreen() {
 
   const searchQuery = useTmdbSearch(debouncedQuery);
   const addMutation = useAddToCollection(userId);
+  const updateMutation = useUpdateCollectionItem(userId);
 
   // Camera Logic
   const [permission, requestPermission] = useCameraPermissions();
@@ -230,7 +231,28 @@ export default function AddScreen() {
     } catch (e: any) {
       console.error('Add failed:', e);
       const msg = e?.message || String(e);
-      const errorText = (msg.includes('duplicate key') || msg.includes('unique constraint') || msg.includes('23505'))
+
+      if (msg.startsWith('WISHLIST_CONFLICT:::')) {
+        const [, conflictId, formatName] = msg.split(':::');
+        const title = selectedItem.title ?? selectedItem.name;
+        if (Platform.OS === 'web') {
+          if (window.confirm(`${title} (${formatName}) is on your wishlist. Do you want to mark it as acquired?`)) {
+            updateMutation.mutate({ itemId: conflictId, updates: { status: 'owned' } });
+            router.back();
+          }
+        } else {
+          Alert.alert('On Wishlist', `${title} (${formatName}) is on your wishlist. Do you want to mark it as acquired?`, [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Mark as Acquired', onPress: () => {
+                updateMutation.mutate({ itemId: conflictId, updates: { status: 'owned' } });
+                router.back();
+            }}
+          ]);
+        }
+        return;
+      }
+
+      const errorText = (msg.includes('duplicate key') || msg.includes('unique constraint') || msg.includes('23505') || msg.includes('already own'))
         ? `You might already have ${selectedItem.title ?? selectedItem.name} in this format. Use the Edition field to add another copy.`
         : `Could not add: ${msg}`;
       if (Platform.OS === 'web') {

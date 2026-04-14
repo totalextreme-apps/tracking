@@ -111,6 +111,19 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="board"
+        options={{
+          headerShown: false,
+          title: 'Bulletin',
+          tabBarIcon: ({ color }) => <TabBarIcon name="clipboard" color={color} />,
+        }}
+        listeners={{
+          tabPress: () => {
+            playSound('click');
+          },
+        }}
+      />
+      <Tabs.Screen
         name="two"
         options={{
           headerShown: false,

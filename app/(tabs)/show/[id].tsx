@@ -17,6 +17,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useSound } from '@/context/SoundContext';
 import { useThriftMode } from '@/context/ThriftModeContext';
 import { useAddToCollection, useCollection, useDeleteCollectionItem, useUpdateCollectionItem } from '@/hooks/useCollection';
+import { useCreatePost } from '@/hooks/useSocial';
 import { deleteFromCloudinary, uploadToCloudinary } from '@/lib/cloudinary';
 import { getCustomLists } from '@/lib/collection-utils';
 
@@ -59,12 +60,34 @@ export default function ShowDetailScreen() {
     const [cropModalVisible, setCropModalVisible] = useState(false);
     const [pendingImageUri, setPendingImageUri] = useState<string | null>(null);
     const [showEditionModal, setShowEditionModal] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [pendingFormat, setPendingFormat] = useState<string | null>(null);
     const [editionInput, setEditionInput] = useState('');
 
     // Curated Stacks State
     const [showNewStackInput, setShowNewStackInput] = useState(false);
     const [newStackName, setNewStackName] = useState('');
+
+    // Bulletin Board State
+    const [showPostModal, setShowPostModal] = useState(false);
+    const [postContent, setPostContent] = useState('');
+    const createPostMutation = useCreatePost(userId);
+
+    const handleCreatePost = () => {
+        if (!postContent.trim()) return;
+        createPostMutation.mutate({
+            content: postContent,
+            collection_item_id: showItems[0]?.id,
+            show_id: showIdNum,
+            rating: showItems[0]?.rating || null,
+        }, {
+            onSuccess: () => {
+                setShowPostModal(false);
+                setPostContent('');
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            }
+        });
+    };
 
     const { data: collection, refetch } = useCollection(userId);
     const updateMutation = useUpdateCollectionItem(userId);
@@ -213,37 +236,32 @@ export default function ShowDetailScreen() {
         setShowNewStackInput(false);
     };
 
-    const deleteShow = async () => {
-        const performDelete = async () => {
-            try {
-                setEjecting(true);
-                playSound('eject');
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                await Promise.all(showItems.map((item: any) => deleteMutation.mutateAsync(item.id)));
-                if (refetch) await refetch();
+    const handleConfirmDelete = async () => {
+        try {
+            setShowDeleteModal(false);
+            setEjecting(true);
+            playSound('eject');
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            await Promise.all(showItems.map((item: any) => deleteMutation.mutateAsync(item.id)));
+            if (refetch) await refetch();
 
-                setEjecting(false);
+            setEjecting(false);
 
-                if (fromStack) {
-                    router.replace(`/stack/${fromStack}` as any);
-                } else if (router.canGoBack()) {
-                    router.back();
-                } else {
-                    router.replace('/(tabs)/home' as any);
-                }
-            } catch (e) {
-                setEjecting(false);
-                Alert.alert('Error', 'Could not delete show');
+            if (fromStack) {
+                router.replace(`/stack/${fromStack}` as any);
+            } else if (router.canGoBack()) {
+                router.back();
+            } else {
+                router.replace('/(tabs)/home' as any);
             }
-        };
-        if (Platform.OS === 'web') {
-            if (window.confirm('Remove this show from your collection?')) performDelete();
-        } else {
-            Alert.alert('Delete Show', 'Remove this show from your collection?', [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Delete', style: 'destructive', onPress: performDelete },
-            ]);
+        } catch (e) {
+            setEjecting(false);
+            Alert.alert('Error', 'Could not delete show');
         }
+    };
+
+    const deleteShow = () => {
+        setShowDeleteModal(true);
     };
 
     if (isNotFound) {
@@ -306,7 +324,7 @@ export default function ShowDetailScreen() {
             await addMutation.mutateAsync({
                 tmdbItem: activeShow,
                 formats: [pendingFormat as MovieFormat],
-                status: 'owned',
+                status: thriftMode ? 'wishlist' : 'owned',
                 edition: editionInput.trim() || null,
                 seasonNumber: seasonNumber
             });
@@ -316,7 +334,29 @@ export default function ShowDetailScreen() {
             setShowEditionModal(false);
             setPendingFormat(null);
             setEditionInput('');
-        } catch (e) {
+        } catch (e: any) {
+            const msg = e?.message || String(e);
+            if (msg.startsWith('WISHLIST_CONFLICT:::')) {
+                const [, conflictId, formatName] = msg.split(':::');
+                const title = activeShow.name;
+                if (Platform.OS === 'web') {
+                  if (window.confirm(`${title} (${formatName}) is on your wishlist. Do you want to mark it as acquired?`)) {
+                    updateMutation.mutate({ itemId: conflictId, updates: { status: 'owned' } });
+                    setShowEditionModal(false);
+                    setPendingFormat(null);
+                  }
+                } else {
+                  Alert.alert('On Wishlist', `${title} (${formatName}) is on your wishlist. Do you want to mark it as acquired?`, [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Mark as Acquired', onPress: () => {
+                        updateMutation.mutate({ itemId: conflictId, updates: { status: 'owned' } });
+                        setShowEditionModal(false);
+                        setPendingFormat(null);
+                    }}
+                  ]);
+                }
+                return;
+            }
             Alert.alert('Error', 'Failed to add format');
         }
     };
@@ -434,9 +474,20 @@ export default function ShowDetailScreen() {
                             </Pressable>
                         )}
                         {showItems.length > 0 && (
-                            <Pressable onPress={deleteShow} className="bg-red-900/10 px-4 rounded-lg border border-red-900/40 items-center justify-center">
-                                <Ionicons name="trash-outline" size={20} color="#ef4444" />
-                            </Pressable>
+                            <>
+                                <Pressable onPress={deleteShow} className="bg-red-900/10 px-4 rounded-lg border border-red-900/40 items-center justify-center">
+                                    <Ionicons name="trash-outline" size={20} color="#ef4444" />
+                                </Pressable>
+                                {/* PIN TO BULLETIN BOARD */}
+                                {!thriftMode && (
+                                    <Pressable 
+                                        onPress={() => setShowPostModal(true)}
+                                        className="bg-amber-600/10 px-4 rounded-lg border border-amber-600/40 items-center justify-center"
+                                    >
+                                        <Ionicons name="pin" size={20} color="#f59e0b" />
+                                    </Pressable>
+                                )}
+                            </>
                         )}
                     </View>
 
@@ -587,6 +638,81 @@ export default function ShowDetailScreen() {
                 onClose={() => { setCropModalVisible(false); setPendingImageUri(null); }}
                 onSave={handleSaveCustomArt}
             />
+
+            {/* Delete Confirmation Modal */}
+            <Modal
+                visible={showDeleteModal}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setShowDeleteModal(false)}
+            >
+                <View className="flex-1 bg-black/80 items-center justify-center p-4">
+                    <View className="bg-neutral-900 rounded-lg p-6 w-full max-w-sm border border-neutral-800 shadow-xl">
+                        <Ionicons name="trash-outline" size={32} color="#ef4444" style={{ alignSelf: 'center', marginBottom: 16 }} />
+                        <Text className="text-white font-bold text-center text-xl mb-2">Delete Show</Text>
+                        <Text className="text-neutral-400 font-mono text-center text-sm mb-6">
+                            Are you sure you want to remove this show and all formats from your collection?
+                        </Text>
+                        <View className="flex-row gap-3">
+                            <Pressable 
+                                onPress={() => setShowDeleteModal(false)}
+                                className="flex-1 bg-neutral-800 py-3 rounded-lg items-center border border-neutral-700"
+                            >
+                                <Text className="text-white font-mono font-bold">CANCEL</Text>
+                            </Pressable>
+                            <Pressable 
+                                onPress={handleConfirmDelete}
+                                className="flex-1 bg-red-600 border border-red-500 py-3 rounded-lg items-center shadow shadow-red-900/50"
+                            >
+                                <Text className="text-white font-mono font-bold">DELETE</Text>
+                            </Pressable>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Post to Bulletin Board Modal */}
+            <Modal
+                visible={showPostModal}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setShowPostModal(false)}
+            >
+                <View className="flex-1 bg-black/80 items-center justify-center p-4">
+                    <View className="bg-yellow-100/90 rounded p-4 w-full max-w-sm shadow-xl" style={{ transform: [{ rotate: '-1deg' }] }}>
+                        <View className="flex-row items-center justify-between mb-4">
+                            <View className="bg-red-500 w-3 h-3 rounded-full" />
+                            <Text className="font-mono text-sm font-bold text-neutral-800">RECOMMEND TITLE</Text>
+                        </View>
+                        <TextInput
+                            className="font-mono text-sm text-neutral-900 min-h-[80px]"
+                            placeholder="Write a recommendation or review..."
+                            placeholderTextColor="#78716c"
+                            multiline
+                            value={postContent}
+                            onChangeText={setPostContent}
+                            autoFocus
+                        />
+                        <View className="flex-row justify-end mt-4 gap-2">
+                            <Pressable 
+                                onPress={() => setShowPostModal(false)}
+                                className="px-4 py-2 border border-neutral-400 rounded"
+                            >
+                                <Text className="font-mono font-bold text-xs text-neutral-700">CANCEL</Text>
+                            </Pressable>
+                            <Pressable 
+                                onPress={handleCreatePost}
+                                disabled={createPostMutation.isPending || !postContent.trim()}
+                                className={`px-4 py-2 bg-neutral-900 rounded ${!postContent.trim() ? 'opacity-50' : ''}`}
+                            >
+                                <Text className="text-white font-mono font-bold text-xs">
+                                    {createPostMutation.isPending ? 'PINNING...' : 'PIN TO BOARD'}
+                                </Text>
+                            </Pressable>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
 
             <Modal visible={showEditionModal} transparent animationType="fade">
                 <View className="flex-1 bg-black/80 items-center justify-center p-4">

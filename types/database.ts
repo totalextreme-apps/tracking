@@ -65,6 +65,30 @@ export interface CollectionItemWithMedia extends CollectionItem {
   shows: Show | null;
 }
 
+export interface Follow {
+  follower_id: string;
+  following_id: string;
+  created_at: string;
+}
+
+export interface BulletinPost {
+  id: string;
+  user_id: string;
+  collection_item_id: string | null;
+  movie_id: number | null;
+  show_id: number | null;
+  content: string;
+  rating: number | null;
+  created_at: string;
+}
+
+export interface BulletinPostWithMedia extends BulletinPost {
+  profiles: Profile | null;
+  movies: Movie | null;
+  shows: Show | null;
+  collection_items: CollectionItem | null;
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -92,6 +116,19 @@ export interface Database {
         Row: Profile;
         Insert: Profile;
         Update: Partial<Profile>;
+      };
+      follows: {
+        Row: Follow;
+        Insert: Omit<Follow, 'created_at'> & { created_at?: string };
+        Update: Partial<Omit<Follow, 'created_at'>>;
+      };
+      bulletin_posts: {
+        Row: BulletinPost;
+        Insert: Omit<BulletinPost, 'id' | 'created_at'> & {
+          id?: string;
+          created_at?: string;
+        };
+        Update: Partial<Omit<BulletinPost, 'id' | 'user_id'>>;
       };
     };
   };

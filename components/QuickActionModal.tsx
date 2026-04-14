@@ -6,6 +6,7 @@ import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, Text, TextInput
 import ConfettiCannon from 'react-native-confetti-cannon';
 
 import { useSound } from '@/context/SoundContext';
+import { useThriftMode } from '@/context/ThriftModeContext';
 import { useAddToCollection, useDeleteCollectionItem, useUpdateCollectionItem } from '@/hooks/useCollection';
 import type { CollectionItemWithMedia, MovieFormat } from '@/types/database';
 
@@ -29,6 +30,7 @@ export function QuickActionModal({
   const router = useRouter();
   const { playSound } = useSound();
   const confettiRef = useRef<ConfettiCannon>(null);
+  const { thriftMode } = useThriftMode();
 
   const [viewState, setViewState] = useState<'main' | 'add-format' | 'remove-format'>('main');
   const [selectedFormat, setSelectedFormat] = useState<MovieFormat | null>(null);
@@ -68,14 +70,14 @@ export function QuickActionModal({
     onClose();
   };
 
-  const handleAcquire = async () => {
+  const handleAcquire = async (targetItem: CollectionItemWithMedia) => {
     if (isProcessing) return;
     setIsProcessing(true);
     try {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       confettiRef.current?.start();
       await updateMutation.mutateAsync({
-        itemId: item.id,
+        itemId: targetItem.id,
         updates: { status: 'owned' }
       });
       setTimeout(() => {
@@ -119,7 +121,7 @@ export function QuickActionModal({
       await addMutation.mutateAsync({
         tmdbItem: media as any, // Will need enough metadata
         formats: [selectedFormat],
-        status: 'owned',
+        status: thriftMode ? 'wishlist' : 'owned',
         edition: edition.trim() || null,
         seasonNumber: item.season_number
       });
@@ -150,17 +152,23 @@ export function QuickActionModal({
     }
   };
 
-  const renderMainActions = () => (
+  const renderMainActions = () => {
+    const wishlistItems = relatedItems.filter(i => i.status === 'wishlist');
+    
+    return (
     <>
-      {isWishlist && (
+      {isWishlist && wishlistItems.length > 0 && wishlistItems.map(wItem => (
         <Pressable
-          onPress={handleAcquire}
-          className="bg-amber-500 py-3 rounded-xl items-center mb-3 flex-row justify-center"
+          key={wItem.id}
+          onPress={() => handleAcquire(wItem)}
+          className="bg-amber-500 py-3 rounded-xl items-center mb-3 flex-row justify-center border border-amber-400"
         >
           <Ionicons name="checkmark-circle" size={20} color="black" />
-          <Text className="text-black font-mono font-bold text-lg ml-2">ACQUIRED</Text>
+          <Text className="text-black font-mono font-bold text-lg ml-2">
+            ACQUIRED {wItem.format === 'BluRay' ? 'BLU-RAY' : wItem.format.toUpperCase()}
+          </Text>
         </Pressable>
-      )}
+      ))}
 
       {!isWishlist && (
         <View className="bg-neutral-800 rounded-xl p-4 mb-3 items-center">
@@ -210,6 +218,7 @@ export function QuickActionModal({
       </Pressable>
     </>
   );
+  }
 
   const renderAddFormat = () => (
     <View>

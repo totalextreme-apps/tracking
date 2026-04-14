@@ -197,6 +197,22 @@ export function useAddToCollection(userId: string | undefined) {
 
       if (itemError) {
         if (itemError.code === '23505') {
+          // Check if it's wishlist
+          const { data: existingTarget } = await supabase
+             .from('collection_items')
+             .select('id, status, format')
+             .eq('user_id', userId)
+             .eq('media_type', mediaType)
+             .eq(mediaType === 'movie' ? 'movie_id' : 'show_id', internalId)
+             .in('format', formats);
+
+          if (existingTarget && existingTarget.length > 0) {
+              const targets = existingTarget as any[];
+              const wishlistMatch = targets.find((t: any) => t.status === 'wishlist');
+              if (wishlistMatch && status === 'owned') {
+                 throw new Error(`WISHLIST_CONFLICT:::${wishlistMatch.id}:::${wishlistMatch.format}`);
+              }
+          }
           throw new Error('You already own this format/season. Fill in the Edition field to add another copy.');
         }
         throw itemError;

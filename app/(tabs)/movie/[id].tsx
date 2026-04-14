@@ -18,6 +18,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useSound } from '@/context/SoundContext';
 import { useThriftMode } from '@/context/ThriftModeContext';
 import { useAddToCollection, useCollection, useDeleteCollectionItem, useUpdateCollectionItem } from '@/hooks/useCollection';
+import { useCreatePost } from '@/hooks/useSocial';
 import { deleteFromCloudinary, uploadToCloudinary } from '@/lib/cloudinary';
 import { getCustomLists } from '@/lib/collection-utils';
 
@@ -61,12 +62,34 @@ export default function MovieDetailScreen() {
     const [cropModalVisible, setCropModalVisible] = useState(false);
     const [pendingImageUri, setPendingImageUri] = useState<string | null>(null);
     const [showEditionModal, setShowEditionModal] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [pendingFormat, setPendingFormat] = useState<string | null>(null);
     const [editionInput, setEditionInput] = useState('');
 
     // Curated Stacks State
     const [showNewStackInput, setShowNewStackInput] = useState(false);
     const [newStackName, setNewStackName] = useState('');
+
+    // Bulletin Board State
+    const [showPostModal, setShowPostModal] = useState(false);
+    const [postContent, setPostContent] = useState('');
+    const createPostMutation = useCreatePost(userId);
+
+    const handleCreatePost = () => {
+        if (!postContent.trim()) return;
+        createPostMutation.mutate({
+            content: postContent,
+            collection_item_id: movieItems[0]?.id,
+            movie_id: movieId,
+            rating: movieItems[0]?.rating || null,
+        }, {
+            onSuccess: () => {
+                setShowPostModal(false);
+                setPostContent('');
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            }
+        });
+    };
 
     // We use the main collection query and filter. 
     // In a generic app we might want a specific query for just this movie, 
@@ -358,7 +381,7 @@ export default function MovieDetailScreen() {
                     media_type: 'movie',
                 } as any,
                 formats: [pendingFormat as MovieFormat],
-                status: 'owned',
+                status: thriftMode ? 'wishlist' : 'owned',
                 edition: editionInput.trim() || null
             });
 
@@ -378,7 +401,29 @@ export default function MovieDetailScreen() {
             setShowEditionModal(false);
             setPendingFormat(null);
             setEditionInput('');
-        } catch (e) {
+        } catch (e: any) {
+            const msg = e?.message || String(e);
+            if (msg.startsWith('WISHLIST_CONFLICT:::')) {
+                const [, conflictId, formatName] = msg.split(':::');
+                const title = activeMovie.title;
+                if (Platform.OS === 'web') {
+                  if (window.confirm(`${title} (${formatName}) is on your wishlist. Do you want to mark it as acquired?`)) {
+                    updateMutation.mutate({ itemId: conflictId, updates: { status: 'owned' } });
+                    setShowEditionModal(false);
+                    setPendingFormat(null);
+                  }
+                } else {
+                  Alert.alert('On Wishlist', `${title} (${formatName}) is on your wishlist. Do you want to mark it as acquired?`, [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Mark as Acquired', onPress: () => {
+                        updateMutation.mutate({ itemId: conflictId, updates: { status: 'owned' } });
+                        setShowEditionModal(false);
+                        setPendingFormat(null);
+                    }}
+                  ]);
+                }
+                return;
+            }
             Alert.alert('Error', 'Failed to add format');
         }
     };
@@ -407,58 +452,35 @@ export default function MovieDetailScreen() {
             Alert.alert('Error', 'Could not update Grail status');
         }
     };
+    
+    const handleConfirmDelete = async () => {
+        try {
+            setShowDeleteModal(false);
+            setEjecting(true);
+            playSound('eject');
+            await new Promise(resolve => setTimeout(resolve, 2000));
 
-    const deleteMovie = async () => {
-        const performDelete = async () => {
-            try {
-                // EJECT SEQUENCE
-                setEjecting(true);
+            await Promise.all(movieItems.map((item: any) => deleteMutation.mutateAsync(item.id)));
+            if (refetch) refetch();
 
-                // Use global sound manager (web safe)
-                playSound('eject');
+            setEjecting(false);
 
-                // Visual delay for sound/animation
-                await new Promise(resolve => setTimeout(resolve, 2000)); // 2s eject time
-
-                await Promise.all(movieItems.map((item: any) => deleteMutation.mutateAsync(item.id)));
-                if (refetch) refetch();
-
-                // Clear eject state before navigating
-                setEjecting(false);
-
-                // Navigate back safely
-                if (fromStack) {
-                    router.replace(`/stack/${fromStack}` as any);
-                } else if (router.canGoBack()) {
-                    router.back();
-                } else {
-                    router.replace('/(tabs)/home' as any);
-                }
-            } catch (e) {
-                setEjecting(false);
-                console.error('Error deleting movie:', e);
-                if (Platform.OS === 'web') {
-                    window.alert('Could not delete movie');
-                } else {
-                    Alert.alert('Error', 'Could not delete movie');
-                }
+            if (fromStack) {
+                router.replace(`/stack/${fromStack}` as any);
+            } else if (router.canGoBack()) {
+                router.back();
+            } else {
+                router.replace('/(tabs)/home' as any);
             }
-        };
-
-        if (Platform.OS === 'web') {
-            if (window.confirm('Are you sure you want to remove this movie and all formats from your collection?')) {
-                performDelete();
-            }
-        } else {
-            Alert.alert('Delete Movie', 'Are you sure you want to remove this movie and all formats from your collection?', [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Delete',
-                    style: 'destructive',
-                    onPress: performDelete,
-                },
-            ]);
+        } catch (e) {
+            setEjecting(false);
+            console.error('Error deleting movie:', e);
+            Alert.alert('Error', 'Could not delete movie');
         }
+    };
+
+    const deleteMovie = () => {
+        setShowDeleteModal(true);
     };
 
     return (
@@ -634,6 +656,16 @@ export default function MovieDetailScreen() {
                         >
                             <Ionicons name="trash-outline" size={20} color="#ef4444" />
                         </Pressable>
+
+                        {/* PIN TO BULLETIN BOARD */}
+                        {!thriftMode && (
+                            <Pressable 
+                                onPress={() => setShowPostModal(true)}
+                                className="bg-amber-600/10 px-4 rounded-lg border border-amber-600/40 items-center justify-center"
+                            >
+                                <Ionicons name="pin" size={20} color="#f59e0b" />
+                            </Pressable>
+                        )}
                     </View>
 
                     {/* Cast Section */}
@@ -996,6 +1028,81 @@ export default function MovieDetailScreen() {
                     </View>
                 )
             }
+
+            {/* Delete Confirmation Modal */}
+            <Modal
+                visible={showDeleteModal}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setShowDeleteModal(false)}
+            >
+                <View className="flex-1 bg-black/80 items-center justify-center p-4">
+                    <View className="bg-neutral-900 rounded-lg p-6 w-full max-w-sm border border-neutral-800 shadow-xl">
+                        <Ionicons name="trash-outline" size={32} color="#ef4444" style={{ alignSelf: 'center', marginBottom: 16 }} />
+                        <Text className="text-white font-bold text-center text-xl mb-2">Delete Movie</Text>
+                        <Text className="text-neutral-400 font-mono text-center text-sm mb-6">
+                            Are you sure you want to remove this movie and all formats from your collection?
+                        </Text>
+                        <View className="flex-row gap-3">
+                            <Pressable 
+                                onPress={() => setShowDeleteModal(false)}
+                                className="flex-1 bg-neutral-800 py-3 rounded-lg items-center border border-neutral-700"
+                            >
+                                <Text className="text-white font-mono font-bold">CANCEL</Text>
+                            </Pressable>
+                            <Pressable 
+                                onPress={handleConfirmDelete}
+                                className="flex-1 bg-red-600 border border-red-500 py-3 rounded-lg items-center shadow shadow-red-900/50"
+                            >
+                                <Text className="text-white font-mono font-bold">DELETE</Text>
+                            </Pressable>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Post to Bulletin Board Modal */}
+            <Modal
+                visible={showPostModal}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setShowPostModal(false)}
+            >
+                <View className="flex-1 bg-black/80 items-center justify-center p-4">
+                    <View className="bg-yellow-100/90 rounded p-4 w-full max-w-sm shadow-xl" style={{ transform: [{ rotate: '-1deg' }] }}>
+                        <View className="flex-row items-center justify-between mb-4">
+                            <View className="bg-red-500 w-3 h-3 rounded-full" />
+                            <Text className="font-mono text-sm font-bold text-neutral-800">RECOMMEND TITLE</Text>
+                        </View>
+                        <TextInput
+                            className="font-mono text-sm text-neutral-900 min-h-[80px]"
+                            placeholder="Write a recommendation or review..."
+                            placeholderTextColor="#78716c"
+                            multiline
+                            value={postContent}
+                            onChangeText={setPostContent}
+                            autoFocus
+                        />
+                        <View className="flex-row justify-end mt-4 gap-2">
+                            <Pressable 
+                                onPress={() => setShowPostModal(false)}
+                                className="px-4 py-2 border border-neutral-400 rounded"
+                            >
+                                <Text className="font-mono font-bold text-xs text-neutral-700">CANCEL</Text>
+                            </Pressable>
+                            <Pressable 
+                                onPress={handleCreatePost}
+                                disabled={createPostMutation.isPending || !postContent.trim()}
+                                className={`px-4 py-2 bg-neutral-900 rounded ${!postContent.trim() ? 'opacity-50' : ''}`}
+                            >
+                                <Text className="text-white font-mono font-bold text-xs">
+                                    {createPostMutation.isPending ? 'PINNING...' : 'PIN TO BOARD'}
+                                </Text>
+                            </Pressable>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
 
             {/* Edition Input Modal */}
             <Modal

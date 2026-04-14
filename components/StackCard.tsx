@@ -62,7 +62,20 @@ type StackCardProps = {
 
 const DEFAULT_CARD_WIDTH = 100;
 const DEFAULT_CARD_HEIGHT = 150;
-const DEFAULT_OFFSET = 4;
+
+const getStackTransforms = (idx: number) => {
+  if (idx === 0) return { rotate: '0deg', left: 0, top: 0 };
+  
+  const rotations = ['-6deg', '5deg', '-4deg', '7deg', '-5deg', '4deg'];
+  const shiftsX = [-5, 7, -4, 6, -6, 5];
+  const shiftsY = [6, 12, 18, 24, 30, 36]; // Increasing Y significantly to build bolder depth
+  
+  const r = rotations[(idx - 1) % rotations.length];
+  const x = shiftsX[(idx - 1) % shiftsX.length];
+  const y = shiftsY[(idx - 1) % shiftsY.length];
+  
+  return { rotate: r, left: x, top: y };
+};
 
 export function StackCard({
   stack,
@@ -73,7 +86,7 @@ export function StackCard({
   onRatePress,
   width = DEFAULT_CARD_WIDTH,
   height = DEFAULT_CARD_HEIGHT,
-  stackOffset = DEFAULT_OFFSET,
+  stackOffset, // Kept to not break signature, but unused
   mode = 'grid',
   activeFormatFilter = null
 }: StackCardProps) {
@@ -353,6 +366,10 @@ export function StackCard({
 
   if (isPhysical) {
     // Physical stack: cards peeking out from behind
+    const maxShiftY = sorted.length > 0 ? getStackTransforms(sorted.length - 1).top : 0;
+    const paddingBuffer = 15; // Room for rotation and shadows
+    const containerHeight = (width / aspectRatio) + maxShiftY + paddingBuffer;
+
     return (
       <AnimatedPressable
         onPress={handlePress}
@@ -362,18 +379,18 @@ export function StackCard({
         onPressOut={isWishlist ? undefined : onPressOut}
         style={[
           animatedStyle,
-          { width: width + stackOffset * (sorted.length - 1), margin: 6 },
+          { width: width + 10, margin: 6 },
         ]}
       >
-        <View className="items-center">
-          <View className="relative" style={{ width: width, height: (width / aspectRatio) + (sorted.length - 1) * stackOffset * 0.5 }}>
+        <View className="items-center" style={{ paddingTop: 10 }}>
+          <View className="relative" style={{ width: width, height: containerHeight }}>
             {/* Sticker Overlays */}
             {isOnDisplay && !isWishlist && <StickerOverlay visible={isOnDisplay} size={40} />}
             {isGrail && isWishlist && <SaleSticker visible={true} size={40} />}
 
             {/* Poster Image */}
             <View
-              className={`rounded-lg overflow-hidden relative bg-neutral-800 ${isWishlist ? 'border-2 border-dashed border-neutral-600' : ''}`}
+              className={`rounded overflow-hidden relative bg-neutral-800 ${isWishlist ? 'border-2 border-dashed border-neutral-600' : ''}`}
               style={{
                 width: '100%',
                 height: '100%',
@@ -410,14 +427,14 @@ export function StackCard({
             </View>
             {isWishlist && (
               <View
-                className="absolute inset-0 rounded-xl z-20"
+                className="absolute inset-0 rounded z-20"
                 style={{
                   backgroundColor: 'rgba(100,100,100,0.35)',
                 }}
               />
             )}
             {sorted.map((item, idx) => {
-              const offset = idx * stackOffset;
+              const transforms = getStackTransforms(idx);
               const itemMedia = item.movies || item.shows;
               if (!itemMedia) return null;
               const url = item.custom_poster_url || getPosterUrl(itemMedia?.poster_path);
@@ -431,11 +448,19 @@ export function StackCard({
 
               const itemStyle = {
                 position: 'absolute' as const,
-                left: offset,
-                top: offset * 0.5,
+                left: transforms.left,
+                top: transforms.top,
+                transform: [{ rotate: transforms.rotate }],
                 width: width,
                 height: width / aspectRatio,
                 zIndex: sorted.length - idx,
+                borderWidth: 1,
+                borderColor: 'rgba(255,255,255,0.15)',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 6 },
+                shadowOpacity: 0.8,
+                shadowRadius: 8,
+                elevation: 10,
               };
 
               if (isVHS) {
@@ -448,7 +473,7 @@ export function StackCard({
               return (
                 <View
                   key={item.id}
-                  className="absolute bg-neutral-900 rounded-xl overflow-hidden"
+                  className="absolute bg-neutral-900 rounded overflow-hidden"
                   style={{
                     ...itemStyle,
                     shadowColor: '#000',

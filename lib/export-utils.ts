@@ -54,7 +54,7 @@ export function generateCsv(items: CollectionItemWithMedia[]): string {
     ].join(',');
   });
 
-  return [headers.join(','), ...rows].join('\n');
+  return '\uFEFF' + [headers.join(','), ...rows].join('\n');
 }
 
 export async function exportCollection(items: CollectionItemWithMedia[]) {

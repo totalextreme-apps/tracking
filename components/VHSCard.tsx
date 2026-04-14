@@ -14,7 +14,7 @@ export function VHSCard({ posterUrl, style, isCustom = false, isBootleg = false 
 
     return (
         <View
-            className="relative rounded-xl overflow-hidden shadow-lg bg-neutral-900"
+            className="relative rounded overflow-hidden shadow-lg bg-neutral-900"
             style={[{ aspectRatio, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.5, shadowRadius: 5 }, style]}
         >
             {/* Layer 1: Poster */}
