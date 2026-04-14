@@ -289,15 +289,14 @@ export const useCreateComment = (userId?: string) => {
     mutationFn: async ({ collectionItemId, content }: { collectionItemId: string; content: string }) => {
       if (!userId) throw new Error('Not logged in');
       
-      const { error, data } = await supabase
-        .from('item_comments')
+      const { error, data } = await (supabase.from('item_comments') as any)
         .insert({
           user_id: userId,
           collection_item_id: collectionItemId,
           content
-        } as any)
+        })
         .select()
-        .single() as any;
+        .single();
         
       if (error) throw error;
       return data;
@@ -307,6 +306,43 @@ export const useCreateComment = (userId?: string) => {
     },
   });
 };
+
+// Update Comment
+export const useUpdateComment = (userId?: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ commentId, content }: { commentId: string, content: string }) => {
+      if (!userId) throw new Error('Not logged in');
+      const { error } = await (supabase.from('item_comments') as any)
+        .update({ content })
+        .eq('id', commentId)
+        .eq('user_id', userId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['item-comments'] });
+    }
+  });
+};
+
+// Delete Comment
+export const useDeleteComment = (userId?: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (commentId: string) => {
+      if (!userId) throw new Error('Not logged in');
+      const { error } = await (supabase.from('item_comments') as any)
+        .delete()
+        .eq('id', commentId)
+        .eq('user_id', userId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['item-comments'] });
+    }
+  });
+};
+
 
 // 10. Community Social Feed (Combined Activities)
 export const useCommunityFeed = (userId?: string) => {

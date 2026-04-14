@@ -18,7 +18,8 @@ import { useAuth } from '@/context/AuthContext';
 import { useSound } from '@/context/SoundContext';
 import { useThriftMode } from '@/context/ThriftModeContext';
 import { useAddToCollection, useCollection, useDeleteCollectionItem, useUpdateCollectionItem } from '@/hooks/useCollection';
-import { useCreatePost, useItemComments, useCreateComment } from '@/hooks/useSocial';
+import { useCreatePost } from '@/hooks/useSocial';
+import { CommentSection } from '@/components/CommentSection';
 import { deleteFromCloudinary, uploadToCloudinary } from '@/lib/cloudinary';
 import { getCustomLists } from '@/lib/collection-utils';
 
@@ -109,19 +110,8 @@ export default function MovieDetailScreen() {
 
     // Comments State
     const commentActiveItem = movieItems[0];
-    const { data: comments, isLoading: commentsLoading } = useItemComments(commentActiveItem?.id);
-    const createCommentMutation = useCreateComment(userId);
-    const [commentText, setCommentText] = useState('');
     
-    const handleAddComment = () => {
-        if (!commentText.trim() || !commentActiveItem?.id) return;
-        createCommentMutation.mutate({
-            collectionItemId: commentActiveItem.id,
-            content: commentText
-        }, {
-            onSuccess: () => setCommentText('')
-        });
-    };
+    console.log('Movie items count:', movieItems.length, 'Formats:', movieItems.map((i: any) => i.format));
 
     console.log('Movie items count:', movieItems.length, 'Formats:', movieItems.map((i: any) => i.format));
 
@@ -995,64 +985,11 @@ export default function MovieDetailScreen() {
                     </View>
                 )}
 
-                {/* Comments Section */}
-                    <View className="mt-12 bg-neutral-900 border border-neutral-800 rounded-xl p-4 shadow-xl mb-12">
-                        <Text className="text-amber-500 font-bold text-lg mb-4 font-mono uppercase tracking-widest" style={{ fontFamily: 'VCR_OSD_MONO' }}>
-                            Discussion
-                        </Text>
-                        
-                        {commentsLoading ? (
-                            <ActivityIndicator color="#f59e0b" />
-                        ) : comments && comments.length > 0 ? (
-                            comments.map((comment: any) => (
-                                <View key={comment.id} className="flex-row mb-4 bg-black/40 p-3 rounded-lg border border-neutral-800">
-                                    <View className="w-8 h-8 rounded-full overflow-hidden bg-neutral-800 items-center justify-center mr-3 border border-neutral-700">
-                                        {comment.profiles?.avatar_url ? (
-                                            <Image source={{ uri: comment.profiles.avatar_url }} className="w-full h-full" />
-                                        ) : (
-                                            <Ionicons name="person" size={16} color="#737373" />
-                                        )}
-                                    </View>
-                                    <View className="flex-1">
-                                        <View className="flex-row justify-between items-center mb-1">
-                                            <Text className="text-white font-bold font-mono text-xs">
-                                                {comment.profiles?.username || 'Anonymous'}
-                                            </Text>
-                                            <Text className="text-neutral-500 text-[10px] font-mono">
-                                                {new Date(comment.created_at).toLocaleDateString()}
-                                            </Text>
-                                        </View>
-                                        <Text className="text-neutral-300 font-mono text-sm leading-5">
-                                            {comment.content}
-                                        </Text>
-                                    </View>
-                                </View>
-                            ))
-                        ) : (
-                            <Text className="text-neutral-500 font-mono text-center mb-4 text-sm mt-2">
-                                No comments structurally retained on this track. Be the first to catalog!
-                            </Text>
-                        )}
-                        
-                        {/* New Comment Input */}
-                        <View className="mt-2 flex-row flex-end">
-                            <TextInput
-                                className="flex-1 bg-neutral-950 border border-neutral-800 rounded-lg p-3 text-white font-mono min-h-[44px]"
-                                placeholder="Write a comment..."
-                                placeholderTextColor="#525252"
-                                value={commentText}
-                                onChangeText={setCommentText}
-                                multiline
-                            />
-                            <Pressable 
-                                onPress={handleAddComment}
-                                disabled={createCommentMutation.isPending || !commentText.trim()}
-                                className={`ml-2 bg-amber-600 items-center justify-center px-4 rounded-lg flex-row shadow-lg shadow-amber-900/20 ${!commentText.trim() ? 'opacity-50' : ''}`}
-                            >
-                                <Ionicons name="send" size={16} color="#fff" />
-                            </Pressable>
-                        </View>
+                {commentActiveItem?.id && (
+                    <View className="px-4 md:px-8 mb-12">
+                        <CommentSection collectionItemId={commentActiveItem.id} />
                     </View>
+                )}
                 </View>
             </ScrollView >
 
