@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, ScrollView, TextInput, Pressable, ActivityIndicator, ImageBackground, Image, Alert } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { PostCommentSection } from '@/components/PostCommentSection';
 import { useAuth } from '@/context/AuthContext';
 import { useBulletinFeed, useSearchUsers, useCreatePost, useSuggestedUsers, useUpdatePost, useDeletePost } from '@/hooks/useSocial';
 import { StatusBar } from 'expo-status-bar';
@@ -23,6 +24,7 @@ export default function BulletinBoardScreen() {
   // Editing State
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [expandedPostIds, setExpandedPostIds] = useState<Set<string>>(new Set());
 
   // Media Search State
   const [mediaQuery, setMediaQuery] = useState('');
@@ -157,6 +159,15 @@ export default function BulletinBoardScreen() {
     
     // Scroll to top so user sees the edit form
     scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+  };
+
+  const toggleComments = (postId: string) => {
+    setExpandedPostIds(prev => {
+      const next = new Set(prev);
+      if (next.has(postId)) next.delete(postId);
+      else next.add(postId);
+      return next;
+    });
   };
 
   const handleDelete = () => {
@@ -485,9 +496,30 @@ export default function BulletinBoardScreen() {
                     </View>
                   )}
 
-                  <Text className="text-neutral-800 font-mono text-sm leading-5">
+                  <Text className="text-neutral-800 font-mono text-sm leading-5 mt-2">
                     {post.content}
                   </Text>
+
+                  {/* Comment Toggle and Section */}
+                  <View className="mt-4 flex-row items-center border-t border-neutral-200/50 pt-3">
+                    <Pressable 
+                       onPress={() => toggleComments(post.id)}
+                       className="flex-row items-center"
+                    >
+                      <Ionicons 
+                        name={expandedPostIds.has(post.id) ? "chatbubble" : "chatbubble-outline"} 
+                        size={16} 
+                        color="#737373" 
+                      />
+                      <Text className="text-neutral-500 font-mono text-[10px] ml-1 uppercase font-bold tracking-tighter">
+                        {expandedPostIds.has(post.id) ? "Hide Replies" : "View Replies"}
+                      </Text>
+                    </Pressable>
+                  </View>
+
+                  {expandedPostIds.has(post.id) && (
+                    <PostCommentSection postId={post.id} />
+                  )}
                 </View>
               );
             })
