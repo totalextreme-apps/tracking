@@ -6,7 +6,7 @@ import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { router, Stack, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, Platform, Pressable, RefreshControl, ScrollView, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { EmptyState } from '@/components/EmptyState';
