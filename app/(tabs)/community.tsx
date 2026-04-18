@@ -26,6 +26,7 @@ import { StatusBar } from 'expo-status-bar';
 import * as Haptics from 'expo-haptics';
 import { supabase } from '@/lib/supabase';
 import { ConfirmModal } from '@/components/ConfirmModal';
+import { searchMedia, TmdbMediaResult, getMovieById, getTvShowById } from '@/lib/tmdb';
 
 const CORK_BG = 'https://www.transparenttextures.com/patterns/cork-board.png';
 
@@ -134,10 +135,8 @@ export default function CommunityScreen() {
 
   const [activeTab, setActiveTab] = useState<Tab>('activity');
   const [userSearch, setUserSearch] = useState('');
-  const [mediaQuery, setMediaQuery] = useState('');
-  const [mediaResults, setMediaResults] = useState<any[]>([]);
-  const [isSearchingMedia, setIsSearchingMedia] = useState(false);
-  const [selectedMedia, setSelectedMedia] = useState<any>(null);
+  
+  // Bulletin Logic
   const [postContent, setPostContent] = useState('');
   const [rating, setRating] = useState<number | undefined>(undefined);
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
@@ -394,10 +393,68 @@ export default function CommunityScreen() {
           <ImageBackground source={{ uri: CORK_BG }} style={{ marginHorizontal: 16, borderRadius: 12, overflow: 'hidden', marginTop: 16, marginBottom: 16 }} imageStyle={{ opacity: 0.35, borderRadius: 12 }}>
             <View style={{ backgroundColor: 'rgba(100, 60, 20, 0.4)', padding: 14 }}>
               <View style={{ backgroundColor: 'rgba(255,249,220,0.92)', borderRadius: 4, padding: 12, marginBottom: 16, shadowColor: '#000', shadowOffset: { width: 2, height: 4 }, shadowOpacity: 0.4, shadowRadius: 6 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <Text style={{ fontFamily: 'SpaceMono', fontSize: 10, fontWeight: 'bold', color: '#8a7060' }}>{editingPostId ? 'EDITING NOTE' : 'NEW NOTE'}</Text>
+                  {editingPostId && (
+                    <Pressable onPress={resetPostState} style={{ backgroundColor: 'rgba(0,0,0,0.05)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 2 }}>
+                      <Text style={{ fontFamily: 'SpaceMono', fontSize: 8, color: '#666' }}>CANCEL</Text>
+                    </Pressable>
+                  )}
+                </View>
                 <TextInput style={{ fontFamily: 'SpaceMono', fontSize: 13, color: '#2d2016', minHeight: 60, textAlignVertical: 'top' }} placeholder="Share a recommendation..." placeholderTextColor="#a89880" multiline value={postContent} onChangeText={setPostContent} />
-                <View style={{ alignItems: 'flex-end', marginTop: 10 }}>
-                  <Pressable onPress={handlePost} disabled={createPost.isPending || !postContent.trim()} style={{ backgroundColor: '#2d2016', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 4 }}>
-                    <Text style={{ color: '#f59e0b', fontFamily: 'SpaceMono', fontSize: 10, fontWeight: 'bold' }}>PIN TO BOARD</Text>
+                
+                {/* Rating */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)', paddingTop: 8 }}>
+                  <Text style={{ fontSize: 9, fontFamily: 'SpaceMono', color: '#8a7060', marginRight: 6 }}>RATING:</Text>
+                  {[1,2,3,4,5].map(star => (
+                    <Pressable key={star} onPress={() => setRating(star === rating ? undefined : star)} style={{ marginRight: 4 }}>
+                      <Ionicons name={star <= (rating || 0) ? "star" : "star-outline"} size={16} color={star <= (rating || 0) ? '#f59e0b' : '#a89880'} />
+                    </Pressable>
+                  ))}
+                </View>
+
+                {/* Media Attachment */}
+                <View style={{ marginTop: 10, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)', paddingTop: 8 }}>
+                  <Text style={{ fontSize: 9, fontFamily: 'SpaceMono', color: '#8a7060', marginBottom: 6 }}>ATTACH FILM:</Text>
+                  {selectedMedia ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.03)', padding: 6, borderRadius: 4, justifyContent: 'space-between' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                        <Ionicons name="film-outline" size={12} color="#2d2016" style={{ marginRight: 6 }} />
+                        <Text style={{ fontFamily: 'SpaceMono', fontSize: 10, color: '#2d2016' }} numberOfLines={1}>{selectedMedia.title || selectedMedia.name}</Text>
+                      </View>
+                      <Pressable onPress={() => setSelectedMedia(null)}>
+                        <Ionicons name="close-circle" size={14} color="#e53e3e" />
+                      </Pressable>
+                    </View>
+                  ) : (
+                    <View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 4, paddingHorizontal: 8, borderWidth: 1, borderColor: 'rgba(0,0,0,0.1)' }}>
+                        <Ionicons name="search" size={12} color="#a89880" />
+                        <TextInput
+                          style={{ flex: 1, paddingVertical: 4, paddingHorizontal: 6, fontFamily: 'SpaceMono', fontSize: 10, color: '#2d2016' }}
+                          placeholder="Search movie..."
+                          value={mediaQuery}
+                          onChangeText={setMediaQuery}
+                        />
+                      </View>
+                      {mediaResults.length > 0 && (
+                        <View style={{ marginTop: 4, backgroundColor: '#fff', borderRadius: 4, borderWidth: 1, borderColor: 'rgba(0,0,0,0.1)', overflow: 'hidden' }}>
+                          {mediaResults.map(res => (
+                            <Pressable key={`${res.media_type}-${res.id}`} onPress={() => { setSelectedMedia(res); setMediaQuery(''); setMediaResults([]); }} style={{ padding: 8, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.05)' }}>
+                              <Text style={{ fontFamily: 'SpaceMono', fontSize: 9, color: '#2d2016' }}>{res.title || res.name} ({new Date(res.release_date || res.first_air_date || '').getFullYear() || 'N/A'})</Text>
+                            </Pressable>
+                          ))}
+                        </View>
+                      )}
+                    </View>
+                  )}
+                </View>
+
+                <View style={{ alignItems: 'flex-end', marginTop: 14 }}>
+                  <Pressable onPress={handlePost} disabled={createPost.isPending || updatePost.isPending || !postContent.trim()} style={{ backgroundColor: '#2d2016', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 4 }}>
+                    <Text style={{ color: '#f59e0b', fontFamily: 'SpaceMono', fontSize: 10, fontWeight: 'bold' }}>
+                      {editingPostId ? (updatePost.isPending ? 'UPDATING...' : 'UPDATE PIN') : (createPost.isPending ? 'PINNING...' : 'PIN TO BOARD')}
+                    </Text>
                   </Pressable>
                 </View>
               </View>
@@ -410,8 +467,39 @@ export default function CommunityScreen() {
                       </View>
                       <Text style={{ fontFamily: 'SpaceMono', fontSize: 11, fontWeight: 'bold', color: '#2d2016' }}>@{post.profiles?.username}</Text>
                       <View style={{ flex: 1 }} />
-                      {post.user_id === userId && <Pressable onPress={() => setShowDeleteConfirm(post.id)}><Ionicons name="trash" size={14} color="#e53e3e" /></Pressable>}
+                      {post.user_id === userId && (
+                        <View style={{ flexDirection: 'row' }}>
+                          <Pressable onPress={() => startEditing(post)} style={{ marginRight: 10 }}><Ionicons name="pencil" size={14} color="#666" /></Pressable>
+                          <Pressable onPress={() => setShowDeleteConfirm(post.id)}><Ionicons name="trash" size={14} color="#e53e3e" /></Pressable>
+                        </View>
+                      )}
                     </View>
+
+                    {(post.movies || post.shows) && (
+                      <Pressable 
+                        onPress={() => {
+                          const id = post.movies?.id || post.shows?.id;
+                          const t = post.movies ? 'movie' : 'show';
+                          router.push(`/(tabs)/${t}/${id}`);
+                        }}
+                        style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.05)', padding: 8, borderRadius: 4, marginBottom: 10 }}
+                      >
+                        <Image source={{ uri: getPosterUrl(post.movies?.poster_path || post.shows?.poster_path) || '' }} style={{ width: 30, height: 45, borderRadius: 2, marginRight: 10, backgroundColor: '#ddd' }} />
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontFamily: 'SpaceMono', fontSize: 10, color: '#2d2016', fontWeight: 'bold' }} numberOfLines={1}>{post.movies?.title || post.shows?.name}</Text>
+                          <Text style={{ fontFamily: 'SpaceMono', fontSize: 8, color: '#8a7060' }}>{post.movies ? 'MOVIE' : 'TV SHOW'}</Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={12} color="#ccc" />
+                      </Pressable>
+                    )}
+
+                    {post.rating !== undefined && post.rating !== null && (
+                      <View style={{ flexDirection: 'row', marginBottom: 8 }}>
+                        {[1,2,3,4,5].map(star => (
+                          <Ionicons key={star} name="star" size={10} color={star <= post.rating! ? '#f59e0b' : '#d1d1d1'} style={{ marginRight: 2 }} />
+                        ))}
+                      </View>
+                    )}
                     <Text style={{ fontFamily: 'SpaceMono', fontSize: 12, color: '#2d2016' }}>{post.content}</Text>
                     <Pressable onPress={() => toggleComments(post.id)} style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10, paddingTop: 8, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)' }}>
                       <Ionicons name="chatbubble-outline" size={12} color="#8a7060" />
