@@ -12,7 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { getPosterUrl } from '@/lib/dummy-data';
 import { StatusBar } from 'expo-status-bar';
 
-type TabType = 'grails' | 'collection' | 'wishlist' | 'analytics';
+type TabType = 'grails' | 'collection' | 'wishlist' | 'bin' | 'analytics';
 type SortOption = 'added' | 'name' | 'format' | 'year';
 
 export default function UserProfileScreen() {
@@ -81,6 +81,7 @@ export default function UserProfileScreen() {
   const grails = filterAndSortItems(collection?.filter((item: any) => item.is_grail) || []);
   const stackedCollection = stackItems(collection?.filter((item: any) => item.status === 'owned') || []);
   const stackedWishlist = stackItems(collection?.filter((item: any) => item.status === 'wishlist') || []);
+  const binItems = filterAndSortItems(collection?.filter((item: any) => item.for_sale || item.for_trade) || []);
 
   const toggleFollowMutation = useToggleFollow(currentUserId);
   const isFollowing = currentUserId && followers?.some((f: any) => f.follower_id === currentUserId);
@@ -200,6 +201,9 @@ export default function UserProfileScreen() {
           </Pressable>
           <Pressable onPress={() => setActiveTab('wishlist')} className={`flex-1 py-3 items-center border-b-2 ${activeTab === 'wishlist' ? 'border-pink-500' : 'border-transparent'}`}>
             <Text className={`font-mono text-[10px] font-bold ${activeTab === 'wishlist' ? 'text-pink-500' : 'text-neutral-500'}`}>WISHLIST</Text>
+          </Pressable>
+          <Pressable onPress={() => setActiveTab('bin')} className={`flex-1 py-3 items-center border-b-2 ${activeTab === 'bin' ? 'border-emerald-500' : 'border-transparent'}`}>
+            <Text className={`font-mono text-[10px] font-bold ${activeTab === 'bin' ? 'text-emerald-500' : 'text-neutral-500'}`}>THE BIN</Text>
           </Pressable>
           <Pressable onPress={() => setActiveTab('analytics')} className={`flex-1 py-3 items-center border-b-2 ${activeTab === 'analytics' ? 'border-blue-500' : 'border-transparent'}`}>
             <Text className={`font-mono text-[10px] font-bold ${activeTab === 'analytics' ? 'text-blue-500' : 'text-neutral-500'}`}>STATS</Text>
@@ -343,6 +347,56 @@ export default function UserProfileScreen() {
                   ) : (
                     <View className="p-6 items-center border-dashed border border-neutral-800 rounded-lg">
                       <Text className="text-neutral-500 font-mono text-center">Wishlist is empty.</Text>
+                    </View>
+                  )}
+                </View>
+              )}
+
+              {activeTab === 'bin' && (
+                <View>
+                  {binItems.length > 0 ? (
+                    <View className="flex-row flex-wrap justify-between">
+                      {binItems.map((item: any) => {
+                        const posterUrl = getPosterUrl(item.movies?.poster_path || item.shows?.poster_path);
+                        return (
+                          <Pressable 
+                            key={item.id} 
+                            onPress={() => router.push({ pathname: item.movies ? `/movie/${item.movie_id}` as any : `/show/${item.show_id}` as any, params: { ownerId: id } })}
+                            className="w-[48%] mb-4 bg-neutral-900 rounded-xl overflow-hidden border border-neutral-800"
+                          >
+                            <View className="relative">
+                              <Image source={{ uri: posterUrl as string }} className="w-full aspect-[2/3]" />
+                              <View className="absolute top-2 left-2 flex-row gap-1">
+                                {item.for_sale && (
+                                  <View className="bg-emerald-500 px-2 py-0.5 rounded shadow-sm">
+                                    <Text className="text-black font-mono text-[8px] font-bold">SALE</Text>
+                                  </View>
+                                )}
+                                {item.for_trade && (
+                                  <View className="bg-blue-500 px-2 py-0.5 rounded shadow-sm">
+                                    <Text className="text-white font-mono text-[8px] font-bold">TRADE</Text>
+                                  </View>
+                                )}
+                              </View>
+                              {item.for_sale && item.price && (
+                                <View className="absolute bottom-2 right-2 bg-black/80 px-2 py-1 rounded border border-emerald-500/30">
+                                  <Text className="text-emerald-400 font-mono text-[10px] font-bold">${item.price}</Text>
+                                </View>
+                              )}
+                            </View>
+                            <View className="p-2">
+                              <Text className="text-white font-mono text-[10px] font-bold" numberOfLines={1}>{item.movies?.title || item.shows?.name}</Text>
+                              <Text className="text-neutral-500 font-mono text-[8px] uppercase">{item.format}</Text>
+                            </View>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  ) : (
+                    <View className="bg-neutral-900 border border-neutral-800 rounded-lg p-8 items-center border-dashed">
+                      <Ionicons name="cart-outline" size={32} color="#262626" />
+                      <Text className="text-neutral-500 font-mono text-center mt-2">The bin is empty.</Text>
+                      <Text className="text-neutral-700 font-mono text-[9px] text-center mt-1">Designate items for sale or trade to see them here.</Text>
                     </View>
                   )}
                 </View>

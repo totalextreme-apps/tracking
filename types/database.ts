@@ -53,6 +53,9 @@ export interface CollectionItem {
   digital_provider: string | null;
   condition: string | null;
   is_bootleg: boolean;
+  for_sale: boolean;
+  for_trade: boolean;
+  price: number | null;
   custom_poster_url: string | null;
   custom_lists: string[] | null;
   rating?: number; // 0-5

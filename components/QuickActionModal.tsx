@@ -210,12 +210,57 @@ export function QuickActionModal({
 
       <Pressable
         onPress={() => setViewState('remove-format')}
-        className="bg-neutral-800 py-3 px-4 rounded-xl flex-row items-center"
+        className="bg-neutral-800 py-3 px-4 rounded-xl flex-row items-center mb-6"
       >
         <Ionicons name="remove-circle-outline" size={20} color="#ef4444" />
         <Text className="text-red-400 font-mono font-bold ml-3 flex-1">REMOVE FORMAT</Text>
         <Ionicons name="chevron-forward" size={16} color="#525252" />
       </Pressable>
+
+      <Text className="text-neutral-500 font-mono text-[10px] mb-3 tracking-widest uppercase">LISTING OPTIONS</Text>
+      
+      <View className="flex-row gap-2 mb-3">
+        <Pressable 
+          onPress={() => {
+            const newVal = !item.for_sale;
+            updateMutation.mutate({ itemId: item.id, updates: { for_sale: newVal } });
+            playSound('click');
+          }}
+          className={`flex-1 py-3 px-4 rounded-xl flex-row items-center border ${item.for_sale ? 'bg-emerald-900/30 border-emerald-500/50' : 'bg-neutral-800 border-neutral-700'}`}
+        >
+          <Ionicons name="cash-outline" size={18} color={item.for_sale ? '#10b981' : '#a3a3a3'} />
+          <Text className={`font-mono font-bold ml-2 ${item.for_sale ? 'text-emerald-400' : 'text-neutral-400'}`}>FOR SALE</Text>
+        </Pressable>
+
+        <Pressable 
+          onPress={() => {
+            const newVal = !item.for_trade;
+            updateMutation.mutate({ itemId: item.id, updates: { for_trade: newVal } });
+            playSound('click');
+          }}
+          className={`flex-1 py-3 px-4 rounded-xl flex-row items-center border ${item.for_trade ? 'bg-blue-900/30 border-blue-500/50' : 'bg-neutral-800 border-neutral-700'}`}
+        >
+          <Ionicons name="swap-horizontal-outline" size={18} color={item.for_trade ? '#3b82f6' : '#a3a3a3'} />
+          <Text className={`font-mono font-bold ml-2 ${item.for_trade ? 'text-blue-400' : 'text-neutral-400'}`}>FOR TRADE</Text>
+        </Pressable>
+      </View>
+
+      {item.for_sale && (
+        <View className="bg-neutral-800 p-3 rounded-xl flex-row items-center border border-neutral-700 mb-6">
+          <Text className="text-emerald-500 font-mono font-bold mr-2">$</Text>
+          <TextInput
+            className="flex-1 text-white font-mono text-sm"
+            placeholder="Asking Price (Optional)"
+            placeholderTextColor="#525252"
+            keyboardType="numeric"
+            defaultValue={item.price?.toString() || ''}
+            onEndEditing={(e) => {
+              const p = parseFloat(e.nativeEvent.text);
+              updateMutation.mutate({ itemId: item.id, updates: { price: isNaN(p) ? null : p } });
+            }}
+          />
+        </View>
+      )}
     </>
   );
   }

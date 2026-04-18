@@ -244,6 +244,9 @@ export function useUpdateCollectionItem(userId: string | undefined) {
         rating?: number;
         notes?: string;
         edition?: string | null;
+        for_sale?: boolean;
+        for_trade?: boolean;
+        price?: number | null;
         custom_poster_url?: string | null;
         custom_backdrop_url?: string | null;
         custom_lists?: string[] | null;

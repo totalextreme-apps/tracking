@@ -19,6 +19,7 @@ import { BootlegSticker } from './BootlegSticker';
 import { GlossyCard } from './GlossyCard';
 import { NowStreamingSticker } from './NowStreamingSticker';
 import { SaleSticker } from './SaleSticker';
+import { TradeSticker } from './TradeSticker';
 import { StickerOverlay } from './StickerOverlay';
 import { VHSCard } from './VHSCard';
 
@@ -387,7 +388,8 @@ export function StackCard({
             <View className="relative" style={{ width: width, height: containerHeight }}>
               {/* Sticker Overlays */}
               {isOnDisplay && !isWishlist && <StickerOverlay visible={isOnDisplay} size={40} />}
-              {isGrail && isWishlist && <SaleSticker visible={true} size={40} />}
+              {topItem.for_sale && <SaleSticker visible={true} size={40} />}
+              {topItem.for_trade && <TradeSticker visible={true} size={40} />}
 
               {sorted.map((item, idx) => {
                 const transforms = getStackTransforms(idx);
@@ -475,7 +477,8 @@ export function StackCard({
           <View style={{ width: width, height: width / aspectRatio }}>
             {/* Sticker Overlays */}
             {isOnDisplay && !isWishlist && <StickerOverlay visible={isOnDisplay} size={40} />}
-            {isGrail && isWishlist && <SaleSticker visible={true} size={40} />}
+            {topItem.for_sale && <SaleSticker visible={true} size={40} />}
+            {topItem.for_trade && <TradeSticker visible={true} size={40} />}
             
             {topItem.format === 'VHS' ? (
               <VHSCard posterUrl={posterUrl} isCustom={!!topItem.custom_poster_url} isBootleg={topItem.is_bootleg} />
