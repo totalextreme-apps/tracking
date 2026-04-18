@@ -19,7 +19,8 @@ export function useCollection(userId: string | undefined) {
         .from('collection_items')
         .select(`*, movies (*), shows (*)`)
         .eq('user_id', userId)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(10000);
 
       try {
         const { data, error } = await Promise.race([

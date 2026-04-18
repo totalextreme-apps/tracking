@@ -118,11 +118,13 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="board"
+        name="community"
         options={{
           headerShown: false,
-          title: 'Bulletin',
-          tabBarIcon: ({ color }) => <TabBarIcon name="clipboard" color={color} />,
+          title: 'Community',
+          tabBarIcon: ({ color }) => <TabBarIcon name="users" color={color} />,
+          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
+          tabBarBadgeStyle: { backgroundColor: '#f59e0b', color: '#000', fontFamily: 'SpaceMono', fontSize: 9 },
         }}
         listeners={{
           tabPress: () => {
@@ -172,6 +174,13 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="privacy"
+        options={{
+          headerShown: false,
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="board"
         options={{
           headerShown: false,
           href: null,

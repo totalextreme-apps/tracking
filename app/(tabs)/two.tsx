@@ -252,7 +252,7 @@ export default function SettingsScreen() {
             <View className="flex-row gap-3 mt-6">
               <View className="flex-1 bg-neutral-900 p-3 rounded-lg border border-neutral-800 items-center">
                 <Text className="text-2xl font-bold text-white font-mono">{totalMovies}</Text>
-                <Text className="text-[10px] text-neutral-500 font-bold tracking-widest uppercase">Movies</Text>
+                <Text className="text-[10px] text-neutral-500 font-bold tracking-widest uppercase">Items</Text>
               </View>
               <View className="flex-1 bg-neutral-900 p-3 rounded-lg border border-neutral-800 items-center">
                 <Text className="text-2xl font-bold text-amber-500 font-mono">{totalGrails}</Text>
@@ -328,51 +328,6 @@ export default function SettingsScreen() {
 
         {/* SETTINGS LIST */}
         <View className="mb-8">
-          <Text className="text-amber-500/90 font-mono text-sm font-bold tracking-widest mb-3">
-            SOCIAL
-          </Text>
-          <View
-            className="bg-[#2B4A8C] mb-8 border-2"
-            style={{
-              borderTopColor: '#ffffff',
-              borderLeftColor: '#ffffff',
-              borderBottomColor: '#525252',
-              borderRightColor: '#525252',
-              borderWidth: 2,
-            }}
-          >
-            <Pressable
-              onPress={() => router.push('/(tabs)/profile/feed')}
-              className="p-4 flex-row items-center justify-between border-b-2 border-white/20 active:bg-[#1a3366]"
-            >
-              <View className="flex-row items-center">
-                <View className="w-8 items-center"><FontAwesome name="users" size={14} color="#FFE92F" /></View>
-                <Text className="font-mono text-sm font-bold" style={{ color: '#FFE92F' }}>Followed Members & Activity</Text>
-              </View>
-              <FontAwesome name="chevron-right" size={10} color="white" />
-            </Pressable>
-            <Pressable
-              onPress={() => router.push('/(tabs)/profile/messages')}
-              className="p-4 flex-row items-center justify-between border-b-2 border-white/20 active:bg-[#1a3366]"
-            >
-              <View className="flex-row items-center">
-                <View className="w-8 items-center"><FontAwesome name="envelope" size={14} color="#FFE92F" /></View>
-                <Text className="font-mono text-sm font-bold" style={{ color: '#FFE92F' }}>Private Messages (Inbox)</Text>
-              </View>
-              <FontAwesome name="chevron-right" size={10} color="white" />
-            </Pressable>
-            <Pressable
-              onPress={() => router.push('/(tabs)/profile/notifications')}
-              className="p-4 flex-row items-center justify-between active:bg-[#1a3366]"
-            >
-              <View className="flex-row items-center">
-                <View className="w-8 items-center"><FontAwesome name="bell" size={14} color="#FFE92F" /></View>
-                <Text className="font-mono text-sm font-bold" style={{ color: '#FFE92F' }}>Notifications (Alerts)</Text>
-              </View>
-              <FontAwesome name="chevron-right" size={10} color="white" />
-            </Pressable>
-          </View>
-
           <Text className="text-amber-500/90 font-mono text-sm font-bold tracking-widest mb-3">
             SETTINGS
           </Text>

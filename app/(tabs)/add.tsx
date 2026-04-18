@@ -45,6 +45,12 @@ export default function AddScreen() {
   const [triedToSubmit, setTriedToSubmit] = useState(false);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
 
+  // Manual Entry State
+  const [showManualEntry, setShowManualEntry] = useState(false);
+  const [manualTitle, setManualTitle] = useState('');
+  const [manualType, setManualType] = useState<'movie' | 'tv'>('movie');
+  const [manualYear, setManualYear] = useState('');
+
   const searchQuery = useTmdbSearch(debouncedQuery);
   const addMutation = useAddToCollection(userId);
   const updateMutation = useUpdateCollectionItem(userId);
@@ -70,6 +76,9 @@ export default function AddScreen() {
       setIsBootleg(false);
       setStatus('owned');
       setTriedToSubmit(false);
+      setShowManualEntry(false);
+      setManualTitle('');
+      setManualYear('');
     }, [])
   );
 
@@ -165,6 +174,7 @@ export default function AddScreen() {
     setQuery('');
     setDebouncedQuery('');
     setTriedToSubmit(false);
+    setShowManualEntry(false);
     Keyboard.dismiss();
 
     if (item.media_type === 'tv') {
@@ -566,6 +576,80 @@ export default function AddScreen() {
               <Text className="text-white font-mono font-semibold">CHOOSE DIFFERENT</Text>
             </Pressable>
           </View>
+        ) : showManualEntry ? (
+          <View className="px-4 pb-4">
+            <View className="bg-neutral-900 rounded-lg p-6 mb-4 border border-neutral-800 shadow-xl">
+               <Text className="text-amber-500 font-bold text-xl mb-6 tracking-tighter" style={{ fontFamily: 'VCR_OSD_MONO' }}>MANUAL ENTRY</Text>
+               
+               <Text className="text-neutral-500 font-mono text-[10px] mb-2 tracking-widest">TITLE</Text>
+               <TextInput 
+                  nativeID="manual-title-input"
+                  {...({ name: 'manual-title' } as any)}
+                  value={manualTitle}
+                  onChangeText={setManualTitle}
+                  className="bg-neutral-950 border border-neutral-800 text-white px-4 py-3 rounded-lg font-mono text-sm mb-5"
+                  placeholder="e.g. Grandma's Home Visit"
+                  placeholderTextColor="#444"
+                  autoCapitalize="words"
+               />
+
+               <Text className="text-neutral-500 font-mono text-[10px] mb-2 tracking-widest">MEDIA TYPE</Text>
+               <View className="flex-row gap-3 mb-5">
+                  <Pressable onPress={() => setManualType('movie')} className={`py-3 flex-1 rounded-lg border ${manualType === 'movie' ? 'bg-amber-600/20 border-amber-600/50' : 'bg-neutral-950 border-neutral-800'}`}>
+                     <Text className={`font-mono text-center text-sm font-bold ${manualType === 'movie' ? 'text-amber-500' : 'text-neutral-500'}`}>MOVIE</Text>
+                  </Pressable>
+                  <Pressable onPress={() => setManualType('tv')} className={`py-3 flex-1 rounded-lg border ${manualType === 'tv' ? 'bg-amber-600/20 border-amber-600/50' : 'bg-neutral-950 border-neutral-800'}`}>
+                     <Text className={`font-mono text-center text-sm font-bold ${manualType === 'tv' ? 'text-amber-500' : 'text-neutral-500'}`}>TV SERIES</Text>
+                  </Pressable>
+               </View>
+
+               <Text className="text-neutral-500 font-mono text-[10px] mb-2 tracking-widest">RELEASE YEAR</Text>
+               <TextInput 
+                  nativeID="manual-year-input"
+                  {...({ name: 'manual-year' } as any)}
+                  value={manualYear}
+                  onChangeText={setManualYear}
+                  className="bg-neutral-950 border border-neutral-800 text-white px-4 py-3 rounded-lg font-mono text-sm mb-8"
+                  placeholder="YYYY (Optional)"
+                  placeholderTextColor="#444"
+                  keyboardType="numeric"
+                  maxLength={4}
+               />
+
+               <Pressable 
+                  onPress={() => {
+                    if (!manualTitle.trim()) {
+                      Alert.alert('Required', 'Title is required');
+                      return;
+                    }
+                    const fakeId = -Math.abs(Math.floor(Math.random() * 9000000) + 1000000); // Unique negative ID
+                    setSelectedItem({
+                      id: fakeId,
+                      media_type: manualType,
+                      title: manualTitle.trim(),
+                      name: manualTitle.trim(),
+                      release_date: manualYear.trim() || undefined,
+                      first_air_date: manualYear.trim() || undefined,
+                      genres: [], // Bypasses TMDB lookup
+                      seasons: manualType === 'tv' ? [{ id: fakeId, season_number: 1 }] : undefined
+                    } as TmdbMediaResult);
+                    setShowManualEntry(false);
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                  }}
+                  className="bg-emerald-600 py-3 rounded-lg items-center active:opacity-80"
+                  style={{ minHeight: 48 }}
+               >
+                  <Text className="text-white font-mono font-bold tracking-widest">CONTINUE</Text>
+               </Pressable>
+
+               <Pressable 
+                  onPress={() => setShowManualEntry(false)}
+                  className="mt-4 py-3 items-center rounded-lg border border-neutral-800 bg-neutral-950 active:bg-neutral-800"
+               >
+                  <Text className="text-neutral-500 font-mono text-xs">CANCEL</Text>
+               </Pressable>
+            </View>
+          </View>
         ) : (
           /* Search Results */
           <View className="flex-1 px-4">
@@ -603,17 +687,43 @@ export default function AddScreen() {
                     </Pressable>
                   );
                 })}
+                <View className="flex-row justify-center mt-6 mb-8">
+                   <Pressable
+                     onPress={() => setShowManualEntry(true)}
+                     className="bg-neutral-900 border border-neutral-800 px-6 py-3 rounded-full active:bg-neutral-800"
+                   >
+                     <Text className="text-neutral-400 font-mono text-[10px] uppercase tracking-widest">
+                       Not Listed? <Text className="text-amber-500 font-bold">Add Manually</Text>
+                     </Text>
+                   </Pressable>
+                </View>
                 <View className="h-8" />
               </View>
             ) : debouncedQuery.trim().length > 0 && !searchQuery.isFetching ? (
               <View className="py-12 items-center">
-                <Text className="text-neutral-500 font-mono">No results</Text>
+                <Text className="text-neutral-500 font-mono mb-6">No results</Text>
+                <Pressable
+                  onPress={() => setShowManualEntry(true)}
+                  className="bg-neutral-900 border border-neutral-800 px-6 py-3 rounded-full active:bg-neutral-800"
+                >
+                  <Text className="text-neutral-400 font-mono text-[10px] uppercase font-bold tracking-widest">
+                    Add <Text className="text-amber-500 text-lg ml-0.5 mt-[-2px]">{debouncedQuery}</Text> manully
+                  </Text>
+                </Pressable>
               </View>
             ) : (
               <View className="py-12 items-center">
-                <Text className="text-neutral-600 font-mono text-center">
+                <Text className="text-neutral-600 font-mono text-center mb-6">
                   Type at least 1 character to search
                 </Text>
+                <Pressable
+                  onPress={() => setShowManualEntry(true)}
+                  className="bg-neutral-900 border border-neutral-800 px-6 py-3 rounded-full active:bg-neutral-800"
+                >
+                  <Text className="text-neutral-400 font-mono text-[10px] uppercase tracking-widest">
+                    Unlisted Title? <Text className="text-amber-500 font-bold">Add Manually</Text>
+                  </Text>
+                </Pressable>
               </View>
             )}
           </View>
