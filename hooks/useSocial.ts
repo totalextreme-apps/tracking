@@ -186,19 +186,14 @@ export const useBulletinFeed = (userId?: string) => {
 };
 
 // 7. Marketplace Feed (Items for sale/trade from community)
-export const useMarketplaceFeed = () => {
+export function useMarketplaceFeed() {
   return useQuery({
-    queryKey: ['marketplace'],
+    queryKey: ['marketplace_feed'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('collection_items')
-        .select(`
-          *,
-          profiles:user_id(*),
-          movies(*),
-          shows(*)
-        `)
-        .or('for_sale.eq.true,for_trade.eq.true')
+        .select(`*, profiles:user_id(username, avatar_url), movies(*), shows(*)`)
+        .or(`for_sale.eq.true,for_trade.eq.true`)
         .order('created_at', { ascending: false })
         .limit(20);
 
@@ -206,7 +201,7 @@ export const useMarketplaceFeed = () => {
       return data;
     },
   });
-};
+}
 
 // 7b. Create Post Mutation
 export const useCreatePost = (userId?: string) => {

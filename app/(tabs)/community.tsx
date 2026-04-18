@@ -142,10 +142,15 @@ export default function CommunityScreen() {
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [expandedPostIds, setExpandedPostIds] = useState<Set<string>>(new Set());
+  
+  // Media Search State (Bulletin)
+  const [mediaQuery, setMediaQuery] = useState('');
+  const [mediaResults, setMediaResults] = useState<TmdbMediaResult[]>([]);
+  const [selectedMedia, setSelectedMedia] = useState<TmdbMediaResult | null>(null);
+  const [isSearchingMedia, setIsSearchingMedia] = useState(false);
 
   // Data
   const { data: following } = useFollowing(userId);
-  const { data: suggestedUsers } = useSuggestedUsers(userId);
   const { data: bulletinFeed, isLoading: bulletinLoading } = useBulletinFeed(userId);
   const { data: communityFeed, isLoading: communityLoading } = useCommunityFeed(userId);
   const { data: marketplaceFeed } = useMarketplaceFeed();
@@ -153,6 +158,26 @@ export default function CommunityScreen() {
   const { data: notifications, isLoading: notifLoading } = useNotifications(userId);
   const { data: conversations, isLoading: inboxLoading } = useConversations(userId);
   const { data: suggestedMembers } = useSuggestedUsers(userId);
+
+  // TMDB Media Search effect
+  React.useEffect(() => {
+    if (!mediaQuery.trim()) {
+      setMediaResults([]);
+      return;
+    }
+    const handler = setTimeout(async () => {
+      setIsSearchingMedia(true);
+      try {
+        const res = await searchMedia(mediaQuery);
+        setMediaResults(res.results.slice(0, 5));
+      } catch (e) {
+        console.error('Media search error:', e);
+      } finally {
+        setIsSearchingMedia(false);
+      }
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [mediaQuery]);
 
   const toggleFollow = useToggleFollow(userId);
   const createPost = useCreatePost(userId);
