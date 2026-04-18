@@ -564,7 +564,7 @@ export default function CommunityScreen() {
             <ActivityIndicator color="#f59e0b" style={{ marginTop: 40 }} />
           ) : !conversations?.length ? (
             <View style={{ marginTop: 80, alignItems: 'center', paddingHorizontal: 40 }}>
-              <Ionicons name="chatbubbles-outline" size={56, } color="#1a1a1a" />
+              <Ionicons name="chatbubbles-outline" size={56} color="#1a1a1a" />
               <Text style={{ color: '#2a2a2a', fontFamily: 'SpaceMono', fontSize: 11, textAlign: 'center', marginTop: 16, lineHeight: 18 }}>
                 Inbox empty.{'\n'}Message a member from their profile to start a chat.
               </Text>
