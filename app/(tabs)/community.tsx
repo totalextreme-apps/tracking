@@ -17,7 +17,8 @@ import {
   useDeletePost,
   useUpdatePost,
   usePostComments,
-  useCreatePostComment
+  useCreatePostComment,
+  useMarketplaceFeed
 } from '@/hooks/useSocial';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
