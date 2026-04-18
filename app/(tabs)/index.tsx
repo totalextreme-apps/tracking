@@ -30,6 +30,16 @@ export default function HomeScreen() {
   const updateMutation = useUpdateCollectionItem(userId);
   const [quickActionItem, setQuickActionItem] = useState<CollectionItemWithMedia | null>(null);
 
+  // Sync quickActionItem when collection data changes (to avoid stale modal state)
+  useEffect(() => {
+    if (quickActionItem && collection) {
+      const freshItem = (collection as CollectionItemWithMedia[]).find(i => i.id === quickActionItem.id);
+      if (freshItem) {
+        setQuickActionItem(freshItem);
+      }
+    }
+  }, [collection]);
+
   const [sortBy, setSortBy] = useState<'recent' | 'title' | 'release' | 'rating'>('recent');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const { width: windowWidth } = useWindowDimensions();

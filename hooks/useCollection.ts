@@ -236,36 +236,48 @@ export function useUpdateCollectionItem(userId: string | undefined) {
       updates,
     }: {
       itemId: string;
-      updates: {
-        status?: 'owned' | 'wishlist';
-        is_on_display?: boolean;
-        is_grail?: boolean;
-        is_bootleg?: boolean;
-        rating?: number;
-        notes?: string;
-        edition?: string | null;
-        for_sale?: boolean;
-        for_trade?: boolean;
-        price?: number | null;
-        custom_poster_url?: string | null;
-        custom_backdrop_url?: string | null;
-        custom_lists?: string[] | null;
-      };
+      updates: any;
     }) => {
       if (!userId) throw new Error('Not authenticated');
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('collection_items')
         .update(updates)
         .eq('id', itemId)
-        .eq('user_id', userId);
+        .eq('user_id', userId)
+        .select() as any;
 
       if (error) throw error;
-      return { itemId };
+      return data[0];
     },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['collection'] });
+    onMutate: async ({ itemId, updates }) => {
+      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+      await queryClient.cancelQueries({ queryKey: ['collection', userId] });
+
+      // Snapshot the previous value
+      const previousCollection = queryClient.getQueryData(['collection', userId]);
+
+      // Optimistically update to the new value
+      queryClient.setQueryData(['collection', userId], (old: any) => {
+        if (!old) return old;
+        return old.map((item: any) => 
+          item.id === itemId ? { ...item, ...updates } : item
+        );
+      });
+
+      // Return a context object with the snapshotted value
+      return { previousCollection };
+    },
+    onError: (err, variables, context) => {
+      // Rollback to the previous value if mutation fails
+      if (context?.previousCollection) {
+        queryClient.setQueryData(['collection', userId], context.previousCollection);
+      }
+      console.error('Update failed:', err);
+    },
+    onSettled: () => {
+      // Always refetch after error or success to keep server in sync
+      queryClient.invalidateQueries({ queryKey: ['collection', userId] });
     },
   });
 }
