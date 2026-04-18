@@ -10,7 +10,7 @@ import {
   useToggleFollow, 
   useFollowing, 
   useNotifications, 
-  markNotificationRead, 
+  useMarkNotificationRead, 
   useConversations,
   useSuggestedUsers,
   useCreatePost,
@@ -103,10 +103,7 @@ export default function CommunityScreen() {
   const createPost = useCreatePost(userId);
   const deletePost = useDeletePost(userId);
   const updatePost = useUpdatePost(userId);
-  const markRead = useMutation({
-    mutationFn: (id: string) => markNotificationRead(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications', userId] })
-  });
+  const markRead = useMarkNotificationRead();
 
   const isFollowing = (targetId: string) => following?.some((f: any) => f.following_id === targetId);
   const unreadCount = notifications?.filter((n: any) => !n.is_read).length || 0;
