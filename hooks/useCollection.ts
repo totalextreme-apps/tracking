@@ -436,7 +436,51 @@ export function useRefreshLibrary(userId: string | undefined) {
 
       let current = 0;
 
-      // 2. Refresh Movies
+      // 2. Repair Orphans (Check if ID itself is likely a TMDB ID)
+      for (const orphan of orphans) {
+        try {
+          // HEURISTIC: If the internal ID is > 100, it's likely a TMDB ID
+          const suspectedTmdbId = orphan.media_type === 'movie' ? orphan.movie_id : orphan.show_id;
+          
+          if (suspectedTmdbId && suspectedTmdbId > 100) {
+            console.log(`Attempting recovery for orphan ${orphan.id} with suspected TMDB ID ${suspectedTmdbId}`);
+            if (orphan.media_type === 'movie') {
+               const data = await getMovieById(suspectedTmdbId);
+               const { data: movieRow } = await supabase.from('movies').upsert({
+                 tmdb_id: data.id,
+                 title: data.title,
+                 poster_path: data.poster_path,
+                 backdrop_path: data.backdrop_path,
+                 release_date: data.release_date,
+               }).select('id').single();
+               
+               if (movieRow) {
+                 await supabase.from('collection_items').update({ movie_id: (movieRow as any).id }).eq('id', orphan.id);
+               }
+            } else {
+               const data = await getTvShowById(suspectedTmdbId);
+               const { data: showRow } = await supabase.from('shows').upsert({
+                 tmdb_id: data.id,
+                 name: data.name,
+                 poster_path: data.poster_path,
+                 backdrop_path: data.backdrop_path,
+                 first_air_date: data.first_air_date,
+               }).select('id').single();
+               
+               if (showRow) {
+                 await supabase.from('collection_items').update({ show_id: (showRow as any).id }).eq('id', orphan.id);
+               }
+            }
+          }
+        } catch (e) {
+          console.error('Failed to repair orphan', orphan.id, e);
+        }
+        current++;
+        setProgress({ current, total });
+        await new Promise(r => setTimeout(r, 250));
+      }
+
+      // 3. Refresh Movies
       for (const tmdbId of moviesToRefresh) {
         try {
           const movieData = await getMovieById(tmdbId);
