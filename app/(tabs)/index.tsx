@@ -190,7 +190,7 @@ export default function HomeScreen() {
         if (normalizedQuery) {
           const matches = stack.some((item: any) => {
             const media = item.movies || item.shows;
-            const title = (media?.title || media?.name || '').toLowerCase();
+            const title = (media?.title || media?.name || (item.movie_id || item.show_id ? `[MALFORMED DATA] ID: ${item.id}` : '')).toLowerCase();
             const normalizedTitle = title.replace(/[^a-z0-9]/g, '');
             
             const matchesTitle = title.includes(trimmedQuery) || normalizedTitle.includes(normalizedQuery);
@@ -204,7 +204,9 @@ export default function HomeScreen() {
 
             // Check edition/notes
             const content = `${item.edition || ''} ${item.notes || ''} ${item.format || ''}`.toLowerCase();
-            return matchesTitle || matchesCast || content.includes(trimmedQuery) || content.replace(/[^a-z0-9]/g, '').includes(normalizedQuery);
+            const matchesExtras = content.includes(trimmedQuery) || content.replace(/[^a-z0-9]/g, '').includes(normalizedQuery);
+
+            return matchesTitle || matchesCast || matchesExtras;
           });
           
           if (!matches) return false;

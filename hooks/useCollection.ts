@@ -398,26 +398,40 @@ export function useRefreshLibrary(userId: string | undefined) {
     mutationFn: async () => {
       if (!userId) throw new Error('Not authenticated');
 
-      // 1. Fetch all items with their media IDs
-      const { data: items, error } = await (supabase as any)
+      // 1. Fetch all items (including those with null media joins)
+      const { data: items, error } = await supabase
         .from('collection_items')
         .select(`
+          id,
           media_type,
           movie_id,
           show_id,
-          movies (tmdb_id),
-          shows (tmdb_id)
+          movies (id, tmdb_id),
+          shows (id, tmdb_id)
         `)
         .eq('user_id', userId);
 
       if (error) throw error;
 
-      // Dedup media items
-      const moviesToRefresh = Array.from(new Set(items.filter((i: any) => i.media_type === 'movie').map((i: any) => i.movies?.tmdb_id).filter(Boolean))) as number[];
-      const showsToRefresh = Array.from(new Set(items.filter((i: any) => i.media_type === 'tv').map((i: any) => i.shows?.tmdb_id).filter(Boolean))) as number[];
+      // Identify items that have NO metadata but HAVE an ID (Orphans)
+      const orphans = items.filter((i: any) => 
+        (i.media_type === 'movie' && !i.movies) || 
+        (i.media_type === 'tv' && !i.shows)
+      );
 
-      const total = moviesToRefresh.length + showsToRefresh.length;
-      console.log(`Refreshing ${moviesToRefresh.length} movies and ${showsToRefresh.length} shows...`);
+      // Identify items that have metadata but need refresh
+      const existingMovies = items.filter((i: any) => i.media_type === 'movie' && i.movies?.tmdb_id).map((i: any) => i.movies.tmdb_id);
+      const existingShows = items.filter((i: any) => i.media_type === 'tv' && i.shows?.tmdb_id).map((i: any) => i.shows.tmdb_id);
+
+      // We focus on REPAIRING orphans first.
+      // But we need the TMDB ID to repair. If the join is NULL, we don't have tmdb_id!
+      // This happens if the row in movies/shows table is missing.
+      
+      const moviesToRefresh = Array.from(new Set(existingMovies)) as number[];
+      const showsToRefresh = Array.from(new Set(existingShows)) as number[];
+
+      const total = moviesToRefresh.length + showsToRefresh.length + orphans.length;
+      console.log(`Refreshing ${moviesToRefresh.length} movies, ${showsToRefresh.length} shows, and repairing ${orphans.length} orphans...`);
       setProgress({ current: 0, total });
 
       let current = 0;
@@ -436,7 +450,7 @@ export function useRefreshLibrary(userId: string | undefined) {
           if (director) {
             combinedCast.push({ id: director.id, name: director.name, character: 'Director', profile_path: director.profile_path });
           }
-          await (supabase as any).from('movies').update({ movie_cast: combinedCast }).eq('tmdb_id', tmdbId);
+          await supabase.from('movies').update({ movie_cast: combinedCast }).eq('tmdb_id', tmdbId);
         } catch (e) {
           console.error(`Failed to refresh movie ${tmdbId}`, e);
         }
@@ -455,7 +469,7 @@ export function useRefreshLibrary(userId: string | undefined) {
             character: c.character,
             profile_path: c.profile_path,
           })) ?? [];
-          await (supabase as any).from('shows').update({
+          await supabase.from('shows').update({
             show_cast: combinedCast,
             number_of_seasons: showData.number_of_seasons
           }).eq('tmdb_id', tmdbId);
@@ -466,6 +480,8 @@ export function useRefreshLibrary(userId: string | undefined) {
         setProgress({ current, total });
         await new Promise(r => setTimeout(r, 250));
       }
+
+      // 2. Refresh Movies... (keep existing)
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['collection'] });

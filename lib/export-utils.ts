@@ -32,9 +32,9 @@ export function generateCsv(items: CollectionItemWithMedia[]): string {
   const rows = items.map((item) => {
     const movie = item.movies;
     const show = item.shows;
-    const title = movie?.title || show?.name || '';
-    const tmdbId = movie?.tmdb_id || show?.tmdb_id || '';
-    const releaseDate = movie?.release_date || show?.first_air_date || '';
+    const title = movie?.title || show?.name || `[ORPHANED] ID: ${item.movie_id || item.show_id || item.id}`;
+    const tmdbId = movie?.tmdb_id || show?.tmdb_id || 'N/A';
+    const releaseDate = movie?.release_date || show?.first_air_date || 'N/A';
 
     return [
       escapeCsv(tmdbId),
