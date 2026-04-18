@@ -50,7 +50,7 @@ function PostCommentSection({ postId }: { postId: string }) {
 
   return (
     <View style={{ marginTop: 10, backgroundColor: 'rgba(0,0,0,0.03)', borderRadius: 6, padding: 8 }}>
-      {comments?.map((c: any) => (
+      {(comments || []).map((c: any) => (
         <View key={c.id} style={{ marginBottom: 6, borderLeftWidth: 1, borderLeftColor: 'rgba(0,0,0,0.1)', paddingLeft: 8 }}>
           <Text style={{ fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold', color: '#4a3728' }}>@{c.profiles?.username}</Text>
           <Text style={{ fontFamily: 'SpaceMono', fontSize: 10, color: '#2d2016' }}>{c.content}</Text>
@@ -103,28 +103,12 @@ export default function CommunityScreen() {
   const createPost = useCreatePost(userId);
   const deletePost = useDeletePost(userId);
   const updatePost = useUpdatePost(userId);
-  const queryClient = useQueryClient();
   const markRead = useMarkNotificationRead();
 
   const isFollowing = (targetId: string) => following?.some((f: any) => f.following_id === targetId);
   const unreadCount = notifications?.filter((n: any) => !n.is_read).length || 0;
 
   const getPosterUrl = (path: string | null) => path ? `https://image.tmdb.org/t/p/w200${path}` : null;
-
-  const handleMediaSearch = async (q: string) => {
-    setMediaQuery(q);
-    if (q.length < 2) { setMediaResults([]); return; }
-    setIsSearchingMedia(true);
-    try {
-      const response = await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/tmdb-proxy?query=${encodeURIComponent(q)}&type=multi`);
-      const data = await response.json();
-      setMediaResults(data.results?.slice(0, 5) || []);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsSearchingMedia(false);
-    }
-  };
 
   const handlePost = () => {
     if (!postContent.trim()) return;
@@ -154,14 +138,6 @@ export default function CommunityScreen() {
     setMediaResults([]);
   };
 
-  const startEditing = (post: any) => {
-    setEditingPostId(post.id);
-    setPostContent(post.content);
-    setRating(post.rating);
-    setSelectedMedia(post.movies ? { ...post.movies, media_type: 'movie' } : post.shows ? { ...post.shows, media_type: 'tv' } : null);
-    scrollRef.current?.scrollTo({ y: 0, animated: true });
-  };
-
   const toggleComments = (postId: string) => {
     setExpandedPostIds(prev => {
       const next = new Set(prev);
@@ -183,15 +159,22 @@ export default function CommunityScreen() {
   };
 
   const notifMessage = (n: any) => {
-    const actor = n.actor?.username || 'Someone';
+    const actorName = n.actor?.username || 'Someone';
     switch (n.type) {
-      case 'message': return `@${actor} sent you a message`;
-      case 'item_comment': return `@${actor} commented on your item`;
-      case 'post_comment': return `@${actor} replied to your post`;
-      case 'follow': return `@${actor} started tracking you`;
+      case 'message': return `@${actorName} sent you a message`;
+      case 'item_comment': return `@${actorName} commented on your item`;
+      case 'post_comment': return `@${actorName} replied to your post`;
+      case 'follow': return `@${actorName} started tracking you`;
       default: return 'New activity';
     }
   };
+
+  const tabs = [
+    { key: 'activity', label: 'Activity' },
+    { key: 'board', label: 'Board' },
+    { key: 'inbox', label: 'Inbox' },
+    { key: 'alerts', label: unreadCount > 0 ? `Alerts (${unreadCount})` : 'Alerts' },
+  ];
 
   return (
     <View style={{ flex: 1, backgroundColor: '#0a0a0a' }}>
@@ -216,15 +199,10 @@ export default function CommunityScreen() {
 
         {/* Segment Toggle */}
         <View style={{ flexDirection: 'row', backgroundColor: '#111', borderRadius: 10, padding: 3, marginBottom: 12 }}>
-          {([
-            { key: 'activity', label: 'Activity' },
-            { key: 'board', label: 'Board' },
-            { key: 'inbox', label: 'Inbox' },
-            { key: 'alerts', label: `Alerts${unreadCount > 0 ? ` (${unreadCount})` : ''}` },
-          ] as { key: Tab; label: string }[]).map(tab => (
+          {tabs.map(tab => (
             <Pressable
               key={tab.key}
-              onPress={() => { setActiveTab(tab.key); Haptics.selectionAsync(); }}
+              onPress={() => { setActiveTab(tab.key as Tab); Haptics.selectionAsync(); }}
               style={{
                 flex: 1, paddingVertical: 8, borderRadius: 8,
                 backgroundColor: activeTab === tab.key ? '#1c1c1c' : 'transparent',
@@ -257,10 +235,8 @@ export default function CommunityScreen() {
               <Ionicons name="search" size={14} color="#525252" />
               <TextInput
                 style={{ flex: 1, color: '#fff', fontFamily: 'SpaceMono', fontSize: 12, marginLeft: 8 }}
-                placeholder="Find members..."
-                placeholderTextColor="#3a3a3a"
-                value={userSearch}
-                onChangeText={setUserSearch}
+                placeholder="Find members..." placeholderTextColor="#3a3a3a"
+                value={userSearch} onChangeText={setUserSearch}
               />
               {userSearch.length > 0 && (
                 <Pressable onPress={() => setUserSearch('')}>
@@ -269,42 +245,30 @@ export default function CommunityScreen() {
               )}
             </View>
 
-            {/* Search Results */}
             {userSearch.length > 2 && (
               <View style={{ backgroundColor: '#111', borderRadius: 10, borderWidth: 1, borderColor: '#1f1f1f', marginBottom: 8, overflow: 'hidden' }}>
-                {searchLoading ? (
-                  <ActivityIndicator color="#f59e0b" style={{ padding: 16 }} />
-                ) : searchResults?.length ? (
-                  searchResults.map((user: any) => (
-                    <Pressable
-                      key={user.id}
-                      onPress={() => { setUserSearch(''); router.push(`/profile/${user.id}`); }}
-                      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 12, borderBottomWidth: 1, borderBottomColor: '#1a1a1a' }}
-                    >
+                {searchLoading ? <ActivityIndicator color="#f59e0b" style={{ padding: 16 }} /> : (
+                  (searchResults || []).map((user: any) => (
+                    <Pressable key={user.id} onPress={() => { setUserSearch(''); router.push(`/profile/${user.id}`); }} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 12, borderBottomWidth: 1, borderBottomColor: '#1a1a1a' }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#1a1a1a', overflow: 'hidden', marginRight: 10, borderWidth: 1, borderColor: '#2a2a2a' }}>
-                          {user.avatar_url ? <Image source={{ uri: user.avatar_url }} style={{ width: '100%', height: '100%' }} /> : <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><Ionicons name="person" size={14} color="#444" /></View>}
+                        <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#1a1a1a', overflow: 'hidden', marginRight: 10, borderWidth: 1, borderColor: '#222' }}>
+                          {user.avatar_url ? <Image source={{ uri: user.avatar_url }} style={{ width: '100%', height: '100%' }} /> : <Ionicons name="person" size={14} color="#444" />}
                         </View>
-                        <Text style={{ color: '#fff', fontFamily: 'SpaceMono', fontSize: 12 }}>@{user.username || 'anonymous'}</Text>
+                        <Text style={{ color: '#fff', fontFamily: 'SpaceMono', fontSize: 12 }}>@{user.username || 'anon'}</Text>
                       </View>
-                      <Pressable
-                        onPress={(e) => { e.stopPropagation(); toggleFollow.mutate({ targetUserId: user.id, isFollowing: !!isFollowing(user.id) }); }}
-                        style={{ backgroundColor: isFollowing(user.id) ? '#1a1a1a' : '#f59e0b', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20 }}
-                      >
+                      <Pressable onPress={(e) => { e.stopPropagation(); toggleFollow.mutate({ targetUserId: user.id, isFollowing: !!isFollowing(user.id) }); }} style={{ backgroundColor: isFollowing(user.id) ? '#1a1a1a' : '#f59e0b', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20 }}>
                         <Text style={{ fontFamily: 'SpaceMono', fontSize: 10, fontWeight: 'bold', color: isFollowing(user.id) ? '#525252' : '#000' }}>
                           {isFollowing(user.id) ? 'TRACKING' : 'TRACK'}
                         </Text>
                       </Pressable>
                     </Pressable>
                   ))
-                ) : (
-                  <Text style={{ color: '#525252', fontFamily: 'SpaceMono', fontSize: 11, padding: 16, textAlign: 'center' }}>No members found</Text>
                 )}
               </View>
             )}
           </View>
 
-          {/* Following Avatars Strip */}
+          {/* Following strip */}
           {following && following.length > 0 && (
             <View style={{ paddingHorizontal: 16, marginBottom: 16 }}>
               <Text style={{ color: '#3a3a3a', fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold', letterSpacing: 2, marginBottom: 8, textTransform: 'uppercase' }}>Tracking</Text>
@@ -313,7 +277,7 @@ export default function CommunityScreen() {
                   <Pressable key={f.following_id} onPress={() => router.push(`/profile/${f.following_id}`)} style={{ marginRight: 12, alignItems: 'center' }}>
                     <View style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: '#f59e0b33', padding: 2, marginBottom: 4 }}>
                       <View style={{ flex: 1, borderRadius: 20, backgroundColor: '#1a1a1a', overflow: 'hidden' }}>
-                        {f.profiles?.avatar_url ? <Image source={{ uri: f.profiles.avatar_url }} style={{ width: '100%', height: '100%' }} /> : <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><Ionicons name="person" size={16} color="#444" /></View>}
+                        {f.profiles?.avatar_url ? <Image source={{ uri: f.profiles.avatar_url }} style={{ width: '100%', height: '100%' }} /> : <Ionicons name="person" size={16} color="#444" />}
                       </View>
                     </View>
                     <Text style={{ color: '#525252', fontFamily: 'SpaceMono', fontSize: 8, width: 44, textAlign: 'center' }} numberOfLines={1}>{f.profiles?.username || '?'}</Text>
@@ -323,83 +287,40 @@ export default function CommunityScreen() {
             </View>
           )}
 
-          {/* Suggested Members */}
-          {suggestedUsers && suggestedUsers.filter((u: any) => !isFollowing(u.id) && u.id !== userId).length > 0 && !following?.length && (
-            <View style={{ paddingHorizontal: 16, marginBottom: 16 }}>
-              <Text style={{ color: '#3a3a3a', fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold', letterSpacing: 2, marginBottom: 8, textTransform: 'uppercase' }}>Suggested Members</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                {suggestedUsers.filter((u: any) => !isFollowing(u.id) && u.id !== userId).map((u: any) => (
-                  <Pressable key={u.id} onPress={() => router.push(`/profile/${u.id}`)} style={{ marginRight: 10, backgroundColor: '#111', borderRadius: 12, padding: 10, alignItems: 'center', width: 90, borderWidth: 1, borderColor: '#1f1f1f' }}>
-                    <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#1a1a1a', overflow: 'hidden', marginBottom: 6 }}>
-                      {u.avatar_url ? <Image source={{ uri: u.avatar_url }} style={{ width: '100%', height: '100%' }} /> : <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><Ionicons name="person" size={14} color="#444" /></View>}
-                    </View>
-                    <Text style={{ color: '#ccc', fontFamily: 'SpaceMono', fontSize: 9, textAlign: 'center', marginBottom: 6 }} numberOfLines={1}>{u.username || 'anon'}</Text>
-                    <Pressable
-                      onPress={(e) => { e.stopPropagation(); toggleFollow.mutate({ targetUserId: u.id, isFollowing: false }); Haptics.selectionAsync(); }}
-                      style={{ backgroundColor: '#f59e0b', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4 }}
-                    >
-                      <Text style={{ color: '#000', fontFamily: 'SpaceMono', fontSize: 8, fontWeight: 'bold' }}>TRACK</Text>
-                    </Pressable>
-                  </Pressable>
-                ))}
-              </ScrollView>
-            </View>
-          )}
-
-          {/* ── COMMUNITY PULSE (ACTIVITY FEED) ── */}
+          {/* Pulse feed */}
           <View style={{ paddingHorizontal: 16 }}>
-            <Text style={{ color: '#3a3a3a', fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold', letterSpacing: 2, marginBottom: 12, textTransform: 'uppercase' }}>
-              Community Pulse
-            </Text>
-            {communityLoading ? (
-              <ActivityIndicator color="#f59e0b" />
-            ) : !communityFeed?.length ? (
-              <View style={{ alignItems: 'center', paddingVertical: 32 }}>
-                <Ionicons name="radio-outline" size={40} color="#1f1f1f" />
-                <Text style={{ color: '#262626', fontFamily: 'SpaceMono', fontSize: 11, textAlign: 'center', marginTop: 12 }}>
-                  Pulse is quiet. Track more members to see their activity!
-                </Text>
-              </View>
-            ) : (
-              communityFeed.map((item: any, idx: number) => {
+            <Text style={{ color: '#3a3a3a', fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold', letterSpacing: 2, marginBottom: 12, textTransform: 'uppercase' }}>Community Pulse</Text>
+            {communityLoading ? <ActivityIndicator color="#f59e0b" /> : (
+              (communityFeed || []).map((item: any, idx: number) => {
                 const profile = item.profiles;
                 const isPost = item.activity_type === 'post';
                 return (
                   <View key={item.id + '-' + idx} style={{ marginBottom: 16 }}>
-                    {/* Author Row */}
                     <Pressable onPress={() => router.push(`/profile/${item.user_id}`)} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                       <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#1a1a1a', overflow: 'hidden', marginRight: 8, borderWidth: 1, borderColor: '#222' }}>
-                        {profile?.avatar_url ? <Image source={{ uri: profile.avatar_url }} style={{ width: '100%', height: '100%' }} /> : <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><Ionicons name="person" size={12} color="#444" /></View>}
+                        {profile?.avatar_url ? <Image source={{ uri: profile.avatar_url }} style={{ width: '100%', height: '100%' }} /> : <Ionicons name="person" size={12} color="#444" />}
                       </View>
                       <View style={{ flex: 1 }}>
                         <Text style={{ color: '#ddd', fontFamily: 'SpaceMono', fontSize: 11, fontWeight: 'bold' }}>@{profile?.username || 'member'}</Text>
-                        <Text style={{ color: '#3a3a3a', fontFamily: 'SpaceMono', fontSize: 8, textTransform: 'uppercase' }}>
+                        <Text style={{ color: '#333', fontFamily: 'SpaceMono', fontSize: 8, textTransform: 'uppercase' }}>
                           {isPost ? 'pinned a note' : `added to ${item.format} collection`} · {new Date(item.created_at).toLocaleDateString()}
                         </Text>
                       </View>
                     </Pressable>
-
-                    {/* Content Card */}
                     {isPost ? (
-                      <View style={{ backgroundColor: '#111', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#1f1f1f' }}>
-                        <Text style={{ color: '#999', fontFamily: 'SpaceMono', fontSize: 12, lineHeight: 18, fontStyle: 'italic' }}>"{item.content}"</Text>
+                      <View style={{ backgroundColor: '#111', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#1a1a1a' }}>
+                        <Text style={{ color: '#ccc', fontFamily: 'SpaceMono', fontSize: 12, lineHeight: 18, fontStyle: 'italic' }}>"{item.content}"</Text>
                       </View>
                     ) : (
-                      <Pressable
-                        onPress={() => { const id = item.movies?.id || item.shows?.id; const t = item.movies ? 'movie' : 'show'; router.push(`/(tabs)/${t}/${id}?ownerId=${item.user_id}`); }}
-                        style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#0a0a0a', padding: 10, borderRadius: 10, borderWidth: 1, borderColor: '#f59e0b18' }}
-                      >
+                      <Pressable onPress={() => { const id = item.movies?.id || item.shows?.id; const t = item.movies ? 'movie' : 'show'; router.push(`/(tabs)/${t}/${id}?ownerId=${item.user_id}`); }} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#0a0a0a', padding: 10, borderRadius: 10, borderWidth: 1, borderColor: '#f59e0b18' }}>
                         <Image source={{ uri: getPosterUrl(item.movies?.poster_path || item.shows?.poster_path) || '' }} style={{ width: 34, height: 50, borderRadius: 4, marginRight: 10, backgroundColor: '#1a1a1a' }} />
                         <View style={{ flex: 1 }}>
                           <Text style={{ color: '#fff', fontFamily: 'SpaceMono', fontSize: 12, fontWeight: 'bold' }} numberOfLines={1}>{item.movies?.title || item.shows?.name}</Text>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
-                            <View style={{ backgroundColor: '#1a1a1a', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 2, marginRight: 6, borderWidth: 1, borderColor: '#333' }}>
-                              <Text style={{ color: '#f59e0b', fontFamily: 'SpaceMono', fontSize: 7, fontWeight: 'bold' }}>{item.format}</Text>
-                            </View>
-                            <Text style={{ color: '#333', fontFamily: 'SpaceMono', fontSize: 7 }}>TRACKED</Text>
+                          <View style={{ backgroundColor: '#1a1a1a', alignSelf: 'flex-start', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 2, marginTop: 4, borderWidth: 1, borderColor: '#222' }}>
+                            <Text style={{ color: '#f59e0b', fontFamily: 'SpaceMono', fontSize: 7, fontWeight: 'bold' }}>{item.format}</Text>
                           </View>
                         </View>
-                        <Ionicons name="chevron-forward" size={14} color="#2a2a2a" />
+                        <Ionicons name="chevron-forward" size={14} color="#222" />
                       </Pressable>
                     )}
                   </View>
@@ -415,22 +336,16 @@ export default function CommunityScreen() {
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 120 }}>
           <ImageBackground source={{ uri: CORK_BG }} style={{ marginHorizontal: 16, borderRadius: 12, overflow: 'hidden', marginTop: 16, marginBottom: 16 }} imageStyle={{ opacity: 0.35, borderRadius: 12 }}>
             <View style={{ backgroundColor: 'rgba(100, 60, 20, 0.4)', padding: 14 }}>
-              {/* New Post Card */}
               <View style={{ backgroundColor: 'rgba(255,249,220,0.92)', borderRadius: 4, padding: 12, marginBottom: 16, shadowColor: '#000', shadowOffset: { width: 2, height: 4 }, shadowOpacity: 0.4, shadowRadius: 6 }}>
-                <TextInput
-                  style={{ fontFamily: 'SpaceMono', fontSize: 13, color: '#2d2016', minHeight: 60, textAlignVertical: 'top' }}
-                  placeholder="Share a recommendation..." placeholderTextColor="#a89880"
-                  multiline value={postContent} onChangeText={setPostContent}
-                />
+                <TextInput style={{ fontFamily: 'SpaceMono', fontSize: 13, color: '#2d2016', minHeight: 60, textAlignVertical: 'top' }} placeholder="Share a recommendation..." placeholderTextColor="#a89880" multiline value={postContent} onChangeText={setPostContent} />
                 <View style={{ alignItems: 'flex-end', marginTop: 10 }}>
                   <Pressable onPress={handlePost} disabled={createPost.isPending || !postContent.trim()} style={{ backgroundColor: '#2d2016', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 4 }}>
                     <Text style={{ color: '#f59e0b', fontFamily: 'SpaceMono', fontSize: 10, fontWeight: 'bold' }}>PIN TO BOARD</Text>
                   </Pressable>
                 </View>
               </View>
-
               {bulletinLoading ? <ActivityIndicator color="#f59e0b" style={{ marginVertical: 20 }} /> : (
-                bulletinFeed?.map((post: any, idx: number) => (
+                (bulletinFeed || []).map((post: any, idx: number) => (
                   <View key={post.id} style={{ backgroundColor: 'rgba(255,252,225,0.94)', borderRadius: 2, padding: 12, marginBottom: 16, transform: [{ rotate: idx % 2 === 0 ? '-1deg' : '1deg' }], shadowColor: '#000', shadowOffset: { width: 2, height: 4 }, shadowOpacity: 0.35, shadowRadius: 5 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                       <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: '#ddd', overflow: 'hidden', marginRight: 8 }}>
@@ -441,12 +356,10 @@ export default function CommunityScreen() {
                       {post.user_id === userId && <Pressable onPress={() => setShowDeleteConfirm(post.id)}><Ionicons name="trash" size={14} color="#e53e3e" /></Pressable>}
                     </View>
                     <Text style={{ fontFamily: 'SpaceMono', fontSize: 12, color: '#2d2016' }}>{post.content}</Text>
-                    <View style={{ marginTop: 10, paddingTop: 8, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.08)' }}>
-                       <Pressable onPress={() => toggleComments(post.id)} style={{ flexDirection: 'row', alignItems: 'center' }}>
-                         <Ionicons name="chatbubble-outline" size={12} color="#8a7060" />
-                         <Text style={{ fontFamily: 'SpaceMono', fontSize: 9, color: '#8a7060', marginLeft: 4 }}>REPLY</Text>
-                       </Pressable>
-                    </View>
+                    <Pressable onPress={() => toggleComments(post.id)} style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10, paddingTop: 8, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)' }}>
+                      <Ionicons name="chatbubble-outline" size={12} color="#8a7060" />
+                      <Text style={{ fontFamily: 'SpaceMono', fontSize: 9, color: '#8a7060', marginLeft: 4 }}>REPLY</Text>
+                    </Pressable>
                     {expandedPostIds.has(post.id) && <PostCommentSection postId={post.id} />}
                   </View>
                 ))
@@ -462,24 +375,20 @@ export default function CommunityScreen() {
           <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: '#111' }}>
             <Text style={{ color: '#2a2a2a', fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold', letterSpacing: 2, textTransform: 'uppercase' }}>Direct Messages</Text>
           </View>
-          {inboxLoading ? (
-            <ActivityIndicator color="#f59e0b" style={{ marginTop: 40 }} />
-          ) : !conversations?.length ? (
-            <View style={{ marginTop: 80, alignItems: 'center', paddingHorizontal: 40 }}>
-              <Ionicons name="chatbubbles-outline" size={56} color="#1a1a1a" />
-              <Text style={{ color: '#2a2a2a', fontFamily: 'SpaceMono', fontSize: 11, textAlign: 'center', marginTop: 16, lineHeight: 18 }}>
-                Inbox empty.{'\n'}Message a member from their profile to start a chat.
-              </Text>
+          {inboxLoading ? <ActivityIndicator color="#f59e0b" style={{ marginTop: 40 }} /> : !conversations?.length ? (
+            <View style={{ marginTop: 80, alignItems: 'center', paddingHorizontal: 40, opacity: 0.3 }}>
+              <Ionicons name="chatbubbles-outline" size={56} color="#333" />
+              <Text style={{ color: '#fff', fontFamily: 'SpaceMono', fontSize: 11, textAlign: 'center', marginTop: 16 }}>No messages yet.</Text>
             </View>
           ) : (
-            conversations.map((conv: any) => (
-              <Pressable key={conv.partner.id} onPress={() => router.push(`/(tabs)/profile/chat/${conv.partner.id}`)} style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#0f0f0f' }}>
-                <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: '#111', overflow: 'hidden', marginRight: 14 }}>
-                  {conv.partner.avatar_url ? <Image source={{ uri: conv.partner.avatar_url }} style={{ width: '100%', height: '100%' }} /> : <Ionicons name="person" size={22} color="#333" />}
+            (conversations || []).map((conv: any) => (
+              <Pressable key={conv.partner?.id} onPress={() => router.push(`/(tabs)/profile/chat/${conv.partner?.id}`)} style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#0a0a0a' }}>
+                <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#111', overflow: 'hidden', marginRight: 12 }}>
+                  {conv.partner?.avatar_url ? <Image source={{ uri: conv.partner.avatar_url }} style={{ width: '100%', height: '100%' }} /> : <Ionicons name="person" size={20} color="#333" />}
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ color: '#fff', fontFamily: 'SpaceMono', fontSize: 13, fontWeight: 'bold' }}>@{conv.partner.username}</Text>
-                  <Text style={{ color: '#444', fontFamily: 'SpaceMono', fontSize: 11 }} numberOfLines={1}>{conv.lastMessage.content}</Text>
+                  <Text style={{ color: '#fff', fontFamily: 'SpaceMono', fontSize: 13, fontWeight: 'bold' }}>@{conv.partner?.username || 'anon'}</Text>
+                  <Text style={{ color: '#444', fontFamily: 'SpaceMono', fontSize: 11 }} numberOfLines={1}>{conv.lastMessage?.content}</Text>
                 </View>
               </Pressable>
             ))
@@ -493,31 +402,22 @@ export default function CommunityScreen() {
           <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: '#111' }}>
             <Text style={{ color: '#2a2a2a', fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold', letterSpacing: 2, textTransform: 'uppercase' }}>Alerts</Text>
           </View>
-          {notifLoading ? (
-            <ActivityIndicator color="#f59e0b" style={{ marginTop: 40 }} />
-          ) : !notifications?.length ? (
+          {notifLoading ? <ActivityIndicator color="#f59e0b" style={{ marginTop: 40 }} /> : !notifications?.length ? (
             <View style={{ marginTop: 80, alignItems: 'center', paddingHorizontal: 40, opacity: 0.3 }}>
-              <Ionicons name="notifications-off-outline" size={56} color="#525252" />
+              <Ionicons name="notifications-off-outline" size={56} color="#333" />
               <Text style={{ color: '#fff', fontFamily: 'SpaceMono', fontSize: 11, textAlign: 'center', marginTop: 16 }}>All quiet.</Text>
             </View>
           ) : (
-            notifications.map((n: any) => (
-              <Pressable
-                key={n.id}
-                onPress={() => {
-                  markRead.mutate(n.id);
-                  if (n.type === 'message') router.push(`/(tabs)/profile/chat/${n.actor_id}`);
-                  else if (n.type === 'follow') router.push(`/profile/${n.actor_id}`);
-                }}
-                style={{ flexDirection: 'row', alignItems: 'center', padding: 14, borderBottomWidth: 1, borderBottomColor: '#0f0f0f' }}
-              >
-                <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: '#111', overflow: 'hidden', marginRight: 12 }}>
-                  {n.actor?.avatar_url ? <Image source={{ uri: n.actor.avatar_url }} style={{ width: '100%', height: '100%' }} /> : <Ionicons name={notifIcon(n.type) as any} size={18} color="#f59e0b" />}
+            (notifications || []).map((n: any) => (
+              <Pressable key={n.id} onPress={() => { markRead.mutate(n.id); if (n.type === 'message') router.push(`/(tabs)/profile/chat/${n.actor_id}`); else if (n.type === 'follow') router.push(`/profile/${n.actor_id}`); }} style={{ flexDirection: 'row', alignItems: 'center', padding: 14, borderBottomWidth: 1, borderBottomColor: '#0a0a0a', backgroundColor: !n.is_read ? '#f59e0b05' : 'transparent' }}>
+                <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#111', overflow: 'hidden', marginRight: 12 }}>
+                  {n.actor?.avatar_url ? <Image source={{ uri: n.actor.avatar_url }} style={{ width: '100%', height: '100%' }} /> : <Ionicons name={notifIcon(n.type) as any} size={16} color="#f59e0b" />}
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ color: '#ddd', fontFamily: 'SpaceMono', fontSize: 12 }}>{notifMessage(n)}</Text>
-                  <Text style={{ color: '#333', fontFamily: 'SpaceMono', fontSize: 9 }}>{new Date(n.created_at).toLocaleDateString()}</Text>
+                  <Text style={{ color: n.is_read ? '#444' : '#ddd', fontFamily: 'SpaceMono', fontSize: 12 }}>{notifMessage(n)}</Text>
+                  <Text style={{ color: '#222', fontFamily: 'SpaceMono', fontSize: 8 }}>{new Date(n.created_at).toLocaleDateString()}</Text>
                 </View>
+                {!n.is_read && <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#f59e0b' }} />}
               </Pressable>
             ))
           )}
