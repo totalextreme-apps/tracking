@@ -1,8 +1,8 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { View, Text, ScrollView, Pressable, Image, ImageBackground, TextInput, ActivityIndicator, Alert } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { Ionicons, FontAwesome } from '@expo/vector-icons';
-import { useAuth } from '@/hooks/useAuth';
+import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '@/context/AuthContext';
 import { 
   useBulletinFeed, 
   useCommunityFeed, 
@@ -19,12 +19,12 @@ import {
   usePostComments,
   useCreatePostComment
 } from '@/hooks/useSocial';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import * as Haptics from 'expo-haptics';
 import { supabase } from '@/lib/supabase';
-import ConfirmModal from '@/components/ConfirmModal';
+import { ConfirmModal } from '@/components/ConfirmModal';
 
 const CORK_BG = 'https://www.transparenttextures.com/patterns/cork-board.png';
 
@@ -103,6 +103,7 @@ export default function CommunityScreen() {
   const createPost = useCreatePost(userId);
   const deletePost = useDeletePost(userId);
   const updatePost = useUpdatePost(userId);
+  const queryClient = useQueryClient();
   const markRead = useMarkNotificationRead();
 
   const isFollowing = (targetId: string) => following?.some((f: any) => f.following_id === targetId);
