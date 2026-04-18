@@ -178,18 +178,42 @@ export default function HomeScreen() {
 
   let filteredStacks = stacks || [];
   if (searchQuery || formatFilter || genreFilter || mediaTypeFilter) {
+    const normalizedQuery = searchQuery.toLowerCase().replace(/[^a-z0-9]/g, '');
+
     filteredStacks = filteredStacks.filter((stack: any) => {
       if (!stack || !stack[0]) return false;
       const media = stack[0].movies || stack[0].shows;
       if (!media) return false;
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase().replace(/[^a-z0-9]/g, '');
-        const title = (stack[0].movies?.title || stack[0].shows?.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-        const matchesTitle = title.includes(query);
-        const cast = (stack[0].movies?.movie_cast || stack[0].shows?.show_cast || []);
-        const matchesCast = cast.some((c: any) => c?.name?.toLowerCase().replace(/[^a-z0-9]/g, '').includes(query));
-        if (!matchesTitle && !matchesCast) return false;
+
+      // 1. Search Query Filter
+      if (normalizedQuery) {
+        // Check Title/Name
+        const title = (media.title || media.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const matchesTitle = title.includes(normalizedQuery);
+
+        // Check Cast
+        const cast = (media.movie_cast || media.show_cast || []);
+        const matchesCast = cast.some((c: any) => 
+          (c?.name || '').toLowerCase().replace(/[^a-z0-9]/g, '').includes(normalizedQuery)
+        );
+
+        // Check Edition/Notes/Formats in the whole stack
+        const matchesExtras = stack.some((item: any) => {
+          const edition = (item.edition || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+          const notes = (item.notes || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+          const format = (item.format || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+          return edition.includes(normalizedQuery) || notes.includes(normalizedQuery) || format.includes(normalizedQuery);
+        });
+
+        // Check Genres
+        const matchesGenre = (media.genres || []).some((g: any) => 
+          (g?.name || '').toLowerCase().replace(/[^a-z0-9]/g, '').includes(normalizedQuery)
+        );
+
+        if (!matchesTitle && !matchesCast && !matchesExtras && !matchesGenre) return false;
       }
+
+      // 2. Format Filter
       if (formatFilter) {
         if (formatFilter === 'BOOTLEG') {
           if (!stack.some((item: any) => item?.is_bootleg)) return false;
@@ -197,10 +221,15 @@ export default function HomeScreen() {
           if (!stack.some((item: any) => item?.format === formatFilter)) return false;
         }
       }
+
+      // 3. Genre Filter
       if (genreFilter) {
         if (!media.genres?.some((g: any) => g?.name === genreFilter)) return false;
       }
+
+      // 4. Media Type Filter
       if (mediaTypeFilter && stack[0].media_type !== mediaTypeFilter) return false;
+
       return true;
     });
   }
