@@ -71,6 +71,59 @@ function PostCommentSection({ postId }: { postId: string }) {
   );
 }
 
+function MarketplaceSection() {
+  const router = useRouter();
+  const { data: marketplace, isLoading } = useMarketplaceFeed();
+
+  if (isLoading || !marketplace?.length) return null;
+
+  const getPosterUrl = (path: string | null) => path ? `https://image.tmdb.org/t/p/w200${path}` : null;
+
+  return (
+    <View style={{ marginBottom: 24 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 12 }}>
+        <Text style={{ color: '#2a2a2a', fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold', letterSpacing: 2, textTransform: 'uppercase' }}>Community Bin</Text>
+        <Ionicons name="cart-outline" size={14} color="#1a1a1a" />
+      </View>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}>
+        {(marketplace || []).map((item: any) => (
+          <Pressable 
+            key={item.id} 
+            onPress={() => {
+              const id = item.movies?.id || item.shows?.id;
+              const type = item.movies ? 'movie' : 'show';
+              router.push(`/(tabs)/${type}/${id}?ownerId=${item.user_id}`);
+            }}
+            style={{ width: 100 }}
+          >
+            <View style={{ position: 'relative', width: 100, height: 140, backgroundColor: '#111', borderRadius: 8, overflow: 'hidden', borderWidth: 1, borderColor: '#1a1a1a' }}>
+              <Image 
+                source={{ uri: getPosterUrl(item.movies?.poster_path || item.shows?.poster_path) || '' }} 
+                style={{ width: '100%', height: '100%' }} 
+              />
+              <View style={{ position: 'absolute', top: 4, left: 4, flexDirection: 'row', gap: 2 }}>
+                {item.for_sale && <View style={{ backgroundColor: '#10b981', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 2 }}><Text style={{ color: '#000', fontSize: 6, fontWeight: 'bold', fontFamily: 'SpaceMono' }}>SALE</Text></View>}
+                {item.for_trade && <View style={{ backgroundColor: '#3b82f6', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 2 }}><Text style={{ color: '#fff', fontSize: 6, fontWeight: 'bold', fontFamily: 'SpaceMono' }}>TRADE</Text></View>}
+              </View>
+              {item.for_sale && item.price && (
+                <View style={{ position: 'absolute', bottom: 4, right: 4, backgroundColor: 'rgba(0,0,0,0.8)', paddingHorizontal: 4, paddingVertical: 2, borderRadius: 2, borderWidth: 1, borderColor: '#10b98144' }}>
+                  <Text style={{ color: '#10b981', fontSize: 7, fontWeight: 'bold', fontFamily: 'SpaceMono' }}>${item.price}</Text>
+                </View>
+              )}
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
+              <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: '#1a1a1a', overflow: 'hidden', marginRight: 4 }}>
+                <Image source={{ uri: item.profiles?.avatar_url || '' }} style={{ width: '100%', height: '100%' }} />
+              </View>
+              <Text style={{ color: '#666', fontFamily: 'SpaceMono', fontSize: 8 }} numberOfLines={1}>@{item.profiles?.username}</Text>
+            </View>
+          </Pressable>
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
 export default function CommunityScreen() {
   const { userId } = useAuth();
   const router = useRouter();
@@ -95,9 +148,11 @@ export default function CommunityScreen() {
   const { data: suggestedUsers } = useSuggestedUsers(userId);
   const { data: bulletinFeed, isLoading: bulletinLoading } = useBulletinFeed(userId);
   const { data: communityFeed, isLoading: communityLoading } = useCommunityFeed(userId);
+  const { data: marketplaceFeed } = useMarketplaceFeed();
   const { data: searchResults, isLoading: searchLoading } = useSearchUsers(userSearch);
   const { data: notifications, isLoading: notifLoading } = useNotifications(userId);
   const { data: conversations, isLoading: inboxLoading } = useConversations(userId);
+  const { data: suggestedMembers } = useSuggestedUsers(userId);
 
   const toggleFollow = useToggleFollow(userId);
   const createPost = useCreatePost(userId);
@@ -229,6 +284,7 @@ export default function CommunityScreen() {
           contentContainerStyle={{ paddingBottom: 120 }}
           keyboardShouldPersistTaps="handled"
         >
+          <MarketplaceSection />
           {/* User Search */}
           <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#111', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: '#1f1f1f', marginBottom: 4 }}>

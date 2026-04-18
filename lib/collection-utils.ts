@@ -62,13 +62,17 @@ export function getStacks(
   // Group by movie_id or show_id + season_number
   const groups = new Map<string, CollectionItemWithMedia[]>();
   for (const item of filtered) {
+    const media = item.movies || item.shows;
+    const tmdbId = media?.tmdb_id;
     let key: string;
-    if (item.media_type === 'tv' && item.show_id) {
-      key = `tv-${item.show_id}-s${item.season_number ?? 0}`;
-    } else if (item.movie_id) {
-      key = `movie-${item.movie_id}`;
+    
+    if (item.media_type === 'tv') {
+      const showId = tmdbId || item.show_id || item.shows?.id;
+      if (!showId) continue;
+      key = `tv-${showId}-s${item.season_number ?? 0}`;
     } else {
-      continue;
+      const movieId = tmdbId || item.movie_id || item.movies?.id || item.id;
+      key = `movie-${movieId}`;
     }
 
     const existing = groups.get(key) ?? [];

@@ -814,6 +814,50 @@ export default function MovieDetailScreen() {
                                             value={localNotes[item.id] !== undefined ? localNotes[item.id] : (item.notes || '')}
                                             onChangeText={(text) => setLocalNotes(prev => ({ ...prev, [item.id]: text }))}
                                         />
+                                        
+                                        <View className="flex-row gap-2 my-2">
+                                            <Pressable
+                                                onPress={async () => {
+                                                    const newVal = !item.for_sale;
+                                                    playSound('click');
+                                                    await updateMutation.mutateAsync({ itemId: item.id, updates: { for_sale: newVal } });
+                                                }}
+                                                className={`flex-1 py-3 px-3 rounded-lg flex-row items-center border ${item.for_sale ? 'bg-emerald-900/30 border-emerald-500/50' : 'bg-neutral-900 border-neutral-800'}`}
+                                            >
+                                                <Ionicons name="cash-outline" size={14} color={item.for_sale ? '#10b981' : '#a3a3a3'} />
+                                                <Text className={`font-mono font-bold text-[10px] ml-2 ${item.for_sale ? 'text-emerald-400' : 'text-neutral-500'}`}>FOR SALE</Text>
+                                            </Pressable>
+
+                                            <Pressable
+                                                onPress={async () => {
+                                                    const newVal = !item.for_trade;
+                                                    playSound('click');
+                                                    await updateMutation.mutateAsync({ itemId: item.id, updates: { for_trade: newVal } });
+                                                }}
+                                                className={`flex-1 py-3 px-3 rounded-lg flex-row items-center border ${item.for_trade ? 'bg-blue-900/30 border-blue-500/50' : 'bg-neutral-900 border-neutral-800'}`}
+                                            >
+                                                <Ionicons name="swap-horizontal-outline" size={14} color={item.for_trade ? '#3b82f6' : '#a3a3a3'} />
+                                                <Text className={`font-mono font-bold text-[10px] ml-2 ${item.for_trade ? 'text-blue-400' : 'text-neutral-500'}`}>FOR TRADE</Text>
+                                            </Pressable>
+                                        </View>
+
+                                        {item.for_sale && (
+                                            <View className="bg-neutral-900 p-3 rounded-lg flex-row items-center border border-neutral-800 mb-2">
+                                                <Text className="text-emerald-500 font-mono font-bold mr-2">$</Text>
+                                                <TextInput
+                                                    className="flex-1 text-white font-mono text-sm h-10"
+                                                    placeholder="Asking Price"
+                                                    placeholderTextColor="#333"
+                                                    keyboardType="numeric"
+                                                    defaultValue={item.price?.toString() || ''}
+                                                    onEndEditing={async (e) => {
+                                                        const p = parseFloat(e.nativeEvent.text);
+                                                        await updateMutation.mutateAsync({ itemId: item.id, updates: { price: isNaN(p) ? null : p } });
+                                                    }}
+                                                />
+                                            </View>
+                                        )}
+
                                         <Pressable
                                             disabled={updateMutation.isPending}
                                             onPress={async () => {

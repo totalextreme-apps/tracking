@@ -176,63 +176,72 @@ export default function HomeScreen() {
   const genres = getGenres(collection);
   const stacks = getStacks(collection, thriftMode, sortBy, sortOrder);
 
-  let filteredStacks = stacks || [];
-  if (searchQuery || formatFilter || genreFilter || mediaTypeFilter) {
-    const normalizedQuery = searchQuery.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const filteredStacks = useMemo(() => {
+    let filtered = stacks || [];
+    
+    if (searchQuery || formatFilter || genreFilter || mediaTypeFilter) {
+      const trimmedQuery = searchQuery.trim().toLowerCase();
+      const normalizedQuery = trimmedQuery.replace(/[^a-z0-9]/g, '');
 
-    filteredStacks = filteredStacks.filter((stack: any) => {
-      if (!stack || !stack[0]) return false;
-      const media = stack[0].movies || stack[0].shows;
-      if (!media) return false;
+      filtered = filtered.filter((stack: any) => {
+        if (!stack || stack.length === 0) return false;
 
-      // 1. Search Query Filter
-      if (normalizedQuery) {
-        // Check Title/Name
-        const title = (media.title || media.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-        const matchesTitle = title.includes(normalizedQuery);
+        // 1. Search Query Filter (Check across ALL items in the stack)
+        if (normalizedQuery) {
+          const matches = stack.some((item: any) => {
+            const media = item.movies || item.shows;
+            const title = (media?.title || media?.name || '').toLowerCase();
+            const normalizedTitle = title.replace(/[^a-z0-9]/g, '');
+            
+            const matchesTitle = title.includes(trimmedQuery) || normalizedTitle.includes(normalizedQuery);
+            
+            // Check cast
+            const cast = (media?.movie_cast || media?.show_cast || []);
+            const matchesCast = cast.some((c: any) => {
+              const name = (c?.name || '').toLowerCase();
+              return name.includes(trimmedQuery) || name.replace(/[^a-z0-9]/g, '').includes(normalizedQuery);
+            });
 
-        // Check Cast
-        const cast = (media.movie_cast || media.show_cast || []);
-        const matchesCast = cast.some((c: any) => 
-          (c?.name || '').toLowerCase().replace(/[^a-z0-9]/g, '').includes(normalizedQuery)
-        );
-
-        // Check Edition/Notes/Formats in the whole stack
-        const matchesExtras = stack.some((item: any) => {
-          const edition = (item.edition || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-          const notes = (item.notes || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-          const format = (item.format || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-          return edition.includes(normalizedQuery) || notes.includes(normalizedQuery) || format.includes(normalizedQuery);
-        });
-
-        // Check Genres
-        const matchesGenre = (media.genres || []).some((g: any) => 
-          (g?.name || '').toLowerCase().replace(/[^a-z0-9]/g, '').includes(normalizedQuery)
-        );
-
-        if (!matchesTitle && !matchesCast && !matchesExtras && !matchesGenre) return false;
-      }
-
-      // 2. Format Filter
-      if (formatFilter) {
-        if (formatFilter === 'BOOTLEG') {
-          if (!stack.some((item: any) => item?.is_bootleg)) return false;
-        } else {
-          if (!stack.some((item: any) => item?.format === formatFilter)) return false;
+            // Check edition/notes
+            const content = `${item.edition || ''} ${item.notes || ''} ${item.format || ''}`.toLowerCase();
+            return matchesTitle || matchesCast || content.includes(trimmedQuery) || content.replace(/[^a-z0-9]/g, '').includes(normalizedQuery);
+          });
+          
+          if (!matches) return false;
         }
-      }
 
-      // 3. Genre Filter
-      if (genreFilter) {
-        if (!media.genres?.some((g: any) => g?.name === genreFilter)) return false;
-      }
+        const topItem = stack[0];
+        const media = topItem.movies || topItem.shows;
 
-      // 4. Media Type Filter
-      if (mediaTypeFilter && stack[0].media_type !== mediaTypeFilter) return false;
+        // 2. Format Filter
+        if (formatFilter) {
+          if (formatFilter === 'BOOTLEG') {
+            if (!stack.some((item: any) => item?.is_bootleg)) return false;
+          } else if (formatFilter === 'FOR SALE') {
+            if (!stack.some((item: any) => item?.for_sale)) return false;
+          } else if (formatFilter === 'FOR TRADE') {
+            if (!stack.some((item: any) => item?.for_trade)) return false;
+          } else {
+            // Match normalized format comparison (e.g. BluRay vs Blu-ray)
+            const normalizedFilter = formatFilter.replace(/[^a-z0-9]/g, '').toLowerCase();
+            if (!stack.some((item: any) => item?.format.replace(/[^a-z0-9]/g, '').toLowerCase() === normalizedFilter)) return false;
+          }
+        }
 
-      return true;
-    });
-  }
+        // 3. Genre Filter
+        if (genreFilter && media) {
+          if (!media.genres?.some((g: any) => g?.name === genreFilter)) return false;
+        }
+
+        // 4. Media Type Filter
+        if (mediaTypeFilter && topItem.media_type !== mediaTypeFilter) return false;
+
+        return true;
+      });
+    }
+    
+    return filtered;
+  }, [stacks, searchQuery, formatFilter, genreFilter, mediaTypeFilter]);
 
   const hasCollection = (collection?.length ?? 0) > 0;
   const isEmpty = !hasCollection && onDisplay.length === 0;
@@ -402,21 +411,25 @@ export default function HomeScreen() {
                 </View>
 
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-                  {['ALL', 'VHS', 'DVD', 'BluRay', '4K', 'BOOTLEG'].map(f => {
+                  {['ALL', 'VHS', 'DVD', 'BluRay', '4K', 'BOOTLEG', 'FOR SALE', 'FOR TRADE'].map(f => {
                     const isSelected = f === 'ALL' ? formatFilter === null : formatFilter === f;
                     const formatColor = f === 'VHS' ? 'bg-red-600/20 border-red-600/40' :
                       f === 'DVD' ? 'bg-purple-600/20 border-purple-600/40' :
                         f === 'BluRay' ? 'bg-blue-600/20 border-blue-600/40' :
                           f === '4K' ? 'bg-yellow-600/20 border-yellow-600/40' :
                             f === 'BOOTLEG' ? 'bg-orange-600/20 border-orange-600/40' :
-                              'bg-neutral-900 border-neutral-800';
+                              f === 'FOR SALE' ? 'bg-emerald-600/20 border-emerald-600/40' :
+                                f === 'FOR TRADE' ? 'bg-blue-600/20 border-blue-600/40' :
+                                  'bg-neutral-900 border-neutral-800';
                     const textStyle = isSelected ? 'text-amber-500' :
                       f === 'VHS' ? 'text-red-500' :
                         f === 'DVD' ? 'text-purple-400' :
                           f === 'BluRay' ? 'text-blue-400' :
                             f === '4K' ? 'text-yellow-400' :
                               f === 'BOOTLEG' ? 'text-orange-400' :
-                                'text-neutral-500';
+                                f === 'FOR SALE' ? 'text-emerald-400' :
+                                  f === 'FOR TRADE' ? 'text-blue-400' :
+                                    'text-neutral-500';
 
                     return (
                       <Pressable
@@ -525,6 +538,17 @@ export default function HomeScreen() {
 
               {isEmpty ? (
                 <EmptyState />
+              ) : filteredStacks.length === 0 ? (
+                <View className="items-center py-20 px-10">
+                  <Ionicons name="search-outline" size={48} color="#333" />
+                  <Text className="text-neutral-500 font-mono text-center mt-4">NO MATCHES FOUND FOR "{searchQuery}"</Text>
+                  <Pressable 
+                    onPress={() => { setSearchQuery(''); playSound('click'); }}
+                    className="mt-6 px-6 py-2 bg-neutral-800 rounded-full border border-neutral-700"
+                  >
+                    <Text className="text-amber-500 font-mono text-xs font-bold uppercase tracking-widest">Clear Search</Text>
+                  </Pressable>
+                </View>
               ) : (
                 <View className="flex-row flex-wrap" style={{ marginHorizontal: -10 }}>
                   {filteredStacks.map((stack: any) => {
