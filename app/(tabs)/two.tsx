@@ -575,7 +575,9 @@ export default function SettingsScreen() {
               style={{ width: 121, height: 40, opacity: 0.8 }}
               contentFit="contain"
             />
-            <Text className="text-neutral-600 font-mono text-[10px] mt-2">Tracking v1.0.0</Text>
+            <Pressable onPress={() => router.push('/debug')}>
+              <Text className="text-neutral-700 font-mono text-[10px] mt-2">v1.0.0 (Troubleshoot)</Text>
+            </Pressable>
 
             {/* TMDB Attribution */}
             <View className="mt-6 items-center w-full px-4 pt-4 border-t border-neutral-800/50">

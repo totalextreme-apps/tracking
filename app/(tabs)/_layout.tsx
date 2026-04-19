@@ -272,6 +272,14 @@ export default function TabLayout() {
           href: null,
         }}
       />
+      <Tabs.Screen
+        name="debug"
+        options={{
+          href: null, // This hides it from the bottom bar
+          headerShown: true,
+          title: 'Database Debug',
+        }}
+      />
     </Tabs>
   );
 }
