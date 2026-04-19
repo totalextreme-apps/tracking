@@ -9,6 +9,7 @@ export default function DebugScreen() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const buildTime = '2026-04-19 18:25';
 
   useEffect(() => {
     async function fetchRaw() {
@@ -35,7 +36,8 @@ export default function DebugScreen() {
   return (
     <ScrollView className="flex-1 bg-black p-4">
       <Text className="text-amber-500 font-mono text-xl mb-4">RAW DB DEBUG</Text>
-      <Text className="text-neutral-500 font-mono text-xs mb-8">User ID: {userId}</Text>
+      <Text className="text-neutral-500 font-mono text-xs mb-2">User ID: {userId}</Text>
+      <Text className="text-neutral-600 font-mono text-[10px] mb-8">Build: {buildTime}</Text>
 
       {items.length === 0 ? (
         <Text className="text-neutral-600 font-mono">No items found in DB for this user.</Text>
