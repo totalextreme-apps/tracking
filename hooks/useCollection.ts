@@ -425,8 +425,6 @@ export function useRefreshLibrary(userId: string | undefined) {
 
       if (error) throw error;
 
-      // Identify items that have NO metadata but HAVE an ID (Orphans)
-      const orphans = items.filter((i: any) => 
       // Identify items missing metadata
       const orphans = items.filter((i: any) => 
         (i.media_type === 'movie' && !i.movies) || 
