@@ -12,7 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { getPosterUrl } from '@/lib/dummy-data';
 import { StatusBar } from 'expo-status-bar';
 
-type TabType = 'grails' | 'collection' | 'wishlist' | 'bin' | 'analytics';
+type TabType = 'on-display' | 'grails' | 'collection' | 'wishlist' | 'bin' | 'analytics';
 type SortOption = 'added' | 'name' | 'format' | 'year';
 
 export default function UserProfileScreen() {
@@ -25,7 +25,7 @@ export default function UserProfileScreen() {
   const { data: following } = useFollowing(id);
   const { data: collection, isLoading: collectionLoading } = useCollection(id);
   
-  const [activeTab, setActiveTab] = useState<TabType>('grails');
+  const [activeTab, setActiveTab] = useState<TabType>('on-display');
   const [sortBy, setSortBy] = useState<SortOption>('added');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -78,6 +78,7 @@ export default function UserProfileScreen() {
     return stacks;
   };
 
+  const onDisplayItems = filterAndSortItems(collection?.filter((item: any) => item.is_on_display) || []);
   const grails = filterAndSortItems(collection?.filter((item: any) => item.is_grail) || []);
   const stackedCollection = stackItems(collection?.filter((item: any) => item.status === 'owned') || []);
   const stackedWishlist = stackItems(collection?.filter((item: any) => item.status === 'wishlist') || []);
@@ -143,9 +144,25 @@ export default function UserProfileScreen() {
             {profile.username || 'Anonymous User'}
           </Text>
           {profile.bio && (
-            <Text className="text-neutral-400 font-mono text-center mt-2 px-6">
+            <Text className="text-neutral-400 font-mono text-center mt-3 px-6 text-sm leading-5">
               {profile.bio}
             </Text>
+          )}
+
+          {/* Preferences / Tags */}
+          {(profile.movie_preferences?.length || profile.format_preferences?.length) && (
+            <View className="flex-row flex-wrap justify-center gap-2 mt-4 px-6">
+              {profile.movie_preferences?.map((pref: string) => (
+                <View key={pref} className="bg-amber-500/10 border border-amber-500/30 px-2 py-1 rounded">
+                  <Text className="text-amber-500 font-mono text-[8px] font-bold uppercase">{pref}</Text>
+                </View>
+              ))}
+              {profile.format_preferences?.map((pref: string) => (
+                <View key={pref} className="bg-neutral-800 border border-neutral-700 px-2 py-1 rounded">
+                  <Text className="text-neutral-400 font-mono text-[8px] font-bold uppercase">{pref}</Text>
+                </View>
+              ))}
+            </View>
           )}
 
           <View className="flex-row items-center gap-8 mt-6">
@@ -193,20 +210,20 @@ export default function UserProfileScreen() {
         </View>
 
         <View className="flex-row border-b border-neutral-800 mt-8 mb-4">
-          <Pressable onPress={() => setActiveTab('grails')} className={`flex-1 py-3 items-center border-b-2 ${activeTab === 'grails' ? 'border-amber-500' : 'border-transparent'}`}>
-            <Text className={`font-mono text-[10px] font-bold ${activeTab === 'grails' ? 'text-amber-500' : 'text-neutral-500'}`}>GRAILS</Text>
+          <Pressable onPress={() => setActiveTab('on-display')} className={`flex-1 py-3 items-center border-b-2 ${activeTab === 'on-display' ? 'border-amber-500' : 'border-transparent'}`}>
+            <Text className={`font-mono text-[10px] font-bold ${activeTab === 'on-display' ? 'text-amber-500' : 'text-neutral-500'}`}>ON DISPLAY</Text>
           </Pressable>
-          <Pressable onPress={() => setActiveTab('collection')} className={`flex-1 py-3 items-center border-b-2 ${activeTab === 'collection' ? 'border-white' : 'border-transparent'}`}>
-            <Text className={`font-mono text-[10px] font-bold ${activeTab === 'collection' ? 'text-white' : 'text-neutral-500'}`}>COLLECTION</Text>
+          <Pressable onPress={() => setActiveTab('grails')} className={`flex-1 py-3 items-center border-b-2 ${activeTab === 'grails' ? 'border-white' : 'border-transparent'}`}>
+            <Text className={`font-mono text-[10px] font-bold ${activeTab === 'grails' ? 'text-white' : 'text-neutral-500'}`}>GRAILS</Text>
+          </Pressable>
+          <Pressable onPress={() => setActiveTab('collection')} className={`flex-1 py-3 items-center border-b-2 ${activeTab === 'collection' ? 'border-neutral-400' : 'border-transparent'}`}>
+            <Text className={`font-mono text-[10px] font-bold ${activeTab === 'collection' ? 'text-neutral-200' : 'text-neutral-500'}`}>COLLECTION</Text>
           </Pressable>
           <Pressable onPress={() => setActiveTab('wishlist')} className={`flex-1 py-3 items-center border-b-2 ${activeTab === 'wishlist' ? 'border-pink-500' : 'border-transparent'}`}>
             <Text className={`font-mono text-[10px] font-bold ${activeTab === 'wishlist' ? 'text-pink-500' : 'text-neutral-500'}`}>WISHLIST</Text>
           </Pressable>
           <Pressable onPress={() => setActiveTab('bin')} className={`flex-1 py-3 items-center border-b-2 ${activeTab === 'bin' ? 'border-emerald-500' : 'border-transparent'}`}>
             <Text className={`font-mono text-[10px] font-bold ${activeTab === 'bin' ? 'text-emerald-500' : 'text-neutral-500'}`}>THE BIN</Text>
-          </Pressable>
-          <Pressable onPress={() => setActiveTab('analytics')} className={`flex-1 py-3 items-center border-b-2 ${activeTab === 'analytics' ? 'border-blue-500' : 'border-transparent'}`}>
-            <Text className={`font-mono text-[10px] font-bold ${activeTab === 'analytics' ? 'text-blue-500' : 'text-neutral-500'}`}>STATS</Text>
           </Pressable>
         </View>
 
@@ -252,6 +269,39 @@ export default function UserProfileScreen() {
             <ActivityIndicator color="#f59e0b" className="mt-8" />
           ) : (
             <View>
+              {activeTab === 'on-display' && (
+                <View>
+                  {onDisplayItems.length > 0 ? (
+                    <View className="flex-row flex-wrap justify-between">
+                      {onDisplayItems.map((item: any) => {
+                        const posterUrl = getPosterUrl(item.movies?.poster_path || item.shows?.poster_path);
+                        return (
+                          <Pressable 
+                            key={item.id} 
+                            onPress={() => router.push({ pathname: item.movies ? `/movie/${item.movie_id}` as any : `/show/${item.show_id}` as any, params: { ownerId: id } })}
+                            className="w-[31%] mb-4"
+                          >
+                            <View className="relative">
+                              <Image source={{ uri: posterUrl as string }} className="w-full aspect-[2/3] rounded border border-neutral-800" />
+                              <View className="absolute top-1 right-1 bg-amber-500 p-1 rounded-full shadow-sm">
+                                <Ionicons name="star" size={8} color="black" />
+                              </View>
+                            </View>
+                            <Text className="text-white font-mono text-[9px] mt-1 text-center" numberOfLines={1}>
+                              {item.movies?.title || item.shows?.name}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  ) : (
+                    <View className="bg-neutral-900 border border-neutral-800 rounded-lg p-6 items-center border-dashed">
+                      <Text className="text-neutral-500 font-mono text-center">Nothing currently on display.</Text>
+                    </View>
+                  )}
+                </View>
+              )}
+
               {activeTab === 'grails' && (
                 <View>
                   {grails.length > 0 ? (

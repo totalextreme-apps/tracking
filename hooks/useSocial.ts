@@ -100,12 +100,13 @@ export const useSearchUsers = (query: string) => {
       if (!query.trim()) return [];
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('*, grails:collection_items(movie_id, show_id, media_type, movies(poster_path), shows(poster_path))')
         .ilike('username', `%${query}%`)
+        .eq('grails.is_grail', true)
         .limit(20);
 
       if (error) throw error;
-      return data as Profile[];
+      return data as any[];
     },
     enabled: query.length > 2,
   });
@@ -127,7 +128,8 @@ export const useSuggestedUsers = (currentUserId?: string) => {
       // 2. Fetch people not followed
       let query = supabase
         .from('profiles')
-        .select('*');
+        .select('*, grails:collection_items(movie_id, show_id, media_type, movies(poster_path), shows(poster_path))')
+        .eq('grails.is_grail', true);
         
       if (currentUserId) {
         query = query.neq('id', currentUserId);

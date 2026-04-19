@@ -19,6 +19,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
+import { PreferenceQuizModal } from '@/components/PreferenceQuizModal';
 
 const logoSource = Platform.OS === 'web'
   ? { uri: '/logo_tracking.png' }
@@ -42,6 +43,7 @@ export default function SettingsScreen() {
   const [password, setPassword] = useState('');
   const [isLinking, setIsLinking] = useState(false);
   const { soundEnabled, setSoundEnabled, staticEnabled, setStaticEnabled, resetOnboarding } = useSettings();
+  const [showQuiz, setShowQuiz] = useState(false);
 
   const router = useRouter();
 
@@ -144,6 +146,18 @@ export default function SettingsScreen() {
     );
   }
 
+  const handleSavePreferences = async (moviePrefs: string[], formatPrefs: string[]) => {
+    try {
+      await updateProfile({ 
+        movie_preferences: moviePrefs, 
+        format_preferences: formatPrefs 
+      } as any);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (e) {
+      Alert.alert('Update Failed', (e as Error).message);
+    }
+  };
+
   return (
     <View className="flex-1 bg-neutral-950">
       <ConfirmModal
@@ -155,6 +169,13 @@ export default function SettingsScreen() {
         destructive
         onConfirm={performSignOut}
         onCancel={() => setShowSignOutConfirm(false)}
+      />
+      <PreferenceQuizModal
+        visible={showQuiz}
+        onClose={() => setShowQuiz(false)}
+        onSave={handleSavePreferences}
+        initialMoviePrefs={profile?.movie_preferences || []}
+        initialFormatPrefs={profile?.format_preferences || []}
       />
       <ScrollView
         className="flex-1 bg-neutral-950"
@@ -488,11 +509,19 @@ export default function SettingsScreen() {
           {/* GLOBAL COMMUNITY STATS */}
           <GlobalStatsSection />
 
-          {/* INFO / ABOUT */}
-          <View className="bg-neutral-900 rounded-lg overflow-hidden mt-6">
+            <Pressable
+              onPress={() => setShowQuiz(true)}
+              className="p-4 flex-row items-center justify-between active:bg-neutral-800 border-t border-neutral-800"
+            >
+              <View className="flex-row items-center">
+                <View className="w-8 items-center"><FontAwesome name="list-alt" size={14} color="#f59e0b" /></View>
+                <Text className="text-amber-500 font-mono text-sm">Update Collector Quiz</Text>
+              </View>
+              <FontAwesome name="chevron-right" size={10} color="#525252" />
+            </Pressable>
             <Pressable
               onPress={() => router.push('/about')}
-              className="p-4 flex-row items-center justify-between active:bg-neutral-800"
+              className="p-4 flex-row items-center justify-between active:bg-neutral-800 border-t border-neutral-800"
             >
               <View className="flex-row items-center">
                 <View className="w-8 items-center"><FontAwesome name="info-circle" size={14} color="#d1d5db" /></View>

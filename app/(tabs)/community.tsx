@@ -330,18 +330,34 @@ export default function CommunityScreen() {
               <View style={{ backgroundColor: '#111', borderRadius: 10, borderWidth: 1, borderColor: '#1f1f1f', marginBottom: 8, overflow: 'hidden' }}>
                 {searchLoading ? <ActivityIndicator color="#f59e0b" style={{ padding: 16 }} /> : (
                   (searchResults || []).map((user: any) => (
-                    <Pressable key={user.id} onPress={() => { setUserSearch(''); router.push(`/profile/${user.id}`); }} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 12, borderBottomWidth: 1, borderBottomColor: '#1a1a1a' }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#1a1a1a', overflow: 'hidden', marginRight: 10, borderWidth: 1, borderColor: '#222' }}>
-                          {user.avatar_url ? <Image source={{ uri: user.avatar_url }} style={{ width: '100%', height: '100%' }} /> : <Ionicons name="person" size={14} color="#444" />}
+                    <Pressable key={user.id} onPress={() => { setUserSearch(''); router.push(`/profile/${user.id}`); }} style={{ padding: 12, borderBottomWidth: 1, borderBottomColor: '#1a1a1a' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: user.grails?.length ? 10 : 0 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                          <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#1a1a1a', overflow: 'hidden', marginRight: 10, borderWidth: 1, borderColor: '#222' }}>
+                            {user.avatar_url ? <Image source={{ uri: user.avatar_url }} style={{ width: '100%', height: '100%' }} /> : <Ionicons name="person" size={14} color="#444" />}
+                          </View>
+                          <Text style={{ color: '#fff', fontFamily: 'SpaceMono', fontSize: 12 }}>@{user.username || 'anon'}</Text>
                         </View>
-                        <Text style={{ color: '#fff', fontFamily: 'SpaceMono', fontSize: 12 }}>@{user.username || 'anon'}</Text>
+                        <Pressable onPress={(e) => { e.stopPropagation(); toggleFollow.mutate({ targetUserId: user.id, isFollowing: !!isFollowing(user.id) }); }} style={{ backgroundColor: isFollowing(user.id) ? '#1a1a1a' : '#f59e0b', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20 }}>
+                          <Text style={{ fontFamily: 'SpaceMono', fontSize: 10, fontWeight: 'bold', color: isFollowing(user.id) ? '#525252' : '#000' }}>
+                            {isFollowing(user.id) ? 'TRACKING' : 'TRACK'}
+                          </Text>
+                        </Pressable>
                       </View>
-                      <Pressable onPress={(e) => { e.stopPropagation(); toggleFollow.mutate({ targetUserId: user.id, isFollowing: !!isFollowing(user.id) }); }} style={{ backgroundColor: isFollowing(user.id) ? '#1a1a1a' : '#f59e0b', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20 }}>
-                        <Text style={{ fontFamily: 'SpaceMono', fontSize: 10, fontWeight: 'bold', color: isFollowing(user.id) ? '#525252' : '#000' }}>
-                          {isFollowing(user.id) ? 'TRACKING' : 'TRACK'}
-                        </Text>
-                      </Pressable>
+                      
+                      {/* Grails Preview */}
+                      {user.grails?.length > 0 && (
+                        <View style={{ flexDirection: 'row', paddingLeft: 46 }}>
+                          {user.grails.slice(0, 5).map((g: any, i: number) => (
+                            <View key={i} style={{ width: 30, height: 45, borderRadius: 2, overflow: 'hidden', marginRight: 6, backgroundColor: '#111', borderWidth: 1, borderColor: '#222' }}>
+                              <Image 
+                                source={{ uri: getPosterUrl(g.movies?.poster_path || g.shows?.poster_path) || '' }} 
+                                style={{ width: '100%', height: '100%' }}
+                              />
+                            </View>
+                          ))}
+                        </View>
+                      )}
                     </Pressable>
                   ))
                 )}

@@ -163,5 +163,7 @@ export interface Profile {
   avatar_url: string | null;
   website: string | null;
   bio: string | null;
+  movie_preferences?: string[] | null;
+  format_preferences?: string[] | null;
   updated_at: string | null;
 }

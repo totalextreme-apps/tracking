@@ -427,6 +427,8 @@ export function useRefreshLibrary(userId: string | undefined) {
 
       // Identify items that have NO metadata but HAVE an ID (Orphans)
       const orphans = items.filter((i: any) => 
+      // Identify items missing metadata
+      const orphans = items.filter((i: any) => 
         (i.media_type === 'movie' && !i.movies) || 
         (i.media_type === 'tv' && !i.shows)
       );
@@ -435,10 +437,6 @@ export function useRefreshLibrary(userId: string | undefined) {
       const existingMovies = items.filter((i: any) => i.media_type === 'movie' && i.movies?.tmdb_id).map((i: any) => i.movies.tmdb_id);
       const existingShows = items.filter((i: any) => i.media_type === 'tv' && i.shows?.tmdb_id).map((i: any) => i.shows.tmdb_id);
 
-      // We focus on REPAIRING orphans first.
-      // But we need the TMDB ID to repair. If the join is NULL, we don't have tmdb_id!
-      // This happens if the row in movies/shows table is missing.
-      
       const moviesToRefresh = Array.from(new Set(existingMovies)) as number[];
       const showsToRefresh = Array.from(new Set(existingShows)) as number[];
 
@@ -448,39 +446,50 @@ export function useRefreshLibrary(userId: string | undefined) {
 
       let current = 0;
 
-      // 2. Repair Orphans (Check if ID itself is likely a TMDB ID)
+      // 2. Repair Orphans (Phase 2)
       for (const orphan of orphans) {
         try {
-          // HEURISTIC: If the internal ID is > 100, it's likely a TMDB ID
+          // HEURISTIC: If the join failed, but we have a movie_id, it might be a TMDB ID
+          // instead of an internal ID. We attempt to recover it by fetching TMDB.
           const suspectedTmdbId = orphan.media_type === 'movie' ? orphan.movie_id : orphan.show_id;
           
-          if (suspectedTmdbId && suspectedTmdbId > 100) {
-            console.log(`Attempting recovery for orphan ${orphan.id} with suspected TMDB ID ${suspectedTmdbId}`);
+          if (suspectedTmdbId) {
+            console.log(`Deep Repair: Attempting recovery for orphan ${orphan.id} with suspected ID ${suspectedTmdbId}`);
             if (orphan.media_type === 'movie') {
-               const data = await getMovieById(suspectedTmdbId);
-               const { data: movieRow } = await supabase.from('movies').upsert({
-                 tmdb_id: data.id,
-                 title: data.title,
-                 poster_path: data.poster_path,
-                 backdrop_path: data.backdrop_path,
-                 release_date: data.release_date,
-               }).select('id').single();
-               
-               if (movieRow) {
-                 await supabase.from('collection_items').update({ movie_id: (movieRow as any).id }).eq('id', orphan.id);
+               try {
+                 const data = await getMovieById(suspectedTmdbId);
+                 const { data: movieRow } = await supabase.from('movies').upsert({
+                   tmdb_id: data.id,
+                   title: data.title,
+                   poster_path: data.poster_path,
+                   backdrop_path: data.backdrop_path,
+                   release_date: data.release_date,
+                   genres: data.genres ?? null,
+                 }, { onConflict: 'tmdb_id' }).select('id').single();
+                 
+                 if (movieRow) {
+                   await supabase.from('collection_items').update({ movie_id: (movieRow as any).id }).eq('id', orphan.id);
+                 }
+               } catch (err) {
+                 console.warn(`TMDB ID ${suspectedTmdbId} not found for movie orphan.`);
                }
             } else {
-               const data = await getTvShowById(suspectedTmdbId);
-               const { data: showRow } = await supabase.from('shows').upsert({
-                 tmdb_id: data.id,
-                 name: data.name,
-                 poster_path: data.poster_path,
-                 backdrop_path: data.backdrop_path,
-                 first_air_date: data.first_air_date,
-               }).select('id').single();
-               
-               if (showRow) {
-                 await supabase.from('collection_items').update({ show_id: (showRow as any).id }).eq('id', orphan.id);
+               try {
+                 const data = await getTvShowById(suspectedTmdbId);
+                 const { data: showRow } = await supabase.from('shows').upsert({
+                   tmdb_id: data.id,
+                   name: data.name,
+                   poster_path: data.poster_path,
+                   backdrop_path: data.backdrop_path,
+                   first_air_date: data.first_air_date,
+                   genres: data.genres ?? null,
+                 }, { onConflict: 'tmdb_id' }).select('id').single();
+                 
+                 if (showRow) {
+                   await supabase.from('collection_items').update({ show_id: (showRow as any).id }).eq('id', orphan.id);
+                 }
+               } catch (err) {
+                 console.warn(`TMDB ID ${suspectedTmdbId} not found for show orphan.`);
                }
             }
           }
@@ -489,7 +498,7 @@ export function useRefreshLibrary(userId: string | undefined) {
         }
         current++;
         setProgress({ current, total });
-        await new Promise(r => setTimeout(r, 250));
+        await new Promise(r => setTimeout(r, 200));
       }
 
       // 3. Refresh Movies

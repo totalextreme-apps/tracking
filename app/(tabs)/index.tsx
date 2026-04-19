@@ -200,10 +200,10 @@ export default function HomeScreen() {
         if (normalizedQuery) {
           const matches = stack.some((item: any) => {
             const media = item.movies || item.shows;
-            const title = (media?.title || media?.name || (item.movie_id || item.show_id ? `[MALFORMED DATA] ID: ${item.id}` : '')).toLowerCase();
-            const normalizedTitle = title.replace(/[^a-z0-9]/g, '');
+            const title = media?.title || media?.name || `[METADATA PENDING] ${item.movie_id || item.show_id || item.id}`;
+            const normalizedTitle = title.toLowerCase().replace(/[^a-z0-9]/g, '');
             
-            const matchesTitle = title.includes(trimmedQuery) || normalizedTitle.includes(normalizedQuery);
+            const matchesTitle = title.toLowerCase().includes(trimmedQuery) || normalizedTitle.includes(normalizedQuery);
             
             // Check cast
             const cast = (media?.movie_cast || media?.show_cast || []);
