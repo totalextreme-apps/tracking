@@ -112,7 +112,7 @@ export default function MovieDetailScreen() {
     // HEURISTIC: If the join failed, but our movieId looks like a TMDB ID (e.g. 425 for Ice Age)
     // or we have a tmdb_id from a previously cached version
     const activeMovie = internalMovie || persistedMovie;
-    const tmdbIdToUse = activeMovie?.tmdb_id || (movieId && movieId > 1000 ? movieId : null);
+    const tmdbIdToUse = activeMovie?.tmdb_id || (movieId && movieId > 0 ? movieId : null);
 
     const { data: tmdbMovie, isLoading: tmdbLoading } = useQuery({
         queryKey: ['tmdb', tmdbIdToUse],
