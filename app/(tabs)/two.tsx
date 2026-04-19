@@ -455,6 +455,7 @@ export default function SettingsScreen() {
                 <View className="w-8 items-center"><FontAwesome name="sign-out" size={14} color="#FFE92F" /></View>
                 <Text className="font-mono text-sm font-bold" style={{ color: '#FFE92F' }}>Sign Out</Text>
               </View>
+            </Pressable>
           </View>
         </View>
 
