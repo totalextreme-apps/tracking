@@ -107,31 +107,24 @@ export default function MovieDetailScreen() {
     const movieId = typeof id === 'string' ? parseInt(id, 10) : undefined;
 
     const movieItems = collection?.filter((item: any) => item.movie_id === movieId) ?? [];
-    const movie = movieItems[0]?.movies;
+    const internalMovie = movieItems[0]?.movies;
 
-    // Comments State
-    const commentActiveItem = movieItems[0];
-    
-    console.log('Movie items count:', movieItems.length, 'Formats:', movieItems.map((i: any) => i.format));
+    // HEURISTIC: If the join failed, but our movieId looks like a TMDB ID (e.g. 425 for Ice Age)
+    // or we have a tmdb_id from a previously cached version
+    const activeMovie = internalMovie || persistedMovie;
+    const tmdbIdToUse = activeMovie?.tmdb_id || (movieId && movieId > 1000 ? movieId : null);
 
-    console.log('Movie items count:', movieItems.length, 'Formats:', movieItems.map((i: any) => i.format));
-
-    const activeMovie = movie || persistedMovie;
-
-    useEffect(() => {
-        if (movie && !persistedMovie) {
-            setPersistedMovie(movie);
-        }
-    }, [movie, persistedMovie]);
-
-    const { data: tmdbMovie } = useQuery({
-        queryKey: ['tmdb', activeMovie?.tmdb_id],
+    const { data: tmdbMovie, isLoading: tmdbLoading } = useQuery({
+        queryKey: ['tmdb', tmdbIdToUse],
         queryFn: async () => {
-            if (!activeMovie?.tmdb_id) return null;
-            return getMovieById(activeMovie.tmdb_id);
+            if (!tmdbIdToUse) return null;
+            return getMovieById(tmdbIdToUse);
         },
-        enabled: !!activeMovie?.tmdb_id,
+        enabled: !!tmdbIdToUse,
     });
+
+    // Final movie object to use for display
+    const movie = internalMovie || tmdbMovie || persistedMovie;
 
     // Load custom art from ANY collection item for this movie
     const customArtUrl = movieItems.find((i: any) => i.custom_poster_url)?.custom_poster_url;
