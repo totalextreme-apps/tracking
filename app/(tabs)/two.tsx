@@ -509,6 +509,8 @@ export default function SettingsScreen() {
           {/* GLOBAL COMMUNITY STATS */}
           <GlobalStatsSection />
 
+          {/* INFO / ABOUT */}
+          <View className="bg-neutral-900 rounded-lg overflow-hidden mt-6">
             <Pressable
               onPress={() => setShowQuiz(true)}
               className="p-4 flex-row items-center justify-between active:bg-neutral-800 border-t border-neutral-800"
@@ -563,7 +565,6 @@ export default function SettingsScreen() {
               <FontAwesome name="chevron-right" size={10} color="#525252" />
             </Pressable>
           </View>
-        </View>
 
         {/* App Version */}
         <View className="mt-8 mb-32 items-center">
