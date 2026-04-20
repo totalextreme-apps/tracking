@@ -65,6 +65,22 @@ export default function HomeScreen() {
     }, 1500);
   };
 
+  const scrollShelfRight = () => {
+    if (shelfRef.current) {
+      playSound('click');
+      if (Platform.OS === 'web') (shelfRef.current as any).scrollTo({ x: (shelfRef.current as any).scrollLeft + 400, animated: true });
+      else shelfRef.current.scrollTo({ x: 500, animated: true });
+    }
+  };
+
+  const scrollShelfLeft = () => {
+    if (shelfRef.current) {
+      playSound('click');
+      if (Platform.OS === 'web') (shelfRef.current as any).scrollTo({ x: (shelfRef.current as any).scrollLeft - 400, animated: true });
+      else shelfRef.current.scrollTo({ x: 0, animated: true });
+    }
+  };
+
   const toggleFavorite = async (item: CollectionItemWithMedia) => {
     try {
       const isWishlist = item.status === 'wishlist';
@@ -105,28 +121,28 @@ export default function HomeScreen() {
 
   const genres = getGenres(collection);
 
-  // V1.0.16 - THE DATA INSPECTOR (USING LITERAL FORMAT COLUMN)
+  // V1.0.17 - EMERGENCY RECOVERY BUILD
   const filteredCollection = useMemo(() => {
     if (!collection) return [];
-    
-    // Status
     let items = collection.filter((i: any) => thriftMode ? i.status === 'wishlist' : i.status === 'owned');
 
-    // IRONCLAD FORMAT COLUMN FILTER
     if (formatFilter && formatFilter !== 'ALL') {
       items = items.filter((item: any) => {
         if (formatFilter === 'BOOTLEG') return item.is_bootleg;
         if (formatFilter === 'FOR SALE') return item.for_sale;
         if (formatFilter === 'FOR TRADE') return item.for_trade;
         
-        // LITERAL CHECK AGAINST THE FORMAT COLUMN
-        return String(item.format).trim() === formatFilter;
+        // LITERAL CHECK AGAINST THE DATABASE FIELD
+        return item.format === formatFilter;
       });
     }
 
     if (searchQuery) {
       const q = searchQuery.trim().toLowerCase();
-      items = items.filter((item: any) => (item.movies || item.shows)?.title?.toLowerCase().includes(q));
+      items = items.filter((item: any) => {
+        const m = item.movies || item.shows;
+        return (m?.title || m?.name || '').toLowerCase().includes(q);
+      });
     }
 
     if (genreFilter) items = items.filter((item: any) => (item.movies || item.shows)?.genres?.some((g: any) => g?.name === genreFilter));
@@ -144,7 +160,7 @@ export default function HomeScreen() {
     if (!formatFilter || formatFilter === 'ALL') return raw;
     return raw.filter((item: any) => {
         if (formatFilter === 'BOOTLEG') return item.is_bootleg;
-        return String(item.format).trim() === formatFilter;
+        return item.format === formatFilter;
     });
   }, [collection, formatFilter]);
 
@@ -161,8 +177,8 @@ export default function HomeScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#f59e0b" />}
       >
         <View className="w-full">
-          <View className="bg-neutral-950 p-1 border-b border-neutral-900">
-            <Text className="text-neutral-700 font-mono text-[8px] text-center">INSPECTOR V1.0.16.2 | S:{filteredStacks.length}</Text>
+          <View className="bg-neutral-900 p-1 border-b border-white/5">
+            <Text className="text-neutral-500 font-mono text-[8px] text-center uppercase tracking-widest">STABLE RECOVERY V1.0.17 | {formatFilter || 'ALL'}</Text>
           </View>
 
           <View className="flex-1">
@@ -230,7 +246,6 @@ export default function HomeScreen() {
 
               <View className="bg-neutral-900 mb-8 p-4 rounded-xl border border-neutral-800">
                 <View className="flex-row items-center gap-2 mb-6 flex-wrap">
-                  {/* Sorting & Type filters restored */}
                   <Text className="text-neutral-500 font-mono text-[10px] uppercase tracking-tighter mr-1">SORT:</Text>
                   {[{ id: 'recent', label: 'RECENT' }, { id: 'title', label: 'NAME' }, { id: 'release', label: 'YEAR' }, { id: 'rating', label: 'RATING' }].map((s: any) => (
                     <Pressable key={s.id} onPress={() => { if (sortBy === s.id) setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); else { setSortBy(s.id); setSortOrder(s.id === 'title' || s.id === 'release' ? 'asc' : 'desc'); } playSound('click'); }} className={`px-3 py-1.5 rounded border flex-row items-center gap-1.5 ${sortBy === s.id ? 'bg-amber-500/20 border-amber-500/50' : 'bg-neutral-950 border-neutral-800'}`}>
@@ -246,9 +261,9 @@ export default function HomeScreen() {
                 {filteredStacks.map((stack: any) => (
                   <View key={stack[0]?.id} style={{ width: `${100 / resolvedColumns}%`, paddingHorizontal: 10, marginBottom: 32 }}>
                     
-                    {/* DATA INSPECTOR LABEL */}
-                    <View className="absolute z-50 bg-red-600 px-1 py-0.5 rounded-sm top-2 left-4">
-                      <Text className="text-white font-mono font-bold text-[8px] uppercase">DB:{stack[0]?.format}</Text>
+                    {/* DATA INSPECTOR LABEL (HIDDEN BUT AVAILABLE) */}
+                    <View className="absolute z-50 bg-red-600/20 px-1 rounded-sm top-2 left-4">
+                      <Text className="text-red-500/50 font-mono font-bold text-[6px] uppercase">{stack[0]?.format}</Text>
                     </View>
 
                     <StackCard stack={stack} onPress={() => navigateToDetail(stack[0])} onToggleFavorite={toggleFavorite} onLongPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); setQuickActionItem(stack[0]); }} onRatePress={(rating) => handleGridRate(stack[0], rating)} width={(windowWidth - 48 - (resolvedColumns * 20)) / resolvedColumns} mode={viewMode === 'list' ? 'list' : 'grid'} activeFormatFilter={formatFilter} />
@@ -261,6 +276,16 @@ export default function HomeScreen() {
       </ScrollView>
 
       {quickActionItem && <QuickActionModal item={quickActionItem} visible={!!quickActionItem} collection={collection || []} userId={userId} onClose={() => setQuickActionItem(null)} />}
+
+      {showRewind && (
+        <View className="absolute inset-0 z-[100] items-center justify-center pointer-events-none">
+          <View className="bg-amber-500/10 absolute inset-0" />
+          <View className="bg-black/40 p-10 rounded-full border border-amber-500/20">
+            <Ionicons name="reload" size={80} color="#f59e0b" />
+            <Text className="text-amber-500 font-mono text-center mt-4 tracking-[10px]">REWINDING</Text>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
