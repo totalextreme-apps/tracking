@@ -330,7 +330,7 @@ export default function CommunityScreen() {
               <View style={{ backgroundColor: '#111', borderRadius: 10, borderWidth: 1, borderColor: '#1f1f1f', marginBottom: 8, overflow: 'hidden' }}>
                 {searchLoading ? <ActivityIndicator color="#f59e0b" style={{ padding: 16 }} /> : (
                   (searchResults || []).map((user: any) => (
-                    <Pressable key={user.id} onPress={() => { setUserSearch(''); router.push(`/profile/${user.id}`); }} style={{ padding: 12, borderBottomWidth: 1, borderBottomColor: '#1a1a1a' }}>
+                    <Pressable key={user.id} onPress={() => { setUserSearch(''); router.push(`/profile/${user.id}?from=community`); }} style={{ padding: 12, borderBottomWidth: 1, borderBottomColor: '#1a1a1a' }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: user.grails?.length ? 10 : 0 }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                           <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#1a1a1a', overflow: 'hidden', marginRight: 10, borderWidth: 1, borderColor: '#222' }}>
@@ -371,7 +371,7 @@ export default function CommunityScreen() {
               <Text style={{ color: '#3a3a3a', fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold', letterSpacing: 2, marginBottom: 8, textTransform: 'uppercase' }}>Tracking</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 {following.map((f: any) => (
-                  <Pressable key={f.following_id} onPress={() => router.push(`/profile/${f.following_id}`)} style={{ marginRight: 12, alignItems: 'center' }}>
+                  <Pressable key={f.following_id} onPress={() => router.push(`/profile/${f.following_id}?from=community`)} style={{ marginRight: 12, alignItems: 'center' }}>
                     <View style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: '#f59e0b33', padding: 2, marginBottom: 4 }}>
                       <View style={{ flex: 1, borderRadius: 20, backgroundColor: '#1a1a1a', overflow: 'hidden' }}>
                         {f.profiles?.avatar_url ? <Image source={{ uri: f.profiles.avatar_url }} style={{ width: '100%', height: '100%' }} /> : <Ionicons name="person" size={16} color="#444" />}
@@ -393,7 +393,7 @@ export default function CommunityScreen() {
                 const isPost = item.activity_type === 'post';
                 return (
                   <View key={item.id + '-' + idx} style={{ marginBottom: 16 }}>
-                    <Pressable onPress={() => router.push(`/profile/${item.user_id}`)} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                    <Pressable onPress={() => router.push(`/profile/${item.user_id}?from=community`)} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                       <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#1a1a1a', overflow: 'hidden', marginRight: 8, borderWidth: 1, borderColor: '#222' }}>
                         {profile?.avatar_url ? <Image source={{ uri: profile.avatar_url }} style={{ width: '100%', height: '100%' }} /> : <Ionicons name="person" size={12} color="#444" />}
                       </View>
@@ -595,7 +595,7 @@ export default function CommunityScreen() {
             </View>
           ) : (
             (notifications || []).map((n: any) => (
-              <Pressable key={n.id} onPress={() => { markRead.mutate(n.id); if (n.type === 'message') router.push(`/(tabs)/profile/chat/${n.actor_id}`); else if (n.type === 'follow') router.push(`/profile/${n.actor_id}`); }} style={{ flexDirection: 'row', alignItems: 'center', padding: 14, borderBottomWidth: 1, borderBottomColor: '#0a0a0a', backgroundColor: !n.is_read ? '#f59e0b05' : 'transparent' }}>
+              <Pressable key={n.id} onPress={() => { markRead.mutate(n.id); if (n.type === 'message') router.push(`/(tabs)/profile/chat/${n.actor_id}?from=community`); else if (n.type === 'follow') router.push(`/profile/${n.actor_id}?from=community`); }} style={{ flexDirection: 'row', alignItems: 'center', padding: 14, borderBottomWidth: 1, borderBottomColor: '#0a0a0a', backgroundColor: !n.is_read ? '#f59e0b05' : 'transparent' }}>
                 <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#111', overflow: 'hidden', marginRight: 12 }}>
                   {n.actor?.avatar_url ? <Image source={{ uri: n.actor.avatar_url }} style={{ width: '100%', height: '100%' }} /> : <Ionicons name={notifIcon(n.type) as any} size={16} color="#f59e0b" />}
                 </View>

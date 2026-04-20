@@ -16,7 +16,7 @@ type TabType = 'on-display' | 'grails' | 'collection' | 'wishlist' | 'bin' | 'an
 type SortOption = 'added' | 'name' | 'format' | 'year';
 
 export default function UserProfileScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, from } = useLocalSearchParams<{ id: string; from?: string }>();
   const { userId: currentUserId } = useAuth();
   const router = useRouter();
 
@@ -123,7 +123,18 @@ export default function UserProfileScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       
       <View className="pt-16 pb-4 bg-black border-b border-neutral-800 flex-row items-center justify-between px-4">
-        <Pressable onPress={() => router.back()} className="p-2">
+        <Pressable 
+          onPress={() => {
+            if (from === 'community') {
+              router.push('/(tabs)/community');
+            } else if (fromStack) {
+              router.push('/(tabs)/');
+            } else {
+              router.back();
+            }
+          }} 
+          className="p-2"
+        >
           <Ionicons name="arrow-back" size={24} color="#f59e0b" />
         </Pressable>
         <Text className="text-white font-bold text-lg font-mono uppercase" numberOfLines={1}>
