@@ -179,14 +179,14 @@ export default function HomeScreen() {
     }
   };
 
-  const onDisplay = thriftMode
+  const onDisplayRaw = thriftMode
     ? collection?.filter((item: any) => item && item.is_grail) ?? []
     : getOnDisplayItems(collection);
 
   const genres = getGenres(collection);
   const stacks = getStacks(collection, thriftMode, sortBy, sortOrder);
 
-  // V1.0.7 - THE ABSOLUTE NO-BYPASS FILTER WITH DISBANDING
+  // V1.0.8 - THE STRICT FORMAT HEADER FILTER
   const filteredStacks = useMemo(() => {
     const raw = stacks || [];
     const normSearch = searchQuery.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -198,29 +198,30 @@ export default function HomeScreen() {
 
     for (let i = 0; i < raw.length; i++) {
         const stack = raw[i];
-        if (!stack) continue;
+        if (!stack || stack.length === 0) continue;
 
-        let filteredItems = [...stack];
-
-        // 1. Format Filter (STRICT ISOLATION)
-        if (normFormat) {
-          if (formatFilter === 'BOOTLEG') filteredItems = filteredItems.filter(item => item.is_bootleg);
-          else if (formatFilter === 'FOR SALE') filteredItems = filteredItems.filter(item => item.for_sale);
-          else if (formatFilter === 'FOR TRADE') filteredItems = filteredItems.filter(item => item.for_trade);
-          else {
-            filteredItems = filteredItems.filter(item => {
-               // Normalizing the field format
-               const fieldFmt = (item.format || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-               if (normFormat === 'digital') return fieldFmt.includes('digital');
-               // Use includes to be safe about hybrids like 'VHS/DVD' but strict enough for isolation
-               return fieldFmt.includes(normFormat);
-            });
-          }
-        }
+        // Disband stack into only matching items
+        let filteredItems = stack.filter(item => {
+            // A. Format Filter (Strictly uses the database 'format' field value)
+            if (normFormat) {
+                if (formatFilter === 'BOOTLEG') return item.is_bootleg;
+                if (formatFilter === 'FOR SALE') return item.for_sale;
+                if (formatFilter === 'FOR TRADE') return item.for_trade;
+                
+                const itemFmt = (item.format || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                // Correct "Blu-ray" display name to matched search "bluray"
+                if (normFormat === 'bluray') return itemFmt === 'bluray';
+                if (normFormat === 'digital') return itemFmt.includes('digital');
+                
+                // Final strict check (VHS === vhs, DVD === dvd)
+                return itemFmt === normFormat;
+            }
+            return true;
+        });
 
         if (filteredItems.length === 0) continue;
 
-        // 2. Search query filter
+        // B. Apply remaining filters to the already-disbanded items
         if (normSearch) {
            const matches = filteredItems.some(item => {
              const m = item.movies || item.shows;
@@ -231,7 +232,6 @@ export default function HomeScreen() {
            if (!matches) continue;
         }
 
-        // 3. Genre filter
         if (genreFilter) {
             const matches = filteredItems.some(item => {
               const m = item.movies || item.shows;
@@ -240,7 +240,6 @@ export default function HomeScreen() {
             if (!matches) continue;
         }
 
-        // 4. Media type filter
         if (mediaTypeFilter) {
             filteredItems = filteredItems.filter(item => item.media_type === mediaTypeFilter);
             if (filteredItems.length === 0) continue;
@@ -251,6 +250,21 @@ export default function HomeScreen() {
 
     return results;
   }, [stacks, searchQuery, formatFilter, genreFilter, mediaTypeFilter]);
+
+  // Apply same filter logic to On Display
+  const onDisplay = useMemo(() => {
+    return onDisplayRaw.filter((item: any) => {
+        if (!formatFilter) return true;
+        const normFormat = formatFilter.replace(/[^a-z0-9]/g, '').toLowerCase();
+        if (formatFilter === 'BOOTLEG') return item.is_bootleg;
+        if (formatFilter === 'FOR SALE') return item.for_sale;
+        if (formatFilter === 'FOR TRADE') return item.for_trade;
+        
+        const itemFmt = (item.format || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (normFormat === 'digital') return itemFmt.includes('digital');
+        return itemFmt === normFormat;
+    });
+  }, [onDisplayRaw, formatFilter]);
 
   const hasCollection = (collection?.length ?? 0) > 0;
   const isEmpty = !hasCollection && onDisplay.length === 0;
@@ -321,10 +335,10 @@ export default function HomeScreen() {
       >
         <View className="w-full">
           
-          {/* V1.0.7 DEBUG HEADER */}
+          {/* V1.0.8 DEBUG HEADER */}
           <View className="bg-red-600/20 p-2 border-b border-red-600/40">
              <Text className="text-red-500 font-mono text-[9px] text-center">
-                 V1.0.7 | DEBUG: {formatFilter ? `FILTER:${formatFilter}` : 'NO FILTER'} | STACKS:{filteredStacks.length}
+                 V1.0.8 | FILTER:{formatFilter || 'OFF'} | STACKS:{filteredStacks.length} | DATA:{filteredStacks[0]?.[0]?.format || 'N/A'}
              </Text>
           </View>
 
@@ -361,26 +375,16 @@ export default function HomeScreen() {
                     contentContainerStyle={{ paddingLeft: 24, paddingRight: 40 }}
                     className="py-12"
                   >
-                    {onDisplay.map((item: any) => {
-                      // V1.0.7 Filter On Display too
-                      if (formatFilter) {
-                         const f = (item.format || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-                         const nf = formatFilter.toLowerCase().replace(/[^a-z0-9]/g, '');
-                         if (nf === 'bootleg' && !item.is_bootleg) return null;
-                         if (nf === 'digital' && !f.includes('digital')) return null;
-                         if (nf !== 'digital' && nf !== 'bootleg' && !f.includes(nf)) return null;
-                      }
-                      return (
-                        <OnDisplayCard
-                          key={item.id}
-                          item={item}
-                          onSingleTapAction={() => navigateToDetail(item)}
-                          onLongPressAction={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); setQuickActionItem(item); }}
-                          onToggleFavorite={toggleFavorite}
-                          onRatePress={(rating) => handleGridRate(item, rating)}
-                        />
-                      );
-                    })}
+                    {onDisplay.map((item: any) => (
+                      <OnDisplayCard
+                        key={item.id}
+                        item={item}
+                        onSingleTapAction={() => navigateToDetail(item)}
+                        onLongPressAction={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); setQuickActionItem(item); }}
+                        onToggleFavorite={toggleFavorite}
+                        onRatePress={(rating) => handleGridRate(item, rating)}
+                      />
+                    ))}
                   </ScrollView>
                 </View>
               </View>
@@ -425,7 +429,7 @@ export default function HomeScreen() {
                   <View className="flex-row items-center bg-neutral-900 rounded-lg border border-neutral-800 px-4 py-2.5 flex-1">
                     <Ionicons name="search" size={16} color="#444" style={{ marginRight: 8 }} />
                     <TextInput
-                      placeholder="SEARCH... [V1.0.7]"
+                      placeholder="SEARCH... [V1.0.8]"
                       placeholderTextColor="#333"
                       value={searchQuery}
                       onChangeText={setSearchQuery}
