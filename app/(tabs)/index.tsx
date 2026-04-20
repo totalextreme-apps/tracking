@@ -182,18 +182,18 @@ export default function HomeScreen() {
     return raw.filter((item: any) => item.format === formatFilter);
   }, [collection, formatFilter]);
 
-  const getFormatColorClasses = (fmt: string, isSelected: boolean) => {
-    if (isSelected) return 'bg-amber-500/20 border-amber-500/50 text-amber-500';
-    const baseText = 'text-neutral-500';
-    if (fmt === 'VHS') return `bg-red-500/5 border-red-500/30 ${baseText}`;
-    if (fmt === 'DVD') return `bg-amber-600/5 border-amber-600/30 ${baseText}`;
-    if (fmt === 'BluRay') return `bg-purple-600/5 border-purple-600/30 ${baseText}`;
-    if (fmt === '4K') return `bg-green-600/5 border-green-600/30 ${baseText}`;
-    if (fmt === 'Digital') return `bg-teal-600/5 border-teal-600/30 ${baseText}`;
-    if (fmt === 'BOOTLEG') return `bg-orange-600/10 border-orange-600/40 ${baseText}`;
-    if (fmt === 'FOR SALE') return `bg-red-600/10 border-red-600/40 ${baseText}`;
-    if (fmt === 'FOR TRADE') return `bg-sky-600/10 border-sky-600/40 ${baseText}`;
-    return `bg-neutral-900 border-neutral-800 ${baseText}`;
+  const getFormatPillStyles = (fmt: string, isSelected: boolean) => {
+    if (isSelected) return { container: 'bg-amber-500/20 border-amber-500/50', text: 'text-amber-500' };
+    const baseText = 'text-neutral-300'; // CRISP READABLE TEXT
+    if (fmt === 'VHS') return { container: 'bg-red-500/5 border-red-500/30', text: baseText };
+    if (fmt === 'DVD') return { container: 'bg-amber-600/5 border-amber-600/30', text: baseText };
+    if (fmt === 'BluRay') return { container: 'bg-purple-600/5 border-purple-600/30', text: baseText };
+    if (fmt === '4K') return { container: 'bg-green-600/5 border-green-600/30', text: baseText };
+    if (fmt === 'Digital') return { container: 'bg-teal-600/5 border-teal-600/30', text: baseText };
+    if (fmt === 'BOOTLEG') return { container: 'bg-orange-600/10 border-orange-600/40', text: baseText };
+    if (fmt === 'FOR SALE') return { container: 'bg-red-600/10 border-red-600/40', text: baseText };
+    if (fmt === 'FOR TRADE') return { container: 'bg-sky-600/10 border-sky-600/40', text: baseText };
+    return { container: 'bg-neutral-900 border-neutral-800', text: baseText };
   };
 
   if (authPhase === 'checking' || authLoading) return <View className="flex-1 bg-black items-center justify-center"><TrackingLoader label="SYNCHRONIZING..." /></View>;
@@ -209,7 +209,7 @@ export default function HomeScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#f59e0b" />}
       >
         <View className="flex-1">
-          {/* ON DISPLAY SECTION (OWNED) */}
+          {/* ON DISPLAY SECTION (OWNED) - ONLY IN STACKS MODE */}
           {onDisplay.length > 0 && !thriftMode && (
             <View className="mb-8 mt-6">
               <View className="px-4 md:px-8 flex-row items-center justify-between mb-2 max-w-7xl mx-auto w-full">
@@ -233,8 +233,8 @@ export default function HomeScreen() {
             </View>
           )}
 
-          {/* GRAILS SECTION (WISHLIST) */}
-          {grailList.length > 0 && (
+          {/* THE GRAILS SECTION (WISHLIST) - ONLY IN THRIFT MODE */}
+          {grailList.length > 0 && thriftMode && (
             <View className="mb-8 mt-6">
               <View className="px-4 md:px-8 flex-row items-center justify-between mb-2 max-w-7xl mx-auto w-full">
                 <View className="flex-row items-baseline gap-2">
@@ -284,9 +284,10 @@ export default function HomeScreen() {
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
                 {['ALL', 'VHS', 'DVD', 'BluRay', '4K', 'Digital', 'BOOTLEG', 'FOR SALE', 'FOR TRADE'].map(f => {
                   const isSelected = f === 'ALL' ? formatFilter === null : formatFilter === f;
+                  const styles = getFormatPillStyles(f, isSelected);
                   return (
-                    <Pressable key={f} onPress={() => { setFormatFilter(f === 'ALL' ? null : (isSelected ? null : f)); playSound('click'); }} className={`px-4 py-1.5 rounded-full border ${getFormatColorClasses(f, isSelected)}`}>
-                      <Text className={`font-mono text-[10px] uppercase font-bold`}>{f === 'BluRay' ? 'Blu-ray' : f}</Text>
+                    <Pressable key={f} onPress={() => { setFormatFilter(f === 'ALL' ? null : (isSelected ? null : f)); playSound('click'); }} className={`px-4 py-1.5 rounded-full border ${styles.container}`}>
+                      <Text className={`font-mono text-[10px] uppercase font-bold ${styles.text}`}>{f === 'BluRay' ? 'Blu-ray' : f}</Text>
                     </Pressable>
                   );
                 })}
