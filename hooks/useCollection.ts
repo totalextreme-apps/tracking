@@ -643,7 +643,7 @@ export function useBatchImportMetadata(userId?: string) {
   const [progress, setProgress] = useState({ current: 0, total: 0 });
 
   const mutation = useMutation({
-    mutationFn: async (rows: { tmdb_id: number; media_type: string; notes_match?: string }[]) => {
+    mutationFn: async (rows: { tmdb_id: number; media_type: string; notes_match?: string; format?: string; status?: string }[]) => {
       if (!userId) return;
       const total = rows.length;
       setProgress({ current: 0, total });
@@ -651,32 +651,43 @@ export function useBatchImportMetadata(userId?: string) {
       let current = 0;
       for (const row of rows) {
         try {
-          // Find collection item by TMDB ID (if we keep it in notes) or just by mapping
-          // In this case, we search for a matching orphan
-          const { data: orphans } = await supabase
-            .from('collection_items')
-            .select('*')
-            .eq('user_id', userId)
-            .eq('media_type', row.media_type)
-            .is('movie_id', null)
-            .is('show_id', null);
-          
-          if (orphans && orphans.length > 0) {
-              // Just pick the first orphan of that media type? 
-              // No, let's try to match by notes if possible
-              const target = orphans.find(o => o.notes?.includes(row.notes_match || '')) || orphans[0];
-              
-              // Now fetch metadata
-              const data = await (row.media_type === 'movie' ? getMovieById(row.tmdb_id) : getTvShowById(row.tmdb_id));
-              if (data) {
-                const table = row.media_type === 'movie' ? 'movies' : 'shows';
-                const { data: movieRow } = await supabase.from(table).upsert({ tmdb_id: data.id, title: (data as any).title || (data as any).name, poster_path: data.poster_path }, { onConflict: 'tmdb_id' }).select('id').single();
-                if (movieRow) {
-                  await supabase.from('collection_items').update({ [row.media_type === 'movie' ? 'movie_id' : 'show_id']: movieRow.id }).eq('id', target.id);
-                }
-              }
+          // 1. Fetch metadata FIRST to ensure we have a valid media row
+          const data = await (row.media_type === 'movie' ? getMovieById(row.tmdb_id) : getTvShowById(row.tmdb_id));
+          if (data) {
+            const table = row.media_type === 'movie' ? 'movies' : 'shows';
+            const { data: movieRow } = await supabase.from(table).upsert({ 
+              tmdb_id: data.id, 
+              title: (data as any).title || (data as any).name, 
+              poster_path: data.poster_path 
+            }, { onConflict: 'tmdb_id' }).select('id').single();
+
+            if (movieRow) {
+               // 2. Find internal orphan to link
+               const { data: orphans } = await supabase
+                 .from('collection_items')
+                 .select('*')
+                 .eq('user_id', userId)
+                 .eq('media_type', row.media_type)
+                 .is('movie_id', null)
+                 .is('show_id', null);
+               
+               if (orphans && orphans.length > 0) {
+                   const target = orphans.find(o => o.notes?.includes(row.notes_match || '')) || orphans[0];
+                   await supabase.from('collection_items').update({ [row.media_type === 'movie' ? 'movie_id' : 'show_id']: movieRow.id }).eq('id', target.id);
+               } else {
+                   // 3. IF NO ORPHANS (Purged), RE-CREATE THE ITEM
+                   await supabase.from('collection_items').insert({
+                     user_id: userId,
+                     [row.media_type === 'movie' ? 'movie_id' : 'show_id']: movieRow.id,
+                     media_type: row.media_type,
+                     format: row.format || 'DVD',
+                     status: row.status || 'owned',
+                     notes: row.notes_match || ''
+                   });
+               }
+            }
           }
-          await new Promise(r => setTimeout(r, 100));
+          await new Promise(r => setTimeout(r, 150)); // Slow down to prevent database/TMDB lockup
         } catch (e) { console.error('Import failed', e); }
         current++;
         setProgress({ current, total });

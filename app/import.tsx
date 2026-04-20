@@ -73,18 +73,22 @@ export default function ImportScreen() {
     const rows = dataRows.map(line => {
       const cols = parseCsvLine(line);
       // Expected Format (from export-utils.ts):
-      // 0: TMDB ID, 1: Title, 2: Media Type, ... 10: Notes
+      // 0: TMDB ID, 2: Media Type, 5: Format, 6: Status, 10: Notes
       const tmdbId = parseInt(cols[0]);
       const mediaType = cols[2]?.toLowerCase() === 'tv' ? 'tv' : 'movie';
+      const format = cols[5] || 'DVD';
+      const status = cols[6]?.toLowerCase() === 'wishlist' ? 'wishlist' : 'owned';
       const notes = cols[10] || '';
       const title = cols[1] || '';
 
       return {
         tmdb_id: tmdbId,
         media_type: mediaType,
-        notes_match: notes || title // Match by notes first, fallback to title hint
+        format: format,
+        status: status,
+        notes_match: notes || title
       };
-    }).filter(r => !isNaN(r.tmdb_id));
+    }).filter((r): r is { tmdb_id: number; media_type: string; format: string; status: string; notes_match: string } => !!r && !isNaN(r.tmdb_id));
 
     if (rows.length === 0) {
       Alert.alert('Error', 'No valid TMDB IDs found in the file.');
