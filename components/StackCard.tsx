@@ -507,12 +507,33 @@ export function StackCard({
             )}
           </View>
 
+            {/* Format Logo Overlay */}
+            <Image
+              source={
+                topItem.format === 'VHS' ? require('@/assets/images/overlays/formats/VHS.png') :
+                topItem.format === 'DVD' ? require('@/assets/images/overlays/formats/DVD.png') :
+                topItem.format === 'BluRay' ? require('@/assets/images/overlays/formats/BluRay.png') :
+                topItem.format === '4K' ? require('@/assets/images/overlays/formats/4K Ultra.png') :
+                require('@/assets/images/overlays/formats/Digital.png')
+              }
+              style={{ 
+                position: 'absolute', 
+                bottom: 8, 
+                right: 8, 
+                width: 32, 
+                height: 20, 
+                opacity: 0.9,
+                zIndex: 10
+              }}
+              contentFit="contain"
+            />
+          </View>
+
           <View className="flex-row w-[100%] justify-end items-center mt-2 px-1">
             <View className={`px-2 py-0.5 rounded flex-row items-center gap-1 ${FORMAT_COLORS[topItem.format] || 'bg-neutral-700'}`}>
               <Text className="text-white font-mono text-[10px] font-bold">
                 {topItem.format === 'BluRay' ? 'Blu-ray' : topItem.format}
               </Text>
-              {topItem.is_bootleg && <Image source={require('@/assets/images/overlays/boot_sticker.png')} style={{ width: 12, height: 12 }} contentFit="contain" />}
             </View>
             {topItem.rating && (
               <View className="flex-row items-center ml-2 bg-black/60 px-1.5 py-0.5 rounded-sm">

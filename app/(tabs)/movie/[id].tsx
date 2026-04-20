@@ -105,13 +105,17 @@ export default function MovieDetailScreen() {
     const addMutation = useAddToCollection(userId);
 
     const movieId = typeof id === 'string' ? parseInt(id, 10) : undefined;
+    const itemUuid = typeof id === 'string' && isNaN(movieId as any) ? id : null;
 
-    const movieItems = collection?.filter((item: any) => item.movie_id === movieId) ?? [];
+    const movieItems = collection?.filter((item: any) => 
+        item.movie_id === movieId || 
+        item.id === itemUuid ||
+        item.movies?.tmdb_id === movieId
+    ) ?? [];
+
     const internalMovie = movieItems[0]?.movies;
     const commentActiveItem = movieItems[0];
 
-    // HEURISTIC: If the join failed, but our movieId looks like a TMDB ID (e.g. 425 for Ice Age)
-    // or we have a tmdb_id from a previously cached version
     const activeMovie = internalMovie || persistedMovie;
     const tmdbIdToUse = activeMovie?.tmdb_id || (movieId && movieId > 0 ? movieId : null);
 
@@ -1035,8 +1039,46 @@ export default function MovieDetailScreen() {
                 )}
 
                 {commentActiveItem?.id && (
-                    <View className="px-4 md:px-8 mb-12">
+                    <View className="px-4 md:px-8 mb-6">
                         <CommentSection collectionItemId={commentActiveItem.id} />
+                    </View>
+                )}
+
+                {/* FORCE REMOVE (For Orphans/Bugs) */}
+                {!isReadOnly && movieItems.length > 0 && (
+                    <View className="px-4 md:px-8 mb-24 mt-8 pt-8 border-t border-neutral-900">
+                        <Pressable
+                            onPress={() => {
+                                Alert.alert(
+                                    'Force Remove All?',
+                                    'This will delete every physical copy of this movie from your tracking list. There is no undo.',
+                                    [
+                                        { text: 'Cancel', style: 'cancel' },
+                                        { 
+                                            text: 'DELETE ALL', 
+                                            style: 'destructive',
+                                            onPress: async () => {
+                                                setEjecting(true);
+                                                try {
+                                                    for (const item of movieItems) {
+                                                        await deleteMutation.mutateAsync(item.id);
+                                                    }
+                                                    router.back();
+                                                } catch (e) {
+                                                    Alert.alert('Error', 'Failed to remove some items');
+                                                } finally {
+                                                    setEjecting(false);
+                                                }
+                                            }
+                                        }
+                                    ]
+                                );
+                            }}
+                            className="bg-red-500/10 border border-red-500/20 p-5 rounded-2xl items-center"
+                        >
+                            <Text className="text-red-500 font-mono font-bold text-xs uppercase tracking-widest">Force Remove ALL from Collection</Text>
+                            <Text className="text-red-500/50 font-mono text-[9px] mt-1">Use this if metadata or ID matching is corrupted</Text>
+                        </Pressable>
                     </View>
                 )}
                 </View>
