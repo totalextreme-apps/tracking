@@ -39,7 +39,12 @@ function filterByThriftMode(
 
 export function getOnDisplayItems(collection: CollectionItemWithMedia[] | undefined) {
   if (!collection) return [];
-  return collection.filter((item) => item.is_on_display && item.status !== 'wishlist');
+  return collection.filter((item) => item.is_on_display && item.status === 'owned');
+}
+
+export function getGrailItems(collection: CollectionItemWithMedia[] | undefined) {
+  if (!collection) return [];
+  return collection.filter((item) => item.is_grail && item.status === 'wishlist');
 }
 
 export function getWishlistItems(collection: CollectionItemWithMedia[] | undefined) {

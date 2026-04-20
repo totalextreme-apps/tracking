@@ -18,7 +18,7 @@ import { useSound } from '@/context/SoundContext';
 import { useThriftMode } from '@/context/ThriftModeContext';
 import { useCollection, useUpdateCollectionItem } from '@/hooks/useCollection';
 import { usePersistedState } from '@/hooks/usePersistedState';
-import { getGenres, getOnDisplayItems, getStacks } from '@/lib/collection-utils';
+import { getGenres, getOnDisplayItems, getGrailItems, getStacks } from '@/lib/collection-utils';
 import type { CollectionItemWithMedia } from '@/types/database';
 
 export default function HomeScreen() {
@@ -43,7 +43,9 @@ export default function HomeScreen() {
   const [genreFilter, setGenreFilter] = useState<string | null>(null);
   const [mediaTypeFilter, setMediaTypeFilter] = useState<'movie' | 'tv' | null>(null);
   const [isGenreDropdownOpen, setIsGenreDropdownOpen] = useState(false);
+  
   const shelfRef = useRef<ScrollView>(null);
+  const grailRef = useRef<ScrollView>(null);
 
   const [refreshing, setRefreshing] = useState(false);
   const [showRewind, setShowRewind] = useState(false);
@@ -78,6 +80,22 @@ export default function HomeScreen() {
       playSound('click');
       if (Platform.OS === 'web') (shelfRef.current as any).scrollTo({ x: (shelfRef.current as any).scrollLeft - 400, animated: true });
       else shelfRef.current.scrollTo({ x: 0, animated: true });
+    }
+  };
+
+  const scrollGrailRight = () => {
+    if (grailRef.current) {
+      playSound('click');
+      if (Platform.OS === 'web') (grailRef.current as any).scrollTo({ x: (grailRef.current as any).scrollLeft + 400, animated: true });
+      else grailRef.current.scrollTo({ x: 500, animated: true });
+    }
+  };
+
+  const scrollGrailLeft = () => {
+    if (grailRef.current) {
+      playSound('click');
+      if (Platform.OS === 'web') (grailRef.current as any).scrollTo({ x: (grailRef.current as any).scrollLeft - 400, animated: true });
+      else grailRef.current.scrollTo({ x: 0, animated: true });
     }
   };
 
@@ -121,14 +139,10 @@ export default function HomeScreen() {
 
   const genres = getGenres(collection);
 
-  // V1.0.18 - VICTORY LAP / STACKS RESTORED / COLORS BACK
   const filteredCollection = useMemo(() => {
     if (!collection) return [];
-    
-    // Status
     let items = collection.filter((i: any) => thriftMode ? i.status === 'wishlist' : i.status === 'owned');
 
-    // IRONCLAD LITERAL ITEM FILTER
     if (formatFilter && formatFilter !== 'ALL') {
       items = items.filter((item: any) => {
         if (formatFilter === 'BOOTLEG') return item.is_bootleg;
@@ -159,18 +173,18 @@ export default function HomeScreen() {
   const onDisplay = useMemo(() => {
     const raw = getOnDisplayItems(collection);
     if (!formatFilter || formatFilter === 'ALL') return raw;
-    return raw.filter((item: any) => {
-        if (formatFilter === 'BOOTLEG') return item.is_bootleg;
-        return item.format === formatFilter;
-    });
+    return raw.filter((item: any) => item.format === formatFilter);
+  }, [collection, formatFilter]);
+
+  const grailList = useMemo(() => {
+    const raw = getGrailItems(collection);
+    if (!formatFilter || formatFilter === 'ALL') return raw;
+    return raw.filter((item: any) => item.format === formatFilter);
   }, [collection, formatFilter]);
 
   const getFormatColorClasses = (fmt: string, isSelected: boolean) => {
     if (isSelected) return 'bg-amber-500/20 border-amber-500/50 text-amber-500';
-    
-    // Default Text Color (Light Gray like sort buttons)
     const baseText = 'text-neutral-500';
-    
     if (fmt === 'VHS') return `bg-red-500/5 border-red-500/30 ${baseText}`;
     if (fmt === 'DVD') return `bg-amber-600/5 border-amber-600/30 ${baseText}`;
     if (fmt === 'BluRay') return `bg-purple-600/5 border-purple-600/30 ${baseText}`;
@@ -179,7 +193,6 @@ export default function HomeScreen() {
     if (fmt === 'BOOTLEG') return `bg-orange-600/10 border-orange-600/40 ${baseText}`;
     if (fmt === 'FOR SALE') return `bg-red-600/10 border-red-600/40 ${baseText}`;
     if (fmt === 'FOR TRADE') return `bg-sky-600/10 border-sky-600/40 ${baseText}`;
-    
     return `bg-neutral-900 border-neutral-800 ${baseText}`;
   };
 
@@ -192,17 +205,16 @@ export default function HomeScreen() {
 
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingBottom: 160 }} // FIXED: Bottom clearance for the tab bar
+        contentContainerStyle={{ paddingBottom: 160 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#f59e0b" />}
       >
         <View className="flex-1">
-          {onDisplay.length > 0 && (
+          {/* ON DISPLAY SECTION (OWNED) */}
+          {onDisplay.length > 0 && !thriftMode && (
             <View className="mb-8 mt-6">
               <View className="px-4 md:px-8 flex-row items-center justify-between mb-2 max-w-7xl mx-auto w-full">
                 <View className="flex-row items-baseline gap-2">
-                  <Text className="text-amber-500 font-bold text-3xl tracking-tighter uppercase" style={{ fontFamily: 'VCR_OSD_MONO' }}>
-                    {thriftMode ? 'GRAILS' : 'ON DISPLAY'}
-                  </Text>
+                  <Text className="text-amber-500 font-bold text-3xl tracking-tighter uppercase" style={{ fontFamily: 'VCR_OSD_MONO' }}>ON DISPLAY</Text>
                   <Text className="text-neutral-500 font-mono text-xs ml-1">/ {onDisplay.length}</Text>
                 </View>
                 <View className="flex-row items-center gap-2">
@@ -210,11 +222,34 @@ export default function HomeScreen() {
                   <Pressable onPress={scrollShelfRight} className="p-2 bg-neutral-900 rounded-full border border-neutral-800 active:bg-neutral-800"><Ionicons name="chevron-forward" size={16} color="#f59e0b" /></Pressable>
                 </View>
               </View>
-
               <View className="relative">
-                <Image source={thriftMode ? require('@/assets/images/thrift_background.png') : require('@/assets/images/shelf_background.png')} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.8 }} contentFit="cover" />
+                <Image source={require('@/assets/images/shelf_background.png')} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.8 }} contentFit="cover" />
                 <ScrollView ref={shelfRef} horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingLeft: 24, paddingRight: 40 }} className="py-12">
                   {onDisplay.map((item: any) => (
+                    <OnDisplayCard key={item.id} item={item} onSingleTapAction={() => navigateToDetail(item)} onLongPressAction={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); setQuickActionItem(item); }} onToggleFavorite={toggleFavorite} onRatePress={(rating) => handleGridRate(item, rating)} />
+                  ))}
+                </ScrollView>
+              </View>
+            </View>
+          )}
+
+          {/* GRAILS SECTION (WISHLIST) */}
+          {grailList.length > 0 && (
+            <View className="mb-8 mt-6">
+              <View className="px-4 md:px-8 flex-row items-center justify-between mb-2 max-w-7xl mx-auto w-full">
+                <View className="flex-row items-baseline gap-2">
+                  <Text className="text-amber-500 font-bold text-3xl tracking-tighter uppercase" style={{ fontFamily: 'VCR_OSD_MONO' }}>THE GRAILS</Text>
+                  <Text className="text-neutral-500 font-mono text-xs ml-1">/ {grailList.length}</Text>
+                </View>
+                <View className="flex-row items-center gap-2">
+                  <Pressable onPress={scrollGrailLeft} className="p-2 bg-neutral-900 rounded-full border border-neutral-800 active:bg-neutral-800"><Ionicons name="chevron-back" size={16} color="#f59e0b" /></Pressable>
+                  <Pressable onPress={scrollGrailRight} className="p-2 bg-neutral-900 rounded-full border border-neutral-800 active:bg-neutral-800"><Ionicons name="chevron-forward" size={16} color="#f59e0b" /></Pressable>
+                </View>
+              </View>
+              <View className="relative">
+                <Image source={require('@/assets/images/thrift_background.png')} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.8 }} contentFit="cover" />
+                <ScrollView ref={grailRef} horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingLeft: 24, paddingRight: 40 }} className="py-12">
+                  {grailList.map((item: any) => (
                     <OnDisplayCard key={item.id} item={item} onSingleTapAction={() => navigateToDetail(item)} onLongPressAction={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); setQuickActionItem(item); }} onToggleFavorite={toggleFavorite} onRatePress={(rating) => handleGridRate(item, rating)} />
                   ))}
                 </ScrollView>
