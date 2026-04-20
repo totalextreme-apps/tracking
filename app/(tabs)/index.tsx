@@ -132,31 +132,24 @@ export default function HomeScreen() {
 
   const genres = getGenres(collection);
 
-  // V1.0.14 - RETURN TO STACKS / ITEM-LEVEL PURGE
+  // V1.0.15 - LITERAL STRING MATCHING (VHS, DVD, BluRay, 4K, Digital)
   const filteredCollection = useMemo(() => {
     if (!collection) return [];
     
     // Status
     let items = collection.filter((i: any) => thriftMode ? i.status === 'wishlist' : i.status === 'owned');
 
-    // IRONCLAD ITEM FILTER
+    // IRONCLAD LITERAL ITEM FILTER
     if (formatFilter) {
-      const normMatch = formatFilter.replace(/[^a-z0-9]/g, '').toLowerCase();
       items = items.filter((item: any) => {
         if (formatFilter === 'BOOTLEG') return item.is_bootleg;
         if (formatFilter === 'FOR SALE') return item.for_sale;
         if (formatFilter === 'FOR TRADE') return item.for_trade;
+        if (formatFilter === 'ALL') return true;
         
-        const itemFmt = (item.format || '').replace(/[^a-z0-9]/g, '').toLowerCase();
-        
-        // Match using prefix for custom format strings (e.g. "VHS Clamshell" starts with "VHS")
-        if (normMatch === 'vhs') return itemFmt.startsWith('vhs');
-        if (normMatch === 'dvd') return itemFmt.startsWith('dvd');
-        if (normMatch === 'bluray') return itemFmt.startsWith('bluray') || itemFmt.startsWith('blueray');
-        if (normMatch === '4k') return itemFmt.startsWith('4k') || itemFmt.startsWith('uhd');
-        if (normMatch === 'digital') return itemFmt.includes('digital');
-        
-        return itemFmt.includes(normMatch);
+        // Exact comparison against database type enum
+        // MovieFormat = 'VHS' | 'DVD' | 'BluRay' | '4K' | 'Digital';
+        return item.format === formatFilter;
       });
     }
 
@@ -174,24 +167,20 @@ export default function HomeScreen() {
     return items;
   }, [collection, thriftMode, formatFilter, searchQuery, genreFilter, mediaTypeFilter]);
 
-  // Group the ALREADY FILTERED items back into stacks
   const filteredStacks = useMemo(() => {
     return getStacks(filteredCollection, thriftMode, sortBy, sortOrder);
   }, [filteredCollection, thriftMode, sortBy, sortOrder]);
 
   const onDisplay = useMemo(() => {
     const raw = getOnDisplayItems(collection);
-    if (!formatFilter) return raw;
-    const normMatch = formatFilter.replace(/[^a-z0-9]/g, '').toLowerCase();
+    if (!formatFilter || formatFilter === 'ALL') return raw;
     return raw.filter((item: any) => {
-        const itemFmt = (item.format || '').replace(/[^a-z0-9]/g, '').toLowerCase();
         if (formatFilter === 'BOOTLEG') return item.is_bootleg;
-        if (normMatch === 'digital') return itemFmt.includes('digital');
-        return itemFmt.startsWith(normMatch);
+        if (formatFilter === 'FOR SALE') return item.for_sale;
+        if (formatFilter === 'FOR TRADE') return item.for_trade;
+        return item.format === formatFilter;
     });
   }, [collection, formatFilter]);
-
-  const hasCollection = (collection?.length ?? 0) > 0;
 
   if (authPhase === 'checking' || authLoading) return <View className="flex-1 bg-black items-center justify-center"><TrackingLoader label="SYNCHRONIZING..." /></View>;
 
@@ -206,8 +195,8 @@ export default function HomeScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#f59e0b" />}
       >
         <View className="w-full">
-          <View className="bg-amber-500/10 p-1">
-            <Text className="text-amber-500/40 font-mono text-[8px] text-center">STACKS V1.0.14 | FILT: {formatFilter || 'OFF'}</Text>
+          <View className="bg-neutral-900/50 p-1">
+            <Text className="text-neutral-600 font-mono text-[8px] text-center">V1.0.15 | {formatFilter || 'ALL'}</Text>
           </View>
 
           <View className="flex-1">
@@ -262,7 +251,7 @@ export default function HomeScreen() {
                 </View>
 
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-                  {['ALL', 'VHS', 'DVD', 'BluRay', '4K', 'DIGITAL', 'BOOTLEG', 'FOR SALE', 'FOR TRADE'].map(f => {
+                  {['ALL', 'VHS', 'DVD', 'BluRay', '4K', 'Digital', 'BOOTLEG', 'FOR SALE', 'FOR TRADE'].map(f => {
                     const isSelected = f === 'ALL' ? formatFilter === null : formatFilter === f;
                     return (
                       <Pressable key={f} onPress={() => { setFormatFilter(f === 'ALL' ? null : (isSelected ? null : f)); playSound('click'); }} className={`px-4 py-1.5 rounded-full border ${isSelected ? 'bg-amber-500/20 border-amber-500/50' : 'bg-neutral-900 border-neutral-800'}`}>
@@ -305,7 +294,7 @@ export default function HomeScreen() {
               {filteredStacks.length === 0 ? (
                 <View className="items-center py-20 px-10">
                    <Ionicons name="search-outline" size={48} color="#333" />
-                   <Text className="text-neutral-500 font-mono text-center mt-4 uppercase">NO MATCHES FOUND</Text>
+                   <Text className="text-neutral-500 font-mono text-center mt-4">NO MATCHES FOUND</Text>
                 </View>
               ) : (
                 <View className="flex-row flex-wrap" style={{ marginHorizontal: -10 }}>
