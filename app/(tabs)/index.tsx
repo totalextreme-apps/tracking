@@ -186,13 +186,14 @@ export default function HomeScreen() {
   const genres = getGenres(collection);
   const stacks = getStacks(collection, thriftMode, sortBy, sortOrder);
 
-  // V1.0.6 - THE ABSOLUTE NO-BYPASS FILTER
+  // V1.0.7 - THE ABSOLUTE NO-BYPASS FILTER WITH DISBANDING
   const filteredStacks = useMemo(() => {
     const raw = stacks || [];
     const normSearch = searchQuery.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
     const normFormat = formatFilter ? formatFilter.replace(/[^a-z0-9]/g, '').toLowerCase() : null;
 
-    // Direct loop to avoid complex array methods that might be shadowed
+    if (!normSearch && !normFormat && !genreFilter && !mediaTypeFilter) return raw;
+
     const results: CollectionItemWithMedia[][] = [];
 
     for (let i = 0; i < raw.length; i++) {
@@ -201,16 +202,18 @@ export default function HomeScreen() {
 
         let filteredItems = [...stack];
 
-        // 1. Format Filter
+        // 1. Format Filter (STRICT ISOLATION)
         if (normFormat) {
           if (formatFilter === 'BOOTLEG') filteredItems = filteredItems.filter(item => item.is_bootleg);
           else if (formatFilter === 'FOR SALE') filteredItems = filteredItems.filter(item => item.for_sale);
           else if (formatFilter === 'FOR TRADE') filteredItems = filteredItems.filter(item => item.for_trade);
           else {
             filteredItems = filteredItems.filter(item => {
-               const itemFmt = (item.format || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-               if (normFormat === 'digital') return itemFmt.includes('digital');
-               return itemFmt === normFormat;
+               // Normalizing the field format
+               const fieldFmt = (item.format || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+               if (normFormat === 'digital') return fieldFmt.includes('digital');
+               // Use includes to be safe about hybrids like 'VHS/DVD' but strict enough for isolation
+               return fieldFmt.includes(normFormat);
             });
           }
         }
@@ -318,10 +321,10 @@ export default function HomeScreen() {
       >
         <View className="w-full">
           
-          {/* V1.0.6 DEBUG HEADER */}
+          {/* V1.0.7 DEBUG HEADER */}
           <View className="bg-red-600/20 p-2 border-b border-red-600/40">
              <Text className="text-red-500 font-mono text-[9px] text-center">
-                 DEBUG: {formatFilter ? `FILTER:${formatFilter}` : 'NO FILTER'} | STACKS:{filteredStacks.length} | ID:{stacks ? stacks.length : 0}
+                 V1.0.7 | DEBUG: {formatFilter ? `FILTER:${formatFilter}` : 'NO FILTER'} | STACKS:{filteredStacks.length}
              </Text>
           </View>
 
@@ -358,16 +361,26 @@ export default function HomeScreen() {
                     contentContainerStyle={{ paddingLeft: 24, paddingRight: 40 }}
                     className="py-12"
                   >
-                    {onDisplay.map((item: any) => (
-                      <OnDisplayCard
-                        key={item.id}
-                        item={item}
-                        onSingleTapAction={() => navigateToDetail(item)}
-                        onLongPressAction={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); setQuickActionItem(item); }}
-                        onToggleFavorite={toggleFavorite}
-                        onRatePress={(rating) => handleGridRate(item, rating)}
-                      />
-                    ))}
+                    {onDisplay.map((item: any) => {
+                      // V1.0.7 Filter On Display too
+                      if (formatFilter) {
+                         const f = (item.format || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                         const nf = formatFilter.toLowerCase().replace(/[^a-z0-9]/g, '');
+                         if (nf === 'bootleg' && !item.is_bootleg) return null;
+                         if (nf === 'digital' && !f.includes('digital')) return null;
+                         if (nf !== 'digital' && nf !== 'bootleg' && !f.includes(nf)) return null;
+                      }
+                      return (
+                        <OnDisplayCard
+                          key={item.id}
+                          item={item}
+                          onSingleTapAction={() => navigateToDetail(item)}
+                          onLongPressAction={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); setQuickActionItem(item); }}
+                          onToggleFavorite={toggleFavorite}
+                          onRatePress={(rating) => handleGridRate(item, rating)}
+                        />
+                      );
+                    })}
                   </ScrollView>
                 </View>
               </View>
@@ -412,7 +425,7 @@ export default function HomeScreen() {
                   <View className="flex-row items-center bg-neutral-900 rounded-lg border border-neutral-800 px-4 py-2.5 flex-1">
                     <Ionicons name="search" size={16} color="#444" style={{ marginRight: 8 }} />
                     <TextInput
-                      placeholder="SEARCH... [V1.0.6]"
+                      placeholder="SEARCH... [V1.0.7]"
                       placeholderTextColor="#333"
                       value={searchQuery}
                       onChangeText={setSearchQuery}
