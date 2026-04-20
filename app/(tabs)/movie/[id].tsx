@@ -108,6 +108,7 @@ export default function MovieDetailScreen() {
 
     const movieItems = collection?.filter((item: any) => item.movie_id === movieId) ?? [];
     const internalMovie = movieItems[0]?.movies;
+    const commentActiveItem = movieItems[0];
 
     // HEURISTIC: If the join failed, but our movieId looks like a TMDB ID (e.g. 425 for Ice Age)
     // or we have a tmdb_id from a previously cached version

@@ -579,7 +579,7 @@ export function StackCard({
             <View className="flex-1 items-center justify-center bg-neutral-800 p-2">
               <FontAwesome name="film" size={width * 0.4} color="#222" />
               <Text className="text-neutral-500 font-mono text-[10px] text-center mt-2 uppercase">
-                {media ? (media.title || media.name) : `ID: ${topItem.movie_id || topItem.show_id}`}
+                {media ? (media.title || media.name) : `REPAIR PENDING: ${topItem.movie_id || topItem.show_id}`}
               </Text>
             </View>
           )}
