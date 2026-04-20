@@ -162,7 +162,7 @@ export default function HomeScreen() {
       >
         <View className="w-full">
           <View className="bg-neutral-950 p-1 border-b border-neutral-900">
-            <Text className="text-neutral-700 font-mono text-[8px] text-center">INSPECTOR V1.0.16 | S:{filteredStacks.length}</Text>
+            <Text className="text-neutral-700 font-mono text-[8px] text-center">INSPECTOR V1.0.16.2 | S:{filteredStacks.length}</Text>
           </View>
 
           <View className="flex-1">
