@@ -193,11 +193,12 @@ export default function HomeScreen() {
       const trimmedQuery = searchQuery.trim().toLowerCase();
       const normalizedQuery = trimmedQuery.replace(/[^a-z0-9]/g, '');
 
+      // FIX: Ensure we assign the result back to filtered!
       filtered = filtered.map((stack: any) => {
         if (!stack || stack.length === 0) return null;
         let items = [...stack];
 
-        // Format Logic
+        // Format Logic (Strict but permissive for suffixes)
         if (formatFilter) {
           if (formatFilter === 'BOOTLEG') items = items.filter(i => i.is_bootleg);
           else if (formatFilter === 'FOR SALE') items = items.filter(i => i.for_sale);
@@ -206,7 +207,9 @@ export default function HomeScreen() {
             const normalizedFilter = formatFilter.replace(/[^a-z0-9]/g, '').toLowerCase();
             items = items.filter(item => {
               const fmt = (item?.format || '').replace(/[^a-z0-9]/g, '').toLowerCase();
-              return (normalizedFilter === 'digital' ? fmt.includes('digital') : fmt === normalizedFilter);
+              // Category isolation: matches if fmt contains target (e.g. 'vhs rental' contains 'vhs')
+              // but 'dvd' does NOT contain 'vhs'
+              return fmt.includes(normalizedFilter);
             });
           }
         }
@@ -399,7 +402,7 @@ export default function HomeScreen() {
                   <View className="flex-row items-center bg-neutral-900 rounded-lg border border-neutral-800 px-4 py-2.5 flex-1">
                     <Ionicons name="search" size={16} color="#444" style={{ marginRight: 8 }} />
                     <TextInput
-                      placeholder="SEARCH... [V1.0.3]"
+                      placeholder="SEARCH... [V1.0.4]"
                       placeholderTextColor="#333"
                       value={searchQuery}
                       onChangeText={setSearchQuery}
