@@ -186,64 +186,71 @@ export default function HomeScreen() {
   const genres = getGenres(collection);
   const stacks = getStacks(collection, thriftMode, sortBy, sortOrder);
 
+  // THE ULTIMATE STACK FILTER LOGIC
   const filteredStacks = useMemo(() => {
-    let filtered = stacks || [];
+    // 1. Start with raw stacks
+    let workingSet = stacks || [];
     
-    if (searchQuery || formatFilter || genreFilter || mediaTypeFilter) {
-      const trimmedQuery = searchQuery.trim().toLowerCase();
-      const normalizedQuery = trimmedQuery.replace(/[^a-z0-9]/g, '');
-
-      // FIX: Ensure we assign the result back to filtered!
-      filtered = filtered.map((stack: any) => {
-        if (!stack || stack.length === 0) return null;
-        let items = [...stack];
-
-        // Format Logic (Strict but permissive for suffixes)
-        if (formatFilter) {
-          if (formatFilter === 'BOOTLEG') items = items.filter(i => i.is_bootleg);
-          else if (formatFilter === 'FOR SALE') items = items.filter(i => i.for_sale);
-          else if (formatFilter === 'FOR TRADE') items = items.filter(i => i.for_trade);
-          else {
-            const normalizedFilter = formatFilter.replace(/[^a-z0-9]/g, '').toLowerCase();
-            items = items.filter(item => {
-              const fmt = (item?.format || '').replace(/[^a-z0-9]/g, '').toLowerCase();
-              // Category isolation: matches if fmt contains target (e.g. 'vhs rental' contains 'vhs')
-              // but 'dvd' does NOT contain 'vhs'
-              return fmt.includes(normalizedFilter);
-            });
-          }
-        }
-
-        if (items.length === 0) return null;
-
-        // Apply remaining filters (Search, Genre, Type) to the matched items
-        if (normalizedQuery) {
-          const matchesSearch = items.some(item => {
-            const media = item.movies || item.shows;
-            const title = (media?.title || media?.name || '').toLowerCase();
-            return title.includes(trimmedQuery) || title.replace(/[^a-z0-9]/g, '').includes(normalizedQuery);
-          });
-          if (!matchesSearch) return null;
-        }
-
-        if (genreFilter) {
-          const matchesGenre = items.some(item => {
-            const media = item.movies || item.shows;
-            return media?.genres?.some((g: any) => g?.name === genreFilter);
-          });
-          if (!matchesGenre) return null;
-        }
-
-        if (mediaTypeFilter) {
-          if (!items.some(i => i.media_type === mediaTypeFilter)) return null;
-          items = items.filter(i => i.media_type === mediaTypeFilter);
-        }
-
-        return items;
-      }).filter((s): s is CollectionItemWithMedia[] => s !== null);
+    // 2. If no filters are active, return them as is
+    if (!searchQuery && !formatFilter && !genreFilter && !mediaTypeFilter) {
+      return workingSet;
     }
-    
-    return filtered;
+
+    const trimmedQuery = searchQuery.trim().toLowerCase();
+    const normalizedQuery = trimmedQuery.replace(/[^a-z0-9]/g, '');
+    const normalizedFormat = formatFilter ? formatFilter.replace(/[^a-z0-9]/g, '').toLowerCase() : null;
+
+    // 3. Perform item-level mapping and filtering
+    return workingSet.map((stack: any) => {
+      if (!stack) return null;
+      let items = [...stack];
+
+      // A. APPLY FORMAT FILTER (Strict Category Isolation)
+      if (normalizedFormat) {
+        if (formatFilter === 'BOOTLEG') {
+          items = items.filter(i => i.is_bootleg);
+        } else if (formatFilter === 'FOR SALE') {
+          items = items.filter(i => i.for_sale);
+        } else if (formatFilter === 'FOR TRADE') {
+          items = items.filter(i => i.for_trade);
+        } else {
+          items = items.filter(item => {
+            const fmt = (item.format || '').replace(/[^a-z0-9]/g, '').toLowerCase();
+            if (normalizedFormat === 'digital') return fmt.includes('digital');
+            return fmt === normalizedFormat;
+          });
+        }
+      }
+
+      if (items.length === 0) return null;
+
+      // B. APPLY SEARCH FILTER
+      if (normalizedQuery) {
+        const matchesSearch = items.some(item => {
+          const media = item.movies || item.shows;
+          const title = (media?.title || media?.name || '').toLowerCase();
+          return title.includes(trimmedQuery) || title.replace(/[^a-z0-9]/g, '').includes(normalizedQuery);
+        });
+        if (!matchesSearch) return null;
+      }
+
+      // C. APPLY GENRE FILTER
+      if (genreFilter) {
+        const matchesGenre = items.some(item => {
+          const media = item.movies || item.shows;
+          return media?.genres?.some((g: any) => g?.name === genreFilter);
+        });
+        if (!matchesGenre) return null;
+      }
+
+      // D. APPLY MEDIA TYPE FILTER
+      if (mediaTypeFilter) {
+        items = items.filter(i => i.media_type === mediaTypeFilter);
+        if (items.length === 0) return null;
+      }
+
+      return items;
+    }).filter((s): s is CollectionItemWithMedia[] => s !== null);
   }, [stacks, searchQuery, formatFilter, genreFilter, mediaTypeFilter]);
 
   const hasCollection = (collection?.length ?? 0) > 0;
@@ -402,7 +409,7 @@ export default function HomeScreen() {
                   <View className="flex-row items-center bg-neutral-900 rounded-lg border border-neutral-800 px-4 py-2.5 flex-1">
                     <Ionicons name="search" size={16} color="#444" style={{ marginRight: 8 }} />
                     <TextInput
-                      placeholder="SEARCH... [V1.0.4]"
+                      placeholder="SEARCH... [V1.0.5]"
                       placeholderTextColor="#333"
                       value={searchQuery}
                       onChangeText={setSearchQuery}
