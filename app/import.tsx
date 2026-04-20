@@ -68,18 +68,33 @@ export default function ImportScreen() {
       return;
     }
 
+    // Identify columns by header name
+    const headerRow = parseCsvLine(lines[0].toLowerCase());
+    const colIdx = {
+      tmdbId: headerRow.findIndex(h => h.includes('tmdb id') || h.includes('id')),
+      title: headerRow.findIndex(h => h.includes('title')),
+      mediaType: headerRow.findIndex(h => h.includes('media type') || h.includes('type')),
+      format: headerRow.findIndex(h => h.includes('format')),
+      status: headerRow.findIndex(h => h.includes('status')),
+      notes: headerRow.findIndex(h => h.includes('notes') || h.includes('edition'))
+    };
+
     // Skip header row
     const dataRows = lines.slice(1);
     const rows = dataRows.map(line => {
       const cols = parseCsvLine(line);
-      // Expected Format (from export-utils.ts):
-      // 0: TMDB ID, 2: Media Type, 5: Format, 6: Status, 10: Notes
-      const tmdbId = parseInt(cols[0]);
-      const mediaType = cols[2]?.toLowerCase() === 'tv' ? 'tv' : 'movie';
-      const format = cols[5] || 'DVD';
-      const status = cols[6]?.toLowerCase() === 'wishlist' ? 'wishlist' : 'owned';
-      const notes = cols[10] || '';
-      const title = cols[1] || '';
+      const tmdbIdStr = colIdx.tmdbId !== -1 ? cols[colIdx.tmdbId] : '';
+      const tmdbId = parseInt(tmdbIdStr);
+      
+      const mediaTypeRaw = colIdx.mediaType !== -1 ? (cols[colIdx.mediaType] || '').toLowerCase() : '';
+      const mediaType = mediaTypeRaw === 'tv' ? 'tv' : 'movie';
+      
+      const format = colIdx.format !== -1 ? (cols[colIdx.format] || 'DVD') : 'DVD';
+      const statusRaw = colIdx.status !== -1 ? (cols[colIdx.status] || '').toLowerCase() : '';
+      const status = statusRaw.includes('wishlist') ? 'wishlist' : 'owned';
+      
+      const notes = colIdx.notes !== -1 ? (cols[colIdx.notes] || '') : '';
+      const title = colIdx.title !== -1 ? (cols[colIdx.title] || '') : '';
 
       return {
         tmdb_id: tmdbId,
