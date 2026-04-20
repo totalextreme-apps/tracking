@@ -98,9 +98,11 @@ export function StackCard({
     const matching = [];
     const others = [];
     for (const item of qualitySorted) {
+      const normalizedFilter = (activeFormatFilter || '').replace(/[^a-z0-9]/g, '').toLowerCase();
+      const itemFmt = (item.format || '').replace(/[^a-z0-9]/g, '').toLowerCase();
       if (activeFormatFilter === 'BOOTLEG' && item.is_bootleg) {
         matching.push(item);
-      } else if (item.format === activeFormatFilter || (activeFormatFilter === 'DIGITAL' && item.format.toLowerCase().includes('digital'))) {
+      } else if (normalizedFilter && itemFmt.includes(normalizedFilter)) {
         matching.push(item);
       } else {
         others.push(item);

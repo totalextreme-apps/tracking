@@ -236,11 +236,11 @@ export default function HomeScreen() {
           } else {
             // Match normalized format comparison (e.g. BluRay vs Blu-ray)
             const normalizedFilter = formatFilter.replace(/[^a-z0-9]/g, '').toLowerCase();
-            if (normalizedFilter === 'digital') {
-              if (!stack.some((item: any) => item?.format.toLowerCase().includes('digital'))) return false;
-            } else {
-              if (!stack.some((item: any) => item?.format.replace(/[^a-z0-9]/g, '').toLowerCase() === normalizedFilter)) return false;
-            }
+            const matches = stack.some((item: any) => {
+              const fmt = item?.format.replace(/[^a-z0-9]/g, '').toLowerCase() || '';
+              return fmt.includes(normalizedFilter);
+            });
+            if (!matches) return false;
           }
         }
 
