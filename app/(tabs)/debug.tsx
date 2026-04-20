@@ -57,6 +57,11 @@ export default function DebugScreen() {
 
   return (
     <ScrollView className="flex-1 bg-black p-4">
+      <View className="mb-4 bg-neutral-900 p-4 rounded-xl border border-neutral-800">
+        <Text className="text-white font-mono text-[10px] uppercase text-neutral-500 mb-1">Staging Build Identifier</Text>
+        <Text className="text-amber-500 font-mono text-[12px]">Revision: 5031a7f (2026-04-19 22:40)</Text>
+      </View>
+
       <View className="flex-row items-center justify-between mb-4">
         <Pressable onPress={() => router.back()} className="p-2 -ml-2">
           <Ionicons name="arrow-back" size={20} color="#525252" />
