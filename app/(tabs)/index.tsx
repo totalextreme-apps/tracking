@@ -166,13 +166,13 @@ export default function HomeScreen() {
   }, [collection, formatFilter]);
 
   const getFormatColorClasses = (fmt: string, isSelected: boolean) => {
-    if (!isSelected) return 'bg-neutral-900 border-neutral-800 text-neutral-500';
-    if (fmt === 'VHS') return 'bg-red-500/20 border-red-500/50 text-red-500';
-    if (fmt === 'DVD') return 'bg-blue-500/20 border-blue-500/50 text-blue-500';
-    if (fmt === 'BluRay') return 'bg-purple-500/20 border-purple-500/50 text-purple-500';
-    if (fmt === '4K') return 'bg-green-500/20 border-green-500/50 text-green-500';
-    if (fmt === 'Digital') return 'bg-teal-500/20 border-teal-500/50 text-teal-500';
-    return 'bg-amber-500/20 border-amber-500/50 text-amber-500';
+    if (isSelected) return 'bg-amber-500/20 border-amber-500/50 text-amber-500';
+    if (fmt === 'VHS') return 'bg-red-500/10 border-red-500/20 text-red-500/80';
+    if (fmt === 'DVD') return 'bg-blue-500/10 border-blue-500/20 text-blue-500/80';
+    if (fmt === 'BluRay') return 'bg-purple-500/10 border-purple-500/20 text-purple-500/80';
+    if (fmt === '4K') return 'bg-green-500/10 border-green-500/20 text-green-500/80';
+    if (fmt === 'Digital') return 'bg-teal-500/10 border-teal-500/20 text-teal-500/80';
+    return 'bg-neutral-900 border-neutral-800 text-neutral-500';
   };
 
   if (authPhase === 'checking' || authLoading) return <View className="flex-1 bg-black items-center justify-center"><TrackingLoader label="SYNCHRONIZING..." /></View>;
