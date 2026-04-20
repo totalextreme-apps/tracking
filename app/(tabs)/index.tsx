@@ -65,6 +65,34 @@ export default function HomeScreen() {
     }, 1500);
   };
 
+  const toggleFavorite = async (item: CollectionItemWithMedia) => {
+    try {
+      const isWishlist = item.status === 'wishlist';
+      const updates = isWishlist ? { is_grail: !item.is_grail } : { is_on_display: !item.is_on_display };
+      await updateMutation.mutateAsync({ itemId: item.id, updates });
+      if (refetch) refetch();
+    } catch (e) {
+      console.error('Failed to toggle status', e);
+    }
+  };
+
+  const handleGridRate = async (item: CollectionItemWithMedia, rating: number) => {
+    if (!item || !collection) return;
+    playSound('click');
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      const isMovie = item.media_type === 'movie';
+      const relatedItems = collection.filter((i: any) => {
+        if (isMovie) return i.movie_id === item.movie_id;
+        return i.show_id === item.show_id && i.season_number === item.season_number;
+      });
+      await Promise.all(relatedItems.map((i: any) => updateMutation.mutateAsync({ itemId: i.id, updates: { rating } })));
+      if (refetch) refetch();
+    } catch (e) {
+      console.error('Failed to save rating', e);
+    }
+  };
+
   const navigateToDetail = (item: CollectionItemWithMedia) => {
     if (item.media_type === 'tv') {
       const showId = item.show_id || item.shows?.id;
@@ -77,7 +105,7 @@ export default function HomeScreen() {
 
   const genres = getGenres(collection);
 
-  // V1.0.11 - THE PURGE
+  // V1.0.12 - RECOVERY BUILD
   const filteredCollection = useMemo(() => {
     if (!collection) return [];
     let items = collection.filter((i: any) => thriftMode ? i.status === 'wishlist' : i.status === 'owned');
@@ -91,7 +119,6 @@ export default function HomeScreen() {
         
         const itemFmt = (item.format || '').replace(/[^a-z0-9]/g, '').toLowerCase();
         
-        // PHYSICAL LOCK
         if (filterStr === 'vhs') return itemFmt === 'vhs';
         if (filterStr === 'dvd') return itemFmt === 'dvd';
         if (filterStr === 'bluray') return itemFmt === 'bluray';
@@ -113,8 +140,6 @@ export default function HomeScreen() {
     return getStacks(filteredCollection, thriftMode, sortBy, sortOrder);
   }, [filteredCollection, thriftMode, sortBy, sortOrder]);
 
-  const hasCollection = (collection?.length ?? 0) > 0;
-
   if (authPhase === 'checking' || authLoading) return <View className="flex-1 bg-black items-center justify-center"><TrackingLoader label="SYNCHRONIZING..." /></View>;
 
   return (
@@ -122,11 +147,11 @@ export default function HomeScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <StatusBar style="light" />
 
-      {/* V1.0.11 NUCLEAR HEADER */}
-      <View className="bg-yellow-500 p-1 flex-row justify-center items-center gap-4">
-         <Text className="text-black font-bold font-mono text-[10px]">NUCLEAR V1.0.11</Text>
+      {/* V1.0.12 RECOVERY HEADER */}
+      <View className="bg-emerald-500 p-1 flex-row justify-center items-center gap-4">
+         <Text className="text-black font-bold font-mono text-[10px]">RECOVERY V1.0.12</Text>
          <Text className="text-black font-mono text-[10px]">FILT:{formatFilter || 'NONE'}</Text>
-         <Text className="text-black font-mono text-[10px]">STACKS:{filteredStacks.length}</Text>
+         <Text className="text-black font-mono text-[10px]">S:{filteredStacks.length}</Text>
       </View>
 
       <ScrollView
@@ -136,10 +161,12 @@ export default function HomeScreen() {
       >
         <View className="px-4 md:px-8 max-w-7xl mx-auto w-full">
             <View className="flex-row items-center justify-between mb-6 mt-6">
-                <Text className="text-amber-500 font-bold text-3xl tracking-tighter uppercase" style={{ fontFamily: 'VCR_OSD_MONO' }}>
-                {thriftMode ? 'WISH LIST' : 'THE STACKS'}
-                </Text>
-                <Text className="text-neutral-500 font-mono text-xs ml-1">/ {filteredStacks.length}</Text>
+                <View className="flex-row items-baseline gap-2">
+                  <Text className="text-amber-500 font-bold text-3xl tracking-tighter uppercase" style={{ fontFamily: 'VCR_OSD_MONO' }}>
+                  {thriftMode ? 'WISH LIST' : 'THE STACKS'}
+                  </Text>
+                  <Text className="text-neutral-500 font-mono text-xs ml-1">/ {filteredStacks.length}</Text>
+                </View>
             </View>
 
             <View className="pb-6 w-full">
@@ -147,7 +174,7 @@ export default function HomeScreen() {
                 <View className="flex-row items-center bg-neutral-900 rounded-lg border border-neutral-800 px-4 py-2.5 flex-1">
                 <Ionicons name="search" size={16} color="#444" style={{ marginRight: 8 }} />
                 <TextInput
-                    placeholder="SEARCH... [V1.0.11]"
+                    placeholder="SEARCH... [V1.0.12]"
                     placeholderTextColor="#333"
                     value={searchQuery}
                     onChangeText={setSearchQuery}
