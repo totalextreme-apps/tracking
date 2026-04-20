@@ -186,10 +186,10 @@ export default function HomeScreen() {
     if (isSelected) return { container: 'bg-amber-500/20 border-amber-500/50', text: 'text-amber-500' };
     const baseText = 'text-neutral-300'; // CRISP READABLE TEXT
     if (fmt === 'VHS') return { container: 'bg-red-500/5 border-red-500/30', text: baseText };
-    if (fmt === 'DVD') return { container: 'bg-amber-600/5 border-amber-600/30', text: baseText };
-    if (fmt === 'BluRay') return { container: 'bg-purple-600/5 border-purple-600/30', text: baseText };
-    if (fmt === '4K') return { container: 'bg-green-600/5 border-green-600/30', text: baseText };
-    if (fmt === 'Digital') return { container: 'bg-teal-600/5 border-teal-600/30', text: baseText };
+    if (fmt === 'DVD') return { container: 'bg-purple-500/5 border-purple-500/30', text: baseText };
+    if (fmt === 'BluRay') return { container: 'bg-blue-500/5 border-blue-500/30', text: baseText };
+    if (fmt === '4K') return { container: 'bg-yellow-400/5 border-yellow-400/30', text: baseText };
+    if (fmt === 'Digital') return { container: 'bg-green-500/5 border-green-500/30', text: baseText };
     if (fmt === 'BOOTLEG') return { container: 'bg-orange-600/10 border-orange-600/40', text: baseText };
     if (fmt === 'FOR SALE') return { container: 'bg-red-600/10 border-red-600/40', text: baseText };
     if (fmt === 'FOR TRADE') return { container: 'bg-sky-600/10 border-sky-600/40', text: baseText };
