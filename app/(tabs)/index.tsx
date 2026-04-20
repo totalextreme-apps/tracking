@@ -30,7 +30,7 @@ export default function HomeScreen() {
   const updateMutation = useUpdateCollectionItem(userId);
   const [quickActionItem, setQuickActionItem] = useState<CollectionItemWithMedia | null>(null);
 
-  // Sync quickActionItem when collection data changes
+  // Sync quickActionItem
   useEffect(() => {
     if (quickActionItem && collection) {
       const freshItem = (collection as CollectionItemWithMedia[]).find(i => i.id === quickActionItem.id);
@@ -58,30 +58,6 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showRewind, setShowRewind] = useState(false);
   const [showRetryFallback, setShowRetryFallback] = useState(false);
-  const loadingTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => {
-    const isActuallyLoading = authLoading || (userId && collectionLoading && !collectionError);
-    if (isActuallyLoading) {
-      if (!loadingTimerRef.current) {
-        loadingTimerRef.current = setTimeout(() => {
-          setShowRetryFallback(true);
-        }, 6000) as any;
-      }
-    } else {
-      if (loadingTimerRef.current) {
-        clearTimeout(loadingTimerRef.current);
-        loadingTimerRef.current = null;
-      }
-      setShowRetryFallback(false);
-    }
-    return () => {
-      if (loadingTimerRef.current) {
-        clearTimeout(loadingTimerRef.current);
-        loadingTimerRef.current = null;
-      }
-    };
-  }, [authLoading, userId, collectionLoading, collectionError]);
 
   useFocusEffect(
     useCallback(() => {
@@ -129,11 +105,7 @@ export default function HomeScreen() {
       const updates = isWishlist
         ? { is_grail: !item.is_grail }
         : { is_on_display: !item.is_on_display };
-
-      await updateMutation.mutateAsync({
-        itemId: item.id,
-        updates
-      });
+      await updateMutation.mutateAsync({ itemId: item.id, updates });
       if (refetch) refetch();
     } catch (e) {
       console.error('Failed to toggle status', e);
@@ -150,9 +122,7 @@ export default function HomeScreen() {
         if (isMovie) return i.movie_id === item.movie_id;
         return i.show_id === item.show_id && i.season_number === item.season_number;
       });
-      await Promise.all(relatedItems.map((i: any) => 
-        updateMutation.mutateAsync({ itemId: i.id, updates: { rating } })
-      ));
+      await Promise.all(relatedItems.map((i: any) => updateMutation.mutateAsync({ itemId: i.id, updates: { rating } })));
       if (refetch) refetch();
     } catch (e) {
       console.error('Failed to save rating', e);
@@ -162,37 +132,25 @@ export default function HomeScreen() {
   const navigateToDetail = (item: CollectionItemWithMedia) => {
     if (item.media_type === 'tv') {
       const showId = item.show_id || item.shows?.id;
-      if (showId) {
-        router.push({
-          pathname: "/show/[id]",
-          params: { id: showId, season: item.season_number || 1 }
-        } as any);
-      }
+      if (showId) router.push({ pathname: "/show/[id]", params: { id: showId, season: item.season_number || 1 } } as any);
     } else {
       const movieId = item.movie_id || item.movies?.id;
-      if (movieId) {
-        router.push({
-          pathname: "/movie/[id]",
-          params: { id: movieId }
-        } as any);
-      }
+      if (movieId) router.push({ pathname: "/movie/[id]", params: { id: movieId } } as any);
     }
   };
 
   const genres = getGenres(collection);
 
-  // GROUND UP REBUILD: PHASE 1 - FILTER THE RAW COLLECTION
+  // V1.0.10 - THE "IF" STATEMENT REDEMPTION
   const filteredCollection = useMemo(() => {
     if (!collection) return [];
     
-    // Status filter (Thrift Mode)
-    let items = collection.filter((i: any) => 
-      thriftMode ? i.status === 'wishlist' : i.status === 'owned'
-    );
+    // Status
+    let items = collection.filter((i: any) => thriftMode ? i.status === 'wishlist' : i.status === 'owned');
 
-    // Format Filter (STRICT HEADER MATCHING)
+    // Format (HARDCODED IF STATEMENTS)
     if (formatFilter) {
-      const normMatch = formatFilter.replace(/[^a-z0-9]/g, '').toLowerCase();
+      const filterStr = formatFilter.replace(/[^a-z0-9]/g, '').toLowerCase();
       items = items.filter((item: any) => {
         if (formatFilter === 'BOOTLEG') return item.is_bootleg;
         if (formatFilter === 'FOR SALE') return item.for_sale;
@@ -200,35 +158,43 @@ export default function HomeScreen() {
         
         const itemFmt = (item.format || '').replace(/[^a-z0-9]/g, '').toLowerCase();
         
-        // Special case for Digital to allow partials, but strict for physical
-        if (normMatch === 'digital') return itemFmt.includes('digital');
-        if (normMatch === 'bluray') return itemFmt === 'bluray';
-        
-        return itemFmt === normMatch;
+        // Literal Purge
+        if (filterStr === 'vhs') {
+            if (itemFmt === 'vhs') return true;
+            return false;
+        }
+        if (filterStr === 'dvd') {
+            if (itemFmt === 'dvd') return true;
+            return false;
+        }
+        if (filterStr === 'bluray') {
+            if (itemFmt === 'bluray') return true;
+            return false;
+        }
+        if (filterStr === '4k') {
+            if (itemFmt === '4k') return true;
+            return false;
+        }
+        if (filterStr === 'digital') {
+            return itemFmt.includes('digital');
+        }
+        return true;
       });
     }
 
-    // Search Filter
     if (searchQuery) {
       const q = searchQuery.trim().toLowerCase();
-      const nq = q.replace(/[^a-z0-9]/g, '');
       items = items.filter((item: any) => {
-        const media = item.movies || item.shows;
-        if (!media) return false;
-        const title = (media.title || media.name || '').toLowerCase();
-        return title.includes(q) || title.replace(/[^a-z0-9]/g, '').includes(nq);
+        const m = item.movies || item.shows;
+        if (!m) return false;
+        return (m.title || m.name || '').toLowerCase().includes(q);
       });
     }
 
-    // Genre Filter
     if (genreFilter) {
-      items = items.filter((item: any) => {
-        const media = item.movies || item.shows;
-        return media?.genres?.some((g: any) => g?.name === genreFilter);
-      });
+      items = items.filter((item: any) => (item.movies || item.shows)?.genres?.some((g: any) => g?.name === genreFilter));
     }
 
-    // Media Type Filter
     if (mediaTypeFilter) {
       items = items.filter((item: any) => item.media_type === mediaTypeFilter);
     }
@@ -236,26 +202,19 @@ export default function HomeScreen() {
     return items;
   }, [collection, thriftMode, formatFilter, searchQuery, genreFilter, mediaTypeFilter]);
 
-  // GROUND UP REBUILD: PHASE 2 - GROUP FILTERED ITEMS INTO STACKS
   const filteredStacks = useMemo(() => {
-    // We use the same grouping logic as getStacks, but on already-filtered data
     return getStacks(filteredCollection, thriftMode, sortBy, sortOrder);
   }, [filteredCollection, thriftMode, sortBy, sortOrder]);
 
-  // Apply same filter to On Display
   const onDisplay = useMemo(() => {
     const raw = getOnDisplayItems(collection);
     if (!formatFilter) return raw;
-    
-    const normMatch = formatFilter.replace(/[^a-z0-9]/g, '').toLowerCase();
+    const filterStr = formatFilter.replace(/[^a-z0-9]/g, '').toLowerCase();
     return raw.filter((item: any) => {
-      if (formatFilter === 'BOOTLEG') return item.is_bootleg;
-      if (formatFilter === 'FOR SALE') return item.for_sale;
-      if (formatFilter === 'FOR TRADE') return item.for_trade;
-      
-      const itemFmt = (item.format || '').replace(/[^a-z0-9]/g, '').toLowerCase();
-      if (normMatch === 'digital') return itemFmt.includes('digital');
-      return itemFmt === normMatch;
+        const itemFmt = (item.format || '').replace(/[^a-z0-9]/g, '').toLowerCase();
+        if (filterStr === 'vhs') return itemFmt === 'vhs';
+        if (filterStr === 'dvd') return itemFmt === 'dvd';
+        return true;
     });
   }, [collection, formatFilter]);
 
@@ -263,55 +222,7 @@ export default function HomeScreen() {
   const isEmpty = !hasCollection && onDisplay.length === 0;
 
   if (authPhase === 'checking' || authLoading) {
-    return (
-      <View className="flex-1 bg-black items-center justify-center">
-        <TrackingLoader label="SYNCHRONIZING..." />
-      </View>
-    );
-  }
-
-  if (!userId) {
-    return (
-      <View className="flex-1 bg-neutral-950 items-center justify-center p-6">
-        <Text className="text-amber-500 font-mono text-xl mb-4 italic">SIGNAL LOST</Text>
-        <Text className="text-neutral-500 font-mono text-center">Enable Anonymous Auth or check your network connection.</Text>
-        <Pressable onPress={onRefresh} className="bg-neutral-900 px-6 py-3 rounded-md mt-8 border border-neutral-800 active:bg-neutral-800">
-          <Text className="text-white font-mono text-xs tracking-widest uppercase">RETRY FETCH</Text>
-        </Pressable>
-      </View>
-    );
-  }
-
-  if (showCaptcha) {
-    return (
-      <View className="flex-1 bg-black items-center justify-center p-6">
-        <ScrambledChannel onRetry={() => onCaptchaSuccess('')} />
-      </View>
-    );
-  }
-
-  if (showRetryFallback && !hasCollection) {
-    return (
-      <View className="flex-1 bg-neutral-950 items-center justify-center p-6">
-        <Text className="text-red-500 font-mono text-xl mb-4 italic">LOAD TIMEOUT</Text>
-        <Text className="text-neutral-500 font-mono text-center mb-8">The tapes are stuck! Check your connection or retry.</Text>
-        <Pressable onPress={onRefresh} className="bg-neutral-900 border border-neutral-800 px-8 py-3 rounded active:bg-neutral-800">
-          <Text className="text-white font-mono uppercase tracking-widest text-xs">TRY AGAIN</Text>
-        </Pressable>
-      </View>
-    );
-  }
-
-  if (collectionError) {
-    return (
-      <View className="flex-1 bg-neutral-950 items-center justify-center p-6">
-        <Text className="text-red-500 font-mono text-xl mb-4">COLLECTION ERROR</Text>
-        <Text className="text-neutral-400 font-mono text-center">We couldn't retrieve your collection.</Text>
-        <Pressable onPress={onRefresh} className="bg-neutral-900 px-6 py-3 rounded-md mt-6 border border-neutral-800">
-          <Text className="text-white font-mono text-xs uppercase tracking-widest">RETRY FETCH</Text>
-        </Pressable>
-      </View>
-    );
+    return <View className="flex-1 bg-black items-center justify-center"><TrackingLoader label="SYNCHRONIZING..." /></View>;
   }
 
   return (
@@ -322,100 +233,34 @@ export default function HomeScreen() {
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingBottom: 100 }}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#f59e0b" />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#f59e0b" />}
       >
         <View className="w-full">
           
+          {/* V1.0.10 DEBUG HEADER */}
+          <View className="bg-red-600/20 p-2 border-b border-red-600/40">
+             <Text className="text-red-500 font-mono text-[9px] text-center">
+                 V1.0.10 | F:{formatFilter || 'OFF'} | S:{filteredStacks.length} | C:{collection?.length || 0}
+             </Text>
+          </View>
+
           <View className="flex-1">
-            {onDisplay.length > 0 && (
-              <View className="mb-8 mt-6">
-                <View className="px-4 md:px-8 flex-row items-center justify-between mb-2 max-w-7xl mx-auto w-full">
-                  <View className="flex-row items-baseline gap-2">
-                    <Text className="text-amber-500 font-bold text-3xl tracking-tighter uppercase" style={{ fontFamily: 'VCR_OSD_MONO' }}>
-                      {thriftMode ? 'GRAILS' : 'ON DISPLAY'}
-                    </Text>
-                    <Text className="text-neutral-500 font-mono text-xs ml-1">/ {onDisplay.length}</Text>
-                  </View>
-                  <View className="flex-row items-center gap-2">
-                    <Pressable onPress={scrollShelfLeft} className="p-2 bg-neutral-900 rounded-full border border-neutral-800 active:bg-neutral-800">
-                      <Ionicons name="chevron-back" size={16} color="#f59e0b" />
-                    </Pressable>
-                    <Pressable onPress={scrollShelfRight} className="p-2 bg-neutral-900 rounded-full border border-neutral-800 active:bg-neutral-800">
-                      <Ionicons name="chevron-forward" size={16} color="#f59e0b" />
-                    </Pressable>
-                  </View>
-                </View>
-
-                <View className="relative">
-                  <Image
-                    source={thriftMode ? require('@/assets/images/thrift_background.png') : require('@/assets/images/shelf_background.png')}
-                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.8 }}
-                    contentFit="cover"
-                  />
-                  <ScrollView
-                    ref={shelfRef}
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={{ paddingLeft: 24, paddingRight: 40 }}
-                    className="py-12"
-                  >
-                    {onDisplay.map((item: any) => (
-                      <OnDisplayCard
-                        key={item.id}
-                        item={item}
-                        onSingleTapAction={() => navigateToDetail(item)}
-                        onLongPressAction={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); setQuickActionItem(item); }}
-                        onToggleFavorite={toggleFavorite}
-                        onRatePress={(rating) => handleGridRate(item, rating)}
-                      />
-                    ))}
-                  </ScrollView>
-                </View>
-              </View>
-            )}
-
             <View className="px-4 md:px-8 pb-4 max-w-7xl mx-auto w-full">
-              <View className="flex-row items-center justify-between mb-6">
+              <View className="flex-row items-center justify-between mb-6 mt-6">
                 <View className="flex-row items-baseline gap-2">
                   <Text className="text-amber-500 font-bold text-3xl tracking-tighter uppercase" style={{ fontFamily: 'VCR_OSD_MONO' }}>
                     {thriftMode ? 'WISH LIST' : 'THE STACKS'}
                   </Text>
-                  <Text className="text-neutral-500 font-mono text-xs ml-1">
-                    / {thriftMode ? collection?.filter((i: any) => i.status === 'wishlist').length : filteredStacks.length}
-                  </Text>
-                </View>
-
-                <View className="flex-row bg-neutral-900 rounded-md p-1 border border-neutral-800">
-                  <Pressable
-                    onPress={() => { setViewMode('list'); playSound('click'); }}
-                    className={`p-1.5 rounded ${viewMode === 'list' ? 'bg-neutral-800' : ''}`}
-                  >
-                    <Ionicons name="list-outline" size={14} color={viewMode === 'list' ? '#fff' : '#666'} />
-                  </Pressable>
-                  <Pressable
-                    onPress={() => { setViewMode('grid2'); setNumColumns(2); playSound('click'); }}
-                    className={`p-1.5 rounded ${viewMode === 'grid2' || (viewMode === 'custom' && numColumns === 2) ? 'bg-neutral-800' : ''}`}
-                  >
-                    <Ionicons name="apps-outline" size={14} color={(viewMode === 'grid2' || (viewMode === 'custom' && numColumns === 2)) ? '#fff' : '#666'} />
-                  </Pressable>
-                  <Pressable
-                    onPress={() => { setViewMode('grid4'); setNumColumns(4); playSound('click'); }}
-                    className={`p-1.5 rounded ${viewMode === 'grid4' || (viewMode === 'custom' && numColumns === 4) ? 'bg-neutral-800' : ''}`}
-                  >
-                    <Ionicons name="grid-outline" size={14} color={(viewMode === 'grid4' || (viewMode === 'custom' && numColumns === 4)) ? '#fff' : '#666'} />
-                  </Pressable>
+                  <Text className="text-neutral-500 font-mono text-xs ml-1">/ {filteredStacks.length}</Text>
                 </View>
               </View>
 
-              {/* Header/Search Bar */}
               <View className="pb-6 w-full">
                 <View className="flex-row items-center mb-4">
                   <View className="flex-row items-center bg-neutral-900 rounded-lg border border-neutral-800 px-4 py-2.5 flex-1">
                     <Ionicons name="search" size={16} color="#444" style={{ marginRight: 8 }} />
                     <TextInput
-                      placeholder="SEARCH... [V1.0.9]"
+                      placeholder="SEARCH... [V1.0.10]"
                       placeholderTextColor="#333"
                       value={searchQuery}
                       onChangeText={setSearchQuery}
@@ -429,195 +274,42 @@ export default function HomeScreen() {
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
                   {['ALL', 'VHS', 'DVD', 'BluRay', '4K', 'DIGITAL', 'BOOTLEG', 'FOR SALE', 'FOR TRADE'].map(f => {
                     const isSelected = f === 'ALL' ? formatFilter === null : formatFilter === f;
-                    const formatColor = f === 'VHS' ? 'bg-red-600/20 border-red-600/40' :
-                      f === 'DVD' ? 'bg-purple-600/20 border-purple-600/40' :
-                        f === 'BluRay' ? 'bg-blue-600/20 border-blue-600/40' :
-                          f === '4K' ? 'bg-yellow-600/20 border-yellow-600/40' :
-                            f === 'DIGITAL' ? 'bg-emerald-600/20 border-emerald-600/40' :
-                              f === 'BOOTLEG' ? 'bg-orange-600/20 border-orange-600/40' :
-                                f === 'FOR SALE' ? 'bg-emerald-600/20 border-emerald-600/40' :
-                                  f === 'FOR TRADE' ? 'bg-blue-600/20 border-blue-600/40' :
-                                    'bg-neutral-900 border-neutral-800';
-                    const textStyle = isSelected ? 'text-amber-500' :
-                      f === 'VHS' ? 'text-red-500' :
-                        f === 'DVD' ? 'text-purple-400' :
-                          f === 'BluRay' ? 'text-blue-400' :
-                            f === '4K' ? 'text-yellow-400' :
-                              f === 'DIGITAL' ? 'text-emerald-400' :
-                                f === 'BOOTLEG' ? 'text-orange-400' :
-                                  f === 'FOR SALE' ? 'text-emerald-400' :
-                                    f === 'FOR TRADE' ? 'text-blue-400' :
-                                      'text-neutral-500';
-
+                    const formatColor = f === 'VHS' ? 'bg-red-600/20 border-red-600/40' : f === 'DVD' ? 'bg-purple-600/20 border-purple-600/40' : 'bg-neutral-900';
+                    const textStyle = isSelected ? 'text-amber-500' : 'text-neutral-500';
                     return (
                       <Pressable
                         key={f}
                         onPress={() => { setFormatFilter(f === 'ALL' ? null : (isSelected ? null : f)); playSound('click'); }}
                         className={`px-4 py-1.5 rounded-full border ${isSelected ? 'bg-amber-500/20 border-amber-500/50' : formatColor}`}
                       >
-                        <Text className={`font-mono text-[10px] uppercase font-bold ${textStyle}`}>
-                          {f === 'BluRay' ? 'Blu-ray' : f}
-                        </Text>
+                        <Text className={`font-mono text-[10px] uppercase font-bold ${textStyle}`}>{f === 'BluRay' ? 'Blu-ray' : f}</Text>
                       </Pressable>
                     );
                   })}
                 </ScrollView>
               </View>
 
-              <View className="bg-neutral-900 mb-8 p-4 rounded-xl border border-neutral-800">
-                <View className="flex-row items-center gap-2 mb-6 flex-wrap">
-                  <Text className="text-neutral-500 font-mono text-[10px] uppercase tracking-tighter mr-1">SORT:</Text>
-                  {[
-                    { id: 'recent', label: 'RECENT' },
-                    { id: 'title', label: 'NAME' },
-                    { id: 'release', label: 'YEAR' },
-                    { id: 'rating', label: 'RATING' }
-                  ].map((s: any) => (
-                    <Pressable
-                      key={s.id}
-                      onPress={() => {
-                        if (sortBy === s.id) {
-                          setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-                        } else {
-                          setSortBy(s.id);
-                          setSortOrder(s.id === 'title' || s.id === 'release' ? 'asc' : 'desc');
-                        }
-                        playSound('click');
-                      }}
-                      className={`px-3 py-1.5 rounded border flex-row items-center gap-1.5 ${sortBy === s.id ? 'bg-amber-500/20 border-amber-500/50' : 'bg-neutral-950 border-neutral-800'}`}
-                    >
-                      <Text className={`font-mono text-[10px] font-bold ${sortBy === s.id ? 'text-amber-500' : 'text-neutral-500'}`}>
-                        {s.label}
-                      </Text>
-                      {sortBy === s.id && (
-                        <Ionicons name={sortOrder === 'asc' ? 'chevron-up' : 'chevron-down'} size={10} color="#f59e0b" />
-                      )}
-                    </Pressable>
-                  ))}
-
-                  <View className="h-4 w-[1px] bg-neutral-800 mx-1" />
-
-                  <Text className="text-neutral-500 font-mono text-[10px] uppercase tracking-tighter mr-1">TYPE:</Text>
-                  <View className="flex-row bg-neutral-950 rounded border border-neutral-800 p-0.5 mr-2">
-                    <Pressable
-                      onPress={() => { setMediaTypeFilter(null); playSound('click'); }}
-                      className={`px-2.5 py-1 rounded ${mediaTypeFilter === null ? 'bg-neutral-800' : ''}`}
-                    >
-                      <Text className={`font-mono text-[10px] font-bold ${mediaTypeFilter === null ? 'text-amber-500' : 'text-neutral-500'}`}>ALL</Text>
-                    </Pressable>
-                    <Pressable
-                      onPress={() => { setMediaTypeFilter('movie'); playSound('click'); }}
-                      className={`px-2.5 py-1 rounded ${mediaTypeFilter === 'movie' ? 'bg-neutral-800' : ''}`}
-                    >
-                      <Text className={`font-mono text-[10px] font-bold ${mediaTypeFilter === 'movie' ? 'text-amber-500' : 'text-neutral-500'}`}>FILM</Text>
-                    </Pressable>
-                    <Pressable
-                      onPress={() => { setMediaTypeFilter('tv'); playSound('click'); }}
-                      className={`px-2.5 py-1 rounded ${mediaTypeFilter === 'tv' ? 'bg-neutral-800' : ''}`}
-                    >
-                      <Text className={`font-mono text-[10px] font-bold ${mediaTypeFilter === 'tv' ? 'text-amber-500' : 'text-neutral-500'}`}>TV</Text>
-                    </Pressable>
-                  </View>
-
-                  <Text className="text-neutral-500 font-mono text-[10px] uppercase tracking-tighter mr-1">GENRE:</Text>
-                  <Pressable
-                    onPress={() => { setIsGenreDropdownOpen(true); playSound('click'); }}
-                    className={`px-3 py-1.5 rounded border flex-row items-center gap-1.5 ${genreFilter ? 'bg-amber-500/20 border-amber-500/50' : 'bg-neutral-950 border-neutral-800'}`}
-                  >
-                    <Text className={`font-mono text-[10px] font-bold ${genreFilter ? 'text-amber-500' : 'text-neutral-500'}`}>
-                      {genreFilter || 'ALL'}
-                    </Text>
-                    <Ionicons name="chevron-down" size={10} color={genreFilter ? '#f59e0b' : '#666'} />
-                  </Pressable>
-                </View>
-
-                <View className="flex-row justify-between mb-2">
-                  <Text className="text-neutral-400 font-mono text-[9px] tracking-widest">DENSITY: {numColumns} COLUMNS</Text>
-                  <Pressable onPress={() => { setNumColumns(2); setViewMode('grid2'); playSound('click'); }}>
-                    <Text className="text-amber-500/50 font-mono text-[9px]">RESET</Text>
-                  </Pressable>
-                </View>
-                <Slider
-                  style={{ width: '100%', height: 30 }}
-                  minimumValue={1}
-                  maximumValue={isDesktop ? 8 : 4}
-                  step={1}
-                  value={numColumns}
-                  onValueChange={(val) => {
-                    setNumColumns(val);
-                    setViewMode('custom');
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  }}
-                  minimumTrackTintColor="#f59e0b"
-                  maximumTrackTintColor="#333"
-                  thumbTintColor="#f59e0b"
-                />
-              </View>
-
-              {isEmpty ? (
-                <EmptyState />
-              ) : filteredStacks.length === 0 ? (
+              {filteredStacks.length === 0 ? (
                 <View className="items-center py-20 px-10">
                   <Ionicons name="search-outline" size={48} color="#333" />
-                  <Text className="text-neutral-500 font-mono text-center mt-4">NO MATCHES FOUND FOR "{searchQuery}"</Text>
-                  <Pressable 
-                    onPress={() => { setSearchQuery(''); playSound('click'); }}
-                    className="mt-6 px-6 py-2 bg-neutral-800 rounded-full border border-neutral-700"
-                  >
-                    <Text className="text-amber-500 font-mono text-xs font-bold uppercase tracking-widest">Clear Search</Text>
-                  </Pressable>
+                  <Text className="text-neutral-500 font-mono text-center mt-4">NO MATCHES FOUND</Text>
                 </View>
               ) : (
                 <View className="flex-row flex-wrap" style={{ marginHorizontal: -10 }}>
-                  {filteredStacks.map((stack: any) => {
-                    if (!stack || !stack[0]) return null;
-                    const topItem = stack[0];
-                    return (
-                      <View
-                        key={topItem.id}
-                        style={{
-                          width: `${100 / resolvedColumns}%`,
-                          paddingHorizontal: 10,
-                          marginBottom: 32
-                        }}
-                      >
-                        <StackCard
-                          stack={stack}
-                          onPress={() => navigateToDetail(topItem)}
-                          onToggleFavorite={toggleFavorite}
-                          onLongPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); setQuickActionItem(topItem); }}
-                          onRatePress={(rating) => handleGridRate(topItem, rating)}
-                          width={(windowWidth - 48 - (resolvedColumns * 20)) / resolvedColumns}
-                          mode={viewMode === 'list' ? 'list' : 'grid'}
-                          activeFormatFilter={formatFilter}
-                        />
-                        {viewMode !== 'list' && (
-                          <View className="mt-2 pl-1">
-                            <View className="flex-row mb-1">
-                              {topItem.rating ? (
-                                [...Array(5)].map((_, i) => (
-                                  <Pressable key={i} onPress={(e) => { e.stopPropagation(); handleGridRate(topItem, i + 1); }} hitSlop={5}>
-                                    <FontAwesome name={i < topItem.rating! ? 'star' : 'star-o'} size={10} color={i < topItem.rating! ? '#f59e0b' : '#333'} style={{ marginRight: 2 }} />
-                                  </Pressable>
-                                ))
-                              ) : (
-                                [...Array(5)].map((_, i) => (
-                                  <Pressable key={i} onPress={(e) => { e.stopPropagation(); handleGridRate(topItem, i + 1); }} hitSlop={5}>
-                                    <FontAwesome name="star-o" size={10} color="#333" style={{ marginRight: 2 }} />
-                                  </Pressable>
-                                ))
-                              )}
-                            </View>
-                            {topItem.media_type === 'tv' && (
-                              <Text className="text-neutral-500 font-mono text-[9px]">
-                                S{topItem.season_number}
-                              </Text>
-                            )}
-                          </View>
-                        )}
-                      </View>
-                    );
-                  })}
+                  {filteredStacks.map((stack: any) => (
+                    <View key={stack[0]?.id} style={{ width: `${100 / resolvedColumns}%`, paddingHorizontal: 10, marginBottom: 32 }}>
+                      <StackCard
+                        stack={stack}
+                        onPress={() => navigateToDetail(stack[0])}
+                        onToggleFavorite={toggleFavorite}
+                        onLongPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); setQuickActionItem(stack[0]); }}
+                        onRatePress={(rating) => handleGridRate(stack[0], rating)}
+                        width={(windowWidth - 48 - (resolvedColumns * 20)) / resolvedColumns}
+                        mode={viewMode === 'list' ? 'list' : 'grid'}
+                        activeFormatFilter={formatFilter}
+                      />
+                    </View>
+                  ))}
                 </View>
               )}
             </View>
@@ -625,57 +317,7 @@ export default function HomeScreen() {
         </View>
       </ScrollView>
 
-      {quickActionItem && (
-        <QuickActionModal
-          item={quickActionItem}
-          visible={!!quickActionItem}
-          collection={collection || []}
-          userId={userId}
-          onClose={() => setQuickActionItem(null)}
-        />
-      )}
-
-      <Modal visible={isGenreDropdownOpen} transparent animationType="fade">
-        <Pressable className="flex-1 bg-black/80 items-center justify-center p-6" onPress={() => setIsGenreDropdownOpen(false)}>
-          <View className="bg-neutral-900 w-full max-w-sm rounded-2xl border border-neutral-800 p-6 overflow-hidden">
-            <Text className="text-white font-bold text-lg mb-4 text-center">FILTER BY GENRE</Text>
-            <ScrollView className="max-h-80">
-              <Pressable
-                onPress={() => { setGenreFilter(null); setIsGenreDropdownOpen(false); }}
-                className="py-3 border-b border-neutral-800"
-              >
-                <Text className={`text-center font-mono ${genreFilter === null ? 'text-amber-500' : 'text-neutral-400'}`}>ALL GENRES</Text>
-              </Pressable>
-              {genres.map(g => (
-                <Pressable
-                  key={g}
-                  onPress={() => {
-                    setGenreFilter(g);
-                    setIsGenreDropdownOpen(false);
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  }}
-                  className="py-3 border-b border-neutral-800"
-                >
-                  <Text className={`text-center font-mono ${genreFilter === g ? 'text-amber-500' : 'text-neutral-400'}`}>{g}</Text>
-                </Pressable>
-              ))}
-            </ScrollView>
-            <Pressable onPress={() => setIsGenreDropdownOpen(false)} className="mt-6 bg-neutral-800 py-3 rounded-lg">
-              <Text className="text-white text-center font-bold">CLOSE</Text>
-            </Pressable>
-          </View>
-        </Pressable>
-      </Modal>
-
-      {showRewind && (
-        <View className="absolute inset-0 z-[100] items-center justify-center pointer-events-none">
-          <View className="bg-amber-500/10 absolute inset-0" />
-          <View className="bg-black/40 p-10 rounded-full border border-amber-500/20">
-            <Ionicons name="reload" size={80} color="#f59e0b" />
-            <Text className="text-amber-500 font-mono text-center mt-4 tracking-[10px]">REWINDING</Text>
-          </View>
-        </View>
-      )}
+      {quickActionItem && <QuickActionModal item={quickActionItem} visible={!!quickActionItem} collection={collection || []} userId={userId} onClose={() => setQuickActionItem(null)} />}
     </View>
   );
 }
