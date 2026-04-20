@@ -553,3 +553,59 @@ export function useRefreshLibrary(userId: string | undefined) {
 
   return { ...mutation, progress };
 }
+
+export function useDeepRepair(userId?: string) {
+  const queryClient = useQueryClient();
+  const [progress, setProgress] = useState({ current: 0, total: 0 });
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      if (!userId) return;
+      const { data: items } = await supabase.from('collection_items').select('*').eq('user_id', userId);
+      if (!items) return;
+
+      const orphans = items.filter(i => !i.movies && !i.shows && (i.movie_id || i.show_id));
+      const totallyNull = items.filter(i => !i.movie_id && !i.show_id);
+      const total = orphans.length + totallyNull.length;
+      setProgress({ current: 0, total });
+
+      let current = 0;
+      for (const item of orphans) {
+        try {
+          const suspectedTmdbId = item.media_type === 'movie' ? item.movie_id : item.show_id;
+          if (suspectedTmdbId && suspectedTmdbId > 0) {
+            const data = await (item.media_type === 'movie' ? getMovieById(suspectedTmdbId) : getTvShowById(suspectedTmdbId));
+            if (data) {
+              const table = item.media_type === 'movie' ? 'movies' : 'shows';
+              const { data: row } = await supabase.from(table).upsert({ tmdb_id: data.id, title: (data as any).title || (data as any).name, poster_path: data.poster_path }, { onConflict: 'tmdb_id' }).select('id').single();
+              if (row) {
+                await supabase.from('collection_items').update({ [item.media_type === 'movie' ? 'movie_id' : 'show_id']: row.id }).eq('id', item.id);
+              }
+            }
+          }
+        } catch (e) { console.error('Deep repair failed for item', item.id, e); }
+        current++;
+        setProgress({ current, total });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['collection'] });
+    }
+  });
+
+  return { ...mutation, progress };
+}
+
+export function usePurgeOrphans(userId?: string) {
+  const queryClient = useQueryClient();
+  const mutation = useMutation({
+    mutationFn: async () => {
+      if (!userId) return;
+      await supabase.from('collection_items').delete().eq('user_id', userId).is('movie_id', null).is('show_id', null);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['collection'] });
+    }
+  });
+  return mutation;
+}
