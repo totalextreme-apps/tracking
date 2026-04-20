@@ -481,53 +481,51 @@ export function StackCard({
           {isOnDisplay && !isWishlist && <StickerOverlay visible={isOnDisplay} size={40} />}
           {topItem.for_sale && <SaleSticker visible={true} size={40} />}
           {topItem.for_trade && <TradeSticker visible={true} size={40} />}
-          
-          <View className="bg-neutral-900 rounded-lg overflow-hidden border border-neutral-800" style={{ width: width, height: width / aspectRatio }}>
-            {posterUrl ? (
-              <Image source={{ uri: posterUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
-            ) : (
-              <View className="flex-1 items-center justify-center p-2">
-                <FontAwesome name="film" size={width * 0.4} color="#333" />
-                <Text className="text-[10px] font-mono text-neutral-500 text-center mt-2 uppercase px-4 truncate">
-                  {media ? (media.title || media.name) : `ID: ${topItem.movie_id || topItem.show_id}`}
-                </Text>
-              </View>
-            )}
-            {topItem.is_bootleg && <BootlegSticker size={30} />}
-
-            {isGrail && (
-              <View 
-                className="absolute inset-0 border-[3px] border-yellow-400 rounded-sm"
-                pointerEvents="none"
-              />
-            )}
-            
-            {isWishlist && (
-              <View className="absolute inset-0 bg-black/40 border-2 border-dashed border-neutral-600 rounded-sm" />
-            )}
-          </View>
-
-            {/* Format Logo Overlay */}
-            <Image
-              source={
-                topItem.format === 'VHS' ? require('@/assets/images/overlays/formats/VHS.png') :
-                topItem.format === 'DVD' ? require('@/assets/images/overlays/formats/DVD.png') :
-                topItem.format === 'BluRay' ? require('@/assets/images/overlays/formats/BluRay.png') :
-                topItem.format === '4K' ? require('@/assets/images/overlays/formats/4K Ultra.png') :
-                require('@/assets/images/overlays/formats/Digital.png')
-              }
-              style={{ 
-                position: 'absolute', 
-                bottom: 8, 
-                right: 8, 
-                width: 32, 
-                height: 20, 
-                opacity: 0.9,
-                zIndex: 10
-              }}
-              contentFit="contain"
+                   {/* THE CARD ASSET */}
+          {topItem.format === 'VHS' ? (
+            <VHSCard 
+              posterUrl={posterUrl} 
+              isCustom={!!topItem.custom_poster_url} 
+              isBootleg={topItem.is_bootleg} 
+              style={{ width: width, height: width / aspectRatio }} 
             />
-          </View>
+          ) : ['DVD', 'BluRay', '4K'].includes(topItem.format) ? (
+            <GlossyCard 
+              posterUrl={posterUrl} 
+              format={topItem.format as any} 
+              isCustom={!!topItem.custom_poster_url} 
+              isBootleg={topItem.is_bootleg} 
+              style={{ width: width, height: width / aspectRatio }} 
+            />
+          ) : (
+            <View className="bg-neutral-900 rounded-lg overflow-hidden border border-neutral-800" style={{ width: width, height: width / aspectRatio }}>
+              {posterUrl ? (
+                <Image source={{ uri: posterUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+              ) : (
+                <View className="flex-1 items-center justify-center p-2">
+                  <FontAwesome name="film" size={width * 0.4} color="#333" />
+                  <Text className="text-[10px] font-mono text-neutral-500 text-center mt-2 uppercase px-4 truncate">
+                    {media ? (media.title || media.name) : `ID: ${topItem.movie_id || topItem.show_id}`}
+                  </Text>
+                </View>
+              )}
+              {topItem.is_bootleg && <BootlegSticker size={30} />}
+            </View>
+          )}
+
+          {isGrail && (
+            <View 
+              className="absolute inset-0 border-[3px] border-yellow-400 rounded-sm"
+              pointerEvents="none"
+              style={{ zIndex: 50 }}
+            />
+          )}
+          
+          {isWishlist && (
+            <View className="absolute inset-0 bg-black/40 border-2 border-dashed border-neutral-600 rounded-sm" style={{ zIndex: 60 }} />
+          )}
+        </View>
+>
 
           <View className="flex-row w-[100%] justify-end items-center mt-2 px-1">
             <View className={`px-2 py-0.5 rounded flex-row items-center gap-1 ${FORMAT_COLORS[topItem.format] || 'bg-neutral-700'}`}>
