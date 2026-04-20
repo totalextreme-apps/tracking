@@ -79,22 +79,16 @@ export default function HomeScreen() {
   const scrollShelfRight = () => {
     if (shelfRef.current) {
       playSound('click');
-      if (Platform.OS === 'web') {
-        (shelfRef.current as any).scrollTo({ x: (shelfRef.current as any).scrollLeft + 400, animated: true });
-      } else {
-        shelfRef.current.scrollTo({ x: 500, animated: true });
-      }
+      if (Platform.OS === 'web') (shelfRef.current as any).scrollTo({ x: (shelfRef.current as any).scrollLeft + 400, animated: true });
+      else shelfRef.current.scrollTo({ x: 500, animated: true });
     }
   };
 
   const scrollShelfLeft = () => {
     if (shelfRef.current) {
       playSound('click');
-      if (Platform.OS === 'web') {
-        (shelfRef.current as any).scrollTo({ x: (shelfRef.current as any).scrollLeft - 400, animated: true });
-      } else {
-        shelfRef.current.scrollTo({ x: 0, animated: true });
-      }
+      if (Platform.OS === 'web') (shelfRef.current as any).scrollTo({ x: (shelfRef.current as any).scrollLeft - 400, animated: true });
+      else shelfRef.current.scrollTo({ x: 0, animated: true });
     }
   };
 
@@ -138,14 +132,14 @@ export default function HomeScreen() {
 
   const genres = getGenres(collection);
 
-  // V1.0.13 - RESTORED & IRONCLAD
+  // V1.0.14 - RETURN TO STACKS / ITEM-LEVEL PURGE
   const filteredCollection = useMemo(() => {
     if (!collection) return [];
     
-    // Status Filter (Owned vs Wishlist)
+    // Status
     let items = collection.filter((i: any) => thriftMode ? i.status === 'wishlist' : i.status === 'owned');
 
-    // Format Filter (STRICT PHYSICAL LOCK)
+    // IRONCLAD ITEM FILTER
     if (formatFilter) {
       const normMatch = formatFilter.replace(/[^a-z0-9]/g, '').toLowerCase();
       items = items.filter((item: any) => {
@@ -155,18 +149,17 @@ export default function HomeScreen() {
         
         const itemFmt = (item.format || '').replace(/[^a-z0-9]/g, '').toLowerCase();
         
-        // Literal Identity Check
-        if (normMatch === 'vhs') return itemFmt === 'vhs';
-        if (normMatch === 'dvd') return itemFmt === 'dvd';
-        if (normMatch === 'bluray') return itemFmt === 'bluray' || itemFmt === 'blueray';
-        if (normMatch === '4k') return itemFmt === '4k' || itemFmt === 'uhd';
+        // Match using prefix for custom format strings (e.g. "VHS Clamshell" starts with "VHS")
+        if (normMatch === 'vhs') return itemFmt.startsWith('vhs');
+        if (normMatch === 'dvd') return itemFmt.startsWith('dvd');
+        if (normMatch === 'bluray') return itemFmt.startsWith('bluray') || itemFmt.startsWith('blueray');
+        if (normMatch === '4k') return itemFmt.startsWith('4k') || itemFmt.startsWith('uhd');
         if (normMatch === 'digital') return itemFmt.includes('digital');
         
-        return itemFmt === normMatch;
+        return itemFmt.includes(normMatch);
       });
     }
 
-    // Search Filter
     if (searchQuery) {
       const q = searchQuery.trim().toLowerCase();
       items = items.filter((item: any) => {
@@ -175,18 +168,17 @@ export default function HomeScreen() {
       });
     }
 
-    // Genre/Type Filters
     if (genreFilter) items = items.filter((item: any) => (item.movies || item.shows)?.genres?.some((g: any) => g?.name === genreFilter));
     if (mediaTypeFilter) items = items.filter((item: any) => item.media_type === mediaTypeFilter);
 
     return items;
   }, [collection, thriftMode, formatFilter, searchQuery, genreFilter, mediaTypeFilter]);
 
+  // Group the ALREADY FILTERED items back into stacks
   const filteredStacks = useMemo(() => {
     return getStacks(filteredCollection, thriftMode, sortBy, sortOrder);
   }, [filteredCollection, thriftMode, sortBy, sortOrder]);
 
-  // Sync On Display Shelf
   const onDisplay = useMemo(() => {
     const raw = getOnDisplayItems(collection);
     if (!formatFilter) return raw;
@@ -195,12 +187,11 @@ export default function HomeScreen() {
         const itemFmt = (item.format || '').replace(/[^a-z0-9]/g, '').toLowerCase();
         if (formatFilter === 'BOOTLEG') return item.is_bootleg;
         if (normMatch === 'digital') return itemFmt.includes('digital');
-        return itemFmt === normMatch;
+        return itemFmt.startsWith(normMatch);
     });
   }, [collection, formatFilter]);
 
   const hasCollection = (collection?.length ?? 0) > 0;
-  const isEmpty = !hasCollection && onDisplay.length === 0;
 
   if (authPhase === 'checking' || authLoading) return <View className="flex-1 bg-black items-center justify-center"><TrackingLoader label="SYNCHRONIZING..." /></View>;
 
@@ -215,10 +206,9 @@ export default function HomeScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#f59e0b" />}
       >
         <View className="w-full">
-           {/* RESTORATION VERSION INDICATOR */}
-           <View className="bg-amber-500/10 p-1">
-             <Text className="text-amber-500/40 font-mono text-[8px] text-center">STAGING V1.0.13 | FILT: {formatFilter || 'OFF'}</Text>
-           </View>
+          <View className="bg-amber-500/10 p-1">
+            <Text className="text-amber-500/40 font-mono text-[8px] text-center">STACKS V1.0.14 | FILT: {formatFilter || 'OFF'}</Text>
+          </View>
 
           <View className="flex-1">
             {onDisplay.length > 0 && (
@@ -267,7 +257,7 @@ export default function HomeScreen() {
                 <View className="flex-row items-center mb-4">
                   <View className="flex-row items-center bg-neutral-900 rounded-lg border border-neutral-800 px-4 py-2.5 flex-1">
                     <Ionicons name="search" size={16} color="#444" style={{ marginRight: 8 }} />
-                    <TextInput placeholder="SEARCH..." placeholderTextColor="#333" value={searchQuery} onChangeText={setSearchQuery} className="flex-1 text-white font-mono text-xs" autoCapitalize="none" style={{ padding: 0 }} />
+                    <TextInput placeholder="SEARCH TITLE..." placeholderTextColor="#444" value={searchQuery} onChangeText={setSearchQuery} className="flex-1 text-white font-mono text-xs" autoCapitalize="none" style={{ padding: 0 }} />
                   </View>
                 </View>
 
@@ -315,7 +305,7 @@ export default function HomeScreen() {
               {filteredStacks.length === 0 ? (
                 <View className="items-center py-20 px-10">
                    <Ionicons name="search-outline" size={48} color="#333" />
-                   <Text className="text-neutral-500 font-mono text-center mt-4 uppercase tracking-widest">SIGNAL LOST: NO MATCHES</Text>
+                   <Text className="text-neutral-500 font-mono text-center mt-4 uppercase">NO MATCHES FOUND</Text>
                 </View>
               ) : (
                 <View className="flex-row flex-wrap" style={{ marginHorizontal: -10 }}>
