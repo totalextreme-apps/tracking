@@ -6,7 +6,6 @@ import { useAuth } from '@/context/AuthContext';
 import { useDeepRepair, usePurgeOrphans } from '@/hooks/useCollection';
 import { useRouter } from 'expo-router';
 
-import { useRouter } from 'expo-router';
 import { TextInput } from 'react-native';
 
 export default function DebugScreen() {
