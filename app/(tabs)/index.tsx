@@ -232,14 +232,12 @@ export default function HomeScreen() {
         }
 
         if (mediaTypeFilter) {
-          const matchesType = items.some(item => item.media_type === mediaTypeFilter);
-          if (!matchesType) return null;
-          // Also filter the items within the stack to strictly match the type
+          if (!items.some(i => i.media_type === mediaTypeFilter)) return null;
           items = items.filter(i => i.media_type === mediaTypeFilter);
         }
 
         return items;
-      }).filter(s => s !== null);
+      }).filter((s): s is CollectionItemWithMedia[] => s !== null);
     }
     
     return filtered;
@@ -401,7 +399,7 @@ export default function HomeScreen() {
                   <View className="flex-row items-center bg-neutral-900 rounded-lg border border-neutral-800 px-4 py-2.5 flex-1">
                     <Ionicons name="search" size={16} color="#444" style={{ marginRight: 8 }} />
                     <TextInput
-                      placeholder="SEARCH..."
+                      placeholder="SEARCH... [V1.0.3]"
                       placeholderTextColor="#333"
                       value={searchQuery}
                       onChangeText={setSearchQuery}
