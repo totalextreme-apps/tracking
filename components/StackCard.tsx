@@ -539,7 +539,6 @@ export function StackCard({
               </View>
             )}
           </View>
-        </View>
       </AnimatedPressable>
     );
   }
