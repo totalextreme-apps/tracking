@@ -193,67 +193,53 @@ export default function HomeScreen() {
       const trimmedQuery = searchQuery.trim().toLowerCase();
       const normalizedQuery = trimmedQuery.replace(/[^a-z0-9]/g, '');
 
-      filtered = filtered.filter((stack: any) => {
-        if (!stack || stack.length === 0) return false;
+      filtered = filtered.map((stack: any) => {
+        if (!stack || stack.length === 0) return null;
+        let items = [...stack];
 
-        // 1. Search Query Filter (Check across ALL items in the stack)
-        if (normalizedQuery) {
-          const matches = stack.some((item: any) => {
-            const media = item.movies || item.shows;
-            const title = media?.title || media?.name || `[METADATA PENDING] ${item.movie_id || item.show_id || item.id}`;
-            const normalizedTitle = title.toLowerCase().replace(/[^a-z0-9]/g, '');
-            
-            const matchesTitle = title.toLowerCase().includes(trimmedQuery) || normalizedTitle.includes(normalizedQuery);
-            
-            // Check cast
-            const cast = (media?.movie_cast || media?.show_cast || []);
-            const matchesCast = cast.some((c: any) => {
-              const name = (c?.name || '').toLowerCase();
-              return name.includes(trimmedQuery) || name.replace(/[^a-z0-9]/g, '').includes(normalizedQuery);
-            });
-
-            // Check edition/notes
-            const content = `${item.edition || ''} ${item.notes || ''} ${item.format || ''}`.toLowerCase();
-            const matchesExtras = content.includes(trimmedQuery) || content.replace(/[^a-z0-9]/g, '').includes(normalizedQuery);
-
-            return matchesTitle || matchesCast || matchesExtras;
-          });
-          
-          if (!matches) return false;
-        }
-
-        const topItem = stack[0];
-        const media = topItem.movies || topItem.shows;
-
-        // 2. Format Filter
+        // Format Logic
         if (formatFilter) {
-          if (formatFilter === 'BOOTLEG') {
-            if (!stack.some((item: any) => item?.is_bootleg)) return false;
-          } else if (formatFilter === 'FOR SALE') {
-            if (!stack.some((item: any) => item?.for_sale)) return false;
-          } else if (formatFilter === 'FOR TRADE') {
-            if (!stack.some((item: any) => item?.for_trade)) return false;
-          } else {
-            // Strict matching for physical formats
+          if (formatFilter === 'BOOTLEG') items = items.filter(i => i.is_bootleg);
+          else if (formatFilter === 'FOR SALE') items = items.filter(i => i.for_sale);
+          else if (formatFilter === 'FOR TRADE') items = items.filter(i => i.for_trade);
+          else {
             const normalizedFilter = formatFilter.replace(/[^a-z0-9]/g, '').toLowerCase();
-            const matches = stack.some((item: any) => {
+            items = items.filter(item => {
               const fmt = (item?.format || '').replace(/[^a-z0-9]/g, '').toLowerCase();
               return (normalizedFilter === 'digital' ? fmt.includes('digital') : fmt === normalizedFilter);
             });
-            if (!matches) return false;
           }
         }
 
-        // 3. Genre Filter
-        if (genreFilter && media) {
-          if (!media.genres?.some((g: any) => g?.name === genreFilter)) return false;
+        if (items.length === 0) return null;
+
+        // Apply remaining filters (Search, Genre, Type) to the matched items
+        if (normalizedQuery) {
+          const matchesSearch = items.some(item => {
+            const media = item.movies || item.shows;
+            const title = (media?.title || media?.name || '').toLowerCase();
+            return title.includes(trimmedQuery) || title.replace(/[^a-z0-9]/g, '').includes(normalizedQuery);
+          });
+          if (!matchesSearch) return null;
         }
 
-        // 4. Media Type Filter
-        if (mediaTypeFilter && topItem.media_type !== mediaTypeFilter) return false;
+        if (genreFilter) {
+          const matchesGenre = items.some(item => {
+            const media = item.movies || item.shows;
+            return media?.genres?.some((g: any) => g?.name === genreFilter);
+          });
+          if (!matchesGenre) return null;
+        }
 
-        return true;
-      });
+        if (mediaTypeFilter) {
+          const matchesType = items.some(item => item.media_type === mediaTypeFilter);
+          if (!matchesType) return null;
+          // Also filter the items within the stack to strictly match the type
+          items = items.filter(i => i.media_type === mediaTypeFilter);
+        }
+
+        return items;
+      }).filter(s => s !== null);
     }
     
     return filtered;
