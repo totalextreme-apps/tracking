@@ -30,7 +30,7 @@ export default function HomeScreen() {
   const updateMutation = useUpdateCollectionItem(userId);
   const [quickActionItem, setQuickActionItem] = useState<CollectionItemWithMedia | null>(null);
 
-  // Sync quickActionItem when collection data changes (to avoid stale modal state)
+  // Sync quickActionItem when collection data changes
   useEffect(() => {
     if (quickActionItem && collection) {
       const freshItem = (collection as CollectionItemWithMedia[]).find(i => i.id === quickActionItem.id);
@@ -179,92 +179,85 @@ export default function HomeScreen() {
     }
   };
 
-  const onDisplayRaw = thriftMode
-    ? collection?.filter((item: any) => item && item.is_grail) ?? []
-    : getOnDisplayItems(collection);
-
   const genres = getGenres(collection);
-  const stacks = getStacks(collection, thriftMode, sortBy, sortOrder);
 
-  // V1.0.8 - THE STRICT FORMAT HEADER FILTER
-  const filteredStacks = useMemo(() => {
-    const raw = stacks || [];
-    const normSearch = searchQuery.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-    const normFormat = formatFilter ? formatFilter.replace(/[^a-z0-9]/g, '').toLowerCase() : null;
+  // GROUND UP REBUILD: PHASE 1 - FILTER THE RAW COLLECTION
+  const filteredCollection = useMemo(() => {
+    if (!collection) return [];
+    
+    // Status filter (Thrift Mode)
+    let items = collection.filter((i: any) => 
+      thriftMode ? i.status === 'wishlist' : i.status === 'owned'
+    );
 
-    if (!normSearch && !normFormat && !genreFilter && !mediaTypeFilter) return raw;
-
-    const results: CollectionItemWithMedia[][] = [];
-
-    for (let i = 0; i < raw.length; i++) {
-        const stack = raw[i];
-        if (!stack || stack.length === 0) continue;
-
-        // Disband stack into only matching items
-        let filteredItems = stack.filter(item => {
-            // A. Format Filter (Strictly uses the database 'format' field value)
-            if (normFormat) {
-                if (formatFilter === 'BOOTLEG') return item.is_bootleg;
-                if (formatFilter === 'FOR SALE') return item.for_sale;
-                if (formatFilter === 'FOR TRADE') return item.for_trade;
-                
-                const itemFmt = (item.format || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-                // Correct "Blu-ray" display name to matched search "bluray"
-                if (normFormat === 'bluray') return itemFmt === 'bluray';
-                if (normFormat === 'digital') return itemFmt.includes('digital');
-                
-                // Final strict check (VHS === vhs, DVD === dvd)
-                return itemFmt === normFormat;
-            }
-            return true;
-        });
-
-        if (filteredItems.length === 0) continue;
-
-        // B. Apply remaining filters to the already-disbanded items
-        if (normSearch) {
-           const matches = filteredItems.some(item => {
-             const m = item.movies || item.shows;
-             if (!m) return false;
-             const t = (m.title || m.name || '').toLowerCase();
-             return t.includes(normSearch) || t.replace(/[^a-z0-9]/g, '').includes(normSearch);
-           });
-           if (!matches) continue;
-        }
-
-        if (genreFilter) {
-            const matches = filteredItems.some(item => {
-              const m = item.movies || item.shows;
-              return m?.genres?.some((g: any) => g?.name === genreFilter);
-            });
-            if (!matches) continue;
-        }
-
-        if (mediaTypeFilter) {
-            filteredItems = filteredItems.filter(item => item.media_type === mediaTypeFilter);
-            if (filteredItems.length === 0) continue;
-        }
-
-        results.push(filteredItems);
-    }
-
-    return results;
-  }, [stacks, searchQuery, formatFilter, genreFilter, mediaTypeFilter]);
-
-  // Apply same filter logic to On Display
-  const onDisplay = useMemo(() => {
-    return onDisplayRaw.filter((item: any) => {
-        if (!formatFilter) return true;
-        const normFormat = formatFilter.replace(/[^a-z0-9]/g, '').toLowerCase();
+    // Format Filter (STRICT HEADER MATCHING)
+    if (formatFilter) {
+      const normMatch = formatFilter.replace(/[^a-z0-9]/g, '').toLowerCase();
+      items = items.filter((item: any) => {
         if (formatFilter === 'BOOTLEG') return item.is_bootleg;
         if (formatFilter === 'FOR SALE') return item.for_sale;
         if (formatFilter === 'FOR TRADE') return item.for_trade;
         
-        const itemFmt = (item.format || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-        if (normFormat === 'digital') return itemFmt.includes('digital');
-        return itemFmt === normFormat;
+        const itemFmt = (item.format || '').replace(/[^a-z0-9]/g, '').toLowerCase();
+        
+        // Special case for Digital to allow partials, but strict for physical
+        if (normMatch === 'digital') return itemFmt.includes('digital');
+        if (normMatch === 'bluray') return itemFmt === 'bluray';
+        
+        return itemFmt === normMatch;
+      });
+    }
+
+    // Search Filter
+    if (searchQuery) {
+      const q = searchQuery.trim().toLowerCase();
+      const nq = q.replace(/[^a-z0-9]/g, '');
+      items = items.filter((item: any) => {
+        const media = item.movies || item.shows;
+        if (!media) return false;
+        const title = (media.title || media.name || '').toLowerCase();
+        return title.includes(q) || title.replace(/[^a-z0-9]/g, '').includes(nq);
+      });
+    }
+
+    // Genre Filter
+    if (genreFilter) {
+      items = items.filter((item: any) => {
+        const media = item.movies || item.shows;
+        return media?.genres?.some((g: any) => g?.name === genreFilter);
+      });
+    }
+
+    // Media Type Filter
+    if (mediaTypeFilter) {
+      items = items.filter((item: any) => item.media_type === mediaTypeFilter);
+    }
+
+    return items;
+  }, [collection, thriftMode, formatFilter, searchQuery, genreFilter, mediaTypeFilter]);
+
+  // GROUND UP REBUILD: PHASE 2 - GROUP FILTERED ITEMS INTO STACKS
+  const filteredStacks = useMemo(() => {
+    // We use the same grouping logic as getStacks, but on already-filtered data
+    return getStacks(filteredCollection, thriftMode, sortBy, sortOrder);
+  }, [filteredCollection, thriftMode, sortBy, sortOrder]);
+
+  // Apply same filter to On Display
+  const onDisplay = useMemo(() => {
+    const raw = getOnDisplayItems(collection);
+    if (!formatFilter) return raw;
+    
+    const normMatch = formatFilter.replace(/[^a-z0-9]/g, '').toLowerCase();
+    return raw.filter((item: any) => {
+      if (formatFilter === 'BOOTLEG') return item.is_bootleg;
+      if (formatFilter === 'FOR SALE') return item.for_sale;
+      if (formatFilter === 'FOR TRADE') return item.for_trade;
+      
+      const itemFmt = (item.format || '').replace(/[^a-z0-9]/g, '').toLowerCase();
+      if (normMatch === 'digital') return itemFmt.includes('digital');
+      return itemFmt === normMatch;
     });
-  }, [onDisplayRaw, formatFilter]);
+  }, [collection, formatFilter]);
 
   const hasCollection = (collection?.length ?? 0) > 0;
   const isEmpty = !hasCollection && onDisplay.length === 0;
@@ -335,13 +328,6 @@ export default function HomeScreen() {
       >
         <View className="w-full">
           
-          {/* V1.0.8 DEBUG HEADER */}
-          <View className="bg-red-600/20 p-2 border-b border-red-600/40">
-             <Text className="text-red-500 font-mono text-[9px] text-center">
-                 V1.0.8 | FILTER:{formatFilter || 'OFF'} | STACKS:{filteredStacks.length} | DATA:{filteredStacks[0]?.[0]?.format || 'N/A'}
-             </Text>
-          </View>
-
           <View className="flex-1">
             {onDisplay.length > 0 && (
               <View className="mb-8 mt-6">
@@ -429,7 +415,7 @@ export default function HomeScreen() {
                   <View className="flex-row items-center bg-neutral-900 rounded-lg border border-neutral-800 px-4 py-2.5 flex-1">
                     <Ionicons name="search" size={16} color="#444" style={{ marginRight: 8 }} />
                     <TextInput
-                      placeholder="SEARCH... [V1.0.8]"
+                      placeholder="SEARCH... [V1.0.9]"
                       placeholderTextColor="#333"
                       value={searchQuery}
                       onChangeText={setSearchQuery}
