@@ -525,7 +525,6 @@ export function StackCard({
             <View className="absolute inset-0 bg-black/40 border-2 border-dashed border-neutral-600 rounded-sm" style={{ zIndex: 60 }} />
           )}
         </View>
->
 
           <View className="flex-row w-[100%] justify-end items-center mt-2 px-1">
             <View className={`px-2 py-0.5 rounded flex-row items-center gap-1 ${FORMAT_COLORS[topItem.format] || 'bg-neutral-700'}`}>
