@@ -236,7 +236,11 @@ export default function HomeScreen() {
           } else {
             // Match normalized format comparison (e.g. BluRay vs Blu-ray)
             const normalizedFilter = formatFilter.replace(/[^a-z0-9]/g, '').toLowerCase();
-            if (!stack.some((item: any) => item?.format.replace(/[^a-z0-9]/g, '').toLowerCase() === normalizedFilter)) return false;
+            if (normalizedFilter === 'digital') {
+              if (!stack.some((item: any) => item?.format.toLowerCase().includes('digital'))) return false;
+            } else {
+              if (!stack.some((item: any) => item?.format.replace(/[^a-z0-9]/g, '').toLowerCase() === normalizedFilter)) return false;
+            }
           }
         }
 
@@ -423,25 +427,27 @@ export default function HomeScreen() {
                 </View>
 
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-                  {['ALL', 'VHS', 'DVD', 'BluRay', '4K', 'BOOTLEG', 'FOR SALE', 'FOR TRADE'].map(f => {
+                  {['ALL', 'VHS', 'DVD', 'BluRay', '4K', 'DIGITAL', 'BOOTLEG', 'FOR SALE', 'FOR TRADE'].map(f => {
                     const isSelected = f === 'ALL' ? formatFilter === null : formatFilter === f;
                     const formatColor = f === 'VHS' ? 'bg-red-600/20 border-red-600/40' :
                       f === 'DVD' ? 'bg-purple-600/20 border-purple-600/40' :
                         f === 'BluRay' ? 'bg-blue-600/20 border-blue-600/40' :
                           f === '4K' ? 'bg-yellow-600/20 border-yellow-600/40' :
-                            f === 'BOOTLEG' ? 'bg-orange-600/20 border-orange-600/40' :
-                              f === 'FOR SALE' ? 'bg-emerald-600/20 border-emerald-600/40' :
-                                f === 'FOR TRADE' ? 'bg-blue-600/20 border-blue-600/40' :
-                                  'bg-neutral-900 border-neutral-800';
+                            f === 'DIGITAL' ? 'bg-emerald-600/20 border-emerald-600/40' :
+                              f === 'BOOTLEG' ? 'bg-orange-600/20 border-orange-600/40' :
+                                f === 'FOR SALE' ? 'bg-emerald-600/20 border-emerald-600/40' :
+                                  f === 'FOR TRADE' ? 'bg-blue-600/20 border-blue-600/40' :
+                                    'bg-neutral-900 border-neutral-800';
                     const textStyle = isSelected ? 'text-amber-500' :
                       f === 'VHS' ? 'text-red-500' :
                         f === 'DVD' ? 'text-purple-400' :
                           f === 'BluRay' ? 'text-blue-400' :
                             f === '4K' ? 'text-yellow-400' :
-                              f === 'BOOTLEG' ? 'text-orange-400' :
-                                f === 'FOR SALE' ? 'text-emerald-400' :
-                                  f === 'FOR TRADE' ? 'text-blue-400' :
-                                    'text-neutral-500';
+                              f === 'DIGITAL' ? 'text-emerald-400' :
+                                f === 'BOOTLEG' ? 'text-orange-400' :
+                                  f === 'FOR SALE' ? 'text-emerald-400' :
+                                    f === 'FOR TRADE' ? 'text-blue-400' :
+                                      'text-neutral-500';
 
                     return (
                       <Pressable

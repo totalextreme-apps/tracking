@@ -100,7 +100,7 @@ export function StackCard({
     for (const item of qualitySorted) {
       if (activeFormatFilter === 'BOOTLEG' && item.is_bootleg) {
         matching.push(item);
-      } else if (item.format === activeFormatFilter) {
+      } else if (item.format === activeFormatFilter || (activeFormatFilter === 'DIGITAL' && item.format.toLowerCase().includes('digital'))) {
         matching.push(item);
       } else {
         others.push(item);
