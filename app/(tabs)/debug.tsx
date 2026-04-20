@@ -6,6 +6,9 @@ import { useAuth } from '@/context/AuthContext';
 import { useDeepRepair, usePurgeOrphans } from '@/hooks/useCollection';
 import { useRouter } from 'expo-router';
 
+import { useRouter } from 'expo-router';
+import { TextInput } from 'react-native';
+
 export default function DebugScreen() {
   const { userId } = useAuth();
   const router = useRouter();
@@ -15,7 +18,8 @@ export default function DebugScreen() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const buildTime = '2026-04-19 20:45';
+  const [search, setSearch] = useState('');
+  const buildTime = '2026-04-19 21:07';
 
   const fetchData = async () => {
     if (!userId) return;
@@ -34,6 +38,17 @@ export default function DebugScreen() {
     }
   };
 
+  const filteredItems = items.filter(item => {
+    if (!search) return true;
+    const s = search.toLowerCase();
+    return (
+      item.id?.toLowerCase().includes(s) ||
+      String(item.movie_id).includes(s) ||
+      String(item.show_id).includes(s) ||
+      item.notes?.toLowerCase().includes(s)
+    );
+  });
+
   useEffect(() => {
     fetchData();
   }, [userId]);
@@ -48,6 +63,16 @@ export default function DebugScreen() {
         </Pressable>
         <Text className="text-amber-500 font-bold font-mono text-xl">RAW DB DEBUG</Text>
         <View className="w-8" />
+      </View>
+
+      <View className="mb-6">
+        <TextInput
+          placeholder="SEARCH RAW DATA (ID, TITLE, NOTES...)"
+          placeholderTextColor="#444"
+          value={search}
+          onChangeText={setSearch}
+          className="bg-neutral-900 border border-neutral-800 p-3 rounded-lg text-white font-mono text-xs"
+        />
       </View>
 
       <View className="mb-8 gap-3">
@@ -79,10 +104,10 @@ export default function DebugScreen() {
       <Text className="text-neutral-500 font-mono text-xs mb-1">User ID: {userId}</Text>
       <Text className="text-neutral-600 font-mono text-[10px] mb-8">Build: {buildTime}</Text>
 
-      {items.length === 0 ? (
-        <Text className="text-neutral-600 font-mono">No items found in DB for this user.</Text>
+      {filteredItems.length === 0 ? (
+        <Text className="text-neutral-600 font-mono">No matching records found.</Text>
       ) : (
-        items.map((item) => (
+        filteredItems.map((item) => (
           <View key={item.id} className="mb-4 p-4 bg-neutral-900 rounded border border-neutral-800">
             <Text className="text-white font-mono text-xs font-bold">ID: {item.id}</Text>
             <Text className="text-neutral-400 font-mono text-[10px]">Type: {item.media_type}</Text>
