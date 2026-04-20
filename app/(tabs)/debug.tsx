@@ -89,6 +89,17 @@ export default function DebugScreen() {
         </Pressable>
 
         <Pressable 
+          onPress={() => router.push('/import')}
+          className="bg-emerald-500/10 border border-emerald-500 p-4 rounded-xl flex-row items-center justify-between"
+        >
+          <View>
+            <Text className="text-emerald-500 font-bold font-mono uppercase text-sm">Spreadsheet Metadata Import</Text>
+            <Text className="text-emerald-500/50 font-mono text-[10px]">Paste columns from your CSV/Spreadsheet</Text>
+          </View>
+          <Ionicons name="document-text-outline" size={20} color="#10b981" />
+        </Pressable>
+
+        <Pressable 
           disabled={reset.isPending}
           onPress={() => {
             if (confirm('This will disconnect ALL titles and reset them to ID: NULL (Orphans). Continue?')) {
