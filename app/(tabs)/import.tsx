@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
-import { View, Text, ScrollView, Pressable, TextInput, ActivityIndicator, Alert } from 'react-native';
+import { useState, useRef } from 'react';
+import { View, Text, ScrollView, Pressable, ActivityIndicator, Alert, Platform } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
 import { useBatchImportMetadata } from '@/hooks/useCollection';
 import { useRouter } from 'expo-router';
@@ -8,34 +8,96 @@ import { useRouter } from 'expo-router';
 export default function ImportScreen() {
   const { userId } = useAuth();
   const router = useRouter();
-  const [csvData, setCsvData] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [fileName, setFileName] = useState<string | null>(null);
   const importMutation = useBatchImportMetadata(userId ?? undefined);
 
-  const handleImport = () => {
-    if (!csvData.trim()) return;
-    
-    // Parse CSV: Expecting TMDB_ID, MEDIA_TYPE (movie/tv), optional TITLE_HINT
-    const lines = csvData.split('\n').filter(l => l.trim());
-    const rows = lines.map(line => {
-      const parts = line.split(',').map(s => s.trim());
-      if (parts.length < 2) return null;
-      const [id, type, hint] = parts;
+  // Use standard HTML input for web (since user is on Chrome)
+  const fileInputRef = useRef<any>(null);
+
+  const handleFileChange = (event: any) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    setFileName(file.name);
+    setLoading(true);
+
+    const reader = new FileReader();
+    reader.onload = (e: any) => {
+      try {
+        const text = e.target.result;
+        processCsv(text);
+      } catch (err) {
+        Alert.alert('Error', 'Failed to read file.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const processCsv = (csvText: string) => {
+    // Basic CSV Parser that handles quotes
+    const parseCsvLine = (line: string) => {
+      const result = [];
+      let current = '';
+      let inQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        if (char === '"') {
+          if (inQuotes && line[i + 1] === '"') {
+            current += '"';
+            i++;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (char === ',' && !inQuotes) {
+          result.push(current);
+          current = '';
+        } else {
+          current += char;
+        }
+      }
+      result.push(current);
+      return result;
+    };
+
+    const lines = csvText.split(/\r?\n/).filter(l => l.trim());
+    if (lines.length < 2) {
+      Alert.alert('Error', 'File is empty or invalid.');
+      return;
+    }
+
+    // Skip header row
+    const dataRows = lines.slice(1);
+    const rows = dataRows.map(line => {
+      const cols = parseCsvLine(line);
+      // Expected Format (from export-utils.ts):
+      // 0: TMDB ID, 1: Title, 2: Media Type, ... 10: Notes
+      const tmdbId = parseInt(cols[0]);
+      const mediaType = cols[2]?.toLowerCase() === 'tv' ? 'tv' : 'movie';
+      const notes = cols[10] || '';
+      const title = cols[1] || '';
+
       return {
-        tmdb_id: parseInt(id),
-        media_type: type?.toLowerCase() === 'tv' ? 'tv' : 'movie',
-        notes_match: hint
+        tmdb_id: tmdbId,
+        media_type: mediaType,
+        notes_match: notes || title // Match by notes first, fallback to title hint
       };
-    }).filter((r): r is { tmdb_id: number; media_type: string; notes_match?: string } => !!r && !isNaN(r.tmdb_id));
+    }).filter(r => !isNaN(r.tmdb_id));
 
     if (rows.length === 0) {
-      Alert.alert('Error', 'No valid rows found. Format: TMDB_ID, TYPE (movie/tv), NAME');
+      Alert.alert('Error', 'No valid TMDB IDs found in the file.');
       return;
     }
 
     importMutation.mutate(rows, {
       onSuccess: () => {
-        Alert.alert('Success', `Imported metadata for ${rows.length} items.`);
+        Alert.alert('Success', `Imported metadata for ${rows.length} items. Your collection should be restored!`);
         router.back();
+      },
+      onError: (err: any) => {
+        Alert.alert('Import Failed', err.message);
       }
     });
   };
@@ -46,47 +108,69 @@ export default function ImportScreen() {
         <Pressable onPress={() => router.back()} className="p-2 -ml-2">
           <Ionicons name="arrow-back" size={24} color="#f59e0b" />
         </Pressable>
-        <Text className="text-amber-500 font-bold font-mono text-xl">BATCH IMPORT</Text>
+        <Text className="text-amber-500 font-bold font-mono text-xl">CSV IMPORT</Text>
         <View className="w-8" />
       </View>
 
-      <View className="bg-neutral-900 p-4 rounded-xl border border-neutral-800 mb-6">
-        <Text className="text-white font-mono font-bold mb-2">HOW TO RECOVERY:</Text>
-        <Text className="text-neutral-400 font-mono text-xs mb-1">1. Open your spreadsheet.</Text>
-        <Text className="text-neutral-400 font-mono text-xs mb-1">2. Copy your columns in this order: TMDB_ID, TYPE, NAME.</Text>
-        <Text className="text-neutral-400 font-mono text-xs mb-4">3. Paste them below. One per line.</Text>
-        
-        <TextInput
-          multiline
-          placeholder={'425, movie, Ice Age\n123, movie, Dune...'}
-          placeholderTextColor="#444"
-          value={csvData}
-          onChangeText={setCsvData}
-          className="bg-black text-white p-4 rounded-lg font-mono text-xs min-h-[300px] border border-neutral-800"
-          textAlignVertical="top"
-        />
+      <View className="bg-neutral-900 p-6 rounded-3xl border border-neutral-800 mb-8 items-center">
+        <View className="w-16 h-16 bg-neutral-800 rounded-full items-center justify-center mb-4">
+          <Ionicons name="cloud-upload-outline" size={32} color="#f59e0b" />
+        </View>
+        <Text className="text-white font-mono font-bold text-lg mb-2">RESTORE FROM FILE</Text>
+        <Text className="text-neutral-400 font-mono text-center text-xs mb-8 leading-5">
+           Upload the exact CSV file you exported from your settings.
+           We'll use it to re-link all your movie titles and posters.
+        </Text>
+
+        {Platform.OS === 'web' ? (
+          <View className="w-full">
+            <input
+              type="file"
+              accept=".csv"
+              ref={fileInputRef}
+              style={{ display: 'none' }}
+              onChange={handleFileChange}
+            />
+            <Pressable 
+              onPress={() => fileInputRef.current?.click()}
+              disabled={importMutation.isPending || loading}
+              className={`w-full bg-amber-500 p-5 rounded-2xl flex-row items-center justify-center ${importMutation.isPending || loading ? 'opacity-50' : ''}`}
+            >
+              <Ionicons name="document-text-outline" size={20} color="black" className="mr-2" />
+              <Text className="text-black font-bold font-mono uppercase">
+                {fileName || 'SELECT CSV FILE'}
+              </Text>
+            </Pressable>
+          </View>
+        ) : (
+          <Text className="text-red-500 font-mono text-xs text-center">
+            File upload is currently supported on the web version.
+          </Text>
+        )}
       </View>
 
-      <Pressable 
-        onPress={handleImport}
-        disabled={importMutation.isPending}
-        className={`bg-amber-500 p-4 rounded-xl flex-row items-center justify-center ${importMutation.isPending ? 'opacity-50' : ''}`}
-      >
-        <Text className="text-black font-bold font-mono uppercase mr-2">Start Recovery Import</Text>
-        {importMutation.isPending && <ActivityIndicator color="black" size="small" />}
-      </Pressable>
-
       {importMutation.isPending && (
-        <View className="mt-4">
-          <Text className="text-amber-500 font-mono text-center text-xs">
-            Processing {importMutation.progress.current} of {importMutation.progress.total}...
+        <View className="items-center">
+          <ActivityIndicator color="#f59e0b" size="large" className="mb-4" />
+          <Text className="text-amber-500 font-mono text-lg font-bold">RECOVERING COLLECTION...</Text>
+          <Text className="text-neutral-500 font-mono text-xs mt-2">
+            Linked {importMutation.progress.current} of {importMutation.progress.total} items
           </Text>
-          <View className="h-1 bg-neutral-900 rounded-full mt-2 overflow-hidden">
+          <View className="w-full h-2 bg-neutral-900 rounded-full mt-6 overflow-hidden">
              <View 
                style={{ width: `${(importMutation.progress.current / importMutation.progress.total) * 100}%` }}
                className="h-full bg-amber-500" 
              />
           </View>
+        </View>
+      )}
+
+      {!importMutation.isPending && !loading && (
+        <View className="bg-neutral-950 p-4 rounded-xl border border-neutral-900">
+           <Text className="text-neutral-600 font-mono text-[10px] uppercase mb-2">EXPECTED FORMAT:</Text>
+           <Text className="text-neutral-700 font-mono text-[9px]">
+             "TMDB ID","Title","Media Type","Season","Release Date","Format","Status"...
+           </Text>
         </View>
       )}
     </ScrollView>

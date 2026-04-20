@@ -67,8 +67,7 @@ export function getStacks(
     let key: string;
     
     if (item.media_type === 'tv') {
-      const showId = tmdbId || item.show_id || item.shows?.id;
-      if (!showId) continue;
+      const showId = tmdbId || item.show_id || item.shows?.id || item.id;
       key = `tv-${showId}-s${item.season_number ?? 0}`;
     } else {
       const movieId = tmdbId || item.movie_id || item.movies?.id || item.id;
