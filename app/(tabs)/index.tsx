@@ -234,11 +234,11 @@ export default function HomeScreen() {
           } else if (formatFilter === 'FOR TRADE') {
             if (!stack.some((item: any) => item?.for_trade)) return false;
           } else {
-            // Match normalized format comparison (e.g. BluRay vs Blu-ray)
+            // Strict matching for physical formats
             const normalizedFilter = formatFilter.replace(/[^a-z0-9]/g, '').toLowerCase();
             const matches = stack.some((item: any) => {
-              const fmt = item?.format.replace(/[^a-z0-9]/g, '').toLowerCase() || '';
-              return fmt.includes(normalizedFilter);
+              const fmt = (item?.format || '').replace(/[^a-z0-9]/g, '').toLowerCase();
+              return (normalizedFilter === 'digital' ? fmt.includes('digital') : fmt === normalizedFilter);
             });
             if (!matches) return false;
           }
