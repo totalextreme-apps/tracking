@@ -306,7 +306,10 @@ export function StackCard({
         </View>
         {/* Info Section */}
         <View className="flex-1 px-3 py-1 justify-center">
-          <View className="flex-row mb-1">
+          <Text className="text-white font-bold text-sm leading-tight" numberOfLines={2}>
+            {media ? (media.title || media.name) : `ID: ${topItem.movie_id || topItem.show_id}`}
+          </Text>
+          <View className="flex-row my-1">
              {topItem.rating ? (
                [...Array(5)].map((_, i) => (
                  <Pressable key={i} onPress={(e) => { e.stopPropagation(); onRatePress?.(i + 1); }} hitSlop={5}>
@@ -316,7 +319,7 @@ export function StackCard({
              ) : (
                [...Array(5)].map((_, i) => (
                  <Pressable key={i} onPress={(e) => { e.stopPropagation(); onRatePress?.(i + 1); }} hitSlop={5}>
-                   <FontAwesome name="star-o" size={12} color="#404040" style={{ marginRight: 2 }} />
+                   <FontAwesome name="star-o" size={10} color="#333" style={{ marginRight: 2 }} />
                  </Pressable>
                ))
              )}

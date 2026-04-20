@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
-import { useDeepRepair, usePurgeOrphans } from '@/hooks/useCollection';
+import { useDeepRepair, usePurgeOrphans, useResetMetadata } from '@/hooks/useCollection';
 import { useRouter } from 'expo-router';
 
 import { TextInput } from 'react-native';
@@ -13,12 +13,13 @@ export default function DebugScreen() {
   const router = useRouter();
   const repair = useDeepRepair(userId ?? undefined);
   const purge = usePurgeOrphans(userId ?? undefined);
+  const reset = useResetMetadata(userId ?? undefined);
 
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
-  const buildTime = '2026-04-19 21:07';
+  const buildTime = '2026-04-19 21:35';
 
   const fetchData = async () => {
     if (!userId) return;
@@ -85,6 +86,22 @@ export default function DebugScreen() {
             <Text className="text-amber-500/50 font-mono text-[10px]">Force TMDB match for every orphaned record</Text>
           </View>
           {repair.isPending ? <ActivityIndicator size="small" color="#f59e0b" /> : <Ionicons name="flash-outline" size={20} color="#f59e0b" />}
+        </Pressable>
+
+        <Pressable 
+          disabled={reset.isPending}
+          onPress={() => {
+            if (confirm('This will disconnect ALL titles and reset them to ID: NULL (Orphans). Continue?')) {
+              reset.mutate(undefined, { onSuccess: fetchData });
+            }
+          }}
+          className="bg-blue-500/10 border border-blue-500/30 p-4 rounded-xl flex-row items-center justify-between"
+        >
+          <View>
+            <Text className="text-blue-500 font-bold font-mono uppercase text-sm">Force Reset Metadata</Text>
+            <Text className="text-blue-500/50 font-mono text-[10px]">Rollback accidental TMDB mismatches</Text>
+          </View>
+          {reset.isPending ? <ActivityIndicator size="small" color="#3b82f6" /> : <Ionicons name="refresh-outline" size={20} color="#3b82f6" />}
         </Pressable>
 
         <Pressable 

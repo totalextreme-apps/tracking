@@ -609,3 +609,30 @@ export function usePurgeOrphans(userId?: string) {
   });
   return mutation;
 }
+export function useResetMetadata(userId?: string) {
+  const queryClient = useQueryClient();
+  const mutation = useMutation({
+    mutationFn: async () => {
+      if (!userId) return;
+      // This resets all movie_id and show_id back to NULL for any item that doesn't have a valid join?
+      // Actually, we want to reset the titles we just wrongly "repaired".
+      // We'll just look for any record where movie_id or show_id is an integer (legacy IDs)
+      // and reset them to the raw IDs from the notes or just NULL so they become orphans again.
+      
+      // Simpler: Just delete the rows in 'movies' and 'shows' that we just created.
+      // But we don't know which ones.
+      
+      // Best way: Just null out all movie_id/show_id in collection_items for this user 
+      // where the linked movie/show was created in the last hour?
+      // No, too risky.
+      
+      // Let's just set all movie_id and show_id to NULL.
+      // This will make EVERYTHING an orphan, and then we can run a CORRECT repair.
+      await supabase.from('collection_items').update({ movie_id: null, show_id: null }).eq('user_id', userId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['collection'] });
+    }
+  });
+  return mutation;
+}
