@@ -477,7 +477,7 @@ export function StackCard({
         onPressOut={isWishlist ? undefined : onPressOut}
         style={[animatedStyle, { width: width, margin: 6 }]}
       >
-        <>
+        <View style={{ width: width }}>
           <View className="relative">
             {isOnDisplay && !isWishlist && <StickerOverlay visible={isOnDisplay} size={40} />}
             {topItem.for_sale && <SaleSticker visible={true} size={40} />}
@@ -540,7 +540,7 @@ export function StackCard({
               </View>
             )}
           </View>
-        </>
+        </View>
       </AnimatedPressable>
     );
   }
