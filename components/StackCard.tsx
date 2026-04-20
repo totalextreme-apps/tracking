@@ -477,54 +477,55 @@ export function StackCard({
         onPressOut={isWishlist ? undefined : onPressOut}
         style={[animatedStyle, { width: width, margin: 6 }]}
       >
-        <View className="relative">
-          {isOnDisplay && !isWishlist && <StickerOverlay visible={isOnDisplay} size={40} />}
-          {topItem.for_sale && <SaleSticker visible={true} size={40} />}
-          {topItem.for_trade && <TradeSticker visible={true} size={40} />}
-                   {/* THE CARD ASSET */}
-          {topItem.format === 'VHS' ? (
-            <VHSCard 
-              posterUrl={posterUrl} 
-              isCustom={!!topItem.custom_poster_url} 
-              isBootleg={topItem.is_bootleg} 
-              style={{ width: width, height: width / aspectRatio }} 
-            />
-          ) : ['DVD', 'BluRay', '4K'].includes(topItem.format) ? (
-            <GlossyCard 
-              posterUrl={posterUrl} 
-              format={topItem.format as any} 
-              isCustom={!!topItem.custom_poster_url} 
-              isBootleg={topItem.is_bootleg} 
-              style={{ width: width, height: width / aspectRatio }} 
-            />
-          ) : (
-            <View className="bg-neutral-900 rounded-lg overflow-hidden border border-neutral-800" style={{ width: width, height: width / aspectRatio }}>
-              {posterUrl ? (
-                <Image source={{ uri: posterUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
-              ) : (
-                <View className="flex-1 items-center justify-center p-2">
-                  <FontAwesome name="film" size={width * 0.4} color="#333" />
-                  <Text className="text-[10px] font-mono text-neutral-500 text-center mt-2 uppercase px-4 truncate">
-                    {media ? (media.title || media.name) : `ID: ${topItem.movie_id || topItem.show_id}`}
-                  </Text>
-                </View>
-              )}
-              {topItem.is_bootleg && <BootlegSticker size={30} />}
-            </View>
-          )}
+        <>
+          <View className="relative">
+            {isOnDisplay && !isWishlist && <StickerOverlay visible={isOnDisplay} size={40} />}
+            {topItem.for_sale && <SaleSticker visible={true} size={40} />}
+            {topItem.for_trade && <TradeSticker visible={true} size={40} />}
+            {/* THE CARD ASSET */}
+            {topItem.format === 'VHS' ? (
+              <VHSCard 
+                posterUrl={posterUrl} 
+                isCustom={!!topItem.custom_poster_url} 
+                isBootleg={topItem.is_bootleg} 
+                style={{ width: width, height: width / aspectRatio }} 
+              />
+            ) : ['DVD', 'BluRay', '4K'].includes(topItem.format) ? (
+              <GlossyCard 
+                posterUrl={posterUrl} 
+                format={topItem.format as any} 
+                isCustom={!!topItem.custom_poster_url} 
+                isBootleg={topItem.is_bootleg} 
+                style={{ width: width, height: width / aspectRatio }} 
+              />
+            ) : (
+              <View className="bg-neutral-900 rounded-lg overflow-hidden border border-neutral-800" style={{ width: width, height: width / aspectRatio }}>
+                {posterUrl ? (
+                  <Image source={{ uri: posterUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                ) : (
+                  <View className="flex-1 items-center justify-center p-2">
+                    <FontAwesome name="film" size={width * 0.4} color="#333" />
+                    <Text className="text-[10px] font-mono text-neutral-500 text-center mt-2 uppercase px-4 truncate">
+                      {media ? (media.title || media.name) : `ID: ${topItem.movie_id || topItem.show_id}`}
+                    </Text>
+                  </View>
+                )}
+                {topItem.is_bootleg && <BootlegSticker size={30} />}
+              </View>
+            )}
 
-          {isGrail && (
-            <View 
-              className="absolute inset-0 border-[3px] border-yellow-400 rounded-sm"
-              pointerEvents="none"
-              style={{ zIndex: 50 }}
-            />
-          )}
-          
-          {isWishlist && (
-            <View className="absolute inset-0 bg-black/40 border-2 border-dashed border-neutral-600 rounded-sm" style={{ zIndex: 60 }} />
-          )}
-        </View>
+            {isGrail && (
+              <View 
+                className="absolute inset-0 border-[3px] border-yellow-400 rounded-sm"
+                pointerEvents="none"
+                style={{ zIndex: 50 }}
+              />
+            )}
+            
+            {isWishlist && (
+              <View className="absolute inset-0 bg-black/40 border-2 border-dashed border-neutral-600 rounded-sm" style={{ zIndex: 60 }} />
+            )}
+          </View>
 
           <View className="flex-row w-[100%] justify-end items-center mt-2 px-1">
             <View className={`px-2 py-0.5 rounded flex-row items-center gap-1 ${FORMAT_COLORS[topItem.format] || 'bg-neutral-700'}`}>
@@ -539,6 +540,7 @@ export function StackCard({
               </View>
             )}
           </View>
+        </>
       </AnimatedPressable>
     );
   }
