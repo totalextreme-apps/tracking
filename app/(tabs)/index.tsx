@@ -167,12 +167,20 @@ export default function HomeScreen() {
 
   const getFormatColorClasses = (fmt: string, isSelected: boolean) => {
     if (isSelected) return 'bg-amber-500/20 border-amber-500/50 text-amber-500';
-    if (fmt === 'VHS') return 'bg-red-500/10 border-red-500/20 text-red-500/80';
-    if (fmt === 'DVD') return 'bg-blue-500/10 border-blue-500/20 text-blue-500/80';
-    if (fmt === 'BluRay') return 'bg-purple-500/10 border-purple-500/20 text-purple-500/80';
-    if (fmt === '4K') return 'bg-green-500/10 border-green-500/20 text-green-500/80';
-    if (fmt === 'Digital') return 'bg-teal-500/10 border-teal-500/20 text-teal-500/80';
-    return 'bg-neutral-900 border-neutral-800 text-neutral-500';
+    
+    // Default Text Color (Light Gray like sort buttons)
+    const baseText = 'text-neutral-500';
+    
+    if (fmt === 'VHS') return `bg-red-500/5 border-red-500/30 ${baseText}`;
+    if (fmt === 'DVD') return `bg-amber-600/5 border-amber-600/30 ${baseText}`;
+    if (fmt === 'BluRay') return `bg-purple-600/5 border-purple-600/30 ${baseText}`;
+    if (fmt === '4K') return `bg-green-600/5 border-green-600/30 ${baseText}`;
+    if (fmt === 'Digital') return `bg-teal-600/5 border-teal-600/30 ${baseText}`;
+    if (fmt === 'BOOTLEG') return `bg-orange-600/10 border-orange-600/40 ${baseText}`;
+    if (fmt === 'FOR SALE') return `bg-red-600/10 border-red-600/40 ${baseText}`;
+    if (fmt === 'FOR TRADE') return `bg-sky-600/10 border-sky-600/40 ${baseText}`;
+    
+    return `bg-neutral-900 border-neutral-800 ${baseText}`;
   };
 
   if (authPhase === 'checking' || authLoading) return <View className="flex-1 bg-black items-center justify-center"><TrackingLoader label="SYNCHRONIZING..." /></View>;
