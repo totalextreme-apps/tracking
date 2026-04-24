@@ -27,6 +27,7 @@ import * as Haptics from 'expo-haptics';
 import { supabase } from '@/lib/supabase';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { searchMedia, TmdbMediaResult, getMovieById, getTvShowById } from '@/lib/tmdb';
+import { MemberCard } from '@/components/MemberCard';
 
 const CORK_BG = 'https://www.transparenttextures.com/patterns/cork-board.png';
 
@@ -421,22 +422,41 @@ export default function CommunityScreen() {
             )}
           </View>
 
-          {/* Following strip */}
+          {/* Member Card Feed */}
           {following && following.length > 0 && (
-            <View style={{ paddingHorizontal: 16, marginBottom: 16 }}>
-              <Text style={{ color: '#3a3a3a', fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold', letterSpacing: 2, marginBottom: 8, textTransform: 'uppercase' }}>Tracking</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                {following.map((f: any) => (
-                  <Pressable key={f.following_id} onPress={() => router.push(`/profile/${f.following_id}?from=community`)} style={{ marginRight: 12, alignItems: 'center' }}>
-                    <View style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: '#f59e0b33', padding: 2, marginBottom: 4 }}>
-                      <View style={{ flex: 1, borderRadius: 20, backgroundColor: '#1a1a1a', overflow: 'hidden' }}>
-                        {f.profiles?.avatar_url ? <Image source={{ uri: f.profiles.avatar_url }} style={{ width: '100%', height: '100%' }} /> : <Ionicons name="person" size={16} color="#444" />}
-                      </View>
-                    </View>
-                    <Text style={{ color: '#525252', fontFamily: 'SpaceMono', fontSize: 8, width: 44, textAlign: 'center' }} numberOfLines={1}>{f.profiles?.username || '?'}</Text>
-                  </Pressable>
-                ))}
-              </ScrollView>
+            <View style={{ paddingHorizontal: 16, marginBottom: 24, paddingBottom: 24, borderBottomWidth: 1, borderBottomColor: '#1a1a1a' }}>
+              
+              {/* TOP 5 */}
+              {following.some((f: any) => f.is_top_five) && (
+                  <View style={{ marginBottom: 16 }}>
+                      <Text style={{ color: '#f59e0b', fontFamily: 'SpaceMono', fontSize: 10, fontWeight: 'bold', letterSpacing: 2, marginBottom: 16, textTransform: 'uppercase' }}>★ My Top 5</Text>
+                      {following.filter((f: any) => f.is_top_five).map((f: any) => (
+                        <View key={f.following_id} style={{ marginBottom: 24 }}>
+                          <MemberCard 
+                              userId={f.following_id} 
+                              profile={f.profiles} 
+                              isReadOnly={true}
+                              onAvatarPress={() => router.push(`/profile/${f.following_id}?from=community`)}
+                              onDisplayItems={f.profiles?.on_display || []}
+                          />
+                        </View>
+                      ))}
+                  </View>
+              )}
+
+              {/* TRACKING */}
+              <Text style={{ color: '#3a3a3a', fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold', letterSpacing: 2, marginBottom: 16, textTransform: 'uppercase' }}>The Network</Text>
+              {following.filter((f: any) => !f.is_top_five).map((f: any) => (
+                 <View key={f.following_id} style={{ marginBottom: 24 }}>
+                   <MemberCard 
+                      userId={f.following_id} 
+                      profile={f.profiles} 
+                      isReadOnly={true}
+                      onAvatarPress={() => router.push(`/profile/${f.following_id}?from=community`)}
+                      onDisplayItems={f.profiles?.on_display || []}
+                   />
+                 </View>
+              ))}
             </View>
           )}
 
@@ -462,6 +482,13 @@ export default function CommunityScreen() {
                   if (pulseFilter === 'collection' && item.activity_type === 'post') return false;
                   if (pulseFilter === 'notes' && item.activity_type !== 'post') return false;
                   return true;
+                })
+                .sort((a: any, b: any) => {
+                   const isATop5 = following?.find((f: any) => f.following_id === a.user_id)?.is_top_five;
+                   const isBTop5 = following?.find((f: any) => f.following_id === b.user_id)?.is_top_five;
+                   if (isATop5 && !isBTop5) return -1;
+                   if (!isATop5 && isBTop5) return 1;
+                   return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
                 })
                 .map((item: any, idx: number) => {
                 const profile = item.profiles;
@@ -500,6 +527,32 @@ export default function CommunityScreen() {
               })
             )}
           </View>
+
+          {/* Suggested Members (Shared Tastes) */}
+          {suggestedMembers && suggestedMembers.length > 0 && (
+            <View style={{ paddingHorizontal: 16, marginTop: 16, marginBottom: 24, paddingTop: 24, borderTopWidth: 1, borderTopColor: '#1a1a1a' }}>
+              <Text style={{ color: '#3a3a3a', fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold', letterSpacing: 2, marginBottom: 16, textTransform: 'uppercase' }}>Suggested For You (Shared Tastes)</Text>
+              {suggestedMembers.map((user: any) => (
+                <View key={user.id} style={{ marginBottom: 24 }}>
+                  <MemberCard 
+                      userId={user.id} 
+                      profile={user} 
+                      isReadOnly={true}
+                      onAvatarPress={() => router.push(`/profile/${user.id}?from=community`)}
+                  />
+                  <View style={{ marginTop: -12, paddingHorizontal: 12 }}>
+                      <Pressable 
+                          onPress={() => toggleFollow.mutate({ targetUserId: user.id, isFollowing: false })}
+                          style={{ backgroundColor: '#f59e0b', paddingVertical: 8, borderRadius: 8, alignItems: 'center' }}
+                      >
+                          <Text style={{ fontFamily: 'SpaceMono', fontSize: 10, fontWeight: 'bold', color: '#000' }}>TRACK THIS MEMBER</Text>
+                      </Pressable>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+
         </ScrollView>
       )}
 

@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, Pressable, TextInput, Modal } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, Pressable, TextInput, Modal, Alert } from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
-import { useProfile, useFollowers, useFollowing, useToggleFollow } from '@/hooks/useSocial';
+import { useProfile, useFollowers, useFollowing, useToggleFollow, useToggleTopFive } from '@/hooks/useSocial';
 import { useCollection } from '@/hooks/useCollection';
 import { useAuth } from '@/context/AuthContext';
 import { MemberCard } from '@/components/MemberCard';
@@ -128,12 +128,23 @@ export default function UserProfileScreen() {
   const binItems = filterAndSortItems(collection?.filter((item: any) => item.for_sale || item.for_trade) || []);
 
   const toggleFollowMutation = useToggleFollow(currentUserId);
+  const toggleTopFiveMutation = useToggleTopFive(currentUserId);
   const isFollowing = currentUserId && followers?.some((f: any) => f.follower_id === currentUserId);
+  const isTopFive = following?.some((f: any) => f.following_id === id && f.is_top_five);
   const isOwnProfile = currentUserId === id;
 
   const handleToggleFollow = () => {
     if (!currentUserId || !id || isOwnProfile) return;
     toggleFollowMutation.mutate({ targetUserId: id, isFollowing: !!isFollowing });
+  };
+
+  const handleToggleTopFive = () => {
+    if (!currentUserId || !id || isOwnProfile) return;
+    toggleTopFiveMutation.mutate({ targetUserId: id, setToTopFive: !isTopFive }, {
+        onError: (err: any) => {
+            Alert.alert("Top 5 Error", err.message || "Failed to update Top 5");
+        }
+    });
   };
 
   if (profileLoading) {
@@ -238,7 +249,7 @@ export default function UserProfileScreen() {
           </View>
 
           {!isOwnProfile && (
-            <View className="flex-row gap-3 mt-8 px-6 w-full max-w-sm">
+            <View className="flex-row gap-2 mt-8 px-6 w-full max-w-sm justify-center">
               <Pressable 
                 onPress={handleToggleFollow}
                 disabled={toggleFollowMutation.isPending}
@@ -248,7 +259,35 @@ export default function UserProfileScreen() {
                   name={isFollowing ? "person-remove-outline" : "person-add-outline"} 
                   size={16} 
                   color={isFollowing ? "#525252" : "#f59e0b"} 
-                  className="mr-2"
+                />
+                <Text className={`font-mono font-bold text-[10px] ml-2 ${isFollowing ? 'text-neutral-500' : 'text-amber-500'}`}>
+                  {isFollowing ? 'UNFOLLOW' : 'TRACK'}
+                </Text>
+              </Pressable>
+
+              {isFollowing && (
+                <Pressable 
+                  onPress={handleToggleTopFive}
+                  disabled={toggleTopFiveMutation.isPending}
+                  className={`px-4 h-12 rounded-xl border-2 items-center justify-center ${isTopFive ? 'border-amber-500 bg-amber-500/10' : 'border-neutral-800 bg-neutral-900/40'}`}
+                >
+                  <Ionicons 
+                    name={isTopFive ? "star" : "star-outline"} 
+                    size={16} 
+                    color={isTopFive ? "#f59e0b" : "#525252"} 
+                  />
+                  <Text className={`font-mono font-bold text-[8px] mt-1 tracking-widest ${isTopFive ? 'text-amber-500' : 'text-neutral-500'}`}>
+                    TOP 5
+                  </Text>
+                </Pressable>
+              )}
+
+              <Pressable className="flex-1 flex-row h-12 rounded-xl border border-neutral-800 bg-neutral-900 items-center justify-center">
+                <Ionicons name="chatbubbles-outline" size={16} color="#f59e0b" />
+                <Text className="font-mono font-bold text-[10px] text-amber-500 ml-2">MESSAGE</Text>
+              </Pressable>
+            </View>
+          )}                  className="mr-2"
                 />
                 <Text className={`font-mono font-bold text-xs tracking-tighter ${isFollowing ? 'text-neutral-500' : 'text-amber-500'}`}>
                   {isFollowing ? 'UNFOLLOW' : 'FOLLOW'}

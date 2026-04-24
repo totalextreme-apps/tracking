@@ -6,11 +6,13 @@ import { Pressable, Text, View } from 'react-native';
 type MemberCardProps = {
     userId: string | null;
     profile: any;
-    onEditPress: () => void;
-    onAvatarPress: () => void;
+    onEditPress?: () => void;
+    onAvatarPress?: () => void;
+    isReadOnly?: boolean;
+    onDisplayItems?: any[];
 };
 
-export function MemberCard({ userId, profile, onEditPress, onAvatarPress }: MemberCardProps) {
+export function MemberCard({ userId, profile, onEditPress, onAvatarPress, isReadOnly = false, onDisplayItems = [] }: MemberCardProps) {
     // Deterministic pseudo-random barcode seeded from userId
     const barcodeLines = useMemo(() => {
         let seed = (userId || 'guest').split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
@@ -24,7 +26,8 @@ export function MemberCard({ userId, profile, onEditPress, onAvatarPress }: Memb
     const displayId = userId ? userId.substring(0, 8).toUpperCase() : 'UNKNOWN';
 
     return (
-        <View className="w-full aspect-[1.586] rounded-xl overflow-hidden relative shadow-xl bg-[#262626]">
+        <View className="w-full">
+            <View className="w-full aspect-[1.586] rounded-xl overflow-hidden relative shadow-xl bg-[#262626]">
             {/* Top Orange Stripe */}
             <View className="absolute top-4 left-0 right-0 h-1 bg-amber-600" />
             <View className="absolute top-[18px] left-0 right-0 h-0.5 bg-black/50" />
@@ -74,7 +77,7 @@ export function MemberCard({ userId, profile, onEditPress, onAvatarPress }: Memb
 
                 {/* RIGHT COLUMN: Photo */}
                 <View className="w-[35%] justify-center items-center pb-2">
-                    <Pressable onPress={onAvatarPress} className="w-full aspect-[3/4] bg-neutral-200 p-1 shadow-lg">
+                    <Pressable onPress={onAvatarPress} disabled={!onAvatarPress} className="w-full aspect-[3/4] bg-neutral-200 p-1 shadow-lg">
                         <View className="w-full h-full bg-neutral-800 border-2 border-white overflow-hidden relative">
                             {profile?.avatar_url ? (
                                 <Image source={{ uri: profile.avatar_url }} style={{ width: '100%', height: '100%' }} contentFit="cover" transition={400} />
@@ -85,13 +88,36 @@ export function MemberCard({ userId, profile, onEditPress, onAvatarPress }: Memb
                             )}
                         </View>
                         {/* Edit Icon Badge */}
-                        <View className="absolute -bottom-3 -right-3 bg-amber-600 p-2 rounded-full border-2 border-white shadow-sm z-10">
-                            <FontAwesome name="camera" size={14} color="white" />
-                        </View>
+                        {!isReadOnly && onEditPress && (
+                            <Pressable onPress={onEditPress} className="absolute -bottom-3 -right-3 bg-amber-600 p-2 rounded-full border-2 border-white shadow-sm z-10">
+                                <FontAwesome name="camera" size={14} color="white" />
+                            </Pressable>
+                        )}
                     </Pressable>
                 </View>
             </View>
+        </View>
 
+        {/* 3 Most Recent On Display Items */}
+        {onDisplayItems && onDisplayItems.length > 0 && (
+            <View className="mt-3 flex-row gap-2 justify-center">
+                {onDisplayItems.slice(0, 3).map((item, i) => {
+                    const posterPath = item.movies?.poster_path || item.shows?.poster_path;
+                    const posterUrl = posterPath ? `https://image.tmdb.org/t/p/w200${posterPath}` : null;
+                    return (
+                        <View key={item.id || i} className="w-20 aspect-[2/3] bg-neutral-800 rounded border border-neutral-700 overflow-hidden shadow">
+                            {posterUrl ? (
+                                <Image source={{ uri: posterUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                            ) : (
+                                <View className="flex-1 items-center justify-center">
+                                    <FontAwesome name="film" size={20} color="#525252" />
+                                </View>
+                            )}
+                        </View>
+                    );
+                })}
+            </View>
+        )}
         </View>
     );
 }

@@ -32,11 +32,32 @@ export const useFollowing = (userId?: string) => {
       if (!userId) return [];
       const { data, error } = await supabase
         .from('follows')
-        .select('*, profiles!following_id(*)')
-        .eq('follower_id', userId);
+        .select(`
+          *, 
+          profiles!following_id(
+            id, username, avatar_url,
+            on_display:collection_items(
+              id, is_on_display, created_at, movies(poster_path), shows(poster_path)
+            )
+          )
+        `)
+        .eq('follower_id', userId)
+        .eq('profiles.on_display.is_on_display', true)
+        .order('is_top_five', { ascending: false });
 
       if (error) throw error;
-      return data;
+      
+      // Post-process to ensure only the 3 most recent on-display items are sent for each profile.
+      // (Supabase join filtering with .eq on child arrays still returns all matches, so we limit them here if we just want 3)
+      return data.map((f: any) => {
+          if (f.profiles?.on_display) {
+             f.profiles.on_display = f.profiles.on_display
+                 .filter((i: any) => i.is_on_display)
+                 .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                 .slice(0, 3);
+          }
+          return f;
+      });
     },
     enabled: !!userId,
   });
@@ -86,8 +107,42 @@ export const useToggleFollow = (currentUserId?: string) => {
     },
     onSuccess: (_, { targetUserId }) => {
       queryClient.invalidateQueries({ queryKey: ['following', currentUserId] });
-      queryClient.invalidateQueries({ queryKey: ['followers', targetUserId] });
       queryClient.invalidateQueries({ queryKey: ['users', 'suggested'] });
+    },
+  });
+};
+
+// 4b. Toggle Top 5 Pin Mutation
+export const useToggleTopFive = (currentUserId?: string) => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ targetUserId, setToTopFive }: { targetUserId: string; setToTopFive: boolean }) => {
+      if (!currentUserId) throw new Error('Not logged in');
+      
+      if (setToTopFive) {
+          // Verify we aren't exceeding 5
+          const { count } = await supabase
+            .from('follows')
+            .select('*', { count: 'exact', head: true })
+            .eq('follower_id', currentUserId)
+            .eq('is_top_five', true);
+            
+          if (count && count >= 5) {
+              throw new Error("You already have 5 pinned members.");
+          }
+      }
+      
+      const { error } = await (supabase
+        .from('follows') as any)
+        .update({ is_top_five: setToTopFive })
+        .match({ follower_id: currentUserId, following_id: targetUserId });
+        
+      if (error) throw error;
+      return setToTopFive;
+    },
+    onSuccess: (_, { targetUserId }) => {
+      queryClient.invalidateQueries({ queryKey: ['following', currentUserId] });
     },
   });
 };
