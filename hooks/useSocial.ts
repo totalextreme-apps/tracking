@@ -34,23 +34,27 @@ export const useFollowing = (userId?: string) => {
         .from('follows')
         .select(`
           *, 
-          profiles!following_id(
-            id, username, avatar_url,
-            on_display:collection_items(
-              id, is_on_display, created_at, movies(poster_path), shows(poster_path)
-            )
-          )
+          profiles!following_id(*)
         `)
         .eq('follower_id', userId);
 
       if (error) throw error;
+      if (!data || data.length === 0) return [];
+
+      const profileIds = data.map((d: any) => d.following_id);
+      
+      const { data: displayItems } = await supabase
+        .from('collection_items')
+        .select('*, movies(poster_path), shows(poster_path)')
+        .in('user_id', profileIds)
+        .eq('is_on_display', true);
       
       // Post-process to ensure only the 3 most recent on-display items are sent for each profile.
       // Also to prevent breaking if the `is_top_five` migration hasn't been run yet, sort locally.
       let result = data.map((f: any) => {
-          if (f.profiles?.on_display) {
-             f.profiles.on_display = f.profiles.on_display
-                 .filter((i: any) => i.is_on_display)
+          if (f.profiles) {
+             const items = (displayItems || []).filter((i: any) => i.user_id === f.following_id);
+             f.profiles.on_display = items
                  .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
                  .slice(0, 3);
           }
@@ -202,6 +206,43 @@ export const useSuggestedUsers = (currentUserId?: string) => {
 
       if (error) throw error;
       return data as Profile[];
+    },
+    enabled: true,
+  });
+};
+
+// 5c. All Users (Directory)
+export const useAllUsers = (currentUserId?: string) => {
+  return useQuery({
+    queryKey: ['users', 'directory'],
+    queryFn: async () => {
+      let query = supabase
+        .from('profiles')
+        .select('*, grails:collection_items(movie_id, show_id, media_type, movies(poster_path), shows(poster_path))')
+        .order('created_at', { ascending: false })
+        .limit(100);
+        
+      const { data, error } = await query;
+      if (error) throw error;
+      
+      // Also fetch on_display items for these users so MemberCards can render them
+      const profileIds = data.map((d: any) => d.id);
+      const { data: displayItems } = await supabase
+        .from('collection_items')
+        .select('*, movies(poster_path), shows(poster_path)')
+        .in('user_id', profileIds)
+        .eq('is_on_display', true);
+        
+      // Embed on_display items into the profiles
+      let result = data.map((profile: any) => {
+          const items = (displayItems || []).filter((i: any) => i.user_id === profile.id);
+          profile.on_display = items
+              .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+              .slice(0, 3);
+          return profile;
+      });
+
+      return result as Profile[];
     },
     enabled: true,
   });

@@ -18,7 +18,8 @@ import {
   useUpdatePost,
   usePostComments,
   useCreatePostComment,
-  useMarketplaceFeed
+  useMarketplaceFeed,
+  useAllUsers
 } from '@/hooks/useSocial';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -31,7 +32,7 @@ import { MemberCard } from '@/components/MemberCard';
 
 const CORK_BG = 'https://www.transparenttextures.com/patterns/cork-board.png';
 
-type Tab = 'activity' | 'board' | 'inbox' | 'alerts';
+type Tab = 'activity' | 'directory' | 'board' | 'inbox' | 'alerts';
 
 function PostCommentSection({ postId }: { postId: string }) {
   const { userId } = useAuth();
@@ -215,6 +216,7 @@ export default function CommunityScreen() {
   const { data: notifications, isLoading: notifLoading } = useNotifications(userId);
   const { data: conversations, isLoading: inboxLoading } = useConversations(userId);
   const { data: suggestedMembers } = useSuggestedUsers(userId);
+  const { data: allUsers, isLoading: allUsersLoading } = useAllUsers(userId);
 
   // TMDB Media Search effect
   React.useEffect(() => {
@@ -315,6 +317,7 @@ export default function CommunityScreen() {
 
   const tabs = [
     { key: 'activity', label: 'Activity' },
+    { key: 'directory', label: 'Directory' },
     { key: 'board', label: 'Board' },
     { key: 'inbox', label: 'Inbox' },
     { key: 'alerts', label: unreadCount > 0 ? `Alerts (${unreadCount})` : 'Alerts' },
@@ -374,61 +377,6 @@ export default function CommunityScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <MarketplaceSection />
-          {/* User Search */}
-          <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#111', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: '#1f1f1f', marginBottom: 4 }}>
-              <Ionicons name="search" size={14} color="#525252" />
-              <TextInput
-                style={{ flex: 1, color: '#fff', fontFamily: 'SpaceMono', fontSize: 12, marginLeft: 8 }}
-                placeholder="Find members..." placeholderTextColor="#3a3a3a"
-                value={userSearch} onChangeText={setUserSearch}
-              />
-              {userSearch.length > 0 && (
-                <Pressable onPress={() => setUserSearch('')}>
-                  <Ionicons name="close-circle" size={16} color="#444" />
-                </Pressable>
-              )}
-            </View>
-
-            {userSearch.length > 2 && (
-              <View style={{ backgroundColor: '#111', borderRadius: 10, borderWidth: 1, borderColor: '#1f1f1f', marginBottom: 8, overflow: 'hidden' }}>
-                {searchLoading ? <ActivityIndicator color="#f59e0b" style={{ padding: 16 }} /> : (
-                  (searchResults || []).map((user: any) => (
-                    <Pressable key={user.id} onPress={() => { setUserSearch(''); router.push(`/profile/${user.id}?from=community`); }} style={{ padding: 12, borderBottomWidth: 1, borderBottomColor: '#1a1a1a' }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: user.grails?.length ? 10 : 0 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                          <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#1a1a1a', overflow: 'hidden', marginRight: 10, borderWidth: 1, borderColor: '#222' }}>
-                            {user.avatar_url ? <Image source={{ uri: user.avatar_url }} style={{ width: '100%', height: '100%' }} /> : <Ionicons name="person" size={14} color="#444" />}
-                          </View>
-                          <Text style={{ color: '#fff', fontFamily: 'SpaceMono', fontSize: 12 }}>@{user.username || 'anon'}</Text>
-                        </View>
-                        <Pressable onPress={(e) => { e.stopPropagation(); toggleFollow.mutate({ targetUserId: user.id, isFollowing: !!isFollowing(user.id) }); }} style={{ backgroundColor: isFollowing(user.id) ? '#1a1a1a' : '#f59e0b', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20 }}>
-                          <Text style={{ fontFamily: 'SpaceMono', fontSize: 10, fontWeight: 'bold', color: isFollowing(user.id) ? '#525252' : '#000' }}>
-                            {isFollowing(user.id) ? 'TRACKING' : 'TRACK'}
-                          </Text>
-                        </Pressable>
-                      </View>
-                      
-                      {/* Grails Preview */}
-                      {user.grails?.length > 0 && (
-                        <View style={{ flexDirection: 'row', paddingLeft: 46 }}>
-                          {user.grails.slice(0, 5).map((g: any, i: number) => (
-                            <View key={i} style={{ width: 30, height: 45, borderRadius: 2, overflow: 'hidden', marginRight: 6, backgroundColor: '#111', borderWidth: 1, borderColor: '#222' }}>
-                              <Image 
-                                source={{ uri: getPosterUrl(g.movies?.poster_path || g.shows?.poster_path) || '' }} 
-                                style={{ width: '100%', height: '100%' }}
-                              />
-                            </View>
-                          ))}
-                        </View>
-                      )}
-                    </Pressable>
-                  ))
-                )}
-              </View>
-            )}
-          </View>
-
           {/* Member Card Feed */}
           {following && following.length > 0 && (
             <View style={{ paddingHorizontal: 16, marginBottom: 24, paddingBottom: 24, borderBottomWidth: 1, borderBottomColor: '#1a1a1a' }}>
@@ -568,6 +516,70 @@ export default function CommunityScreen() {
             </View>
           )}
 
+        </ScrollView>
+      )}
+
+      {/* ══════════════════════════ DIRECTORY TAB ══════════════════════════ */}
+      {activeTab === 'directory' && (
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingBottom: 160, paddingTop: 16 }}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* User Search inside Directory */}
+          <View style={{ paddingHorizontal: 16, marginBottom: 24 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#111', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: '#1f1f1f', marginBottom: 4 }}>
+              <Ionicons name="search" size={14} color="#525252" />
+              <TextInput
+                style={{ flex: 1, color: '#fff', fontFamily: 'SpaceMono', fontSize: 12, marginLeft: 8 }}
+                placeholder="Find members..." placeholderTextColor="#3a3a3a"
+                value={userSearch} onChangeText={setUserSearch}
+              />
+              {userSearch.length > 0 && (
+                <Pressable onPress={() => setUserSearch('')}>
+                  <Ionicons name="close-circle" size={16} color="#444" />
+                </Pressable>
+              )}
+            </View>
+
+            {userSearch.length > 2 && (
+              <View style={{ backgroundColor: '#111', borderRadius: 10, borderWidth: 1, borderColor: '#1f1f1f', marginBottom: 8, overflow: 'hidden' }}>
+                {searchLoading ? <ActivityIndicator color="#f59e0b" style={{ padding: 16 }} /> : (
+                  (searchResults || []).map((user: any) => (
+                    <Pressable key={user.id} onPress={() => { setUserSearch(''); router.push(`/profile/${user.id}?from=community`); }} style={{ padding: 12, borderBottomWidth: 1, borderBottomColor: '#1a1a1a' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: user.grails?.length ? 10 : 0 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                          <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#1a1a1a', overflow: 'hidden', marginRight: 10, borderWidth: 1, borderColor: '#222' }}>
+                            {user.avatar_url ? <Image source={{ uri: user.avatar_url }} style={{ width: '100%', height: '100%' }} /> : <Ionicons name="person" size={14} color="#444" />}
+                          </View>
+                          <Text style={{ color: '#fff', fontFamily: 'SpaceMono', fontSize: 12 }}>@{user.username || 'anon'}</Text>
+                        </View>
+                      </View>
+                    </Pressable>
+                  ))
+                )}
+              </View>
+            )}
+          </View>
+
+          <View style={{ paddingHorizontal: 16 }}>
+            <Text style={{ color: '#3a3a3a', fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold', letterSpacing: 2, marginBottom: 16, textTransform: 'uppercase' }}>All Connected Users</Text>
+            {allUsersLoading ? (
+               <ActivityIndicator color="#f59e0b" style={{ padding: 24 }} />
+            ) : (
+               (allUsers || []).map((user: any) => (
+                 <View key={user.id} style={{ marginBottom: 24 }}>
+                   <MemberCard 
+                      userId={user.id} 
+                      profile={user} 
+                      isReadOnly={true}
+                      onAvatarPress={() => router.push(`/profile/${user.id}?from=community`)}
+                      onDisplayItems={user.on_display || []}
+                   />
+                 </View>
+               ))
+            )}
+          </View>
         </ScrollView>
       )}
 
