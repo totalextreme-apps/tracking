@@ -282,24 +282,12 @@ export default function UserProfileScreen() {
                 </Pressable>
               )}
 
-              <Pressable className="flex-1 flex-row h-12 rounded-xl border border-neutral-800 bg-neutral-900 items-center justify-center">
-                <Ionicons name="chatbubbles-outline" size={16} color="#f59e0b" />
-                <Text className="font-mono font-bold text-[10px] text-amber-500 ml-2">MESSAGE</Text>
-              </Pressable>
-            </View>
-          )}                  className="mr-2"
-                />
-                <Text className={`font-mono font-bold text-xs tracking-tighter ${isFollowing ? 'text-neutral-500' : 'text-amber-500'}`}>
-                  {isFollowing ? 'UNFOLLOW' : 'FOLLOW'}
-                </Text>
-              </Pressable>
-              
               <Pressable 
                 onPress={() => router.push(`/(tabs)/profile/chat/${id}`)}
-                className="flex-1 flex-row h-12 rounded-xl border-2 border-neutral-800 bg-neutral-900 items-center justify-center gap-2"
+                className="flex-1 flex-row h-12 rounded-xl border border-neutral-800 bg-neutral-900 items-center justify-center"
               >
                 <Ionicons name="chatbubbles-outline" size={16} color="#f59e0b" />
-                <Text className="font-mono font-bold text-xs tracking-tighter text-amber-500">MESSAGE</Text>
+                <Text className="font-mono font-bold text-[10px] text-amber-500 ml-2">MESSAGE</Text>
               </Pressable>
             </View>
           )}
