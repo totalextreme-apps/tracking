@@ -13,7 +13,7 @@ import { getPosterUrl } from '@/lib/dummy-data';
 import { StatusBar } from 'expo-status-bar';
 
 type TabType = 'on-display' | 'grails' | 'collection' | 'wishlist' | 'bin' | 'analytics';
-type SortOption = 'added' | 'name' | 'format' | 'year';
+export type SortOption = 'recent' | 'title' | 'release' | 'rating' | 'genre' | 'format';
 
 export default function UserProfileScreen() {
   const { id, from } = useLocalSearchParams<{ id: string; from?: string }>();
@@ -26,8 +26,16 @@ export default function UserProfileScreen() {
   const { data: collection, isLoading: collectionLoading } = useCollection(id);
   
   const [activeTab, setActiveTab] = useState<TabType>('on-display');
-  const [sortBy, setSortBy] = useState<SortOption>('added');
+  const [sortBy, setSortBy] = useState<SortOption>('recent');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [searchQuery, setSearchQuery] = useState('');
+  const [formatFilter, setFormatFilter] = useState<string | null>(null);
+  const [genreFilter, setGenreFilter] = useState<string | null>(null);
+  const [mediaTypeFilter, setMediaTypeFilter] = useState<'movie' | 'tv' | null>(null);
+  const [isGenreDropdownOpen, setIsGenreDropdownOpen] = useState(false);
+
+  const genres = useMemo(() => getGenres(collection), [collection]);
+  const FORMAT_ORDER: Record<string, number> = { '4K': 5, 'Blu-ray': 4, 'BluRay': 4, 'DVD': 3, 'VHS': 2, 'Digital': 1 };
 
   const filterAndSortItems = (items: any[]) => {
     let result = [...(items || [])];
@@ -41,21 +49,52 @@ export default function UserProfileScreen() {
        );
     }
 
+    if (formatFilter && formatFilter !== 'ALL') {
+      result = result.filter(item => {
+        if (formatFilter === 'BOOTLEG') return item.is_bootleg;
+        return item.format === formatFilter;
+      });
+    }
+
+    if (genreFilter) {
+      result = result.filter(item => (item.movies || item.shows)?.genres?.some((g: any) => g?.name === genreFilter));
+    }
+
+    if (mediaTypeFilter) {
+      result = result.filter(item => item.media_type === mediaTypeFilter);
+    }
+
     result.sort((a, b) => {
-      if (sortBy === 'name') {
-        const titleA = (a.movies?.title || a.shows?.name || '').toLowerCase();
-        const titleB = (b.movies?.title || b.shows?.name || '').toLowerCase();
-        return titleA.localeCompare(titleB);
+      let comparison = 0;
+      const mediaA = a.movies || a.shows;
+      const mediaB = b.movies || b.shows;
+
+      switch (sortBy) {
+        case 'title':
+          comparison = (mediaA?.title || mediaA?.name || '').localeCompare(mediaB?.title || mediaB?.name || '');
+          break;
+        case 'release':
+          const dateA = mediaA?.release_date || mediaA?.first_air_date || '';
+          const dateB = mediaB?.release_date || mediaB?.first_air_date || '';
+          comparison = dateA.localeCompare(dateB);
+          break;
+        case 'rating':
+          comparison = (a.rating || 0) - (b.rating || 0);
+          break;
+        case 'genre':
+          const gA = mediaA?.genres?.[0]?.name || 'ZZZ';
+          const gB = mediaB?.genres?.[0]?.name || 'ZZZ';
+          comparison = gA.localeCompare(gB);
+          break;
+        case 'format':
+          comparison = (FORMAT_ORDER[a.format] || 0) - (FORMAT_ORDER[b.format] || 0);
+          break;
+        case 'recent':
+        default:
+          comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          break;
       }
-      if (sortBy === 'year') {
-        const yearA = parseInt((a.movies?.release_date || a.shows?.first_air_date || '0').slice(0, 4));
-        const yearB = parseInt((b.movies?.release_date || b.shows?.first_air_date || '0').slice(0, 4));
-        return yearB - yearA;
-      }
-      if (sortBy === 'format') {
-        return (a.format || '').localeCompare(b.format || '');
-      }
-      return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+      return sortOrder === 'desc' ? -comparison : comparison;
     });
 
     return result;
@@ -240,38 +279,73 @@ export default function UserProfileScreen() {
 
         {activeTab !== 'analytics' && (
           <View className="px-4">
-            <View className="flex-row items-center bg-neutral-900 rounded-lg p-2 px-3 border border-neutral-800 mb-4">
-              <Ionicons name="search" size={16} color="#737373" />
-              <TextInput
-                className="flex-1 text-white ml-2 font-mono text-sm"
-                placeholder={`Search ${activeTab}...`}
-                placeholderTextColor="#525252"
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
-              {searchQuery.length > 0 && (
-                <Pressable onPress={() => setSearchQuery('')}>
-                  <Ionicons name="close-circle" size={16} color="#525252" />
-                </Pressable>
-              )}
+            <View className="mb-4">
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                {['ALL', 'VHS', 'DVD', 'BluRay', '4K', 'Digital', 'BOOTLEG'].map(f => {
+                   const isSelected = f === 'ALL' ? formatFilter === null : formatFilter === f;
+                   return (
+                     <Pressable 
+                       key={f} 
+                       onPress={() => setFormatFilter(f === 'ALL' ? null : f)} 
+                       className={`px-3 py-1 rounded-full border ${isSelected ? 'bg-amber-500/20 border-amber-500/50' : 'bg-neutral-900 border-neutral-800'}`}
+                     >
+                       <Text className={`font-mono text-[10px] uppercase font-bold ${isSelected ? 'text-amber-500' : 'text-neutral-500'}`}>{f === 'BluRay' ? 'Blu-ray' : f}</Text>
+                     </Pressable>
+                   );
+                })}
+              </ScrollView>
             </View>
 
-            <View className="flex-row items-center justify-between mb-6">
-              <Text className="text-neutral-600 font-mono text-[9px] uppercase font-bold tracking-widest">Sort Protocol</Text>
-              <View className="flex-row gap-2">
-                {(['added', 'name', 'format', 'year'] as SortOption[]).map((opt) => (
+            <View className="bg-neutral-900 mb-6 p-4 rounded-xl border border-neutral-800 z-50">
+                <View className="flex-row items-center gap-2 mb-2 flex-wrap">
+                  <Text className="text-neutral-500 font-mono text-[9px] uppercase tracking-tighter mr-1">SORT:</Text>
+                  {[{ id: 'recent', label: 'RECENT' }, { id: 'title', label: 'NAME' }, { id: 'release', label: 'YEAR' }, { id: 'rating', label: 'RATING' }, { id: 'genre', label: 'GENRE' }].map((s: any) => (
+                    <Pressable key={s.id} onPress={() => { if (sortBy === s.id) setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); else { setSortBy(s.id); setSortOrder(s.id === 'title' || s.id === 'release' ? 'asc' : 'desc'); } }} className={`px-2 py-1 rounded border flex-row items-center gap-1 ${sortBy === s.id ? 'bg-amber-500/10 border-amber-500/40' : 'bg-neutral-950 border-neutral-800'}`}>
+                      <Text className={`font-mono text-[8px] font-bold ${sortBy === s.id ? 'text-amber-500' : 'text-neutral-500'}`}>{s.label}</Text>
+                      {sortBy === s.id && <Ionicons name={sortOrder === 'asc' ? 'chevron-up' : 'chevron-down'} size={8} color="#f59e0b" />}
+                    </Pressable>
+                  ))}
+                </View>
+
+                <View className="flex-row items-center gap-2 mt-2 flex-wrap">
+                  <Text className="text-neutral-500 font-mono text-[9px] uppercase tracking-tighter mr-1">FILTERS:</Text>
+                  <View className="flex-row bg-neutral-950 rounded border border-neutral-800 p-0.5 mr-2">
+                    <Pressable onPress={() => setMediaTypeFilter(null)} className={`px-2 py-1 rounded ${mediaTypeFilter === null ? 'bg-neutral-800' : ''}`}><Text className={`font-mono text-[8px] font-bold ${mediaTypeFilter === null ? 'text-amber-500' : 'text-neutral-500'}`}>ALL</Text></Pressable>
+                    <Pressable onPress={() => setMediaTypeFilter('movie')} className={`px-2 py-1 rounded ${mediaTypeFilter === 'movie' ? 'bg-neutral-800' : ''}`}><Text className={`font-mono text-[8px] font-bold ${mediaTypeFilter === 'movie' ? 'text-amber-500' : 'text-neutral-500'}`}>FILM</Text></Pressable>
+                    <Pressable onPress={() => setMediaTypeFilter('tv')} className={`px-2 py-1 rounded ${mediaTypeFilter === 'tv' ? 'bg-neutral-800' : ''}`}><Text className={`font-mono text-[8px] font-bold ${mediaTypeFilter === 'tv' ? 'text-amber-500' : 'text-neutral-500'}`}>TV</Text></Pressable>
+                  </View>
+
                   <Pressable 
-                    key={opt}
-                    onPress={() => setSortBy(opt)} 
-                    className={`px-2 py-1 rounded border ${sortBy === opt ? 'bg-amber-500 border-amber-600' : 'bg-neutral-900 border-neutral-800'}`}
-                  >
-                    <Text className={`font-mono text-[8px] font-bold ${sortBy === opt ? 'text-black' : 'text-neutral-500'}`}>
-                      {opt.toUpperCase()}
-                    </Text>
+                       onPress={() => setIsGenreDropdownOpen(true)}
+                       className={`flex-row items-center gap-2 px-2 py-1 rounded border bg-neutral-950 ${genreFilter ? 'border-amber-500/50' : 'border-neutral-800'}`}
+                    >
+                       <Text className="text-neutral-500 font-mono text-[8px] uppercase tracking-tighter">GENRE:</Text>
+                       <Text className={`font-mono text-[8px] font-bold uppercase ${genreFilter ? 'text-amber-500' : 'text-neutral-500'}`}>
+                          {genreFilter || 'ALL'}
+                       </Text>
+                       <Ionicons name="chevron-down" size={8} color={genreFilter ? "#f59e0b" : "#444"} />
                   </Pressable>
-                ))}
-              </View>
+                </View>
             </View>
+
+            <Modal visible={isGenreDropdownOpen} transparent animationType="fade" onRequestClose={() => setIsGenreDropdownOpen(false)}>
+              <Pressable className="flex-1 bg-black/60 justify-center items-center p-6" onPress={() => setIsGenreDropdownOpen(false)}>
+                <View className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-sm overflow-hidden" onPress={(e: any) => e.stopPropagation()}>
+                  <View className="p-4 border-b border-neutral-800 flex-row justify-between items-center bg-neutral-950">
+                    <Text className="text-amber-500 font-mono text-[10px] font-bold tracking-widest uppercase">Select Genre</Text>
+                    <Pressable onPress={() => setIsGenreDropdownOpen(false)}><Ionicons name="close" size={18} color="#525252" /></Pressable>
+                  </View>
+                  <ScrollView style={{ maxHeight: 350 }}>
+                    <Pressable onPress={() => { setGenreFilter(null); setIsGenreDropdownOpen(false); }} className={`px-5 py-3 border-b border-neutral-800/50 ${genreFilter === null ? 'bg-amber-500/10' : ''}`}><Text className={`font-mono text-[10px] font-bold ${genreFilter === null ? 'text-amber-500' : 'text-neutral-400'}`}>ALL GENRES</Text></Pressable>
+                    {genres.map(g => (
+                      <Pressable key={g} onPress={() => { setGenreFilter(g); setIsGenreDropdownOpen(false); }} className={`px-5 py-3 border-b border-neutral-800/50 ${genreFilter === g ? 'bg-amber-500/10' : ''}`}>
+                        <Text className={`font-mono text-[10px] font-bold ${genreFilter === g ? 'text-amber-500' : 'text-neutral-400'}`}>{g}</Text>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                </View>
+              </Pressable>
+            </Modal>
           </View>
         )}
 

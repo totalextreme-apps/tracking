@@ -76,52 +76,100 @@ function PostCommentSection({ postId }: { postId: string }) {
 function MarketplaceSection() {
   const router = useRouter();
   const { data: marketplace, isLoading } = useMarketplaceFeed();
+  const [formatFilter, setFormatFilter] = useState<string | null>(null);
+  const [typeFilter, setTypeFilter] = useState<'movie' | 'tv' | null>(null);
 
   if (isLoading || !marketplace?.length) return null;
+
+  const filteredMarketplace = (marketplace || []).filter((item: any) => {
+    if (formatFilter && item.format !== formatFilter) return false;
+    if (typeFilter) {
+      const isMovie = !!item.movies;
+      if (typeFilter === 'movie' && !isMovie) return false;
+      if (typeFilter === 'tv' && isMovie) return false;
+    }
+    return true;
+  });
 
   const getPosterUrl = (path: string | null) => path ? `https://image.tmdb.org/t/p/w200${path}` : null;
 
   return (
     <View style={{ marginBottom: 24 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 12 }}>
-        <Text style={{ color: '#2a2a2a', fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold', letterSpacing: 2, textTransform: 'uppercase' }}>Community Bin</Text>
-        <Ionicons name="cart-outline" size={14} color="#1a1a1a" />
+        <View>
+          <Text style={{ color: '#2a2a2a', fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold', letterSpacing: 2, textTransform: 'uppercase' }}>Community Bin</Text>
+          <Text style={{ color: '#525252', fontFamily: 'SpaceMono', fontSize: 7, textTransform: 'uppercase' }}>{filteredMarketplace.length} Items</Text>
+        </View>
+        <View style={{ flexDirection: 'row', gap: 6 }}>
+          <Pressable onPress={() => setTypeFilter(typeFilter === 'movie' ? null : 'movie')} style={{ backgroundColor: typeFilter === 'movie' ? '#f59e0b22' : '#111', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, borderWidth: 1, borderColor: typeFilter === 'movie' ? '#f59e0b' : '#1a1a1a' }}>
+            <Text style={{ color: typeFilter === 'movie' ? '#f59e0b' : '#444', fontFamily: 'SpaceMono', fontSize: 8, fontWeight: 'bold' }}>FILM</Text>
+          </Pressable>
+          <Pressable onPress={() => setTypeFilter(typeFilter === 'tv' ? null : 'tv')} style={{ backgroundColor: typeFilter === 'tv' ? '#f59e0b22' : '#111', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, borderWidth: 1, borderColor: typeFilter === 'tv' ? '#f59e0b' : '#1a1a1a' }}>
+            <Text style={{ color: typeFilter === 'tv' ? '#f59e0b' : '#444', fontFamily: 'SpaceMono', fontSize: 8, fontWeight: 'bold' }}>TV</Text>
+          </Pressable>
+        </View>
       </View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}>
-        {(marketplace || []).map((item: any) => (
+
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, marginBottom: 12, gap: 8 }}>
+        {['VHS', 'DVD', 'BluRay', '4K', 'Digital'].map(f => (
           <Pressable 
-            key={item.id} 
-            onPress={() => {
-              const id = item.movies?.id || item.shows?.id;
-              const type = item.movies ? 'movie' : 'show';
-              router.push(`/(tabs)/${type}/${id}?ownerId=${item.user_id}`);
+            key={f} 
+            onPress={() => setFormatFilter(formatFilter === f ? null : f)}
+            style={{ 
+              backgroundColor: formatFilter === f ? '#f59e0b' : '#0a0a0a', 
+              paddingHorizontal: 10, 
+              paddingVertical: 4, 
+              borderRadius: 4, 
+              borderWidth: 1, 
+              borderColor: formatFilter === f ? '#f59e0b' : '#1a1a1a' 
             }}
-            style={{ width: 100 }}
           >
-            <View style={{ position: 'relative', width: 100, height: 140, backgroundColor: '#111', borderRadius: 8, overflow: 'hidden', borderWidth: 1, borderColor: '#1a1a1a' }}>
-              <Image 
-                source={{ uri: getPosterUrl(item.movies?.poster_path || item.shows?.poster_path) || '' }} 
-                style={{ width: '100%', height: '100%' }} 
-              />
-              <View style={{ position: 'absolute', top: 4, left: 4, flexDirection: 'row', gap: 2 }}>
-                {item.for_sale && <View style={{ backgroundColor: '#10b981', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 2 }}><Text style={{ color: '#000', fontSize: 6, fontWeight: 'bold', fontFamily: 'SpaceMono' }}>SALE</Text></View>}
-                {item.for_trade && <View style={{ backgroundColor: '#3b82f6', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 2 }}><Text style={{ color: '#fff', fontSize: 6, fontWeight: 'bold', fontFamily: 'SpaceMono' }}>TRADE</Text></View>}
-              </View>
-              {item.for_sale && item.price && (
-                <View style={{ position: 'absolute', bottom: 4, right: 4, backgroundColor: 'rgba(0,0,0,0.8)', paddingHorizontal: 4, paddingVertical: 2, borderRadius: 2, borderWidth: 1, borderColor: '#10b98144' }}>
-                  <Text style={{ color: '#10b981', fontSize: 7, fontWeight: 'bold', fontFamily: 'SpaceMono' }}>${item.price}</Text>
-                </View>
-              )}
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
-              <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: '#1a1a1a', overflow: 'hidden', marginRight: 4 }}>
-                <Image source={{ uri: item.profiles?.avatar_url || '' }} style={{ width: '100%', height: '100%' }} />
-              </View>
-              <Text style={{ color: '#666', fontFamily: 'SpaceMono', fontSize: 8 }} numberOfLines={1}>@{item.profiles?.username}</Text>
-            </View>
+            <Text style={{ color: formatFilter === f ? '#000' : '#444', fontFamily: 'SpaceMono', fontSize: 8, fontWeight: 'bold' }}>{f === 'BluRay' ? 'Blu-ray' : f}</Text>
           </Pressable>
         ))}
       </ScrollView>
+
+      {filteredMarketplace.length === 0 ? (
+        <View style={{ height: 140, justifyContent: 'center', alignItems: 'center', opacity: 0.3 }}>
+           <Text style={{ color: '#fff', fontFamily: 'SpaceMono', fontSize: 10 }}>No matches in the bin.</Text>
+        </View>
+      ) : (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}>
+          {filteredMarketplace.map((item: any) => (
+            <Pressable 
+              key={item.id} 
+              onPress={() => {
+                const id = item.movies?.id || item.shows?.id;
+                const type = item.movies ? 'movie' : 'show';
+                router.push(`/(tabs)/${type}/${id}?ownerId=${item.user_id}`);
+              }}
+              style={{ width: 100 }}
+            >
+              <View style={{ position: 'relative', width: 100, height: 140, backgroundColor: '#111', borderRadius: 8, overflow: 'hidden', borderWidth: 1, borderColor: '#1a1a1a' }}>
+                <Image 
+                  source={{ uri: getPosterUrl(item.movies?.poster_path || item.shows?.poster_path) || '' }} 
+                  style={{ width: '100%', height: '100%' }} 
+                />
+                <View style={{ position: 'absolute', top: 4, left: 4, flexDirection: 'row', gap: 2 }}>
+                  {item.for_sale && <View style={{ backgroundColor: '#10b981', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 2 }}><Text style={{ color: '#000', fontSize: 6, fontWeight: 'bold', fontFamily: 'SpaceMono' }}>SALE</Text></View>}
+                  {item.for_trade && <View style={{ backgroundColor: '#3b82f6', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 2 }}><Text style={{ color: '#fff', fontSize: 6, fontWeight: 'bold', fontFamily: 'SpaceMono' }}>TRADE</Text></View>}
+                </View>
+                {item.for_sale && item.price && (
+                  <View style={{ position: 'absolute', bottom: 4, right: 4, backgroundColor: 'rgba(0,0,0,0.8)', paddingHorizontal: 4, paddingVertical: 2, borderRadius: 2, borderWidth: 1, borderColor: '#10b98144' }}>
+                    <Text style={{ color: '#10b981', fontSize: 7, fontWeight: 'bold', fontFamily: 'SpaceMono' }}>${item.price}</Text>
+                  </View>
+                )}
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
+                <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: '#1a1a1a', overflow: 'hidden', marginRight: 4 }}>
+                  <Image source={{ uri: item.profiles?.avatar_url || '' }} style={{ width: '100%', height: '100%' }} />
+                </View>
+                <Text style={{ color: '#666', fontFamily: 'SpaceMono', fontSize: 8 }} numberOfLines={1}>@{item.profiles?.username}</Text>
+              </View>
+            </Pressable>
+          ))}
+        </ScrollView>
+      )}
     </View>
   );
 }
@@ -148,6 +196,14 @@ export default function CommunityScreen() {
   const [mediaResults, setMediaResults] = useState<TmdbMediaResult[]>([]);
   const [selectedMedia, setSelectedMedia] = useState<TmdbMediaResult | null>(null);
   const [isSearchingMedia, setIsSearchingMedia] = useState(false);
+
+  // Board Filters
+  const [boardRatingFilter, setBoardRatingFilter] = useState<number | null>(null);
+  const [boardTypeFilter, setBoardTypeFilter] = useState<'movie' | 'tv' | null>(null);
+  const [boardSort, setBoardSort] = useState<'recent' | 'rating'>('recent');
+
+  // Pulse Filter
+  const [pulseFilter, setPulseFilter] = useState<'all' | 'collection' | 'notes'>('all');
 
   // Data
   const { data: following } = useFollowing(userId);
@@ -386,9 +442,28 @@ export default function CommunityScreen() {
 
           {/* Pulse feed */}
           <View style={{ paddingHorizontal: 16 }}>
-            <Text style={{ color: '#3a3a3a', fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold', letterSpacing: 2, marginBottom: 12, textTransform: 'uppercase' }}>Community Pulse</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <Text style={{ color: '#3a3a3a', fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold', letterSpacing: 2, textTransform: 'uppercase' }}>Community Pulse</Text>
+              <View style={{ flexDirection: 'row', backgroundColor: '#111', borderRadius: 4, padding: 2 }}>
+                {[
+                  { id: 'all', label: 'ALL' },
+                  { id: 'collection', label: 'ADDS' },
+                  { id: 'notes', label: 'NOTES' }
+                ].map(p => (
+                  <Pressable key={p.id} onPress={() => setPulseFilter(p.id as any)} style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 2, backgroundColor: pulseFilter === p.id ? '#1c1c1c' : 'transparent' }}>
+                    <Text style={{ color: pulseFilter === p.id ? '#f59e0b' : '#333', fontFamily: 'SpaceMono', fontSize: 7, fontWeight: 'bold' }}>{p.label}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
             {communityLoading ? <ActivityIndicator color="#f59e0b" /> : (
-              (communityFeed || []).map((item: any, idx: number) => {
+              (communityFeed || [])
+                .filter((item: any) => {
+                  if (pulseFilter === 'collection' && item.activity_type === 'post') return false;
+                  if (pulseFilter === 'notes' && item.activity_type !== 'post') return false;
+                  return true;
+                })
+                .map((item: any, idx: number) => {
                 const profile = item.profiles;
                 const isPost = item.activity_type === 'post';
                 return (
@@ -499,8 +574,40 @@ export default function CommunityScreen() {
                   </Pressable>
                 </View>
               </View>
+
+              {/* Board Filters Row */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16, paddingHorizontal: 4 }}>
+                 <View style={{ flex: 1, flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 4, padding: 2 }}>
+                    <Pressable onPress={() => setBoardSort('recent')} style={{ flex: 1, paddingVertical: 6, borderRadius: 3, backgroundColor: boardSort === 'recent' ? '#2d2016' : 'transparent', alignItems: 'center' }}>
+                      <Text style={{ fontFamily: 'SpaceMono', fontSize: 8, color: boardSort === 'recent' ? '#f59e0b' : '#666', fontWeight: 'bold' }}>RECENT</Text>
+                    </Pressable>
+                    <Pressable onPress={() => setBoardSort('rating')} style={{ flex: 1, paddingVertical: 6, borderRadius: 3, backgroundColor: boardSort === 'rating' ? '#2d2016' : 'transparent', alignItems: 'center' }}>
+                      <Text style={{ fontFamily: 'SpaceMono', fontSize: 8, color: boardSort === 'rating' ? '#f59e0b' : '#666', fontWeight: 'bold' }}>TOP RATED</Text>
+                    </Pressable>
+                 </View>
+                 <View style={{ flexDirection: 'row', gap: 6 }}>
+                    <Pressable onPress={() => setBoardTypeFilter(boardTypeFilter === 'movie' ? null : 'movie')} style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 4, borderWidth: 1, borderColor: boardTypeFilter === 'movie' ? '#2d2016' : 'rgba(0,0,0,0.1)', backgroundColor: boardTypeFilter === 'movie' ? '#2d2016' : 'transparent' }}>
+                      <Text style={{ fontFamily: 'SpaceMono', fontSize: 8, color: boardTypeFilter === 'movie' ? '#f59e0b' : '#444' }}>FILM</Text>
+                    </Pressable>
+                    <Pressable onPress={() => setBoardRatingFilter(boardRatingFilter === 5 ? null : 5)} style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 4, borderWidth: 1, borderColor: boardRatingFilter === 5 ? '#2d2016' : 'rgba(0,0,0,0.1)', backgroundColor: boardRatingFilter === 5 ? '#2d2016' : 'transparent' }}>
+                      <Ionicons name="star" size={8} color={boardRatingFilter === 5 ? "#f59e0b" : "#444"} />
+                    </Pressable>
+                 </View>
+              </View>
+
               {bulletinLoading ? <ActivityIndicator color="#f59e0b" style={{ marginVertical: 20 }} /> : (
-                (bulletinFeed || []).map((post: any, idx: number) => (
+                (bulletinFeed || [])
+                  .filter((post: any) => {
+                    if (boardTypeFilter === 'movie' && !post.movies) return false;
+                    if (boardTypeFilter === 'tv' && !post.shows) return false;
+                    if (boardRatingFilter && (post.rating || 0) < boardRatingFilter) return false;
+                    return true;
+                  })
+                  .sort((a: any, b: any) => {
+                    if (boardSort === 'rating') return (b.rating || 0) - (a.rating || 0);
+                    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+                  })
+                  .map((post: any, idx: number) => (
                   <View key={post.id} style={{ backgroundColor: 'rgba(255,252,225,0.94)', borderRadius: 2, padding: 12, marginBottom: 16, transform: [{ rotate: idx % 2 === 0 ? '-1deg' : '1deg' }], shadowColor: '#000', shadowOffset: { width: 2, height: 4 }, shadowOpacity: 0.35, shadowRadius: 5 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                       <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: '#ddd', overflow: 'hidden', marginRight: 8 }}>
