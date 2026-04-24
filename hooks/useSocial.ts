@@ -41,15 +41,13 @@ export const useFollowing = (userId?: string) => {
             )
           )
         `)
-        .eq('follower_id', userId)
-        .eq('profiles.on_display.is_on_display', true)
-        .order('is_top_five', { ascending: false });
+        .eq('follower_id', userId);
 
       if (error) throw error;
       
       // Post-process to ensure only the 3 most recent on-display items are sent for each profile.
-      // (Supabase join filtering with .eq on child arrays still returns all matches, so we limit them here if we just want 3)
-      return data.map((f: any) => {
+      // Also to prevent breaking if the `is_top_five` migration hasn't been run yet, sort locally.
+      let result = data.map((f: any) => {
           if (f.profiles?.on_display) {
              f.profiles.on_display = f.profiles.on_display
                  .filter((i: any) => i.is_on_display)
@@ -58,6 +56,14 @@ export const useFollowing = (userId?: string) => {
           }
           return f;
       });
+
+      result.sort((a: any, b: any) => {
+          const aTop = a.is_top_five ? 1 : 0;
+          const bTop = b.is_top_five ? 1 : 0;
+          return bTop - aTop;
+      });
+
+      return result;
     },
     enabled: !!userId,
   });
