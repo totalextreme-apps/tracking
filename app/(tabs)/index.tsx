@@ -295,46 +295,9 @@ export default function HomeScreen() {
                   );
                 })}
               </ScrollView>
-
-              <View className="relative z-[60]">
-                 <Pressable 
-                   onPress={() => { setIsGenreDropdownOpen(!isGenreDropdownOpen); playSound('click'); }}
-                   className={`flex-row items-center justify-between px-4 py-2 rounded-lg border bg-neutral-900 ${genreFilter ? 'border-amber-500/50' : 'border-neutral-800'}`}
-                 >
-                   <View className="flex-row items-center gap-2">
-                     <Text className="text-neutral-500 font-mono text-[10px] uppercase tracking-tighter">GENRE:</Text>
-                     <Text className={`font-mono text-xs font-bold uppercase ${genreFilter ? 'text-amber-500' : 'text-neutral-200'}`}>
-                        {genreFilter || 'ALL GENRES'}
-                     </Text>
-                   </View>
-                   <Ionicons name={isGenreDropdownOpen ? "chevron-up" : "chevron-down"} size={14} color={genreFilter ? "#f59e0b" : "#666"} />
-                 </Pressable>
-
-                 {isGenreDropdownOpen && (
-                   <View className="absolute top-[48px] left-0 right-0 bg-neutral-900 border border-neutral-800 rounded-lg shadow-2xl z-[70] overflow-hidden">
-                      <ScrollView style={{ maxHeight: 300 }} bounces={false}>
-                        <Pressable 
-                          onPress={() => { setGenreFilter(null); setIsGenreDropdownOpen(false); playSound('click'); }}
-                          className={`px-4 py-3 border-b border-neutral-800/50 ${genreFilter === null ? 'bg-amber-500/10' : ''}`}
-                        >
-                          <Text className={`font-mono text-xs uppercase font-bold ${genreFilter === null ? 'text-amber-500' : 'text-neutral-400'}`}>ALL GENRES</Text>
-                        </Pressable>
-                        {genres.map(g => (
-                          <Pressable 
-                            key={g} 
-                            onPress={() => { setGenreFilter(g); setIsGenreDropdownOpen(false); playSound('click'); }}
-                            className={`px-4 py-3 border-b border-neutral-800/50 ${genreFilter === g ? 'bg-amber-500/10' : ''}`}
-                          >
-                            <Text className={`font-mono text-xs uppercase font-bold ${genreFilter === g ? 'text-amber-500' : 'text-neutral-400'}`}>{g}</Text>
-                          </Pressable>
-                        ))}
-                      </ScrollView>
-                   </View>
-                 )}
-              </View>
             </View>
 
-            <View className="bg-neutral-900 mb-8 p-4 rounded-xl border border-neutral-800">
+            <View className="bg-neutral-900 mb-8 p-4 rounded-xl border border-neutral-800 z-50">
                 <View className="flex-row items-center gap-2 mb-6 flex-wrap">
                   <Text className="text-neutral-500 font-mono text-[10px] uppercase tracking-tighter mr-1">SORT:</Text>
                   {[{ id: 'recent', label: 'RECENT' }, { id: 'title', label: 'NAME' }, { id: 'release', label: 'YEAR' }, { id: 'rating', label: 'RATING' }, { id: 'genre', label: 'GENRE' }].map((s: any) => (
@@ -349,6 +312,44 @@ export default function HomeScreen() {
                     <Pressable onPress={() => { setMediaTypeFilter(null); playSound('click'); }} className={`px-2.5 py-1 rounded ${mediaTypeFilter === null ? 'bg-neutral-800' : ''}`}><Text className={`font-mono text-[10px] font-bold ${mediaTypeFilter === null ? 'text-amber-500' : 'text-neutral-500'}`}>ALL</Text></Pressable>
                     <Pressable onPress={() => { setMediaTypeFilter('movie'); playSound('click'); }} className={`px-2.5 py-1 rounded ${mediaTypeFilter === 'movie' ? 'bg-neutral-800' : ''}`}><Text className={`font-mono text-[10px] font-bold ${mediaTypeFilter === 'movie' ? 'text-amber-500' : 'text-neutral-500'}`}>FILM</Text></Pressable>
                     <Pressable onPress={() => { setMediaTypeFilter('tv'); playSound('click'); }} className={`px-2.5 py-1 rounded ${mediaTypeFilter === 'tv' ? 'bg-neutral-800' : ''}`}><Text className={`font-mono text-[10px] font-bold ${mediaTypeFilter === 'tv' ? 'text-amber-500' : 'text-neutral-500'}`}>TV</Text></Pressable>
+                  </View>
+
+                  <View className="h-4 w-[1px] bg-neutral-800 mx-1" />
+                  
+                  {/* Genre Filter inside Sort section */}
+                  <View className="relative">
+                    <Pressable 
+                       onPress={() => { setIsGenreDropdownOpen(!isGenreDropdownOpen); playSound('click'); }}
+                       className={`flex-row items-center gap-2 px-3 py-1.5 rounded border bg-neutral-950 ${genreFilter ? 'border-amber-500/50' : 'border-neutral-800'}`}
+                    >
+                       <Text className="text-neutral-500 font-mono text-[10px] uppercase tracking-tighter">GENRE:</Text>
+                       <Text className={`font-mono text-[10px] font-bold uppercase ${genreFilter ? 'text-amber-500' : 'text-neutral-500'}`}>
+                          {genreFilter || 'ALL'}
+                       </Text>
+                       <Ionicons name={isGenreDropdownOpen ? "chevron-up" : "chevron-down"} size={10} color={genreFilter ? "#f59e0b" : "#444"} />
+                    </Pressable>
+
+                    {isGenreDropdownOpen && (
+                       <View className="absolute top-[34px] left-0 w-48 bg-neutral-900 border border-neutral-800 rounded-lg shadow-2xl z-[100] overflow-hidden">
+                          <ScrollView style={{ maxHeight: 250 }} bounces={false} nestedScrollEnabled>
+                            <Pressable 
+                              onPress={() => { setGenreFilter(null); setIsGenreDropdownOpen(false); playSound('click'); }}
+                              className={`px-4 py-2.5 border-b border-neutral-800/50 ${genreFilter === null ? 'bg-amber-500/10' : ''}`}
+                            >
+                              <Text className={`font-mono text-[10px] uppercase font-bold ${genreFilter === null ? 'text-amber-500' : 'text-neutral-400'}`}>ALL GENRES</Text>
+                            </Pressable>
+                            {genres.map(g => (
+                              <Pressable 
+                                key={g} 
+                                onPress={() => { setGenreFilter(g); setIsGenreDropdownOpen(false); playSound('click'); }}
+                                className={`px-4 py-2.5 border-b border-neutral-800/50 ${genreFilter === g ? 'bg-amber-500/10' : ''}`}
+                              >
+                                <Text className={`font-mono text-[10px] uppercase font-bold ${genreFilter === g ? 'text-amber-500' : 'text-neutral-400'}`}>{g}</Text>
+                              </Pressable>
+                            ))}
+                          </ScrollView>
+                       </View>
+                    )}
                   </View>
                 </View>
                 <Slider style={{ width: '100%', height: 30 }} minimumValue={1} maximumValue={isDesktop ? 8 : 4} step={1} value={numColumns} onValueChange={(val) => { setNumColumns(val); setViewMode('custom'); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }} minimumTrackTintColor="#f59e0b" maximumTrackTintColor="#333" thumbTintColor="#f59e0b" />
