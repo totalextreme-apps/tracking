@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, Pressable, TextInput } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, Pressable, TextInput, Modal } from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useProfile, useFollowers, useFollowing, useToggleFollow } from '@/hooks/useSocial';
