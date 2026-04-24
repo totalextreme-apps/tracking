@@ -319,37 +319,62 @@ export default function HomeScreen() {
                   {/* Genre Filter inside Sort section */}
                   <View className="relative">
                     <Pressable 
-                       onPress={() => { setIsGenreDropdownOpen(!isGenreDropdownOpen); playSound('click'); }}
+                       onPress={() => { setIsGenreDropdownOpen(true); playSound('click'); }}
                        className={`flex-row items-center gap-2 px-3 py-1.5 rounded border bg-neutral-950 ${genreFilter ? 'border-amber-500/50' : 'border-neutral-800'}`}
                     >
                        <Text className="text-neutral-500 font-mono text-[10px] uppercase tracking-tighter">GENRE:</Text>
                        <Text className={`font-mono text-[10px] font-bold uppercase ${genreFilter ? 'text-amber-500' : 'text-neutral-500'}`}>
                           {genreFilter || 'ALL'}
                        </Text>
-                       <Ionicons name={isGenreDropdownOpen ? "chevron-up" : "chevron-down"} size={10} color={genreFilter ? "#f59e0b" : "#444"} />
+                       <Ionicons name="chevron-down" size={10} color={genreFilter ? "#f59e0b" : "#444"} />
                     </Pressable>
 
-                    {isGenreDropdownOpen && (
-                       <View className="absolute top-[34px] left-0 w-48 bg-neutral-900 border border-neutral-800 rounded-lg shadow-2xl z-[200] overflow-hidden" style={{ elevation: 20 }}>
-                          <ScrollView style={{ maxHeight: 250 }} bounces={false} nestedScrollEnabled>
+                    <Modal
+                      visible={isGenreDropdownOpen}
+                      transparent
+                      animationType="fade"
+                      onRequestClose={() => setIsGenreDropdownOpen(false)}
+                    >
+                      <Pressable 
+                        className="flex-1 bg-black/40 justify-center items-center p-6"
+                        onPress={() => setIsGenreDropdownOpen(false)}
+                      >
+                        <View 
+                          className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl"
+                          onPress={(e: any) => e.stopPropagation()}
+                        >
+                          <View className="p-4 border-b border-neutral-800 flex-row justify-between items-center bg-neutral-950">
+                            <Text className="text-amber-500 font-mono text-xs font-bold tracking-widest">SELECT GENRE</Text>
+                            <Pressable onPress={() => setIsGenreDropdownOpen(false)}>
+                              <Ionicons name="close" size={20} color="#666" />
+                            </Pressable>
+                          </View>
+                          <ScrollView style={{ maxHeight: 400 }} bounces={false}>
                             <Pressable 
                               onPress={() => { setGenreFilter(null); setIsGenreDropdownOpen(false); playSound('click'); }}
-                              className={`px-4 py-2.5 border-b border-neutral-800/50 ${genreFilter === null ? 'bg-amber-500/10' : ''}`}
+                              className={`px-6 py-4 border-b border-neutral-800/50 ${genreFilter === null ? 'bg-amber-500/10' : ''}`}
                             >
-                              <Text className={`font-mono text-[10px] uppercase font-bold ${genreFilter === null ? 'text-amber-500' : 'text-neutral-400'}`}>ALL GENRES</Text>
+                              <View className="flex-row items-center justify-between">
+                                <Text className={`font-mono text-xs uppercase font-bold ${genreFilter === null ? 'text-amber-500' : 'text-neutral-400'}`}>ALL GENRES</Text>
+                                {genreFilter === null && <Ionicons name="checkmark" size={16} color="#f59e0b" />}
+                              </View>
                             </Pressable>
                             {genres.map(g => (
                               <Pressable 
                                 key={g} 
                                 onPress={() => { setGenreFilter(g); setIsGenreDropdownOpen(false); playSound('click'); }}
-                                className={`px-4 py-2.5 border-b border-neutral-800/50 ${genreFilter === g ? 'bg-amber-500/10' : ''}`}
+                                className={`px-6 py-4 border-b border-neutral-800/50 ${genreFilter === g ? 'bg-amber-500/10' : ''}`}
                               >
-                                <Text className={`font-mono text-[10px] uppercase font-bold ${genreFilter === g ? 'text-amber-500' : 'text-neutral-400'}`}>{g}</Text>
+                                <View className="flex-row items-center justify-between">
+                                  <Text className={`font-mono text-xs uppercase font-bold ${genreFilter === g ? 'text-amber-500' : 'text-neutral-400'}`}>{g}</Text>
+                                  {genreFilter === g && <Ionicons name="checkmark" size={16} color="#f59e0b" />}
+                                </View>
                               </Pressable>
                             ))}
                           </ScrollView>
-                       </View>
-                    )}
+                        </View>
+                      </Pressable>
+                    </Modal>
                   </View>
                 </View>
                 <Slider style={{ width: '100%', height: 30 }} minimumValue={1} maximumValue={isDesktop ? 8 : 4} step={1} value={numColumns} onValueChange={(val) => { setNumColumns(val); setViewMode('custom'); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }} minimumTrackTintColor="#f59e0b" maximumTrackTintColor="#333" thumbTintColor="#f59e0b" />
