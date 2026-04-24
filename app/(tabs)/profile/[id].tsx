@@ -13,7 +13,7 @@ import { getPosterUrl } from '@/lib/dummy-data';
 import { StatusBar } from 'expo-status-bar';
 import { OnDisplayCard } from '@/components/OnDisplayCard';
 
-type TabType = 'on-display' | 'grails' | 'collection' | 'wishlist' | 'bin' | 'analytics';
+type TabType = 'on-display' | 'grails' | 'collection' | 'wishlist' | 'bin' | 'analytics' | 'in-common';
 export type SortOption = 'recent' | 'title' | 'release' | 'rating' | 'genre' | 'format';
 
 export default function UserProfileScreen() {
@@ -25,6 +25,7 @@ export default function UserProfileScreen() {
   const { data: followers } = useFollowers(id);
   const { data: following } = useFollowing(id);
   const { data: collection, isLoading: collectionLoading } = useCollection(id);
+  const { data: myCollection } = useCollection(currentUserId);
   
   const [activeTab, setActiveTab] = useState<TabType>('on-display');
   const [sortBy, setSortBy] = useState<SortOption>('recent');
@@ -120,8 +121,22 @@ export default function UserProfileScreen() {
 
   const onDisplayItems = filterAndSortItems(collection?.filter((item: any) => item.is_on_display) || []);
   const grails = filterAndSortItems(collection?.filter((item: any) => item.is_grail) || []);
-  const stackedCollection = stackItems(collection?.filter((item: any) => item.status === 'owned') || []);
-  const stackedWishlist = stackItems(collection?.filter((item: any) => item.status === 'wishlist') || []);
+  const stackedCollection = useMemo(() => stackItems(collection?.filter((item: any) => item.status === 'owned') || []), [collection, searchQuery, sortBy, sortOrder, formatFilter, genreFilter, mediaTypeFilter]);
+  const stackedWishlist = useMemo(() => stackItems(collection?.filter((i: any) => i.status === 'wishlist') || []), [collection, searchQuery, sortBy, sortOrder, formatFilter, genreFilter, mediaTypeFilter]);
+  
+  const commonItems = useMemo(() => {
+    if (!collection || !myCollection || id === currentUserId) return [];
+    return collection.filter((item: any) => {
+      const mediaId = item.movie_id || item.show_id;
+      return myCollection.some((myItem: any) => 
+        (myItem.movie_id || myItem.show_id) === mediaId && 
+        myItem.format === item.format
+      );
+    });
+  }, [collection, myCollection, id, currentUserId]);
+
+  const stackedCommon = useMemo(() => stackItems(commonItems), [commonItems, searchQuery, sortBy, sortOrder, formatFilter, genreFilter, mediaTypeFilter]);
+
   const binItems = filterAndSortItems(collection?.filter((item: any) => item.for_sale || item.for_trade) || []);
 
   const toggleFollowMutation = useToggleFollow(currentUserId);
@@ -154,8 +169,6 @@ export default function UserProfileScreen() {
   }
 
   const totalItems = collection?.length || 0;
-  const totalGrails = collection?.filter((i: any) => i.is_grail).length || 0;
-  const uniqueFormats = new Set(collection?.map((i: any) => i.format)).size || 0;
 
   return (
     <View className="flex-1 bg-neutral-950">
@@ -200,7 +213,6 @@ export default function UserProfileScreen() {
             </Text>
           )}
 
-          {/* Preferences / Tags */}
           {(profile.movie_preferences?.length || profile.format_preferences?.length) && (
             <View className="flex-row flex-wrap justify-center gap-2 mt-4 px-6">
               {profile.movie_preferences?.map((pref: string) => (
@@ -229,6 +241,12 @@ export default function UserProfileScreen() {
               <Text className="text-white font-bold text-lg font-mono">{following?.length || 0}</Text>
               <Text className="text-neutral-600 font-mono text-xs">FOLLOWING</Text>
             </View>
+            {id !== currentUserId && (
+              <View className="items-center">
+                <Text className="text-amber-500 font-bold text-lg font-mono">{commonItems.length}</Text>
+                <Text className="text-neutral-600 font-mono text-xs">COMMON</Text>
+              </View>
+            )}
           </View>
 
           {!isOwnProfile && (
@@ -276,6 +294,11 @@ export default function UserProfileScreen() {
           <Pressable onPress={() => setActiveTab('bin')} className={`flex-1 py-3 items-center border-b-2 ${activeTab === 'bin' ? 'border-emerald-500' : 'border-transparent'}`}>
             <Text className={`font-mono text-[10px] font-bold ${activeTab === 'bin' ? 'text-emerald-500' : 'text-neutral-500'}`}>THE BIN</Text>
           </Pressable>
+          {id !== currentUserId && (
+            <Pressable onPress={() => setActiveTab('in-common')} className={`flex-1 py-3 items-center border-b-2 ${activeTab === 'in-common' ? 'border-amber-500' : 'border-transparent'}`}>
+              <Text className={`font-mono text-[10px] font-bold ${activeTab === 'in-common' ? 'text-amber-500' : 'text-neutral-500'}`}>COMMON</Text>
+            </Pressable>
+          )}
         </View>
 
         {activeTab !== 'analytics' && (
@@ -458,6 +481,37 @@ export default function UserProfileScreen() {
                   ) : (
                     <View className="p-6 items-center border-dashed border border-neutral-800 rounded-lg">
                       <Text className="text-neutral-500 font-mono text-center">Wishlist is empty.</Text>
+                    </View>
+                  )}
+                </View>
+              )}
+
+              {activeTab === 'in-common' && (
+                <View>
+                  {stackedCommon.length > 0 ? (
+                    <View className="flex-row flex-wrap">
+                      {stackedCommon.map((stack: any) => (
+                        <View key={stack[0].id} style={{ width: '25%', padding: 4 }}>
+                          <StackCard 
+                            stack={stack} 
+                            width={80} 
+                            height={120}
+                            isReadOnly={true}
+                            onPress={() => {
+                              const item = stack[0];
+                              const isMovie = !!item.movies;
+                              router.push({ 
+                                pathname: isMovie ? `/movie/${item.movie_id}` as any : `/show/${item.show_id}` as any, 
+                                params: { ownerId: id } 
+                              });
+                            }}
+                          />
+                        </View>
+                      ))}
+                    </View>
+                  ) : (
+                    <View className="p-6 items-center border-dashed border border-neutral-800 rounded-lg">
+                      <Text className="text-neutral-500 font-mono text-center">No titles in common yet.</Text>
                     </View>
                   )}
                 </View>
