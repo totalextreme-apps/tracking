@@ -165,7 +165,7 @@ export const useSearchUsers = (query: string) => {
       if (!query.trim()) return [];
       const { data, error } = await supabase
         .from('profiles')
-        .select('*, grails:collection_items(movie_id, show_id, media_type, movies(poster_path), shows(poster_path))')
+        .select('*')
         .ilike('username', `%${query}%`)
         .limit(20);
 
@@ -192,7 +192,7 @@ export const useSuggestedUsers = (currentUserId?: string) => {
       // 2. Fetch people not followed
       let query = supabase
         .from('profiles')
-        .select('*, grails:collection_items(movie_id, show_id, media_type, movies(poster_path), shows(poster_path))');
+        .select('*');
         
       if (currentUserId) {
         query = query.neq('id', currentUserId);
@@ -218,7 +218,7 @@ export const useAllUsers = (currentUserId?: string) => {
     queryFn: async () => {
       let query = supabase
         .from('profiles')
-        .select('*, grails:collection_items(movie_id, show_id, media_type, movies(poster_path), shows(poster_path))')
+        .select('*')
         .order('created_at', { ascending: false })
         .limit(100);
         
