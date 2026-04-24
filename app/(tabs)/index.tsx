@@ -30,7 +30,7 @@ export default function HomeScreen() {
   const updateMutation = useUpdateCollectionItem(userId);
   const [quickActionItem, setQuickActionItem] = useState<CollectionItemWithMedia | null>(null);
 
-  const [sortBy, setSortBy] = useState<'recent' | 'title' | 'release' | 'rating'>('recent');
+  const [sortBy, setSortBy] = useState<'recent' | 'title' | 'release' | 'rating' | 'genre'>('recent');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const { width: windowWidth } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && windowWidth > 1024;
@@ -263,7 +263,10 @@ export default function HomeScreen() {
                 <Text className="text-amber-500 font-bold text-3xl tracking-tighter uppercase" style={{ fontFamily: 'VCR_OSD_MONO' }}>
                   {thriftMode ? 'WISH LIST' : 'THE STACKS'}
                 </Text>
-                <Text className="text-neutral-500 font-mono text-xs ml-1">/ {filteredStacks.length}</Text>
+                <View className="flex-row items-baseline">
+                  <Text className="text-neutral-500 font-mono text-xs ml-2">{filteredStacks.length} STACKS</Text>
+                  <Text className="text-neutral-500 font-mono text-[8px] ml-1">/ {filteredCollection.length} ITEMS</Text>
+                </View>
               </View>
 
               <View className="flex-row bg-neutral-900 rounded-md p-1 border border-neutral-800">
@@ -297,7 +300,7 @@ export default function HomeScreen() {
             <View className="bg-neutral-900 mb-8 p-4 rounded-xl border border-neutral-800">
                 <View className="flex-row items-center gap-2 mb-6 flex-wrap">
                   <Text className="text-neutral-500 font-mono text-[10px] uppercase tracking-tighter mr-1">SORT:</Text>
-                  {[{ id: 'recent', label: 'RECENT' }, { id: 'title', label: 'NAME' }, { id: 'release', label: 'YEAR' }, { id: 'rating', label: 'RATING' }].map((s: any) => (
+                  {[{ id: 'recent', label: 'RECENT' }, { id: 'title', label: 'NAME' }, { id: 'release', label: 'YEAR' }, { id: 'rating', label: 'RATING' }, { id: 'genre', label: 'GENRE' }].map((s: any) => (
                     <Pressable key={s.id} onPress={() => { if (sortBy === s.id) setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); else { setSortBy(s.id); setSortOrder(s.id === 'title' || s.id === 'release' ? 'asc' : 'desc'); } playSound('click'); }} className={`px-3 py-1.5 rounded border flex-row items-center gap-1.5 ${sortBy === s.id ? 'bg-amber-500/20 border-amber-500/50' : 'bg-neutral-950 border-neutral-800'}`}>
                       <Text className={`font-mono text-[10px] font-bold ${sortBy === s.id ? 'text-amber-500' : 'text-neutral-500'}`}>{s.label}</Text>
                       {sortBy === s.id && <Ionicons name={sortOrder === 'asc' ? 'chevron-up' : 'chevron-down'} size={10} color="#f59e0b" />}

@@ -50,6 +50,10 @@ export default function AddScreen() {
   const [manualTitle, setManualTitle] = useState('');
   const [manualType, setManualType] = useState<'movie' | 'tv'>('movie');
   const [manualYear, setManualYear] = useState('');
+  const [manualOverview, setManualOverview] = useState('');
+  const [manualCastStr, setManualCastStr] = useState('');
+  const [manualPoster, setManualPoster] = useState('');
+  const [manualBackdrop, setManualBackdrop] = useState('');
 
   const searchQuery = useTmdbSearch(debouncedQuery);
   const addMutation = useAddToCollection(userId);
@@ -79,6 +83,10 @@ export default function AddScreen() {
       setShowManualEntry(false);
       setManualTitle('');
       setManualYear('');
+      setManualOverview('');
+      setManualCastStr('');
+      setManualPoster('');
+      setManualBackdrop('');
     }, [])
   );
 
@@ -603,17 +611,47 @@ export default function AddScreen() {
                   </Pressable>
                </View>
 
-               <Text className="text-neutral-500 font-mono text-[10px] mb-2 tracking-widest">RELEASE YEAR</Text>
-               <TextInput 
-                  nativeID="manual-year-input"
-                  {...({ name: 'manual-year' } as any)}
-                  value={manualYear}
-                  onChangeText={setManualYear}
-                  className="bg-neutral-950 border border-neutral-800 text-white px-4 py-3 rounded-lg font-mono text-sm mb-8"
-                  placeholder="YYYY (Optional)"
-                  placeholderTextColor="#444"
                   keyboardType="numeric"
                   maxLength={4}
+               />
+               
+               <Text className="text-neutral-500 font-mono text-[10px] mb-2 tracking-widest">SYNOPSIS / OVERVIEW</Text>
+               <TextInput 
+                  value={manualOverview}
+                  onChangeText={setManualOverview}
+                  className="bg-neutral-950 border border-neutral-800 text-white px-4 py-3 rounded-lg font-mono text-sm mb-5"
+                  placeholder="Enter a brief description..."
+                  placeholderTextColor="#444"
+                  multiline
+               />
+
+               <Text className="text-neutral-500 font-mono text-[10px] mb-2 tracking-widest">CAST (Comma Separated)</Text>
+               <TextInput 
+                  value={manualCastStr}
+                  onChangeText={setManualCastStr}
+                  className="bg-neutral-950 border border-neutral-800 text-white px-4 py-3 rounded-lg font-mono text-sm mb-5"
+                  placeholder="e.g. Actor Name, Another Actor"
+                  placeholderTextColor="#444"
+               />
+
+               <Text className="text-neutral-500 font-mono text-[10px] mb-2 tracking-widest">POSTER URL (Optional)</Text>
+               <TextInput 
+                  value={manualPoster}
+                  onChangeText={setManualPoster}
+                  className="bg-neutral-950 border border-neutral-800 text-white px-4 py-3 rounded-lg font-mono text-sm mb-5"
+                  placeholder="https://example.com/image.jpg"
+                  placeholderTextColor="#444"
+                  autoCapitalize="none"
+               />
+
+               <Text className="text-neutral-500 font-mono text-[10px] mb-2 tracking-widest">BACKGROUND URL (Optional)</Text>
+               <TextInput 
+                  value={manualBackdrop}
+                  onChangeText={setManualBackdrop}
+                  className="bg-neutral-950 border border-neutral-800 text-white px-4 py-3 rounded-lg font-mono text-sm mb-8"
+                  placeholder="https://example.com/backdrop.jpg"
+                  placeholderTextColor="#444"
+                  autoCapitalize="none"
                />
 
                <Pressable 
@@ -623,16 +661,27 @@ export default function AddScreen() {
                       return;
                     }
                     const fakeId = -Math.abs(Math.floor(Math.random() * 9000000) + 1000000); // Unique negative ID
+                    const castArray = manualCastStr.split(',').filter(c => c.trim()).map((c, i) => ({
+                      id: i,
+                      name: c.trim(),
+                      character: 'Cast',
+                      profile_path: null
+                    }));
+                    
                     setSelectedItem({
                       id: fakeId,
                       media_type: manualType,
                       title: manualTitle.trim(),
                       name: manualTitle.trim(),
-                      release_date: manualYear.trim() || undefined,
-                      first_air_date: manualYear.trim() || undefined,
+                      overview: manualOverview.trim(),
+                      poster_path: manualPoster.trim() || undefined,
+                      backdrop_path: manualBackdrop.trim() || undefined,
+                      release_date: manualYear.trim() ? `${manualYear.trim()}-01-01` : undefined,
+                      first_air_date: manualYear.trim() ? `${manualYear.trim()}-01-01` : undefined,
                       genres: [], // Bypasses TMDB lookup
+                      credits: { cast: castArray },
                       seasons: manualType === 'tv' ? [{ id: fakeId, season_number: 1 }] : undefined
-                    } as TmdbMediaResult);
+                    } as any);
                     setShowManualEntry(false);
                     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                   }}

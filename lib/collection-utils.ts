@@ -21,10 +21,11 @@ export function getCustomLists(collection: CollectionItemWithMedia[] | undefined
 
 const FORMAT_ORDER: Record<string, number> = {
   '4K': 5,
-  BluRay: 4,
-  DVD: 3,
-  VHS: 2,
-  Digital: 1,
+  'Blu-ray': 4,
+  'BluRay': 4,
+  'DVD': 3,
+  'VHS': 2,
+  'Digital': 1,
 };
 
 function filterByThriftMode(
@@ -52,7 +53,7 @@ export function getWishlistItems(collection: CollectionItemWithMedia[] | undefin
   return collection.filter((item) => item.status === 'wishlist');
 }
 
-export type SortOption = 'recent' | 'title' | 'release' | 'rating' | 'bootleg';
+export type SortOption = 'recent' | 'title' | 'release' | 'rating' | 'bootleg' | 'genre';
 export type SortOrder = 'asc' | 'desc';
 
 export function getStacks(
@@ -127,6 +128,16 @@ export function getStacks(
         const isBootA = a.some(i => i.is_bootleg) ? 1 : 0;
         const isBootB = b.some(i => i.is_bootleg) ? 1 : 0;
         comparison = isBootA - isBootB;
+        if (comparison === 0) {
+          const titleAStr = itemA.movies?.title ?? itemA.shows?.name ?? '';
+          const titleBStr = itemB.movies?.title ?? itemB.shows?.name ?? '';
+          comparison = titleAStr.localeCompare(titleBStr);
+        }
+        break;
+      case 'genre':
+        const genreA = (itemA.movies?.genres?.[0]?.name ?? itemA.shows?.genres?.[0]?.name ?? 'ZZZ');
+        const genreB = (itemB.movies?.genres?.[0]?.name ?? itemB.shows?.genres?.[0]?.name ?? 'ZZZ');
+        comparison = genreA.localeCompare(genreB);
         if (comparison === 0) {
           const titleAStr = itemA.movies?.title ?? itemA.shows?.name ?? '';
           const titleBStr = itemB.movies?.title ?? itemB.shows?.name ?? '';

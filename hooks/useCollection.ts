@@ -20,7 +20,7 @@ export function useCollection(userId: string | undefined) {
         .select(`*, movies (*), shows (*)`)
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
-        .limit(10000);
+        .range(0, 99999);
 
       try {
         const { data, error } = await Promise.race([
@@ -141,7 +141,8 @@ export function useAddToCollection(userId: string | undefined) {
           title: itemData.title,
           poster_path: itemData.poster_path,
           backdrop_path: itemData.backdrop_path,
-          release_date: itemData.release_date,
+          release_date: itemData.release_date || null,
+          overview: itemData.overview ?? null,
           genres: itemData.genres ?? null,
           movie_cast: combinedCast.length > 0 ? combinedCast : null,
         };
@@ -163,7 +164,8 @@ export function useAddToCollection(userId: string | undefined) {
           name: itemData.name,
           poster_path: itemData.poster_path,
           backdrop_path: itemData.backdrop_path,
-          first_air_date: itemData.first_air_date,
+          first_air_date: itemData.first_air_date || null,
+          overview: itemData.overview ?? null,
           genres: itemData.genres ?? null,
           show_cast: combinedCast.length > 0 ? combinedCast : null,
           number_of_seasons: itemData.number_of_seasons ?? null,

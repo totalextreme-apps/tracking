@@ -41,7 +41,8 @@ export function StatsSection({ collection }: StatsSectionProps) {
         const colors: Record<string, string> = {
             'VHS': '#f59e0b', // Amber
             'DVD': '#ef4444', // Red
-            'BluRay': '#3b82f6', // Blue
+            'Blu-ray': '#3b82f6', // Blue
+            'BluRay': '#3b82f6', // Legacy Blue
             '4K': '#a855f7', // Purple
             'Digital': '#22c55e', // Green
         };
