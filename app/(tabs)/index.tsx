@@ -297,7 +297,7 @@ export default function HomeScreen() {
               </ScrollView>
             </View>
 
-            <View className="bg-neutral-900 mb-8 p-4 rounded-xl border border-neutral-800 z-50">
+            <View className="bg-neutral-900 mb-8 p-4 rounded-xl border border-neutral-800 z-[100]" style={{ elevation: 10 }}>
                 <View className="flex-row items-center gap-2 mb-6 flex-wrap">
                   <Text className="text-neutral-500 font-mono text-[10px] uppercase tracking-tighter mr-1">SORT:</Text>
                   {[{ id: 'recent', label: 'RECENT' }, { id: 'title', label: 'NAME' }, { id: 'release', label: 'YEAR' }, { id: 'rating', label: 'RATING' }, { id: 'genre', label: 'GENRE' }].map((s: any) => (
@@ -330,7 +330,7 @@ export default function HomeScreen() {
                     </Pressable>
 
                     {isGenreDropdownOpen && (
-                       <View className="absolute top-[34px] left-0 w-48 bg-neutral-900 border border-neutral-800 rounded-lg shadow-2xl z-[100] overflow-hidden">
+                       <View className="absolute top-[34px] left-0 w-48 bg-neutral-900 border border-neutral-800 rounded-lg shadow-2xl z-[200] overflow-hidden" style={{ elevation: 20 }}>
                           <ScrollView style={{ maxHeight: 250 }} bounces={false} nestedScrollEnabled>
                             <Pressable 
                               onPress={() => { setGenreFilter(null); setIsGenreDropdownOpen(false); playSound('click'); }}
