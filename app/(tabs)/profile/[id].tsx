@@ -196,7 +196,7 @@ export default function UserProfileScreen() {
         <View className="w-8" />
       </View>
 
-      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 60 }}>
+      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 120 }}>
         <View className="items-center mt-6 px-4">
           <MemberCard
              userId={id}
