@@ -275,6 +275,13 @@ export default function CommunityScreen() {
     setMediaResults([]);
   };
 
+  const resetPostState = () => {
+    setPostContent('');
+    setSelectedMedia(null);
+    setRating(undefined);
+    setEditingPostId(null);
+  };
+
   const toggleComments = (postId: string) => {
     setExpandedPostIds(prev => {
       const next = new Set(prev);
@@ -458,6 +465,14 @@ export default function CommunityScreen() {
                  </View>
               ))}
             </View>
+          )}
+
+          {(!following || following.length === 0) && (
+             <View style={{ padding: 24, alignItems: 'center', backgroundColor: '#111', marginHorizontal: 16, borderRadius: 10, borderWidth: 1, borderColor: '#1f1f1f', marginBottom: 24 }}>
+                <Ionicons name="people-outline" size={32} color="#f59e0b" style={{ marginBottom: 16 }} />
+                <Text style={{ color: '#fff', fontFamily: 'SpaceMono', fontSize: 13, fontWeight: 'bold', textAlign: 'center', marginBottom: 8 }}>Your Video Store Network is Empty</Text>
+                <Text style={{ color: '#525252', fontFamily: 'SpaceMono', fontSize: 11, textAlign: 'center' }}>Search for members or browse below to start tracking movie lovers.</Text>
+             </View>
           )}
 
           {/* Pulse feed */}

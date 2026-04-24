@@ -163,7 +163,6 @@ export const useSearchUsers = (query: string) => {
         .from('profiles')
         .select('*, grails:collection_items(movie_id, show_id, media_type, movies(poster_path), shows(poster_path))')
         .ilike('username', `%${query}%`)
-        .eq('grails.is_grail', true)
         .limit(20);
 
       if (error) throw error;
@@ -189,8 +188,7 @@ export const useSuggestedUsers = (currentUserId?: string) => {
       // 2. Fetch people not followed
       let query = supabase
         .from('profiles')
-        .select('*, grails:collection_items(movie_id, show_id, media_type, movies(poster_path), shows(poster_path))')
-        .eq('grails.is_grail', true);
+        .select('*, grails:collection_items(movie_id, show_id, media_type, movies(poster_path), shows(poster_path))');
         
       if (currentUserId) {
         query = query.neq('id', currentUserId);
