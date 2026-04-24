@@ -10,32 +10,39 @@ export function useCollection(userId: string | undefined) {
     queryFn: async () => {
       if (!userId) return [];
 
-      // Try Real Supabase Fetch with Timeout
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Collection fetch timed out')), 6000)
-      );
-
-      const supabasePromise = supabase
-        .from('collection_items')
-        .select(`*, movies (*), shows (*)`)
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .range(0, 99999);
-
-      try {
-        const { data, error } = await Promise.race([
-          supabasePromise,
-          timeoutPromise
-        ]) as any;
+      const fetchAllItems = async (from = 0, allItems: any[] = []): Promise<any[]> => {
+        const to = from + 999;
+        const { data, error } = await supabase
+          .from('collection_items')
+          .select(`*, movies (*), shows (*)`)
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .range(from, to);
 
         if (error) throw error;
+        
+        const combined = [...allItems, ...(data || [])];
+        
+        // If we got a full page, there might be more
+        if (data && data.length === 1000) {
+          return fetchAllItems(to + 1, combined);
+        }
+        
+        return combined;
+      };
 
-        // If we have real data, return it
-        if (data && data.length > 0) return data as CollectionItemWithMedia[];
-
-        // Fallback to Mock User (if it's the mock ID and DB is empty)
+      try {
+        // Fallback for Mock User (Immediate return)
         if (userId === '00000000-0000-0000-0000-000000000000') {
-          console.log('Returning MOCK COLLECTION for empty dev user');
+           // ... (keep mock logic if needed, but fetchAllItems will return empty and we can handle it)
+        }
+
+        const items = await fetchAllItems();
+
+        if (items && items.length > 0) return items as CollectionItemWithMedia[];
+
+        // Mock Fallback
+        if (userId === '00000000-0000-0000-0000-000000000000') {
           return [
             {
               id: 'mock-1',
@@ -65,10 +72,6 @@ export function useCollection(userId: string | undefined) {
         return [] as CollectionItemWithMedia[];
       } catch (e) {
         console.error('Fetch error:', e);
-        // Fallback for mock user if network is dead
-        if (userId === '00000000-0000-0000-0000-000000000000') {
-          return [{ id: 'mock-offline', movies: { title: 'OFFLINE MOCK' } }] as any;
-        }
         throw e;
       }
     },
