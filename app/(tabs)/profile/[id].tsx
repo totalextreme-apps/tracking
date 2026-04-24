@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { getPosterUrl } from '@/lib/dummy-data';
 import { StatusBar } from 'expo-status-bar';
 import { OnDisplayCard } from '@/components/OnDisplayCard';
+import { getGenres, getStacks } from '@/lib/collection-utils';
 
 type TabType = 'on-display' | 'grails' | 'collection' | 'wishlist' | 'bin' | 'analytics' | 'in-common';
 export type SortOption = 'recent' | 'title' | 'release' | 'rating' | 'genre' | 'format';
@@ -103,20 +104,7 @@ export default function UserProfileScreen() {
   };
 
   const stackItems = (items: any[]) => {
-    const sorted = filterAndSortItems(items);
-    const stacks: any[][] = [];
-    const seen = new Set();
-
-    sorted.forEach((item: any) => {
-      const itemId = item.movie_id || item.show_id;
-      if (seen.has(itemId)) return;
-      
-      const itemGroup = sorted.filter((i: any) => (i.movie_id || i.show_id) === itemId);
-      stacks.push(itemGroup);
-      seen.add(itemId);
-    });
-
-    return stacks;
+    return getStacks(items, false, sortBy, sortOrder);
   };
 
   const onDisplayItems = filterAndSortItems(collection?.filter((item: any) => item.is_on_display) || []);
