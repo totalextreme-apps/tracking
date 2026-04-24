@@ -11,6 +11,7 @@ import { StackCard } from '@/components/StackCard';
 import { Ionicons } from '@expo/vector-icons';
 import { getPosterUrl } from '@/lib/dummy-data';
 import { StatusBar } from 'expo-status-bar';
+import { OnDisplayCard } from '@/components/OnDisplayCard';
 
 type TabType = 'on-display' | 'grails' | 'collection' | 'wishlist' | 'bin' | 'analytics';
 export type SortOption = 'recent' | 'title' | 'release' | 'rating' | 'genre' | 'format';
@@ -358,26 +359,16 @@ export default function UserProfileScreen() {
                 <View>
                   {onDisplayItems.length > 0 ? (
                     <View className="flex-row flex-wrap justify-between">
-                      {onDisplayItems.map((item: any) => {
-                        const posterUrl = getPosterUrl(item.movies?.poster_path || item.shows?.poster_path);
-                        return (
-                          <Pressable 
-                            key={item.id} 
-                            onPress={() => router.push({ pathname: item.movies ? `/movie/${item.movie_id}` as any : `/show/${item.show_id}` as any, params: { ownerId: id } })}
-                            className="w-[31%] mb-4"
-                          >
-                            <View className="relative">
-                              <Image source={{ uri: posterUrl as string }} className="w-full aspect-[2/3] rounded border border-neutral-800" />
-                              <View className="absolute top-1 right-1 bg-amber-500 p-1 rounded-full shadow-sm">
-                                <Ionicons name="star" size={8} color="black" />
-                              </View>
-                            </View>
-                            <Text className="text-white font-mono text-[9px] mt-1 text-center" numberOfLines={1}>
-                              {item.movies?.title || item.shows?.name}
-                            </Text>
-                          </Pressable>
-                        );
-                      })}
+                      {onDisplayItems.map((item: any) => (
+                        <View key={item.id} className="w-[31%] mb-4">
+                          <OnDisplayCard 
+                            item={item} 
+                            scale={0.9} 
+                            isReadOnly={id !== currentUserId}
+                            onSingleTapAction={() => router.push({ pathname: item.movies ? `/movie/${item.movie_id}` as any : `/show/${item.show_id}` as any, params: { ownerId: id } })}
+                          />
+                        </View>
+                      ))}
                     </View>
                   ) : (
                     <View className="bg-neutral-900 border border-neutral-800 rounded-lg p-6 items-center border-dashed">
@@ -391,33 +382,16 @@ export default function UserProfileScreen() {
                 <View>
                   {grails.length > 0 ? (
                     <View className="flex-row flex-wrap justify-between">
-                      {grails.map((item: any) => {
-                        const posterUrl = getPosterUrl(item.movies?.poster_path || item.shows?.poster_path);
-                        const isMovie = !!item.movies;
-                        const formatSource = item.format === '4K' ? require('@/assets/images/overlays/formats/4K Ultra.png') :
-                                            item.format === 'BluRay' ? require('@/assets/images/overlays/formats/BluRay.png') :
-                                            item.format === 'DVD' ? require('@/assets/images/overlays/formats/DVD.png') :
-                                            item.format === 'VHS' ? require('@/assets/images/overlays/formats/VHS.png') :
-                                            item.format === 'Digital' ? require('@/assets/images/overlays/formats/Digital.png') : null;
-                        
-                        return (
-                          <Pressable 
-                            key={item.id} 
-                            onPress={() => router.push({ pathname: isMovie ? `/movie/${item.movie_id}` as any : `/show/${item.show_id}` as any, params: { ownerId: id } })}
-                            className="w-[31%] mb-4"
-                          >
-                            <View className="relative">
-                              <Image source={{ uri: posterUrl as string }} className="w-full aspect-[2/3] rounded border border-neutral-800" />
-                              {formatSource && (
-                                <Image source={formatSource} style={{ position: 'absolute', bottom: 4, right: 4, width: 24, height: 14 }} contentFit="contain" />
-                              )}
-                            </View>
-                            <Text className="text-white font-mono text-[9px] mt-1 text-center" numberOfLines={1}>
-                              {item.movies?.title || item.shows?.name}
-                            </Text>
-                          </Pressable>
-                        );
-                      })}
+                      {grails.map((item: any) => (
+                        <View key={item.id} className="w-[31%] mb-4">
+                          <OnDisplayCard 
+                            item={item} 
+                            scale={0.9} 
+                            isReadOnly={id !== currentUserId}
+                            onSingleTapAction={() => router.push({ pathname: item.movies ? `/movie/${item.movie_id}` as any : `/show/${item.show_id}` as any, params: { ownerId: id } })}
+                          />
+                        </View>
+                      ))}
                     </View>
                   ) : (
                     <View className="bg-neutral-900 border border-neutral-800 rounded-lg p-6 items-center border-dashed">
@@ -437,6 +411,7 @@ export default function UserProfileScreen() {
                             stack={stack} 
                             width={80} 
                             height={120}
+                            isReadOnly={id !== currentUserId}
                             onPress={() => {
                               const item = stack[0];
                               const isMovie = !!item.movies;
@@ -467,6 +442,7 @@ export default function UserProfileScreen() {
                             stack={stack} 
                             width={80} 
                             height={120}
+                            isReadOnly={id !== currentUserId}
                             onPress={() => {
                               const item = stack[0];
                               const isMovie = !!item.movies;

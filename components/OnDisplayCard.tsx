@@ -28,9 +28,10 @@ type OnDisplayCardProps = {
   onLongPressAction?: () => void;
   onToggleFavorite?: (item: CollectionItemWithMedia) => void;
   onRatePress?: (rating: number) => void;
+  isReadOnly?: boolean;
 };
 
-export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPressAction, onToggleFavorite, onRatePress }: OnDisplayCardProps) {
+export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPressAction, onToggleFavorite, onRatePress, isReadOnly = false }: OnDisplayCardProps) {
   const { playSound } = useSound();
   const media = item.movies || item.shows;
   if (!media) return null;
@@ -53,7 +54,7 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
     const now = Date.now();
     const DOUBLE_TAP_DELAY = 300;
 
-    if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
+    if (!isReadOnly && now - lastTapRef.current < DOUBLE_TAP_DELAY) {
       // DOUBLE TAP DETECTED
       if (singleTapTimeoutRef.current) {
         clearTimeout(singleTapTimeoutRef.current);
@@ -74,21 +75,23 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
 
       // Wait to see if a second tap comes
       singleTapTimeoutRef.current = setTimeout(() => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-        // Trigger Animation
-        tiltX.value = withSequence(withSpring(5), withSpring(0));
-        tiltY.value = withSequence(withSpring(-3), withSpring(0));
+        if (!isReadOnly) {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          // Trigger Animation
+          tiltX.value = withSequence(withSpring(5), withSpring(0));
+          tiltY.value = withSequence(withSpring(-3), withSpring(0));
+        }
 
         if (onSingleTapAction) {
           onSingleTapAction();
         }
         singleTapTimeoutRef.current = null;
-      }, DOUBLE_TAP_DELAY);
+      }, isReadOnly ? 0 : DOUBLE_TAP_DELAY);
     }
   };
 
   const handleLongPress = () => {
+    if (isReadOnly) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     if (onLongPressAction) {
       onLongPressAction();
@@ -215,15 +218,15 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
           <View className="flex-row">
             {item.rating ? (
               [...Array(5)].map((_, i) => (
-                <Pressable key={i} onPress={(e) => { e.stopPropagation(); onRatePress?.(i + 1); }} hitSlop={5}>
-                  <FontAwesome name={i < item.rating! ? 'star' : 'star-o'} size={8} color={i < item.rating! ? '#f59e0b' : '#404040'} style={{ marginRight: 1 }} />
-                </Pressable>
+                <View key={i} style={{ marginRight: 1 }}>
+                  <FontAwesome name={i < item.rating! ? 'star' : 'star-o'} size={8} color={i < item.rating! ? '#f59e0b' : '#404040'} />
+                </View>
               ))
             ) : (
               [...Array(5)].map((_, i) => (
-                <Pressable key={i} onPress={(e) => { e.stopPropagation(); onRatePress?.(i + 1); }} hitSlop={5}>
-                  <FontAwesome name="star-o" size={8} color="#404040" style={{ marginRight: 1 }} />
-                </Pressable>
+                <View key={i} style={{ marginRight: 1 }}>
+                  <FontAwesome name="star-o" size={8} color="#404040" />
+                </View>
               ))
             )}
           </View>

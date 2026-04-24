@@ -59,6 +59,7 @@ type StackCardProps = {
   stackOffset?: number;
   mode?: 'grid' | 'list';
   activeFormatFilter?: string | null;
+  isReadOnly?: boolean;
 };
 
 const DEFAULT_CARD_WIDTH = 100;
@@ -89,7 +90,8 @@ export function StackCard({
   height = DEFAULT_CARD_HEIGHT,
   stackOffset, // Kept to not break signature, but unused
   mode = 'grid',
-  activeFormatFilter = null
+  activeFormatFilter = null,
+  isReadOnly = false,
 }: StackCardProps) {
   const defaultSorted = useMemo(() => {
     const qualitySorted = sortByQuality(stack);
@@ -210,7 +212,7 @@ export function StackCard({
     const now = Date.now();
     const DOUBLE_TAP_DELAY = 300; // ms
 
-    if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
+    if (!isReadOnly && now - lastTapRef.current < DOUBLE_TAP_DELAY) {
       // Double tap detected
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
       playSound('peel');
@@ -219,19 +221,24 @@ export function StackCard({
     } else {
       // Single tap
       lastTapRef.current = now;
-      setTimeout(() => {
-        if (lastTapRef.current === now) {
-          // No second tap came, it's a single tap
-          playSound('click');
-          onCardPress?.();
-        }
-      }, DOUBLE_TAP_DELAY);
+      if (isReadOnly) {
+        // Just navigate immediately or with a short delay but NO SOUND/HAPTICS
+        onCardPress?.();
+      } else {
+        setTimeout(() => {
+          if (lastTapRef.current === now) {
+            // No second tap came, it's a single tap
+            playSound('click');
+            onCardPress?.();
+          }
+        }, DOUBLE_TAP_DELAY);
+      }
     }
   };
 
   const onPressIn = () => {
-    // Disable bounce effect for Digital items
-    if (!isPhysical) return;
+    // Disable bounce effect for Digital items or Read-Only mode
+    if (!isPhysical || isReadOnly) return;
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     tiltX.value = withSpring(6);
@@ -312,19 +319,19 @@ export function StackCard({
             {media ? (media.title || media.name) : `ID: ${topItem.movie_id || topItem.show_id}`}
           </Text>
           <View className="flex-row my-1">
-             {topItem.rating ? (
-               [...Array(5)].map((_, i) => (
-                 <Pressable key={i} onPress={(e) => { e.stopPropagation(); onRatePress?.(i + 1); }} hitSlop={5}>
-                   <FontAwesome name={i < topItem.rating! ? 'star' : 'star-o'} size={12} color={i < topItem.rating! ? '#f59e0b' : '#404040'} style={{ marginRight: 2 }} />
-                 </Pressable>
-               ))
-             ) : (
-               [...Array(5)].map((_, i) => (
-                 <Pressable key={i} onPress={(e) => { e.stopPropagation(); onRatePress?.(i + 1); }} hitSlop={5}>
-                   <FontAwesome name="star-o" size={10} color="#333" style={{ marginRight: 2 }} />
-                 </Pressable>
-               ))
-             )}
+              {topItem.rating ? (
+                [...Array(5)].map((_, i) => (
+                  <View key={i} style={{ marginRight: 2 }}>
+                    <FontAwesome name={i < topItem.rating! ? 'star' : 'star-o'} size={12} color={i < topItem.rating! ? '#f59e0b' : '#404040'} />
+                  </View>
+                ))
+              ) : (
+                [...Array(5)].map((_, i) => (
+                  <View key={i} style={{ marginRight: 2 }}>
+                    <FontAwesome name="star-o" size={10} color="#333" />
+                  </View>
+                ))
+              )}
           </View>
           <Text className="text-neutral-500 font-mono text-[10px] my-0.5">
             {topItem.movies?.release_date?.substring(0, 4) || topItem.shows?.first_air_date?.substring(0, 4) || '????'}
@@ -445,7 +452,7 @@ export function StackCard({
                     key={item.id}
                     onPress={(e) => {
                       e.stopPropagation();
-                      playSound('click');
+                      if (!isReadOnly) playSound('click');
                       setActiveId(item.id);
                     }}
                     className={`px-2 py-0.5 rounded flex-row items-center gap-1 ${FORMAT_COLORS[item.format] || 'bg-neutral-700'}`}
@@ -625,7 +632,7 @@ export function StackCard({
               key={item.id}
               onPress={(e) => {
                 e.stopPropagation();
-                playSound('click');
+                if (!isReadOnly) playSound('click');
                 setActiveId(item.id);
               }}
               className={`px-2 py-0.5 rounded flex-row items-center gap-1 ${FORMAT_COLORS[item.format] || 'bg-neutral-700'}`}
