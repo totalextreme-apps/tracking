@@ -284,7 +284,7 @@ export default function HomeScreen() {
                 </View>
               </View>
 
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }} className="mb-4">
                 {['ALL', 'VHS', 'DVD', 'BluRay', '4K', 'Digital', 'BOOTLEG', 'FOR SALE', 'FOR TRADE'].map(f => {
                   const isSelected = f === 'ALL' ? formatFilter === null : formatFilter === f;
                   const styles = getFormatPillStyles(f, isSelected);
@@ -294,6 +294,24 @@ export default function HomeScreen() {
                     </Pressable>
                   );
                 })}
+              </ScrollView>
+
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                 <Pressable 
+                   onPress={() => { setGenreFilter(null); playSound('click'); }}
+                   className={`px-3 py-1 rounded-md border ${genreFilter === null ? 'bg-amber-500/20 border-amber-500/50' : 'bg-neutral-900 border-neutral-800'}`}
+                 >
+                   <Text className={`font-mono text-[8px] uppercase font-bold ${genreFilter === null ? 'text-amber-500' : 'text-neutral-500'}`}>ALL GENRES</Text>
+                 </Pressable>
+                 {genres.map(g => (
+                   <Pressable 
+                     key={g} 
+                     onPress={() => { setGenreFilter(genreFilter === g ? null : g); playSound('click'); }}
+                     className={`px-3 py-1 rounded-md border ${genreFilter === g ? 'bg-amber-500/20 border-amber-500/50' : 'bg-neutral-900 border-neutral-800'}`}
+                   >
+                     <Text className={`font-mono text-[8px] uppercase font-bold ${genreFilter === g ? 'text-amber-500' : 'text-neutral-500'}`}>{g}</Text>
+                   </Pressable>
+                 ))}
               </ScrollView>
             </View>
 
