@@ -17,7 +17,7 @@ import { ShareableCard } from '@/components/ShareableCard';
 import { useAuth } from '@/context/AuthContext';
 import { useSound } from '@/context/SoundContext';
 import { useThriftMode } from '@/context/ThriftModeContext';
-import { useAddToCollection, useCollection, useDeleteCollectionItem, useUpdateCollectionItem } from '@/hooks/useCollection';
+import { useAddToCollection, useCollection, useDeleteCollectionItem, useUpdateCollectionItem, useUpdateManualMovie } from '@/hooks/useCollection';
 import { useCreatePost } from '@/hooks/useSocial';
 import { ReviewSection } from '@/components/ReviewSection';
 import { CommentSection } from '@/components/CommentSection';
@@ -76,6 +76,12 @@ export default function MovieDetailScreen() {
     const [showPostModal, setShowPostModal] = useState(false);
     const [postContent, setPostContent] = useState('');
     const createPostMutation = useCreatePost(userId);
+    
+    // Edit Manual State
+    const [showEditManualModal, setShowEditManualModal] = useState(false);
+    const [editManualOverview, setEditManualOverview] = useState('');
+    const [editManualCast, setEditManualCast] = useState('');
+    const updateManualMovie = useUpdateManualMovie(userId);
 
     const handleCreatePost = () => {
         if (!postContent.trim()) return;
@@ -676,6 +682,20 @@ export default function MovieDetailScreen() {
                                         <Ionicons name="pin" size={20} color="#f59e0b" />
                                     </Pressable>
                                 )}
+                                
+                                {/* EDIT MANUAL RECORD */}
+                                {activeMovie && activeMovie.tmdb_id === null && !isReadOnly && (
+                                    <Pressable 
+                                        onPress={() => {
+                                            setEditManualOverview(activeMovie.overview || '');
+                                            setEditManualCast((activeMovie.movie_cast || []).map((c: any) => c.name).join(', '));
+                                            setShowEditManualModal(true);
+                                        }}
+                                        className="bg-purple-600/10 px-4 rounded-lg border border-purple-600/40 items-center justify-center flex-1"
+                                    >
+                                        <Text className="text-purple-500 font-mono text-[10px] font-bold tracking-widest text-center">EDIT REC</Text>
+                                    </Pressable>
+                                )}
                             </>
                         )}
                     </View>
@@ -1267,6 +1287,65 @@ export default function MovieDetailScreen() {
                                 className="flex-1 bg-amber-600 py-3 rounded-lg items-center"
                             >
                                 <Text className="text-white font-mono text-sm font-bold">ADD</Text>
+                            </Pressable>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Edit Manual Details Modal */}
+            <Modal visible={showEditManualModal} animationType="slide" transparent>
+                <View className="flex-1 bg-black/90 justify-center items-center px-4">
+                    <View className="bg-neutral-900 w-full max-w-sm rounded-xl border border-neutral-800 p-6">
+                        <Text className="text-white font-mono text-lg font-bold mb-4 uppercase text-center">Edit Manual Record</Text>
+                        
+                        <Text className="text-neutral-400 font-mono text-[10px] mb-2 uppercase tracking-widest">Overview</Text>
+                        <TextInput
+                            className="bg-black text-white p-3 rounded-lg font-mono text-sm border border-neutral-800 mb-4 h-24"
+                            multiline
+                            textAlignVertical="top"
+                            value={editManualOverview}
+                            onChangeText={setEditManualOverview}
+                            placeholder="Enter movie overview..."
+                            placeholderTextColor="#525252"
+                        />
+                        
+                        <Text className="text-neutral-400 font-mono text-[10px] mb-2 uppercase tracking-widest">Cast (Comma Separated)</Text>
+                        <TextInput
+                            className="bg-black text-white p-3 rounded-lg font-mono text-sm border border-neutral-800 mb-6"
+                            value={editManualCast}
+                            onChangeText={setEditManualCast}
+                            placeholder="e.g. John Doe, Jane Smith"
+                            placeholderTextColor="#525252"
+                        />
+                        
+                        <View className="flex-row gap-3">
+                            <Pressable 
+                                onPress={() => setShowEditManualModal(false)}
+                                className="flex-1 bg-neutral-800 p-4 rounded-lg items-center"
+                            >
+                                <Text className="text-white font-mono text-xs font-bold uppercase">Cancel</Text>
+                            </Pressable>
+                            <Pressable 
+                                onPress={() => {
+                                    if (!activeMovie.id) return;
+                                    updateManualMovie.mutate({
+                                        movieId: activeMovie.id,
+                                        overview: editManualOverview,
+                                        castStr: editManualCast
+                                    }, {
+                                        onSuccess: () => {
+                                            setShowEditManualModal(false);
+                                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                                        }
+                                    });
+                                }}
+                                disabled={updateManualMovie.isPending}
+                                className={`flex-1 p-4 rounded-lg items-center ${updateManualMovie.isPending ? 'bg-amber-600/50' : 'bg-amber-600'}`}
+                            >
+                                <Text className="text-black font-mono text-xs font-bold uppercase">
+                                    {updateManualMovie.isPending ? 'Saving...' : 'Save'}
+                                </Text>
                             </Pressable>
                         </View>
                     </View>

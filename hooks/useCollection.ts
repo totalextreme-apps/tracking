@@ -407,6 +407,32 @@ export function useDeleteCollectionItem(userId: string | undefined) {
   });
 }
 
+export function useUpdateManualMovie(userId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ movieId, overview, castStr }: { movieId: number, overview: string, castStr: string }) => {
+      if (!userId) throw new Error('Not authenticated');
+      // Convert cast string to JSON array
+      const castArray = castStr.split(',').map(name => ({
+         name: name.trim()
+      })).filter(c => c.name.length > 0);
+      
+      const { error } = await supabase
+        .from('movies')
+        .update({ 
+           overview,
+           movie_cast: castArray as any
+        } as any)
+        .eq('id', movieId);
+
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['collection'] });
+    },
+  });
+}
+
 export function useRefreshLibrary(userId: string | undefined) {
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const queryClient = useQueryClient();

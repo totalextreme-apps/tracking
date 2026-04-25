@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, ScrollView, TextInput, Pressable, ActivityIndicator, Image, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, ScrollView, TextInput, Pressable, ActivityIndicator, Image, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
-import { useChat, useSendMessage, useProfile } from '@/hooks/useSocial';
+import { useChat, useSendMessage, useProfile, useDeleteMessage, useUpdateMessage } from '@/hooks/useSocial';
 import { StatusBar } from 'expo-status-bar';
 
 export default function ChatScreen() {
@@ -18,10 +18,14 @@ export default function ChatScreen() {
   const { data: partnerProfile } = useProfile(partnerId);
   const { data: messages, isLoading } = useChat(userId ?? undefined, partnerId);
   const sendMessageMutation = useSendMessage(userId ?? undefined);
+  const deleteMessage = useDeleteMessage(userId ?? undefined);
+  const updateMessage = useUpdateMessage(userId ?? undefined);
+
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editText, setEditText] = useState('');
 
   useEffect(() => {
-    // Scroll to bottom when messages change
-    if (messages?.length) {
+    if (messages?.length && !editingMessageId) {
       setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
     }
   }, [messages]);
@@ -30,6 +34,22 @@ export default function ChatScreen() {
     if (!content.trim() || sendMessageMutation.isPending) return;
     sendMessageMutation.mutate({ receiverId: partnerId, content: content.trim() });
     setContent('');
+  };
+
+  const handleMessageLongPress = (msg: any) => {
+    if (msg.sender_id !== userId) return;
+    Alert.alert("Manage Message", "What would you like to do?", [
+      { text: "Edit", onPress: () => { setEditingMessageId(msg.id); setEditText(msg.content); } },
+      { text: "Delete", onPress: () => deleteMessage.mutate(msg.id), style: "destructive" },
+      { text: "Cancel", style: "cancel" }
+    ]);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editText.trim() || !editingMessageId) return;
+    updateMessage.mutate({ messageId: editingMessageId, content: editText.trim() }, {
+       onSuccess: () => { setEditingMessageId(null); setEditText(''); }
+    });
   };
 
   return (
@@ -86,7 +106,9 @@ export default function ChatScreen() {
                      {partnerProfile?.username}
                    </Text>
                 )}
-                <View 
+                <Pressable 
+                  onLongPress={() => handleMessageLongPress(msg)}
+                  delayLongPress={300}
                   className={`p-3 rounded-2xl ${
                     isMe 
                       ? 'bg-amber-600 rounded-tr-none' 
@@ -96,7 +118,10 @@ export default function ChatScreen() {
                   <Text className={`font-mono text-sm ${isMe ? 'text-white' : 'text-neutral-200'}`}>
                     {msg.content}
                   </Text>
-                </View>
+                </Pressable>
+                {isMe && (
+                   <Text className="text-amber-600/50 font-mono text-[8px] mt-1 text-right uppercase">Tap & Hold Options</Text>
+                )}
                 <Text className={`text-neutral-700 font-mono text-[8px] mt-1 ${isMe ? 'text-right' : 'text-left'}`}>
                   {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </Text>
@@ -107,24 +132,46 @@ export default function ChatScreen() {
       </ScrollView>
 
       {/* Input Area */}
-      <View className="p-4 pb-10 bg-black border-t border-neutral-900 flex-row items-center gap-3">
-         <TextInput
-           className="flex-1 bg-neutral-900 text-white p-3 px-4 rounded-full font-mono text-sm border border-neutral-800"
-           placeholder="Type a message..."
-           placeholderTextColor="#525252"
-           value={content}
-           onChangeText={setContent}
-           multiline
-           maxLength={500}
-         />
-         <Pressable 
-           onPress={handleSend}
-           disabled={!content.trim() || sendMessageMutation.isPending}
-           className={`w-10 h-10 rounded-full items-center justify-center ${content.trim() ? 'bg-amber-500' : 'bg-neutral-800'}`}
-         >
-           <Ionicons name="send" size={18} color={content.trim() ? 'black' : '#525252'} />
-         </Pressable>
-      </View>
+      {editingMessageId ? (
+         <View className="p-4 pb-10 bg-neutral-900 border-t border-amber-900 flex-row items-center gap-3">
+            <Pressable onPress={() => setEditingMessageId(null)} className="w-8 h-8 rounded-full items-center justify-center bg-neutral-800">
+              <Ionicons name="close" size={16} color="#525252" />
+            </Pressable>
+            <TextInput
+              className="flex-1 bg-black text-amber-500 p-3 px-4 rounded-full font-mono text-sm border border-amber-900"
+              value={editText}
+              onChangeText={setEditText}
+              multiline
+              autoFocus
+            />
+            <Pressable 
+              onPress={handleSaveEdit}
+              disabled={!editText.trim() || updateMessage.isPending}
+              className={`w-10 h-10 rounded-full items-center justify-center ${editText.trim() ? 'bg-amber-500' : 'bg-neutral-800'}`}
+            >
+              <Ionicons name="checkmark" size={18} color={editText.trim() ? 'black' : '#525252'} />
+            </Pressable>
+         </View>
+      ) : (
+         <View className="p-4 pb-10 bg-black border-t border-neutral-900 flex-row items-center gap-3">
+            <TextInput
+              className="flex-1 bg-neutral-900 text-white p-3 px-4 rounded-full font-mono text-sm border border-neutral-800"
+              placeholder="Type a message..."
+              placeholderTextColor="#525252"
+              value={content}
+              onChangeText={setContent}
+              multiline
+              maxLength={500}
+            />
+            <Pressable 
+              onPress={handleSend}
+              disabled={!content.trim() || sendMessageMutation.isPending}
+              className={`w-10 h-10 rounded-full items-center justify-center ${content.trim() ? 'bg-amber-500' : 'bg-neutral-800'}`}
+            >
+              <Ionicons name="send" size={18} color={content.trim() ? 'black' : '#525252'} />
+            </Pressable>
+         </View>
+      )}
     </KeyboardAvoidingView>
   );
 }

@@ -56,7 +56,7 @@ export const useFollowing = (userId?: string) => {
              const items = (displayItems || []).filter((i: any) => i.user_id === f.following_id);
              f.profiles.on_display = items
                  .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-                 .slice(0, 3);
+                 .slice(0, 5);
           }
           return f;
       });
@@ -238,7 +238,7 @@ export const useAllUsers = (currentUserId?: string) => {
           const items = (displayItems || []).filter((i: any) => i.user_id === profile.id);
           profile.on_display = items
               .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-              .slice(0, 3);
+              .slice(0, 5);
           return profile;
       });
 
@@ -708,4 +708,98 @@ export const useSendMessage = (myId?: string) => {
   });
 };
 
+// 14. Delete Conversation
+export const useDeleteConversation = (myId?: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (partnerId: string) => {
+      if (!myId) throw new Error('Not logged in');
+      const { error } = await supabase
+        .from('messages')
+        .delete()
+        .or(`and(sender_id.eq.${myId},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${myId})`);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations', myId] });
+    }
+  });
+};
 
+// 15. Edit Message
+export const useUpdateMessage = (myId?: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ messageId, content }: { messageId: string, content: string }) => {
+      if (!myId) throw new Error('Not logged in');
+      const { error } = await supabase
+        .from('messages')
+        .update({ content } as any)
+        .eq('id', messageId)
+        .eq('sender_id', myId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['chat'] });
+      queryClient.invalidateQueries({ queryKey: ['conversations', myId] });
+    }
+  });
+};
+
+// 16. Delete Message
+export const useDeleteMessage = (myId?: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (messageId: string) => {
+      if (!myId) throw new Error('Not logged in');
+      const { error } = await supabase
+        .from('messages')
+        .delete()
+        .eq('id', messageId)
+        .eq('sender_id', myId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['chat'] });
+      queryClient.invalidateQueries({ queryKey: ['conversations', myId] });
+    }
+  });
+};
+
+// 17. Delete Notification
+export const useDeleteNotification = (userId?: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (notificationId: string) => {
+      if (!userId) throw new Error('Not logged in');
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('id', notificationId)
+        .eq('user_id', userId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications', userId] });
+    }
+  });
+};
+
+// 18. Clear All Read Notifications
+export const useClearReadNotifications = (userId?: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      if (!userId) throw new Error('Not logged in');
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('user_id', userId)
+        .eq('is_read', true);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications', userId] });
+    }
+  });
+};

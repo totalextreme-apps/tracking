@@ -19,7 +19,10 @@ import {
   usePostComments,
   useCreatePostComment,
   useMarketplaceFeed,
-  useAllUsers
+  useAllUsers,
+  useDeleteConversation,
+  useDeleteNotification,
+  useClearReadNotifications
 } from '@/hooks/useSocial';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -214,9 +217,53 @@ export default function CommunityScreen() {
   const { data: marketplaceFeed } = useMarketplaceFeed();
   const { data: searchResults, isLoading: searchLoading } = useSearchUsers(userSearch);
   const { data: notifications, isLoading: notifLoading } = useNotifications(userId);
-  const { data: conversations, isLoading: inboxLoading } = useConversations(userId);
   const { data: suggestedMembers } = useSuggestedUsers(userId);
   const { data: allUsers, isLoading: allUsersLoading } = useAllUsers(userId);
+
+  const [isNetworkExpanded, setIsNetworkExpanded] = useState(false);
+
+  const networkMembers = useMemo(() => {
+    if (!following) return [];
+    const top5 = following.filter((f: any) => f.is_top_five);
+    const others = following.filter((f: any) => !f.is_top_five);
+    return [...top5, ...others];
+  }, [following]);
+
+  const processedCommunityFeed = useMemo(() => {
+    if (!communityFeed) return [];
+    
+    let sorted = [...communityFeed]
+      .filter((item: any) => {
+          if (pulseFilter === 'collection' && item.activity_type === 'post') return false;
+          if (pulseFilter === 'notes' && item.activity_type !== 'post') return false;
+          return true;
+      })
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      
+    let grouped: any[] = [];
+    
+    for (let item of sorted) {
+      if (item.activity_type === 'post') {
+        grouped.push(item);
+      } else {
+        const itemDate = new Date(item.created_at).toDateString();
+        const lastGroup = grouped[grouped.length - 1];
+        if (lastGroup && lastGroup.type === 'story_group' && lastGroup.user_id === item.user_id && lastGroup.date === itemDate) {
+           lastGroup.items.push(item);
+        } else {
+           grouped.push({
+              type: 'story_group',
+              id: `group-${item.id}`,
+              user_id: item.user_id,
+              profiles: item.profiles,
+              date: itemDate,
+              items: [item]
+           });
+        }
+      }
+    }
+    return grouped;
+  }, [communityFeed, pulseFilter]);
 
   // TMDB Media Search effect
   React.useEffect(() => {
@@ -243,6 +290,9 @@ export default function CommunityScreen() {
   const deletePost = useDeletePost(userId);
   const updatePost = useUpdatePost(userId);
   const markRead = useMarkNotificationRead();
+  const deleteConversation = useDeleteConversation(userId);
+  const deleteNotification = useDeleteNotification(userId);
+  const clearReadNotifications = useClearReadNotifications(userId);
 
   const isFollowing = (targetId: string) => following?.some((f: any) => f.following_id === targetId);
   const unreadCount = notifications?.filter((n: any) => !n.is_read).length || 0;
@@ -316,9 +366,9 @@ export default function CommunityScreen() {
   };
 
   const tabs = [
+    { key: 'board', label: 'Board' },
     { key: 'activity', label: 'Activity' },
     { key: 'directory', label: 'Directory' },
-    { key: 'board', label: 'Board' },
     { key: 'inbox', label: 'Inbox' },
     { key: 'alerts', label: unreadCount > 0 ? `Alerts (${unreadCount})` : 'Alerts' },
   ];
@@ -378,31 +428,13 @@ export default function CommunityScreen() {
         >
           <MarketplaceSection />
           {/* Member Card Feed */}
-          {following && following.length > 0 && (
+          {networkMembers && networkMembers.length > 0 && (
             <View style={{ paddingHorizontal: 16, marginBottom: 24, paddingBottom: 24, borderBottomWidth: 1, borderBottomColor: '#1a1a1a' }}>
+              <Text style={{ color: '#f59e0b', fontFamily: 'SpaceMono', fontSize: 13, fontWeight: 'bold', letterSpacing: 4, marginBottom: 16, textTransform: 'uppercase' }}>The Network</Text>
               
-              {/* TOP 5 */}
-              {following.some((f: any) => f.is_top_five) && (
-                  <View style={{ marginBottom: 16 }}>
-                      <Text style={{ color: '#f59e0b', fontFamily: 'SpaceMono', fontSize: 10, fontWeight: 'bold', letterSpacing: 2, marginBottom: 16, textTransform: 'uppercase' }}>★ My Top 5</Text>
-                      {following.filter((f: any) => f.is_top_five).map((f: any) => (
-                        <View key={f.following_id} style={{ marginBottom: 24 }}>
-                          <MemberCard 
-                              userId={f.following_id} 
-                              profile={f.profiles} 
-                              isReadOnly={true}
-                              onAvatarPress={() => router.push(`/profile/${f.following_id}?from=community`)}
-                              onDisplayItems={f.profiles?.on_display || []}
-                          />
-                        </View>
-                      ))}
-                  </View>
-              )}
-
-              {/* TRACKING */}
-              <Text style={{ color: '#3a3a3a', fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold', letterSpacing: 2, marginBottom: 16, textTransform: 'uppercase' }}>The Network</Text>
-              {following.filter((f: any) => !f.is_top_five).map((f: any) => (
+              {(isNetworkExpanded ? networkMembers : networkMembers.slice(0, 5)).map((f: any) => (
                  <View key={f.following_id} style={{ marginBottom: 24 }}>
+                   {f.is_top_five && <View style={{ alignSelf: 'flex-start', backgroundColor: '#f59e0b22', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10, marginBottom: -10, zIndex: 10, marginLeft: 16, borderWidth: 1, borderColor: '#f59e0b' }}><Text style={{ color: '#f59e0b', fontSize: 8, fontFamily: 'SpaceMono', fontWeight: 'bold' }}>★ TOP 5</Text></View>}
                    <MemberCard 
                       userId={f.following_id} 
                       profile={f.profiles} 
@@ -412,10 +444,21 @@ export default function CommunityScreen() {
                    />
                  </View>
               ))}
+
+              {networkMembers.length > 5 && (
+                 <Pressable 
+                    onPress={() => setIsNetworkExpanded(!isNetworkExpanded)}
+                    style={{ backgroundColor: '#111', paddingVertical: 12, borderRadius: 8, alignItems: 'center', borderWidth: 1, borderColor: '#f59e0b33' }}
+                 >
+                    <Text style={{ color: '#f59e0b', fontFamily: 'SpaceMono', fontSize: 11, fontWeight: 'bold' }}>
+                       {isNetworkExpanded ? 'COLLAPSE NETWORK' : `SEE FULL NETWORK (${networkMembers.length})`}
+                    </Text>
+                 </Pressable>
+              )}
             </View>
           )}
 
-          {(!following || following.length === 0) && (
+          {(!networkMembers || networkMembers.length === 0) && (
              <View style={{ padding: 24, alignItems: 'center', backgroundColor: '#111', marginHorizontal: 16, borderRadius: 10, borderWidth: 1, borderColor: '#1f1f1f', marginBottom: 24 }}>
                 <Ionicons name="people-outline" size={32} color="#f59e0b" style={{ marginBottom: 16 }} />
                 <Text style={{ color: '#fff', fontFamily: 'SpaceMono', fontSize: 13, fontWeight: 'bold', textAlign: 'center', marginBottom: 8 }}>Your Video Store Network is Empty</Text>
@@ -424,9 +467,10 @@ export default function CommunityScreen() {
           )}
 
           {/* Pulse feed */}
+          {/* Pulse feed */}
           <View style={{ paddingHorizontal: 16 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-              <Text style={{ color: '#3a3a3a', fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold', letterSpacing: 2, textTransform: 'uppercase' }}>Community Pulse</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <Text style={{ color: '#fff', fontFamily: 'SpaceMono', fontSize: 14, fontWeight: 'bold', letterSpacing: 2, textTransform: 'uppercase' }}>Community Pulse</Text>
               <View style={{ flexDirection: 'row', backgroundColor: '#111', borderRadius: 4, padding: 2 }}>
                 {[
                   { id: 'all', label: 'ALL' },
@@ -439,25 +483,50 @@ export default function CommunityScreen() {
                 ))}
               </View>
             </View>
-            {communityLoading ? <ActivityIndicator color="#f59e0b" /> : (
-              (communityFeed || [])
-                .filter((item: any) => {
-                  if (pulseFilter === 'collection' && item.activity_type === 'post') return false;
-                  if (pulseFilter === 'notes' && item.activity_type !== 'post') return false;
-                  return true;
-                })
-                .sort((a: any, b: any) => {
-                   const isATop5 = following?.find((f: any) => f.following_id === a.user_id)?.is_top_five;
-                   const isBTop5 = following?.find((f: any) => f.following_id === b.user_id)?.is_top_five;
-                   if (isATop5 && !isBTop5) return -1;
-                   if (!isATop5 && isBTop5) return 1;
-                   return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-                })
-                .map((item: any, idx: number) => {
+            {communityLoading ? <ActivityIndicator color="#f59e0b" /> : processedCommunityFeed.length === 0 ? (
+               <View style={{ padding: 24, alignItems: 'center', backgroundColor: '#111', borderRadius: 10, borderWidth: 1, borderColor: '#1f1f1f', marginBottom: 24 }}>
+                  <Ionicons name="pulse" size={32} color="#f59e0b" style={{ marginBottom: 16 }} />
+                  <Text style={{ color: '#fff', fontFamily: 'SpaceMono', fontSize: 13, fontWeight: 'bold', textAlign: 'center', marginBottom: 8 }}>The Pulse is Quiet</Text>
+                  <Text style={{ color: '#525252', fontFamily: 'SpaceMono', fontSize: 11, textAlign: 'center', lineHeight: 18 }}>When your network adds titles to their shelf or pins notes to the board, they will appear here.</Text>
+               </View>
+            ) : (
+              processedCommunityFeed.map((item: any, idx: number) => {
+                if (item.type === 'story_group') {
+                   const profile = item.profiles;
+                   return (
+                     <View key={item.id + '-' + idx} style={{ marginBottom: 20 }}>
+                       <Pressable onPress={() => router.push(`/profile/${item.user_id}?from=community`)} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                         <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#1a1a1a', overflow: 'hidden', marginRight: 8, borderWidth: 1, borderColor: '#222' }}>
+                           {profile?.avatar_url ? <Image source={{ uri: profile.avatar_url }} style={{ width: '100%', height: '100%' }} /> : <Ionicons name="person" size={12} color="#444" />}
+                         </View>
+                         <View style={{ flex: 1 }}>
+                           <Text style={{ color: '#ddd', fontFamily: 'SpaceMono', fontSize: 11, fontWeight: 'bold' }}>@{profile?.username || 'member'}</Text>
+                           <Text style={{ color: '#333', fontFamily: 'SpaceMono', fontSize: 8, textTransform: 'uppercase' }}>
+                             added {item.items.length} titles to collection · {item.date}
+                           </Text>
+                         </View>
+                       </Pressable>
+                       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 4 }}>
+                          {item.items.map((sub: any, i: number) => (
+                             <Pressable 
+                               key={i} 
+                               onPress={() => { const id = sub.movies?.id || sub.shows?.id; const t = sub.movies ? 'movie' : 'show'; router.push(`/(tabs)/${t}/${id}?ownerId=${sub.user_id}`); }} 
+                               style={{ width: 62, marginRight: 8, backgroundColor: '#0a0a0a', padding: 4, borderRadius: 8, borderWidth: 1, borderColor: '#f59e0b18' }}
+                             >
+                               <Image source={{ uri: getPosterUrl(sub.movies?.poster_path || sub.shows?.poster_path) || '' }} style={{ width: '100%', height: 76, borderRadius: 4, backgroundColor: '#1a1a1a', marginBottom: 4 }} />
+                               <View style={{ backgroundColor: '#1a1a1a', alignSelf: 'center', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 2 }}>
+                                 <Text style={{ color: '#f59e0b', fontFamily: 'SpaceMono', fontSize: 6, fontWeight: 'bold' }}>{sub.format}</Text>
+                               </View>
+                             </Pressable>
+                          ))}
+                       </ScrollView>
+                     </View>
+                   );
+                }
+                
                 const profile = item.profiles;
-                const isPost = item.activity_type === 'post';
                 return (
-                  <View key={item.id + '-' + idx} style={{ marginBottom: 16 }}>
+                  <View key={item.id + '-' + idx} style={{ marginBottom: 20 }}>
                     <Pressable onPress={() => router.push(`/profile/${item.user_id}?from=community`)} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                       <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#1a1a1a', overflow: 'hidden', marginRight: 8, borderWidth: 1, borderColor: '#222' }}>
                         {profile?.avatar_url ? <Image source={{ uri: profile.avatar_url }} style={{ width: '100%', height: '100%' }} /> : <Ionicons name="person" size={12} color="#444" />}
@@ -465,26 +534,13 @@ export default function CommunityScreen() {
                       <View style={{ flex: 1 }}>
                         <Text style={{ color: '#ddd', fontFamily: 'SpaceMono', fontSize: 11, fontWeight: 'bold' }}>@{profile?.username || 'member'}</Text>
                         <Text style={{ color: '#333', fontFamily: 'SpaceMono', fontSize: 8, textTransform: 'uppercase' }}>
-                          {isPost ? 'pinned a note' : `added to ${item.format} collection`} · {new Date(item.created_at).toLocaleDateString()}
+                          pinned a note · {new Date(item.created_at).toLocaleDateString()}
                         </Text>
                       </View>
                     </Pressable>
-                    {isPost ? (
-                      <View style={{ backgroundColor: '#111', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#1a1a1a' }}>
-                        <Text style={{ color: '#ccc', fontFamily: 'SpaceMono', fontSize: 12, lineHeight: 18, fontStyle: 'italic' }}>"{item.content}"</Text>
-                      </View>
-                    ) : (
-                      <Pressable onPress={() => { const id = item.movies?.id || item.shows?.id; const t = item.movies ? 'movie' : 'show'; router.push(`/(tabs)/${t}/${id}?ownerId=${item.user_id}`); }} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#0a0a0a', padding: 10, borderRadius: 10, borderWidth: 1, borderColor: '#f59e0b18' }}>
-                        <Image source={{ uri: getPosterUrl(item.movies?.poster_path || item.shows?.poster_path) || '' }} style={{ width: 34, height: 50, borderRadius: 4, marginRight: 10, backgroundColor: '#1a1a1a' }} />
-                        <View style={{ flex: 1 }}>
-                          <Text style={{ color: '#fff', fontFamily: 'SpaceMono', fontSize: 12, fontWeight: 'bold' }} numberOfLines={1}>{item.movies?.title || item.shows?.name}</Text>
-                          <View style={{ backgroundColor: '#1a1a1a', alignSelf: 'flex-start', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 2, marginTop: 4, borderWidth: 1, borderColor: '#222' }}>
-                            <Text style={{ color: '#f59e0b', fontFamily: 'SpaceMono', fontSize: 7, fontWeight: 'bold' }}>{item.format}</Text>
-                          </View>
-                        </View>
-                        <Ionicons name="chevron-forward" size={14} color="#222" />
-                      </Pressable>
-                    )}
+                    <View style={{ backgroundColor: '#111', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#1a1a1a', borderLeftWidth: 3, borderLeftColor: '#f59e0b' }}>
+                      <Text style={{ color: '#ccc', fontFamily: 'SpaceMono', fontSize: 12, lineHeight: 18, fontStyle: 'italic' }}>"{item.content}"</Text>
+                    </View>
                   </View>
                 );
               })
@@ -494,7 +550,7 @@ export default function CommunityScreen() {
           {/* Suggested Members (Shared Tastes) */}
           {suggestedMembers && suggestedMembers.length > 0 && (
             <View style={{ paddingHorizontal: 16, marginTop: 16, marginBottom: 24, paddingTop: 24, borderTopWidth: 1, borderTopColor: '#1a1a1a' }}>
-              <Text style={{ color: '#3a3a3a', fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold', letterSpacing: 2, marginBottom: 16, textTransform: 'uppercase' }}>Suggested For You (Shared Tastes)</Text>
+              <Text style={{ color: '#f59e0b', fontFamily: 'SpaceMono', fontSize: 13, fontWeight: 'bold', letterSpacing: 2, marginBottom: 16, textTransform: 'uppercase' }}>Suggested For You</Text>
               {suggestedMembers.map((user: any) => (
                 <View key={user.id} style={{ marginBottom: 24 }}>
                   <MemberCard 
@@ -745,8 +801,11 @@ export default function CommunityScreen() {
       {/* ══════════════════════════ INBOX TAB ══════════════════════════ */}
       {activeTab === 'inbox' && (
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 160 }}>
-          <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: '#111' }}>
+          <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: '#111', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <Text style={{ color: '#2a2a2a', fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold', letterSpacing: 2, textTransform: 'uppercase' }}>Direct Messages</Text>
+            <Pressable onPress={() => { /* Wait, to create message we just switch to directory to click member */ setActiveTab('directory'); }} style={{ backgroundColor: '#111', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: '#f59e0b44' }}>
+              <Text style={{ color: '#f59e0b', fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold' }}>+ NEW MSG</Text>
+            </Pressable>
           </View>
           {inboxLoading ? <ActivityIndicator color="#f59e0b" style={{ marginTop: 40 }} /> : !conversations?.length ? (
             <View style={{ marginTop: 80, alignItems: 'center', paddingHorizontal: 40, opacity: 0.3 }}>
@@ -763,6 +822,9 @@ export default function CommunityScreen() {
                   <Text style={{ color: '#fff', fontFamily: 'SpaceMono', fontSize: 13, fontWeight: 'bold' }}>@{conv.partner?.username || 'anon'}</Text>
                   <Text style={{ color: '#444', fontFamily: 'SpaceMono', fontSize: 11 }} numberOfLines={1}>{conv.lastMessage?.content}</Text>
                 </View>
+                <Pressable onPress={() => deleteConversation.mutate(conv.partner?.id)} style={{ padding: 8, backgroundColor: '#1a1a1a', borderRadius: 20 }}>
+                  <Ionicons name="trash" size={14} color="#555" />
+                </Pressable>
               </Pressable>
             ))
           )}
@@ -772,8 +834,13 @@ export default function CommunityScreen() {
       {/* ══════════════════════════ ALERTS TAB ══════════════════════════ */}
       {activeTab === 'alerts' && (
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 160 }}>
-          <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: '#111' }}>
+          <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: '#111', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <Text style={{ color: '#2a2a2a', fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold', letterSpacing: 2, textTransform: 'uppercase' }}>Alerts</Text>
+            {notifications && notifications.some((n: any) => n.is_read) && (
+               <Pressable onPress={() => clearReadNotifications.mutate()} style={{ backgroundColor: '#111', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: '#e53e3e44' }}>
+                 <Text style={{ color: '#e53e3e', fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold' }}>CLEAR READ</Text>
+               </Pressable>
+            )}
           </View>
           {notifLoading ? <ActivityIndicator color="#f59e0b" style={{ marginTop: 40 }} /> : !notifications?.length ? (
             <View style={{ marginTop: 80, alignItems: 'center', paddingHorizontal: 40, opacity: 0.3 }}>
@@ -790,7 +857,13 @@ export default function CommunityScreen() {
                   <Text style={{ color: n.is_read ? '#444' : '#ddd', fontFamily: 'SpaceMono', fontSize: 12 }}>{notifMessage(n)}</Text>
                   <Text style={{ color: '#222', fontFamily: 'SpaceMono', fontSize: 8 }}>{new Date(n.created_at).toLocaleDateString()}</Text>
                 </View>
-                {!n.is_read && <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#f59e0b' }} />}
+                {!n.is_read ? (
+                   <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#f59e0b' }} />
+                ) : (
+                   <Pressable onPress={() => deleteNotification.mutate(n.id)} style={{ padding: 8 }}>
+                     <Ionicons name="trash" size={14} color="#222" />
+                   </Pressable>
+                )}
               </Pressable>
             ))
           )}
