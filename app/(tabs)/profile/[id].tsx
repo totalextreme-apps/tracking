@@ -303,24 +303,24 @@ export default function UserProfileScreen() {
         </View>
 
         <View className="flex-row border-b border-neutral-800 mt-8 mb-4">
-          <Pressable onPress={() => setActiveTab('on-display')} className={`flex-1 py-3 items-center border-b-2 ${activeTab === 'on-display' ? 'border-amber-500' : 'border-transparent'}`}>
-            <Text className={`font-mono text-[10px] font-bold ${activeTab === 'on-display' ? 'text-amber-500' : 'text-neutral-500'}`}>ON DISPLAY</Text>
+          <Pressable onPress={() => setActiveTab('on-display')} className={`flex-1 py-3 items-center justify-center border-b-2 ${activeTab === 'on-display' ? 'border-amber-500' : 'border-transparent'}`}>
+            <Text adjustsFontSizeToFit numberOfLines={1} className={`font-mono text-[10px] text-center font-bold px-1 ${activeTab === 'on-display' ? 'text-amber-500' : 'text-neutral-500'}`}>DISPLAY ({onDisplayItems.length})</Text>
           </Pressable>
-          <Pressable onPress={() => setActiveTab('grails')} className={`flex-1 py-3 items-center border-b-2 ${activeTab === 'grails' ? 'border-white' : 'border-transparent'}`}>
-            <Text className={`font-mono text-[10px] font-bold ${activeTab === 'grails' ? 'text-white' : 'text-neutral-500'}`}>GRAILS</Text>
+          <Pressable onPress={() => setActiveTab('grails')} className={`flex-1 py-3 items-center justify-center border-b-2 ${activeTab === 'grails' ? 'border-white' : 'border-transparent'}`}>
+            <Text adjustsFontSizeToFit numberOfLines={1} className={`font-mono text-[10px] text-center font-bold px-1 ${activeTab === 'grails' ? 'text-white' : 'text-neutral-500'}`}>GRAILS ({grails.length})</Text>
           </Pressable>
-          <Pressable onPress={() => setActiveTab('collection')} className={`flex-1 py-3 items-center border-b-2 ${activeTab === 'collection' ? 'border-neutral-400' : 'border-transparent'}`}>
-            <Text className={`font-mono text-[10px] font-bold ${activeTab === 'collection' ? 'text-neutral-200' : 'text-neutral-500'}`}>COLLECTION</Text>
+          <Pressable onPress={() => setActiveTab('collection')} className={`flex-1 py-3 items-center justify-center border-b-2 ${activeTab === 'collection' ? 'border-neutral-400' : 'border-transparent'}`}>
+            <Text adjustsFontSizeToFit numberOfLines={1} className={`font-mono text-[10px] text-center font-bold px-1 ${activeTab === 'collection' ? 'text-neutral-200' : 'text-neutral-500'}`}>COLLECT ({stackedCollection.length})</Text>
           </Pressable>
-          <Pressable onPress={() => setActiveTab('wishlist')} className={`flex-1 py-3 items-center border-b-2 ${activeTab === 'wishlist' ? 'border-pink-500' : 'border-transparent'}`}>
-            <Text className={`font-mono text-[10px] font-bold ${activeTab === 'wishlist' ? 'text-pink-500' : 'text-neutral-500'}`}>WISHLIST</Text>
+          <Pressable onPress={() => setActiveTab('wishlist')} className={`flex-1 py-3 items-center justify-center border-b-2 ${activeTab === 'wishlist' ? 'border-pink-500' : 'border-transparent'}`}>
+            <Text adjustsFontSizeToFit numberOfLines={1} className={`font-mono text-[10px] text-center font-bold px-1 ${activeTab === 'wishlist' ? 'text-pink-500' : 'text-neutral-500'}`}>WANTED ({stackedWishlist.length})</Text>
           </Pressable>
-          <Pressable onPress={() => setActiveTab('bin')} className={`flex-1 py-3 items-center border-b-2 ${activeTab === 'bin' ? 'border-emerald-500' : 'border-transparent'}`}>
-            <Text className={`font-mono text-[10px] font-bold ${activeTab === 'bin' ? 'text-emerald-500' : 'text-neutral-500'}`}>THE BIN</Text>
+          <Pressable onPress={() => setActiveTab('bin')} className={`flex-1 py-3 items-center justify-center border-b-2 ${activeTab === 'bin' ? 'border-emerald-500' : 'border-transparent'}`}>
+            <Text adjustsFontSizeToFit numberOfLines={1} className={`font-mono text-[10px] text-center font-bold px-1 ${activeTab === 'bin' ? 'text-emerald-500' : 'text-neutral-500'}`}>BIN ({binItems.length})</Text>
           </Pressable>
           {id !== currentUserId && (
-            <Pressable onPress={() => setActiveTab('in-common')} className={`flex-1 py-3 items-center border-b-2 ${activeTab === 'in-common' ? 'border-amber-500' : 'border-transparent'}`}>
-              <Text className={`font-mono text-[10px] font-bold ${activeTab === 'in-common' ? 'text-amber-500' : 'text-neutral-500'}`}>COMMON</Text>
+            <Pressable onPress={() => setActiveTab('in-common')} className={`flex-1 py-3 items-center justify-center border-b-2 ${activeTab === 'in-common' ? 'border-amber-500' : 'border-transparent'}`}>
+              <Text adjustsFontSizeToFit numberOfLines={1} className={`font-mono text-[10px] text-center font-bold px-1 ${activeTab === 'in-common' ? 'text-amber-500' : 'text-neutral-500'}`}>COMMON ({stackedCommon.length})</Text>
             </Pressable>
           )}
         </View>
