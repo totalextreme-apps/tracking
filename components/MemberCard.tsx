@@ -59,9 +59,9 @@ export function MemberCard({ userId, profile, onEditPress, onAvatarPress, isRead
                         </View>
 
                         <View>
-                            <Text className="text-amber-600 font-bold text-[10px] uppercase">ID #</Text>
+                            <Text className="text-amber-600 font-bold text-[10px] uppercase">HANDLE</Text>
                             <View className="flex-row items-baseline border-b border-neutral-600 pb-0.5 border-dashed mr-4">
-                                <Text className="text-amber-500 font-mono font-bold text-lg tracking-widest">{displayId}</Text>
+                                <Text className="text-amber-500 font-mono font-bold text-lg tracking-widest" numberOfLines={1} adjustsFontSizeToFit>{profile?.username ? '@' + profile.username.toUpperCase() : 'UNKNOWN'}</Text>
                             </View>
                         </View>
                     </View>

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, Pressable, TextInput, Modal, Alert } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, Pressable, TextInput, Modal, Alert, Share } from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useProfile, useFollowers, useFollowing, useToggleFollow, useToggleTopFive } from '@/hooks/useSocial';
@@ -192,7 +192,16 @@ export default function UserProfileScreen() {
         <Text className="text-white font-bold text-lg font-mono uppercase" numberOfLines={1}>
           {profile.username ? `${profile.username} PROFILE` : 'PROFILE'}
         </Text>
-        <View className="w-8" />
+        <Pressable 
+            onPress={() => {
+                Share.share({
+                    message: `Check out ${profile?.username || 'this member'}'s collection on Tracking!\n\ntrackingapp://profile/${id}`,
+                });
+            }} 
+            className="p-2"
+        >
+            <Ionicons name="share-outline" size={24} color="#f59e0b" />
+        </Pressable>
       </View>
 
       <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 120 }}>
