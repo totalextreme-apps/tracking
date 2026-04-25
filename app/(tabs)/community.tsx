@@ -219,6 +219,7 @@ export default function CommunityScreen() {
   const { data: notifications, isLoading: notifLoading } = useNotifications(userId);
   const { data: suggestedMembers } = useSuggestedUsers(userId);
   const { data: allUsers, isLoading: allUsersLoading } = useAllUsers(userId);
+  const { data: conversations, isLoading: inboxLoading } = useConversations(userId);
 
   const [isNetworkExpanded, setIsNetworkExpanded] = useState(false);
 
