@@ -619,22 +619,44 @@ export default function CommunityScreen() {
           </View>
 
           <View style={{ paddingHorizontal: 16 }}>
-            <Text style={{ color: '#3a3a3a', fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold', letterSpacing: 2, marginBottom: 16, textTransform: 'uppercase' }}>All Connected Users</Text>
-            {allUsersLoading ? (
-               <ActivityIndicator color="#f59e0b" style={{ padding: 24 }} />
-            ) : (
-               (allUsers || []).map((user: any) => (
-                 <View key={user.id} style={{ marginBottom: 24 }}>
-                   <MemberCard 
-                      userId={user.id} 
-                      profile={user} 
-                      isReadOnly={true}
-                      onAvatarPress={() => router.push(`/profile/${user.id}?from=community`)}
-                      onDisplayItems={user.on_display || []}
-                   />
-                 </View>
-               ))
-            )}
+            <View style={{ backgroundColor: '#222', padding: 8, borderRadius: 12, borderWidth: 4, borderColor: '#333' }}>
+               <View style={{ backgroundColor: '#050505', padding: 20, borderRadius: 4, borderWidth: 1, borderColor: '#00ff0033' }}>
+                  
+                  {/* Top Bar */}
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
+                     <Text style={{ fontFamily: 'SpaceMono', color: '#00ff00', fontSize: 10 }}>VIDEO STORE SYSTEM v1.0.1</Text>
+                     <Text style={{ fontFamily: 'SpaceMono', color: '#00ff00', fontSize: 10 }}>ONLINE</Text>
+                  </View>
+                  <View style={{ height: 1, backgroundColor: '#00ff00', opacity: 0.3, marginBottom: 20 }} />
+                  
+                  {/* Stats Block */}
+                  <Text style={{ fontFamily: 'SpaceMono', color: '#00ff00', fontSize: 12, marginBottom: 12, letterSpacing: 1 }}>{`STORE MEMBERS............... ${(allUsers?.length || 0).toString().padStart(6, '0')}`}</Text>
+                  <Text style={{ fontFamily: 'SpaceMono', color: '#00ff00', fontSize: 12, marginBottom: 12, letterSpacing: 1 }}>{`TITLES IN CIRCULATION....... 003390`}</Text>
+                  <Text style={{ fontFamily: 'SpaceMono', color: '#00ff00', fontSize: 12, marginBottom: 12, letterSpacing: 1 }}>{`SPECIAL REQUESTS............ 000631`}</Text>
+                  <Text style={{ fontFamily: 'SpaceMono', color: '#00ff00', fontSize: 12, marginBottom: 24, letterSpacing: 1 }}>{`MOST WANTED................. 000029`}</Text>
+                  
+                  {/* Member Listing */}
+                  {allUsersLoading ? (
+                     <ActivityIndicator color="#00ff00" style={{ padding: 24 }} />
+                  ) : (
+                     <View>
+                        {(allUsers || []).map((user: any) => (
+                           <Pressable key={user.id} onPress={() => router.push(`/profile/${user.id}?from=community`)} style={{ marginBottom: 6 }}>
+                             <Text style={{ fontFamily: 'SpaceMono', color: '#00ff00', fontSize: 12, letterSpacing: 1 }}>
+                               {`${user.username.padEnd(20, '.')}`} {(user.created_at || '').substring(0,4)}
+                             </Text>
+                           </Pressable>
+                        ))}
+                     </View>
+                  )}
+
+                  {/* Terminal Prompt */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 24 }}>
+                     <Text style={{ fontFamily: 'SpaceMono', color: '#00ff00', fontSize: 12 }}>{'C:\\TRACKING>'}</Text>
+                     <View style={{ width: 8, height: 14, backgroundColor: '#00ff00', marginLeft: 6, opacity: 0.8 }} />
+                  </View>
+               </View>
+            </View>
           </View>
         </ScrollView>
       )}
