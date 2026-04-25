@@ -219,7 +219,8 @@ export const useAllUsers = (currentUserId?: string) => {
       let query = supabase
         .from('profiles')
         .select('*')
-        .order('created_at', { ascending: false })
+        .not('username', 'is', null)
+        .order('username', { ascending: true })
         .limit(100);
         
       const { data, error } = await query;
