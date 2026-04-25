@@ -103,14 +103,14 @@ export default function UserProfileScreen() {
     return result;
   };
 
-  const stackItems = (items: any[]) => {
-    return getStacks(items, false, sortBy, sortOrder);
+  const stackItems = (items: any[], isWishlist = false) => {
+    return getStacks(items, isWishlist, sortBy, sortOrder);
   };
 
   const onDisplayItems = filterAndSortItems(collection?.filter((item: any) => item.is_on_display) || []);
   const grails = filterAndSortItems(collection?.filter((item: any) => item.is_grail) || []);
-  const stackedCollection = useMemo(() => stackItems(filterAndSortItems(collection?.filter((item: any) => item.status === 'owned') || [])), [collection, searchQuery, sortBy, sortOrder, formatFilter, genreFilter, mediaTypeFilter]);
-  const stackedWishlist = useMemo(() => stackItems(filterAndSortItems(collection?.filter((i: any) => i.status === 'wishlist') || [])), [collection, searchQuery, sortBy, sortOrder, formatFilter, genreFilter, mediaTypeFilter]);
+  const stackedCollection = useMemo(() => stackItems(filterAndSortItems(collection?.filter((item: any) => item.status === 'owned') || []), false), [collection, searchQuery, sortBy, sortOrder, formatFilter, genreFilter, mediaTypeFilter]);
+  const stackedWishlist = useMemo(() => stackItems(filterAndSortItems(collection?.filter((i: any) => i.status === 'wishlist') || []), true), [collection, searchQuery, sortBy, sortOrder, formatFilter, genreFilter, mediaTypeFilter]);
   
   const commonItems = useMemo(() => {
     if (!collection || !myCollection || id === currentUserId) return [];
@@ -123,7 +123,7 @@ export default function UserProfileScreen() {
     });
   }, [collection, myCollection, id, currentUserId]);
 
-  const stackedCommon = useMemo(() => stackItems(filterAndSortItems(commonItems)), [commonItems, searchQuery, sortBy, sortOrder, formatFilter, genreFilter, mediaTypeFilter]);
+  const stackedCommon = useMemo(() => stackItems(filterAndSortItems(commonItems), false), [commonItems, searchQuery, sortBy, sortOrder, formatFilter, genreFilter, mediaTypeFilter]);
 
   const binItems = filterAndSortItems(collection?.filter((item: any) => item.for_sale || item.for_trade) || []);
 
