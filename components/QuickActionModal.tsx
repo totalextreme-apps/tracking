@@ -78,7 +78,10 @@ export function QuickActionModal({
       confettiRef.current?.start();
       await updateMutation.mutateAsync({
         itemId: targetItem.id,
-        updates: { status: 'owned' }
+        updates: { 
+          status: 'owned',
+          created_at: new Date().toISOString()
+        }
       });
       setTimeout(() => {
         setIsProcessing(false);

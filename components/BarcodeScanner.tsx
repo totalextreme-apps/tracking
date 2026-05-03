@@ -17,7 +17,7 @@ export default function BarcodeScanner({ onScanned, onClose, barcodeTypes }: Bar
                 facing="back"
                 onBarcodeScanned={onScanned}
                 barcodeScannerSettings={{
-                    barcodeTypes: barcodeTypes as any || ["upc_a", "upc_e", "ean13", "ean8", "qr", "code128", "code39"],
+                    barcodeTypes: barcodeTypes as any || ["upc_a", "upc_e", "ean13", "ean8"],
                 }}
             />
             {/* Visual Target Box Overlay */}

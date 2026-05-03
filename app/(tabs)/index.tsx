@@ -156,7 +156,9 @@ export default function HomeScreen() {
       const q = searchQuery.trim().toLowerCase();
       items = items.filter((item: any) => {
         const m = item.movies || item.shows;
-        return (m?.title || m?.name || '').toLowerCase().includes(q);
+        const inCast = m?.cast?.some((c: any) => c.name.toLowerCase().includes(q)) || 
+                       m?.show_cast?.some((c: any) => c.name.toLowerCase().includes(q));
+        return (m?.title || m?.name || '').toLowerCase().includes(q) || inCast;
       });
     }
 
@@ -216,6 +218,20 @@ export default function HomeScreen() {
                 <View className="flex-row items-baseline gap-2">
                   <Text className="text-amber-500 font-bold text-3xl tracking-tighter uppercase" style={{ fontFamily: 'VCR_OSD_MONO' }}>ON DISPLAY</Text>
                   <Text className="text-neutral-500 font-mono text-xs ml-1">/ {onDisplay.length}</Text>
+                  <Pressable 
+                    onPress={() => {
+                      import('react-native').then(({ Share }) => {
+                        const itemsText = onDisplay.map((item: any, index: number) => {
+                          const m = item.movies || item.shows;
+                          return `${index + 1}. ${m?.title || m?.name} (${item.format})`;
+                        }).join('\n');
+                        Share.share({ message: `Check out what I have On Display:\n\n${itemsText}` });
+                      });
+                    }}
+                    className="ml-2 flex-row items-center justify-center p-1.5 rounded-full bg-neutral-900 border border-neutral-800"
+                  >
+                    <Ionicons name="share-outline" size={14} color="#f59e0b" />
+                  </Pressable>
                 </View>
                 <View className="flex-row items-center gap-2">
                   <Pressable onPress={scrollShelfLeft} className="p-2 bg-neutral-900 rounded-full border border-neutral-800 active:bg-neutral-800"><Ionicons name="chevron-back" size={16} color="#f59e0b" /></Pressable>
@@ -240,6 +256,20 @@ export default function HomeScreen() {
                 <View className="flex-row items-baseline gap-2">
                   <Text className="text-amber-500 font-bold text-3xl tracking-tighter uppercase" style={{ fontFamily: 'VCR_OSD_MONO' }}>THE GRAILS</Text>
                   <Text className="text-neutral-500 font-mono text-xs ml-1">/ {grailList.length}</Text>
+                  <Pressable 
+                    onPress={() => {
+                      import('react-native').then(({ Share }) => {
+                        const itemsText = grailList.map((item: any, index: number) => {
+                          const m = item.movies || item.shows;
+                          return `${index + 1}. ${m?.title || m?.name} (${item.format})`;
+                        }).join('\n');
+                        Share.share({ message: `Check out my Grails:\n\n${itemsText}` });
+                      });
+                    }}
+                    className="ml-2 flex-row items-center justify-center p-1.5 rounded-full bg-neutral-900 border border-neutral-800"
+                  >
+                    <Ionicons name="share-outline" size={14} color="#f59e0b" />
+                  </Pressable>
                 </View>
                 <View className="flex-row items-center gap-2">
                   <Pressable onPress={scrollGrailLeft} className="p-2 bg-neutral-900 rounded-full border border-neutral-800 active:bg-neutral-800"><Ionicons name="chevron-back" size={16} color="#f59e0b" /></Pressable>
@@ -266,6 +296,21 @@ export default function HomeScreen() {
                 <View className="flex-row items-baseline">
                   <Text className="text-neutral-500 font-mono text-xs ml-2">{filteredStacks.length} STACKS</Text>
                   <Text className="text-neutral-500 font-mono text-[8px] ml-1">/ {filteredCollection.length} ITEMS</Text>
+                  <Pressable 
+                    onPress={() => {
+                      import('react-native').then(({ Share }) => {
+                        const itemsText = filteredStacks.map((stack: any, index: number) => {
+                          const item = stack[0];
+                          const m = item.movies || item.shows;
+                          return `${index + 1}. ${m?.title || m?.name} (${item.format})`;
+                        }).join('\n');
+                        Share.share({ message: `Check out my ${thriftMode ? 'Wishlist' : 'Collection'}:\n\n${itemsText}` });
+                      });
+                    }}
+                    className="ml-4 flex-row items-center justify-center p-2 rounded-full bg-neutral-900 border border-neutral-800"
+                  >
+                    <Ionicons name="share-outline" size={14} color="#f59e0b" />
+                  </Pressable>
                 </View>
               </View>
 

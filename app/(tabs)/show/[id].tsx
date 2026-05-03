@@ -348,7 +348,7 @@ export default function ShowDetailScreen() {
                 const title = activeShow.name;
                 if (Platform.OS === 'web') {
                   if (window.confirm(`${title} (${formatName}) is on your wishlist. Do you want to mark it as acquired?`)) {
-                    updateMutation.mutate({ itemId: conflictId, updates: { status: 'owned' } });
+                    updateMutation.mutate({ itemId: conflictId, updates: { status: 'owned', created_at: new Date().toISOString() } });
                     setShowEditionModal(false);
                     setPendingFormat(null);
                   }
@@ -356,7 +356,7 @@ export default function ShowDetailScreen() {
                   Alert.alert('On Wishlist', `${title} (${formatName}) is on your wishlist. Do you want to mark it as acquired?`, [
                     { text: 'Cancel', style: 'cancel' },
                     { text: 'Mark as Acquired', onPress: () => {
-                        updateMutation.mutate({ itemId: conflictId, updates: { status: 'owned' } });
+                        updateMutation.mutate({ itemId: conflictId, updates: { status: 'owned', created_at: new Date().toISOString() } });
                         setShowEditionModal(false);
                         setPendingFormat(null);
                     }}

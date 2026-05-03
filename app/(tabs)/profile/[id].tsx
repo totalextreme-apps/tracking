@@ -45,11 +45,15 @@ export default function UserProfileScreen() {
 
     if (searchQuery) {
        const q = searchQuery.toLowerCase();
-       result = result.filter(item => 
-         item.movies?.title?.toLowerCase().includes(q) || 
-         item.shows?.name?.toLowerCase().includes(q) ||
-         item.edition?.toLowerCase().includes(q)
-       );
+       result = result.filter(item => {
+         const m = item.movies || item.shows;
+         const inCast = m?.cast?.some((c: any) => c.name.toLowerCase().includes(q)) || 
+                        m?.show_cast?.some((c: any) => c.name.toLowerCase().includes(q));
+         return (item.movies?.title?.toLowerCase().includes(q) || 
+           item.shows?.name?.toLowerCase().includes(q) ||
+           item.edition?.toLowerCase().includes(q) ||
+           inCast);
+       });
     }
 
     if (formatFilter && formatFilter !== 'ALL') {
@@ -129,8 +133,9 @@ export default function UserProfileScreen() {
 
   const toggleFollowMutation = useToggleFollow(currentUserId);
   const toggleTopFiveMutation = useToggleTopFive(currentUserId);
-  const isFollowing = currentUserId && followers?.some((f: any) => f.follower_id === currentUserId);
-  const isTopFive = following?.some((f: any) => f.following_id === id && f.is_top_five);
+  const myFollowRecord = followers?.find((f: any) => f.follower_id === currentUserId);
+  const isFollowing = !!myFollowRecord;
+  const isTopFive = !!myFollowRecord?.is_top_five;
   const isOwnProfile = currentUserId === id;
 
   const handleToggleFollow = () => {
@@ -189,7 +194,7 @@ export default function UserProfileScreen() {
         >
           <Ionicons name="arrow-back" size={24} color="#f59e0b" />
         </Pressable>
-        <Text className="text-white font-bold text-lg font-mono uppercase" numberOfLines={1}>
+        <Text className="text-white font-bold text-lg font-mono uppercase flex-1 text-center px-4" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.4}>
           {profile.username ? `${profile.username} PROFILE` : 'PROFILE'}
         </Text>
         <Pressable 
@@ -302,27 +307,29 @@ export default function UserProfileScreen() {
           )}
         </View>
 
-        <View className="flex-row border-b border-neutral-800 mt-8 mb-4">
-          <Pressable onPress={() => setActiveTab('on-display')} className={`flex-1 py-3 items-center justify-center border-b-2 ${activeTab === 'on-display' ? 'border-amber-500' : 'border-transparent'}`}>
-            <Text adjustsFontSizeToFit numberOfLines={1} className={`font-mono text-[10px] text-center font-bold px-1 ${activeTab === 'on-display' ? 'text-amber-500' : 'text-neutral-500'}`}>DISPLAY ({onDisplayItems.length})</Text>
-          </Pressable>
-          <Pressable onPress={() => setActiveTab('grails')} className={`flex-1 py-3 items-center justify-center border-b-2 ${activeTab === 'grails' ? 'border-white' : 'border-transparent'}`}>
-            <Text adjustsFontSizeToFit numberOfLines={1} className={`font-mono text-[10px] text-center font-bold px-1 ${activeTab === 'grails' ? 'text-white' : 'text-neutral-500'}`}>GRAILS ({grails.length})</Text>
-          </Pressable>
-          <Pressable onPress={() => setActiveTab('collection')} className={`flex-1 py-3 items-center justify-center border-b-2 ${activeTab === 'collection' ? 'border-neutral-400' : 'border-transparent'}`}>
-            <Text adjustsFontSizeToFit numberOfLines={1} className={`font-mono text-[10px] text-center font-bold px-1 ${activeTab === 'collection' ? 'text-neutral-200' : 'text-neutral-500'}`}>COLLECT ({stackedCollection.length})</Text>
-          </Pressable>
-          <Pressable onPress={() => setActiveTab('wishlist')} className={`flex-1 py-3 items-center justify-center border-b-2 ${activeTab === 'wishlist' ? 'border-pink-500' : 'border-transparent'}`}>
-            <Text adjustsFontSizeToFit numberOfLines={1} className={`font-mono text-[10px] text-center font-bold px-1 ${activeTab === 'wishlist' ? 'text-pink-500' : 'text-neutral-500'}`}>WANTED ({stackedWishlist.length})</Text>
-          </Pressable>
-          <Pressable onPress={() => setActiveTab('bin')} className={`flex-1 py-3 items-center justify-center border-b-2 ${activeTab === 'bin' ? 'border-emerald-500' : 'border-transparent'}`}>
-            <Text adjustsFontSizeToFit numberOfLines={1} className={`font-mono text-[10px] text-center font-bold px-1 ${activeTab === 'bin' ? 'text-emerald-500' : 'text-neutral-500'}`}>BIN ({binItems.length})</Text>
-          </Pressable>
-          {id !== currentUserId && (
-            <Pressable onPress={() => setActiveTab('in-common')} className={`flex-1 py-3 items-center justify-center border-b-2 ${activeTab === 'in-common' ? 'border-amber-500' : 'border-transparent'}`}>
-              <Text adjustsFontSizeToFit numberOfLines={1} className={`font-mono text-[10px] text-center font-bold px-1 ${activeTab === 'in-common' ? 'text-amber-500' : 'text-neutral-500'}`}>COMMON ({stackedCommon.length})</Text>
+        <View className="border-b border-neutral-800 mt-8 mb-4">
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <Pressable onPress={() => setActiveTab('on-display')} className={`px-4 py-3 items-center justify-center border-b-2 ${activeTab === 'on-display' ? 'border-amber-500' : 'border-transparent'}`}>
+              <Text adjustsFontSizeToFit numberOfLines={1} className={`font-mono text-[10px] text-center font-bold ${activeTab === 'on-display' ? 'text-amber-500' : 'text-neutral-500'}`}>ON DISPLAY</Text>
             </Pressable>
-          )}
+            <Pressable onPress={() => setActiveTab('grails')} className={`px-4 py-3 items-center justify-center border-b-2 ${activeTab === 'grails' ? 'border-white' : 'border-transparent'}`}>
+              <Text adjustsFontSizeToFit numberOfLines={1} className={`font-mono text-[10px] text-center font-bold ${activeTab === 'grails' ? 'text-white' : 'text-neutral-500'}`}>GRAILS</Text>
+            </Pressable>
+            <Pressable onPress={() => setActiveTab('collection')} className={`px-4 py-3 items-center justify-center border-b-2 ${activeTab === 'collection' ? 'border-neutral-400' : 'border-transparent'}`}>
+              <Text adjustsFontSizeToFit numberOfLines={1} className={`font-mono text-[10px] text-center font-bold ${activeTab === 'collection' ? 'text-neutral-200' : 'text-neutral-500'}`}>COLLECTION</Text>
+            </Pressable>
+            <Pressable onPress={() => setActiveTab('wishlist')} className={`px-4 py-3 items-center justify-center border-b-2 ${activeTab === 'wishlist' ? 'border-pink-500' : 'border-transparent'}`}>
+              <Text adjustsFontSizeToFit numberOfLines={1} className={`font-mono text-[10px] text-center font-bold ${activeTab === 'wishlist' ? 'text-pink-500' : 'text-neutral-500'}`}>WANTED</Text>
+            </Pressable>
+            <Pressable onPress={() => setActiveTab('bin')} className={`px-4 py-3 items-center justify-center border-b-2 ${activeTab === 'bin' ? 'border-emerald-500' : 'border-transparent'}`}>
+              <Text adjustsFontSizeToFit numberOfLines={1} className={`font-mono text-[10px] text-center font-bold ${activeTab === 'bin' ? 'text-emerald-500' : 'text-neutral-500'}`}>THE BIN</Text>
+            </Pressable>
+            {id !== currentUserId && (
+              <Pressable onPress={() => setActiveTab('in-common')} className={`px-4 py-3 items-center justify-center border-b-2 ${activeTab === 'in-common' ? 'border-amber-500' : 'border-transparent'}`}>
+                <Text adjustsFontSizeToFit numberOfLines={1} className={`font-mono text-[10px] text-center font-bold ${activeTab === 'in-common' ? 'text-amber-500' : 'text-neutral-500'}`}>IN COMMON</Text>
+              </Pressable>
+            )}
+          </ScrollView>
         </View>
 
         {activeTab !== 'analytics' && (
@@ -404,6 +411,15 @@ export default function UserProfileScreen() {
             <View>
               {activeTab === 'on-display' && (
                 <View>
+                  <View className="flex-row items-center justify-center mb-4 relative">
+                    <Text className="text-white font-mono text-xs uppercase tracking-widest">ON DISPLAY / {onDisplayItems.length}</Text>
+                    <Pressable 
+                      onPress={() => Share.share({ message: `Check out ${profile.username}'s On Display items:\n\n` + onDisplayItems.map((i: any, idx: number) => `${idx + 1}. ${i.movies?.title || i.shows?.name}`).join('\n') })}
+                      className="absolute right-0 p-2"
+                    >
+                      <Ionicons name="share-outline" size={16} color="#f59e0b" />
+                    </Pressable>
+                  </View>
                   {onDisplayItems.length > 0 ? (
                     <View className="flex-row flex-wrap justify-between">
                       {onDisplayItems.map((item: any) => (
@@ -427,6 +443,15 @@ export default function UserProfileScreen() {
 
               {activeTab === 'grails' && (
                 <View>
+                  <View className="flex-row items-center justify-center mb-4 relative">
+                    <Text className="text-white font-mono text-xs uppercase tracking-widest">THE GRAILS / {grails.length}</Text>
+                    <Pressable 
+                      onPress={() => Share.share({ message: `Check out ${profile.username}'s Grails:\n\n` + grails.map((i: any, idx: number) => `${idx + 1}. ${i.movies?.title || i.shows?.name}`).join('\n') })}
+                      className="absolute right-0 p-2"
+                    >
+                      <Ionicons name="share-outline" size={16} color="#f59e0b" />
+                    </Pressable>
+                  </View>
                   {grails.length > 0 ? (
                     <View className="flex-row flex-wrap justify-between">
                       {grails.map((item: any) => (
@@ -450,6 +475,15 @@ export default function UserProfileScreen() {
 
               {activeTab === 'collection' && (
                 <View>
+                  <View className="flex-row items-center justify-center mb-4 relative">
+                    <Text className="text-white font-mono text-xs uppercase tracking-widest">COLLECTION / {stackedCollection.length}</Text>
+                    <Pressable 
+                      onPress={() => Share.share({ message: `Check out ${profile.username}'s Collection:\n\n` + stackedCollection.map((s: any, idx: number) => `${idx + 1}. ${s[0].movies?.title || s[0].shows?.name}`).join('\n') })}
+                      className="absolute right-0 p-2"
+                    >
+                      <Ionicons name="share-outline" size={16} color="#f59e0b" />
+                    </Pressable>
+                  </View>
                   {stackedCollection.length > 0 ? (
                     <View className="flex-row flex-wrap">
                       {stackedCollection.map((stack: any) => (
@@ -482,6 +516,15 @@ export default function UserProfileScreen() {
 
               {activeTab === 'wishlist' && (
                 <View>
+                  <View className="flex-row items-center justify-center mb-4 relative">
+                    <Text className="text-white font-mono text-xs uppercase tracking-widest">WANTED / {stackedWishlist.length}</Text>
+                    <Pressable 
+                      onPress={() => Share.share({ message: `Check out ${profile.username}'s Wishlist:\n\n` + stackedWishlist.map((s: any, idx: number) => `${idx + 1}. ${s[0].movies?.title || s[0].shows?.name}`).join('\n') })}
+                      className="absolute right-0 p-2"
+                    >
+                      <Ionicons name="share-outline" size={16} color="#f59e0b" />
+                    </Pressable>
+                  </View>
                   {stackedWishlist.length > 0 ? (
                     <View className="flex-row flex-wrap">
                       {stackedWishlist.map((stack: any) => (
@@ -514,6 +557,9 @@ export default function UserProfileScreen() {
 
               {activeTab === 'in-common' && (
                 <View>
+                  <View className="flex-row items-center justify-center mb-4 relative">
+                    <Text className="text-white font-mono text-xs uppercase tracking-widest">IN COMMON / {stackedCommon.length}</Text>
+                  </View>
                   {stackedCommon.length > 0 ? (
                     <View className="flex-row flex-wrap">
                       {stackedCommon.map((stack: any) => (
@@ -546,6 +592,15 @@ export default function UserProfileScreen() {
 
               {activeTab === 'bin' && (
                 <View>
+                  <View className="flex-row items-center justify-center mb-4 relative">
+                    <Text className="text-white font-mono text-xs uppercase tracking-widest">THE BIN / {binItems.length}</Text>
+                    <Pressable 
+                      onPress={() => Share.share({ message: `Check out what ${profile.username} is selling/trading:\n\n` + binItems.map((i: any, idx: number) => `${idx + 1}. ${i.movies?.title || i.shows?.name}`).join('\n') })}
+                      className="absolute right-0 p-2"
+                    >
+                      <Ionicons name="share-outline" size={16} color="#f59e0b" />
+                    </Pressable>
+                  </View>
                   {binItems.length > 0 ? (
                     <View className="flex-row flex-wrap justify-between">
                       {binItems.map((item: any) => {
