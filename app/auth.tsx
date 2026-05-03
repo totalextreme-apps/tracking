@@ -223,6 +223,8 @@ export default function AuthScreen() {
                                     secureTextEntry
                                     value={password}
                                     onChangeText={setPassword}
+                                    onSubmitEditing={handleAuth}
+                                    returnKeyType="go"
                                 />
                             </View>
 
