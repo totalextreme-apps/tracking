@@ -815,17 +815,7 @@ export default function CommunityScreen() {
                       isExpanded={expandedPostIds.has(post.id)} 
                       CommentSectionComponent={PostCommentSection} 
                     />
-                  ))}
-                      </View>
-                    )}
-                    <Text style={{ fontFamily: 'SpaceMono', fontSize: 12, color: '#2d2016' }}>{post.content}</Text>
-                    <Pressable onPress={() => toggleComments(post.id)} style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10, paddingTop: 8, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)' }}>
-                      <Ionicons name="chatbubble-outline" size={12} color="#8a7060" />
-                      <Text style={{ fontFamily: 'SpaceMono', fontSize: 9, color: '#8a7060', marginLeft: 4 }}>REPLY</Text>
-                    </Pressable>
-                    {expandedPostIds.has(post.id) && <PostCommentSection postId={post.id} />}
-                  </View>
-                ))
+                  ))
               )}
             </View>
           </ImageBackground>
