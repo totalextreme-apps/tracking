@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, Modal, Image, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, Modal, Image, ActivityIndicator, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import DraggableFlatList, { ScaleDecorator, RenderItemParams } from 'react-native-draggable-flatlist';
 import { supabase } from '@/lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
 import { getPosterUrl } from '@/lib/dummy-data';
@@ -47,33 +46,63 @@ export function ReorderShelfModal({ visible, onClose, items, userId, type }: Reo
     }
   };
 
-  const renderItem = ({ item, drag, isActive }: RenderItemParams<any>) => {
+  const moveUp = (index: number) => {
+    if (index === 0) return;
+    const newData = [...data];
+    const item = newData.splice(index, 1)[0];
+    newData.splice(index - 1, 0, item);
+    setData(newData);
+  };
+
+  const moveDown = (index: number) => {
+    if (index === data.length - 1) return;
+    const newData = [...data];
+    const item = newData.splice(index, 1)[0];
+    newData.splice(index + 1, 0, item);
+    setData(newData);
+  };
+
+  const renderItem = ({ item, index }: { item: any, index: number }) => {
     const title = item.movies?.title || item.shows?.name;
     const poster = getPosterUrl(item.movies?.poster_path || item.shows?.poster_path);
     
     return (
-      <ScaleDecorator>
-        <Pressable
-          onLongPress={drag}
-          disabled={isActive}
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            backgroundColor: isActive ? '#1a1a1a' : '#0a0a0a',
-            padding: 12,
-            borderBottomWidth: 1,
-            borderBottomColor: '#1a1a1a',
-            elevation: isActive ? 5 : 0,
-          }}
-        >
-          <Ionicons name="menu" size={24} color="#525252" style={{ marginRight: 16 }} />
-          <Image source={{ uri: poster }} style={{ width: 40, height: 60, borderRadius: 4, marginRight: 12, backgroundColor: '#222' }} />
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontFamily: 'SpaceMono', fontSize: 12, color: 'white', fontWeight: 'bold' }} numberOfLines={1}>{title}</Text>
-            <Text style={{ fontFamily: 'SpaceMono', fontSize: 10, color: '#f59e0b' }}>{item.format}</Text>
-          </View>
-        </Pressable>
-      </ScaleDecorator>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          backgroundColor: '#0a0a0a',
+          padding: 12,
+          borderBottomWidth: 1,
+          borderBottomColor: '#1a1a1a',
+        }}
+      >
+        <View style={{ flexDirection: 'column', marginRight: 16 }}>
+          <Pressable 
+            onPress={() => moveUp(index)} 
+            disabled={index === 0}
+            style={{ opacity: index === 0 ? 0.2 : 1, padding: 4 }}
+          >
+            <Ionicons name="chevron-up" size={24} color="#f59e0b" />
+          </Pressable>
+          <Pressable 
+            onPress={() => moveDown(index)} 
+            disabled={index === data.length - 1}
+            style={{ opacity: index === data.length - 1 ? 0.2 : 1, padding: 4 }}
+          >
+            <Ionicons name="chevron-down" size={24} color="#f59e0b" />
+          </Pressable>
+        </View>
+
+        <Image source={{ uri: poster }} style={{ width: 40, height: 60, borderRadius: 4, marginRight: 12, backgroundColor: '#222' }} />
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontFamily: 'SpaceMono', fontSize: 12, color: 'white', fontWeight: 'bold' }} numberOfLines={1}>{title}</Text>
+          <Text style={{ fontFamily: 'SpaceMono', fontSize: 10, color: '#f59e0b' }}>{item.format}</Text>
+        </View>
+        <View style={{ width: 30, alignItems: 'center' }}>
+          <Text style={{ fontFamily: 'SpaceMono', fontSize: 10, color: '#525252' }}>#{index + 1}</Text>
+        </View>
+      </View>
     );
   };
 
@@ -94,13 +123,12 @@ export function ReorderShelfModal({ visible, onClose, items, userId, type }: Reo
 
         <View style={{ padding: 16, backgroundColor: '#111' }}>
           <Text style={{ fontFamily: 'SpaceMono', color: '#888', fontSize: 10, textAlign: 'center' }}>
-            Hold and drag the items to reorder them.
+            Use the arrows to move items up or down.
           </Text>
         </View>
 
-        <DraggableFlatList
+        <FlatList
           data={data}
-          onDragEnd={({ data }) => setData(data)}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
           contentContainerStyle={{ paddingBottom: 40 }}
