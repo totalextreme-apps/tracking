@@ -117,7 +117,7 @@ export function useAddToCollection(userId: string | undefined) {
           console.warn('Metadata Fetch Failure:', e);
         }
       }
-      let combinedCast = (itemData as any).credits?.cast?.slice(0, 10).map((c: any) => ({
+      let combinedCast = (itemData as any).credits?.cast?.slice(0, 25).map((c: any) => ({
         id: c.id,
         name: c.name,
         character: c.character,
@@ -534,7 +534,7 @@ export function useRefreshLibrary(userId: string | undefined) {
       for (const tmdbId of moviesToRefresh) {
         try {
           const movieData = await getMovieById(tmdbId);
-          let combinedCast = (movieData as any).credits?.cast?.slice(0, 10).map((c: any) => ({
+          let combinedCast = (movieData as any).credits?.cast?.slice(0, 25).map((c: any) => ({
             id: c.id,
             name: c.name,
             character: c.character,
@@ -557,7 +557,7 @@ export function useRefreshLibrary(userId: string | undefined) {
       for (const tmdbId of showsToRefresh) {
         try {
           const showData = await getTvShowById(tmdbId);
-          let combinedCast = (showData as any).credits?.cast?.slice(0, 10).map((c: any) => ({
+          let combinedCast = (showData as any).credits?.cast?.slice(0, 25).map((c: any) => ({
             id: c.id,
             name: c.name,
             character: c.character,
