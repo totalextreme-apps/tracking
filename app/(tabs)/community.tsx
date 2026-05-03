@@ -31,6 +31,7 @@ import * as Haptics from 'expo-haptics';
 import { supabase } from '@/lib/supabase';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { searchMedia, TmdbMediaResult, getMovieById, getTvShowById } from '@/lib/tmdb';
+import { BulletinPostItem } from '@/components/BulletinPostItem';
 import { MemberCard } from '@/components/MemberCard';
 
 const CORK_BG = 'https://www.transparenttextures.com/patterns/cork-board.png';
@@ -767,54 +768,18 @@ export default function CommunityScreen() {
                     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
                   })
                   .map((post: any, idx: number) => (
-                  <View key={post.id} style={{ backgroundColor: 'rgba(255,252,225,0.94)', borderRadius: 2, padding: 12, marginBottom: 16, transform: [{ rotate: idx % 2 === 0 ? '-1deg' : '1deg' }], shadowColor: '#000', shadowOffset: { width: 2, height: 4 }, shadowOpacity: 0.35, shadowRadius: 5 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                      <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: '#ddd', overflow: 'hidden', marginRight: 8 }}>
-                        {post.profiles?.avatar_url ? <Image source={{ uri: post.profiles.avatar_url }} style={{ width: '100%', height: '100%' }} /> : <Ionicons name="person" size={12} color="#888" />}
-                      </View>
-                      <Text style={{ fontFamily: 'SpaceMono', fontSize: 11, fontWeight: 'bold', color: '#2d2016' }}>@{post.profiles?.username}</Text>
-                      <View style={{ flex: 1 }} />
-                      <View style={{ flexDirection: 'row' }}>
-                        {post.user_id === userId && (
-                          <>
-                            <Pressable onPress={() => startEditing(post)} style={{ marginRight: 10 }}><Ionicons name="pencil" size={14} color="#666" /></Pressable>
-                            <Pressable onPress={() => setShowDeleteConfirm(post.id)} style={{ marginRight: 10 }}><Ionicons name="trash" size={14} color="#e53e3e" /></Pressable>
-                          </>
-                        )}
-                        <Pressable onPress={() => {
-                           const title = post.movies?.title || post.shows?.name || 'this post';
-                           Share.share({
-                              message: `Check out this note by @${post.profiles?.username} about ${title} on the Tracking App: "${post.content}"`
-                           });
-                        }}>
-                           <Ionicons name="share-outline" size={14} color="#666" />
-                        </Pressable>
-                      </View>
-                    </View>
-
-                    {(post.movies || post.shows) && (
-                      <Pressable 
-                        onPress={() => {
-                          const id = post.movies?.id || post.shows?.id;
-                          const t = post.movies ? 'movie' : 'show';
-                          router.push(`/(tabs)/${t}/${id}`);
-                        }}
-                        style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.05)', padding: 8, borderRadius: 4, marginBottom: 10 }}
-                      >
-                        <Image source={{ uri: getPosterUrl(post.movies?.poster_path || post.shows?.poster_path) || '' }} style={{ width: 30, height: 45, borderRadius: 2, marginRight: 10, backgroundColor: '#ddd' }} />
-                        <View style={{ flex: 1 }}>
-                          <Text style={{ fontFamily: 'SpaceMono', fontSize: 10, color: '#2d2016', fontWeight: 'bold' }} numberOfLines={1}>{post.movies?.title || post.shows?.name}</Text>
-                          <Text style={{ fontFamily: 'SpaceMono', fontSize: 8, color: '#8a7060' }}>{post.movies ? 'MOVIE' : 'TV SHOW'}</Text>
-                        </View>
-                        <Ionicons name="chevron-forward" size={12} color="#ccc" />
-                      </Pressable>
-                    )}
-
-                    {post.rating !== undefined && post.rating !== null && (
-                      <View style={{ flexDirection: 'row', marginBottom: 8 }}>
-                        {[1,2,3,4,5].map(star => (
-                          <Ionicons key={star} name="star" size={10} color={star <= post.rating! ? '#f59e0b' : '#d1d1d1'} style={{ marginRight: 2 }} />
-                        ))}
+                    <BulletinPostItem 
+                      key={post.id} 
+                      post={post} 
+                      userId={userId} 
+                      idx={idx} 
+                      startEditing={startEditing} 
+                      setShowDeleteConfirm={setShowDeleteConfirm} 
+                      toggleComments={toggleComments} 
+                      isExpanded={expandedPostIds.has(post.id)} 
+                      CommentSectionComponent={PostCommentSection} 
+                    />
+                  ))}
                       </View>
                     )}
                     <Text style={{ fontFamily: 'SpaceMono', fontSize: 12, color: '#2d2016' }}>{post.content}</Text>
