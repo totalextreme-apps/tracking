@@ -9,9 +9,9 @@ import { useEffect, useRef, useState } from 'react';
 export function usePersistedState<T>(
     storageKey: string,
     defaultValue: T
-): [T, (value: T) => void] {
+): [T, (value: T) => void, boolean] {
     const [value, setValueRaw] = useState<T>(defaultValue);
-    const hydrated = useRef(false);
+    const [isHydrated, setIsHydrated] = useState(false);
 
     // Read persisted value on mount
     useEffect(() => {
@@ -27,7 +27,7 @@ export function usePersistedState<T>(
             })
             .catch(() => { /* ignore read errors */ })
             .finally(() => {
-                hydrated.current = true;
+                setIsHydrated(true);
             });
     }, [storageKey]);
 
@@ -36,5 +36,5 @@ export function usePersistedState<T>(
         AsyncStorage.setItem(storageKey, JSON.stringify(newValue)).catch(() => { });
     };
 
-    return [value, setValue];
+    return [value, setValue, isHydrated];
 }

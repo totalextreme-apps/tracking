@@ -36,7 +36,7 @@ export default function HomeScreen() {
   const { width: windowWidth } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && windowWidth > 1024;
   const [viewMode, setViewMode] = usePersistedState<'list' | 'grid2' | 'grid4' | 'custom'>('stacks_viewMode', isDesktop ? 'grid4' : 'grid2');
-  const [numColumns, setNumColumns] = usePersistedState<number>('stacks_numColumns', isDesktop ? 4 : 2);
+  const [numColumns, setNumColumns, columnsHydrated] = usePersistedState<number>('stacks_numColumns', isDesktop ? 4 : 2);
 
   const resolvedColumns = viewMode === 'list' ? 1 : viewMode === 'grid2' ? 2 : viewMode === 'grid4' ? 4 : numColumns;
   const [searchQuery, setSearchQuery] = useState('');
@@ -428,7 +428,7 @@ export default function HomeScreen() {
                     </Modal>
                   </View>
                 </View>
-                <Slider style={{ width: '100%', height: 30 }} minimumValue={1} maximumValue={isDesktop ? 8 : 4} step={1} value={numColumns} onValueChange={(val) => { setNumColumns(val); setViewMode('custom'); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }} minimumTrackTintColor="#f59e0b" maximumTrackTintColor="#333" thumbTintColor="#f59e0b" />
+                <Slider key={columnsHydrated ? 'h' : 'uh'} style={{ width: '100%', height: 30 }} minimumValue={1} maximumValue={isDesktop ? 8 : 4} step={1} value={numColumns} onValueChange={(val) => { setNumColumns(val); setViewMode('custom'); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }} minimumTrackTintColor="#f59e0b" maximumTrackTintColor="#333" thumbTintColor="#f59e0b" />
             </View>
 
             {isGuest ? (
