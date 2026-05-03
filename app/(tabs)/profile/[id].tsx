@@ -47,7 +47,7 @@ export default function UserProfileScreen() {
        const q = searchQuery.toLowerCase();
        result = result.filter(item => {
          const m = item.movies || item.shows;
-         const inCast = m?.cast?.some((c: any) => c.name.toLowerCase().includes(q)) || 
+         const inCast = m?.movie_cast?.some((c: any) => c.name.toLowerCase().includes(q)) || 
                         m?.show_cast?.some((c: any) => c.name.toLowerCase().includes(q));
          return (item.movies?.title?.toLowerCase().includes(q) || 
            item.shows?.name?.toLowerCase().includes(q) ||

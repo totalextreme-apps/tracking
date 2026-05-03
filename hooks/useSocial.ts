@@ -117,6 +117,7 @@ export const useToggleFollow = (currentUserId?: string) => {
     },
     onSuccess: (_, { targetUserId }) => {
       queryClient.invalidateQueries({ queryKey: ['following', currentUserId] });
+      queryClient.invalidateQueries({ queryKey: ['followers', targetUserId] });
       queryClient.invalidateQueries({ queryKey: ['users', 'suggested'] });
     },
   });
@@ -153,6 +154,7 @@ export const useToggleTopFive = (currentUserId?: string) => {
     },
     onSuccess: (_, { targetUserId }) => {
       queryClient.invalidateQueries({ queryKey: ['following', currentUserId] });
+      queryClient.invalidateQueries({ queryKey: ['followers', targetUserId] });
     },
   });
 };
