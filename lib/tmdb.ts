@@ -53,11 +53,46 @@ async function tmdbFetch<T>(path: string): Promise<T> {
 }
 
 export async function searchMedia(query: string, page = 1): Promise<TmdbSearchResponse> {
-  const encoded = encodeURIComponent(query);
-  let data = await tmdbFetch<any>(`/search/multi?query=${encoded}&page=${page}`);
+  const trimmedQuery = query.trim();
+  
+  // Detect Year at end of query (e.g. "The Reaper 2000")
+  const yearMatch = trimmedQuery.match(/\b(19|20)\d{2}\b$/);
+  let year: string | null = null;
+  let cleanQuery = trimmedQuery;
+  
+  if (yearMatch) {
+    year = yearMatch[0];
+    cleanQuery = trimmedQuery.replace(year, '').trim();
+  }
+
+  const encoded = encodeURIComponent(cleanQuery);
+  let data: any;
+
+  if (year) {
+    // If year detected, fetch movies and tv specifically with year filters
+    try {
+      const movieSearch = await tmdbFetch<any>(`/search/movie?query=${encoded}&primary_release_year=${year}&page=${page}`);
+      const tvSearch = await tmdbFetch<any>(`/search/tv?query=${encoded}&first_air_date_year=${year}&page=${page}`);
+      
+      data = {
+        page: page,
+        results: [
+          ...(movieSearch.results || []).map((r: any) => ({ ...r, media_type: 'movie' })),
+          ...(tvSearch.results || []).map((r: any) => ({ ...r, media_type: 'tv' }))
+        ],
+        total_pages: Math.max(movieSearch.total_pages || 0, tvSearch.total_pages || 0),
+        total_results: (movieSearch.total_results || 0) + (tvSearch.total_results || 0)
+      };
+    } catch (e) {
+      // Fallback to multi-search if specialized fails
+      data = await tmdbFetch<any>(`/search/multi?query=${encodeURIComponent(trimmedQuery)}&page=${page}`);
+    }
+  } else {
+    data = await tmdbFetch<any>(`/search/multi?query=${encoded}&page=${page}`);
+  }
 
   // Special handling for single-character searches which are often buried in multi-search
-  if (query.trim().length === 1 && page === 1) {
+  if (cleanQuery.length === 1 && page === 1 && !year) {
     try {
       const movieSearch = await tmdbFetch<any>(`/search/movie?query=${encoded}&page=1`);
       const tvSearch = await tmdbFetch<any>(`/search/tv?query=${encoded}&page=1`);

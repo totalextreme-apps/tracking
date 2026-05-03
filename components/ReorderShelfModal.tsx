@@ -15,9 +15,16 @@ interface ReorderShelfModalProps {
 }
 
 export function ReorderShelfModal({ visible, onClose, items, userId, type }: ReorderShelfModalProps) {
-  const [data, setData] = useState(items);
+  const [data, setData] = useState(items || []);
   const [isSaving, setIsSaving] = useState(false);
   const queryClient = useQueryClient();
+
+  // Sync data when items prop changes or modal becomes visible
+  React.useEffect(() => {
+    if (visible && items) {
+      setData(items);
+    }
+  }, [visible, items]);
 
   const handleSave = async () => {
     setIsSaving(true);

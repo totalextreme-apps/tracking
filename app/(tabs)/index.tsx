@@ -492,7 +492,13 @@ export default function HomeScreen() {
       </ScrollView>
 
       {quickActionItem && <QuickActionModal item={quickActionItem} visible={!!quickActionItem} collection={collection || []} userId={userId} onClose={() => setQuickActionItem(null)} />}
-      <ReorderShelfModal visible={reorderModalVisible} onClose={() => setReorderModalVisible(false)} type={reorderType} />
+      <ReorderShelfModal 
+        visible={reorderModalVisible} 
+        onClose={() => setReorderModalVisible(false)} 
+        type={reorderType} 
+        items={reorderType === 'display' ? onDisplay : grailList}
+        userId={userId || ''}
+      />
 
       {showRewind && (
         <View className="absolute inset-0 z-[100] items-center justify-center pointer-events-none">
