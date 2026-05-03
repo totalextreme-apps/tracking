@@ -356,6 +356,20 @@ export default function CommunityScreen() {
     }
   };
 
+  const startEditing = (post: any) => {
+    setEditingPostId(post.id);
+    setPostContent(post.content || '');
+    setRating(post.rating || undefined);
+    if (post.movies) {
+      setSelectedMedia({ ...post.movies, media_type: 'movie' } as TmdbMediaResult);
+    } else if (post.shows) {
+      setSelectedMedia({ ...post.shows, media_type: 'tv' } as TmdbMediaResult);
+    } else {
+      setSelectedMedia(null);
+    }
+    scrollRef.current?.scrollTo({ y: 0, animated: true });
+  };
+
   const resetPost = () => {
     setPostContent('');
     setSelectedMedia(null);
