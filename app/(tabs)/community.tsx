@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo } from 'react';
-import { View, Text, ScrollView, Pressable, Image, ImageBackground, TextInput, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, ScrollView, Pressable, Image, ImageBackground, TextInput, ActivityIndicator, Alert, Share } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
@@ -774,12 +774,22 @@ export default function CommunityScreen() {
                       </View>
                       <Text style={{ fontFamily: 'SpaceMono', fontSize: 11, fontWeight: 'bold', color: '#2d2016' }}>@{post.profiles?.username}</Text>
                       <View style={{ flex: 1 }} />
-                      {post.user_id === userId && (
-                        <View style={{ flexDirection: 'row' }}>
-                          <Pressable onPress={() => startEditing(post)} style={{ marginRight: 10 }}><Ionicons name="pencil" size={14} color="#666" /></Pressable>
-                          <Pressable onPress={() => setShowDeleteConfirm(post.id)}><Ionicons name="trash" size={14} color="#e53e3e" /></Pressable>
-                        </View>
-                      )}
+                      <View style={{ flexDirection: 'row' }}>
+                        {post.user_id === userId && (
+                          <>
+                            <Pressable onPress={() => startEditing(post)} style={{ marginRight: 10 }}><Ionicons name="pencil" size={14} color="#666" /></Pressable>
+                            <Pressable onPress={() => setShowDeleteConfirm(post.id)} style={{ marginRight: 10 }}><Ionicons name="trash" size={14} color="#e53e3e" /></Pressable>
+                          </>
+                        )}
+                        <Pressable onPress={() => {
+                           const title = post.movies?.title || post.shows?.name || 'this post';
+                           Share.share({
+                              message: `Check out this note by @${post.profiles?.username} about ${title} on the Tracking App: "${post.content}"`
+                           });
+                        }}>
+                           <Ionicons name="share-outline" size={14} color="#666" />
+                        </Pressable>
+                      </View>
                     </View>
 
                     {(post.movies || post.shows) && (
