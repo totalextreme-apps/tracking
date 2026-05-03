@@ -25,6 +25,7 @@ import {
   useClearReadNotifications
 } from '@/hooks/useSocial';
 import { useQueryClient } from '@tanstack/react-query';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import * as Haptics from 'expo-haptics';
@@ -231,6 +232,15 @@ export default function CommunityScreen() {
   const [rating, setRating] = useState<number | undefined>(undefined);
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+
+  const handleScroll = (event: any) => {
+    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+    setCanScrollLeft(contentOffset.x > 10);
+    setCanScrollRight(contentOffset.x < contentSize.width - layoutMeasurement.width - 10);
+  };
   const [expandedPostIds, setExpandedPostIds] = useState<Set<string>>(new Set());
   
   // Media Search State (Bulletin)
@@ -448,8 +458,18 @@ export default function CommunityScreen() {
         </Text>
 
         {/* Segment Toggle */}
-        <View style={{ marginBottom: 12 }}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ backgroundColor: '#111', borderRadius: 10, padding: 3 }}>
+        <View style={{ marginBottom: 12, position: 'relative' }}>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false} 
+            style={{ backgroundColor: '#111', borderRadius: 10, padding: 3 }}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
+            onContentSizeChange={(w, h) => {
+              // Initial check if content is wider than container
+              if (w <= 300) setCanScrollRight(false); // Approximation or use layout ref
+            }}
+          >
             {tabs.map(tab => (
               <Pressable
                 key={tab.key}
@@ -477,6 +497,24 @@ export default function CommunityScreen() {
               </Pressable>
             ))}
           </ScrollView>
+
+          {/* Indicators */}
+          {canScrollLeft && (
+            <LinearGradient
+              colors={['#111', 'transparent']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={{ position: 'absolute', left: 0, top: 3, bottom: 3, width: 30, borderRadius: 10, pointerEvents: 'none' }}
+            />
+          )}
+          {canScrollRight && (
+            <LinearGradient
+              colors={['transparent', '#111']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={{ position: 'absolute', right: 0, top: 3, bottom: 3, width: 30, borderRadius: 10, pointerEvents: 'none' }}
+            />
+          )}
         </View>
       </View>
 
