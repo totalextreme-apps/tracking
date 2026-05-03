@@ -433,9 +433,10 @@ export default function UserProfileScreen() {
                     {id === currentUserId && onDisplayItems.length > 1 && (
                       <Pressable 
                         onPress={() => { setReorderType('display'); setReorderModalVisible(true); }}
-                        className="absolute left-0 p-2"
+                        className="absolute left-0 p-1 px-2 bg-neutral-900 border border-neutral-800 rounded flex-row items-center"
                       >
-                        <Ionicons name="options-outline" size={16} color="#f59e0b" />
+                        <Ionicons name="list" size={10} color="#f59e0b" style={{ marginRight: 4 }} />
+                        <Text className="text-amber-500 font-mono text-[8px] font-bold">REORDER</Text>
                       </Pressable>
                     )}
                     <Pressable 
@@ -473,9 +474,10 @@ export default function UserProfileScreen() {
                     {id === currentUserId && grails.length > 1 && (
                       <Pressable 
                         onPress={() => { setReorderType('grail'); setReorderModalVisible(true); }}
-                        className="absolute left-0 p-2"
+                        className="absolute left-0 p-1 px-2 bg-neutral-900 border border-neutral-800 rounded flex-row items-center"
                       >
-                        <Ionicons name="options-outline" size={16} color="#f59e0b" />
+                        <Ionicons name="list" size={10} color="#f59e0b" style={{ marginRight: 4 }} />
+                        <Text className="text-amber-500 font-mono text-[8px] font-bold">REORDER</Text>
                       </Pressable>
                     )}
                     <Pressable 
