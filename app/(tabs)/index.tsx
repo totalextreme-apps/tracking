@@ -165,9 +165,7 @@ export default function HomeScreen() {
       const q = searchQuery.trim().toLowerCase();
       items = items.filter((item: any) => {
         const m = item.movies || item.shows;
-        const inCast = m?.movie_cast?.some((c: any) => c.name.toLowerCase().includes(q)) || 
-                       m?.show_cast?.some((c: any) => c.name.toLowerCase().includes(q));
-        return (m?.title || m?.name || '').toLowerCase().includes(q) || inCast;
+        return (m?.title || m?.name || '').toLowerCase().includes(q);
       });
     }
 

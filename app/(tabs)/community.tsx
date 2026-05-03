@@ -418,6 +418,7 @@ export default function CommunityScreen() {
   };
 
   const tabs = [
+    { key: 'profile', label: 'Profile' },
     { key: 'board', label: 'Board' },
     { key: 'activity', label: 'Activity' },
     { key: 'directory', label: 'Directory' },
@@ -451,7 +452,14 @@ export default function CommunityScreen() {
           {tabs.map(tab => (
             <Pressable
               key={tab.key}
-              onPress={() => { setActiveTab(tab.key as Tab); Haptics.selectionAsync(); }}
+              onPress={() => { 
+                if (tab.key === 'profile') {
+                  router.push(`/profile/${userId}`);
+                  return;
+                }
+                setActiveTab(tab.key as Tab); 
+                Haptics.selectionAsync(); 
+              }}
               style={{
                 flex: 1, paddingVertical: 8, borderRadius: 8,
                 backgroundColor: activeTab === tab.key ? '#1c1c1c' : 'transparent',

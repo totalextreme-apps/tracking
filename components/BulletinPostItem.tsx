@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { View, Text, Pressable, Image, Share } from 'react-native';
+import { View, Text, Pressable, Image, Share, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { captureRef } from 'react-native-view-shot';
@@ -14,6 +14,11 @@ export function BulletinPostItem({ post, userId, idx, startEditing, setShowDelet
 
   const handleShare = async () => {
     try {
+      if (Platform.OS === 'web') {
+        const title = post.movies?.title || post.shows?.name || 'this post';
+        Share.share({ message: `Check out this note by @${post.profiles?.username} about ${title} on the Tracking App: "${post.content}"` });
+        return;
+      }
       // Capture the visual post
       const uri = await captureRef(viewRef, {
         format: 'jpg',
@@ -28,6 +33,8 @@ export function BulletinPostItem({ post, userId, idx, startEditing, setShowDelet
       }
     } catch (e) {
       console.error('Share error:', e);
+      const title = post.movies?.title || post.shows?.name || 'this post';
+      Share.share({ message: `Check out this note by @${post.profiles?.username} about ${title} on the Tracking App: "${post.content}"` });
     }
   };
 
