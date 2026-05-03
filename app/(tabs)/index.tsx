@@ -239,6 +239,15 @@ export default function HomeScreen() {
                   >
                     <Ionicons name="share-outline" size={14} color="#f59e0b" />
                   </Pressable>
+                  {onDisplay.length > 1 && !isGuest && (
+                    <Pressable 
+                      onPress={() => { setReorderType('display'); setReorderModalVisible(true); }}
+                      className="ml-3 px-2 py-1 bg-neutral-900 border border-neutral-800 rounded flex-row items-center"
+                    >
+                      <Ionicons name="list" size={10} color="#f59e0b" style={{ marginRight: 4 }} />
+                      <Text className="text-amber-500 font-mono text-[10px] font-bold">REORDER</Text>
+                    </Pressable>
+                  )}
                 </View>
                 <View className="flex-row items-center gap-2">
                   <Pressable onPress={scrollShelfLeft} className="p-2 bg-neutral-900 rounded-full border border-neutral-800 active:bg-neutral-800"><Ionicons name="chevron-back" size={16} color="#f59e0b" /></Pressable>
@@ -277,6 +286,15 @@ export default function HomeScreen() {
                   >
                     <Ionicons name="share-outline" size={14} color="#f59e0b" />
                   </Pressable>
+                  {grailList.length > 1 && !isGuest && (
+                    <Pressable 
+                      onPress={() => { setReorderType('grail'); setReorderModalVisible(true); }}
+                      className="ml-3 px-2 py-1 bg-neutral-900 border border-neutral-800 rounded flex-row items-center"
+                    >
+                      <Ionicons name="list" size={10} color="#f59e0b" style={{ marginRight: 4 }} />
+                      <Text className="text-amber-500 font-mono text-[10px] font-bold">REORDER</Text>
+                    </Pressable>
+                  )}
                 </View>
                 <View className="flex-row items-center gap-2">
                   <Pressable onPress={scrollGrailLeft} className="p-2 bg-neutral-900 rounded-full border border-neutral-800 active:bg-neutral-800"><Ionicons name="chevron-back" size={16} color="#f59e0b" /></Pressable>
