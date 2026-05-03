@@ -39,6 +39,7 @@ const CORK_BG = 'https://www.transparenttextures.com/patterns/cork-board.png';
 type Tab = 'activity' | 'directory' | 'board' | 'inbox' | 'alerts';
 
 function PostCommentSection({ postId }: { postId: string }) {
+  const router = useRouter();
   const { userId } = useAuth();
   const { data: comments, isLoading } = usePostComments(postId);
   const createComment = useCreatePostComment(userId);
@@ -54,6 +55,41 @@ function PostCommentSection({ postId }: { postId: string }) {
     });
   };
 
+  const handleMentionPress = async (username: string) => {
+    try {
+      const { data } = await supabase.from('profiles').select('id').eq('username', username).single();
+      if (data?.id) {
+        router.push(`/profile/${data.id}`);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const renderContentWithMentions = (content: string) => {
+    if (!content) return null;
+    const parts = content.split(/(@\w+)/g);
+    return (
+      <Text style={{ fontFamily: 'SpaceMono', fontSize: 10, color: '#2d2016' }}>
+        {parts.map((part, i) => {
+          if (part.startsWith('@') && part.length > 1) {
+            const username = part.substring(1);
+            return (
+              <Text 
+                key={i} 
+                style={{ color: '#f59e0b', fontWeight: 'bold' }} 
+                onPress={() => handleMentionPress(username)}
+              >
+                {part}
+              </Text>
+            );
+          }
+          return <Text key={i}>{part}</Text>;
+        })}
+      </Text>
+    );
+  };
+
   if (isLoading) return <ActivityIndicator size="small" color="#8a7060" style={{ marginTop: 10 }} />;
 
   return (
@@ -61,7 +97,7 @@ function PostCommentSection({ postId }: { postId: string }) {
       {(comments || []).map((c: any) => (
         <View key={c.id} style={{ marginBottom: 6, borderLeftWidth: 1, borderLeftColor: 'rgba(0,0,0,0.1)', paddingLeft: 8 }}>
           <Text style={{ fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold', color: '#4a3728' }}>@{c.profiles?.username}</Text>
-          <Text style={{ fontFamily: 'SpaceMono', fontSize: 10, color: '#2d2016' }}>{c.content}</Text>
+          {renderContentWithMentions(c.content)}
         </View>
       ))}
       <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>

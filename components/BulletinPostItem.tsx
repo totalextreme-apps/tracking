@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
+import { supabase } from '@/lib/supabase';
 
 export function BulletinPostItem({ post, userId, idx, startEditing, setShowDeleteConfirm, toggleComments, isExpanded, CommentSectionComponent }: any) {
   const router = useRouter();
@@ -28,6 +29,41 @@ export function BulletinPostItem({ post, userId, idx, startEditing, setShowDelet
     } catch (e) {
       console.error('Share error:', e);
     }
+  };
+
+  const handleMentionPress = async (username: string) => {
+    try {
+      const { data } = await supabase.from('profiles').select('id').eq('username', username).single();
+      if (data?.id) {
+        router.push(`/profile/${data.id}`);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const renderContentWithMentions = (content: string) => {
+    if (!content) return null;
+    const parts = content.split(/(@\w+)/g);
+    return (
+      <Text style={{ fontFamily: 'SpaceMono', fontSize: 12, color: '#2d2016' }}>
+        {parts.map((part, i) => {
+          if (part.startsWith('@') && part.length > 1) {
+            const username = part.substring(1);
+            return (
+              <Text 
+                key={i} 
+                style={{ color: '#f59e0b', fontWeight: 'bold' }} 
+                onPress={() => handleMentionPress(username)}
+              >
+                {part}
+              </Text>
+            );
+          }
+          return <Text key={i}>{part}</Text>;
+        })}
+      </Text>
+    );
   };
 
   return (
@@ -81,7 +117,7 @@ export function BulletinPostItem({ post, userId, idx, startEditing, setShowDelet
           ))}
         </View>
       )}
-      <Text style={{ fontFamily: 'SpaceMono', fontSize: 12, color: '#2d2016' }}>{post.content}</Text>
+      {renderContentWithMentions(post.content)}
       
       {/* Hide the 'reply' label visually when sharing by just not capturing it? The user will share it with the reply button, which is fine, might drive clicks! */}
       <Pressable onPress={() => toggleComments(post.id)} style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10, paddingTop: 8, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)' }}>
