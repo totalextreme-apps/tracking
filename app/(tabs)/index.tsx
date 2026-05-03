@@ -221,9 +221,9 @@ export default function HomeScreen() {
           {/* ON DISPLAY SECTION (OWNED) - ONLY IN STACKS MODE */}
           {onDisplay.length > 0 && !thriftMode && (
             <View className="mb-8 mt-6">
-              <View className="px-4 md:px-8 flex-row items-center justify-between mb-2 max-w-7xl mx-auto w-full">
-                <View className="flex-row items-baseline gap-2">
-                  <Text className="text-amber-500 font-bold text-3xl tracking-tighter uppercase" style={{ fontFamily: 'VCR_OSD_MONO' }}>ON DISPLAY</Text>
+              <View className="px-4 md:px-8 flex-row items-center justify-between mb-2 max-w-7xl mx-auto w-full gap-2 flex-wrap">
+                <View className="flex-row items-baseline gap-2 flex-wrap flex-1 min-w-[200px]">
+                  <Text className="text-amber-500 font-bold text-2xl tracking-tighter uppercase" style={{ fontFamily: 'VCR_OSD_MONO' }}>ON DISPLAY</Text>
                   <Text className="text-neutral-500 font-mono text-xs ml-1">/ {onDisplay.length}</Text>
                   <Pressable 
                     onPress={() => {
@@ -268,9 +268,9 @@ export default function HomeScreen() {
           {/* THE GRAILS SECTION (WISHLIST) - ONLY IN THRIFT MODE */}
           {grailList.length > 0 && thriftMode && (
             <View className="mb-8 mt-6">
-              <View className="px-4 md:px-8 flex-row items-center justify-between mb-2 max-w-7xl mx-auto w-full">
-                <View className="flex-row items-baseline gap-2">
-                  <Text className="text-amber-500 font-bold text-3xl tracking-tighter uppercase" style={{ fontFamily: 'VCR_OSD_MONO' }}>THE GRAILS</Text>
+              <View className="px-4 md:px-8 flex-row items-center justify-between mb-2 max-w-7xl mx-auto w-full gap-2 flex-wrap">
+                <View className="flex-row items-baseline gap-2 flex-wrap flex-1 min-w-[200px]">
+                  <Text className="text-amber-500 font-bold text-2xl tracking-tighter uppercase" style={{ fontFamily: 'VCR_OSD_MONO' }}>THE GRAILS</Text>
                   <Text className="text-neutral-500 font-mono text-xs ml-1">/ {grailList.length}</Text>
                   <Pressable 
                     onPress={() => {
@@ -313,9 +313,9 @@ export default function HomeScreen() {
           )}
 
           <View className="px-4 md:px-8 pb-4 max-w-7xl mx-auto w-full">
-            <View className="flex-row items-center justify-between mb-6">
-              <View className="flex-row items-baseline gap-2">
-                <Text className="text-amber-500 font-bold text-3xl tracking-tighter uppercase" style={{ fontFamily: 'VCR_OSD_MONO' }}>
+            <View className="flex-row items-center justify-between mb-6 flex-wrap gap-2">
+              <View className="flex-row items-baseline gap-2 flex-wrap">
+                <Text className="text-amber-500 font-bold text-2xl md:text-3xl tracking-tighter uppercase" style={{ fontFamily: 'VCR_OSD_MONO' }}>
                   {thriftMode ? 'WISH LIST' : 'THE STACKS'}
                 </Text>
                 <View className="flex-row items-baseline">
@@ -492,6 +492,7 @@ export default function HomeScreen() {
       </ScrollView>
 
       {quickActionItem && <QuickActionModal item={quickActionItem} visible={!!quickActionItem} collection={collection || []} userId={userId} onClose={() => setQuickActionItem(null)} />}
+      <ReorderShelfModal visible={reorderModalVisible} onClose={() => setReorderModalVisible(false)} type={reorderType} />
 
       {showRewind && (
         <View className="absolute inset-0 z-[100] items-center justify-center pointer-events-none">

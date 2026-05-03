@@ -448,33 +448,35 @@ export default function CommunityScreen() {
         </Text>
 
         {/* Segment Toggle */}
-        <View style={{ flexDirection: 'row', backgroundColor: '#111', borderRadius: 10, padding: 3, marginBottom: 12 }}>
-          {tabs.map(tab => (
-            <Pressable
-              key={tab.key}
-              onPress={() => { 
-                if (tab.key === 'profile') {
-                  router.push(`/profile/${userId}`);
-                  return;
-                }
-                setActiveTab(tab.key as Tab); 
-                Haptics.selectionAsync(); 
-              }}
-              style={{
-                flex: 1, paddingVertical: 8, borderRadius: 8,
-                backgroundColor: activeTab === tab.key ? '#1c1c1c' : 'transparent',
-                alignItems: 'center',
-              }}
-            >
-              <Text style={{
-                fontFamily: 'SpaceMono', fontSize: 11, fontWeight: 'bold',
-                color: activeTab === tab.key ? '#f59e0b' : '#525252',
-                letterSpacing: 0.5,
-              }}>
-                {tab.label.toUpperCase()}
-              </Text>
-            </Pressable>
-          ))}
+        <View style={{ marginBottom: 12 }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ backgroundColor: '#111', borderRadius: 10, padding: 3 }}>
+            {tabs.map(tab => (
+              <Pressable
+                key={tab.key}
+                onPress={() => { 
+                  if (tab.key === 'profile') {
+                    router.push(`/profile/${userId}`);
+                    return;
+                  }
+                  setActiveTab(tab.key as Tab); 
+                  Haptics.selectionAsync(); 
+                }}
+                style={{
+                  paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8,
+                  backgroundColor: activeTab === tab.key ? '#1c1c1c' : 'transparent',
+                  alignItems: 'center',
+                }}
+              >
+                <Text style={{
+                  fontFamily: 'SpaceMono', fontSize: 11, fontWeight: 'bold',
+                  color: activeTab === tab.key ? '#f59e0b' : '#525252',
+                  letterSpacing: 0.5,
+                }}>
+                  {tab.label.toUpperCase()}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
         </View>
       </View>
 
