@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { getPosterUrl } from '@/lib/dummy-data';
 import { StatusBar } from 'expo-status-bar';
 import { OnDisplayCard } from '@/components/OnDisplayCard';
+import { ReorderShelfModal } from '@/components/ReorderShelfModal';
 import { getGenres, getStacks } from '@/lib/collection-utils';
 
 type TabType = 'on-display' | 'grails' | 'collection' | 'wishlist' | 'bin' | 'analytics' | 'in-common';
@@ -36,6 +37,8 @@ export default function UserProfileScreen() {
   const [genreFilter, setGenreFilter] = useState<string | null>(null);
   const [mediaTypeFilter, setMediaTypeFilter] = useState<'movie' | 'tv' | null>(null);
   const [isGenreDropdownOpen, setIsGenreDropdownOpen] = useState(false);
+  const [reorderModalVisible, setReorderModalVisible] = useState(false);
+  const [reorderType, setReorderType] = useState<'display' | 'grail'>('display');
 
   const genres = useMemo(() => getGenres(collection), [collection]);
   const FORMAT_ORDER: Record<string, number> = { '4K': 5, 'Blu-ray': 4, 'BluRay': 4, 'DVD': 3, 'VHS': 2, 'Digital': 1 };
@@ -111,8 +114,22 @@ export default function UserProfileScreen() {
     return getStacks(items, isWishlist, sortBy, sortOrder);
   };
 
-  const onDisplayItems = filterAndSortItems(collection?.filter((item: any) => item.is_on_display) || []);
-  const grails = filterAndSortItems(collection?.filter((item: any) => item.is_grail) || []);
+  const onDisplayItems = filterAndSortItems(collection?.filter((item: any) => item.is_on_display) || [])
+    .sort((a: any, b: any) => {
+      if (sortBy !== 'recent') return 0;
+      if (a.display_order && b.display_order) return a.display_order - b.display_order;
+      if (a.display_order) return -1;
+      if (b.display_order) return 1;
+      return 0;
+    });
+  const grails = filterAndSortItems(collection?.filter((item: any) => item.is_grail) || [])
+    .sort((a: any, b: any) => {
+      if (sortBy !== 'recent') return 0;
+      if (a.grail_order && b.grail_order) return a.grail_order - b.grail_order;
+      if (a.grail_order) return -1;
+      if (b.grail_order) return 1;
+      return 0;
+    });
   const stackedCollection = useMemo(() => stackItems(filterAndSortItems(collection?.filter((item: any) => item.status === 'owned') || []), false), [collection, searchQuery, sortBy, sortOrder, formatFilter, genreFilter, mediaTypeFilter]);
   const stackedWishlist = useMemo(() => stackItems(filterAndSortItems(collection?.filter((i: any) => i.status === 'wishlist') || []), true), [collection, searchQuery, sortBy, sortOrder, formatFilter, genreFilter, mediaTypeFilter]);
   
@@ -413,6 +430,14 @@ export default function UserProfileScreen() {
                 <View>
                   <View className="flex-row items-center justify-center mb-4 relative">
                     <Text className="text-white font-mono text-xs uppercase tracking-widest">ON DISPLAY / {onDisplayItems.length}</Text>
+                    {id === currentUserId && onDisplayItems.length > 1 && (
+                      <Pressable 
+                        onPress={() => { setReorderType('display'); setReorderModalVisible(true); }}
+                        className="absolute left-0 p-2"
+                      >
+                        <Ionicons name="options-outline" size={16} color="#f59e0b" />
+                      </Pressable>
+                    )}
                     <Pressable 
                       onPress={() => Share.share({ message: `Check out ${profile.username}'s On Display items:\n\n` + onDisplayItems.map((i: any, idx: number) => `${idx + 1}. ${i.movies?.title || i.shows?.name}`).join('\n') })}
                       className="absolute right-0 p-2"
@@ -445,6 +470,14 @@ export default function UserProfileScreen() {
                 <View>
                   <View className="flex-row items-center justify-center mb-4 relative">
                     <Text className="text-white font-mono text-xs uppercase tracking-widest">THE GRAILS / {grails.length}</Text>
+                    {id === currentUserId && grails.length > 1 && (
+                      <Pressable 
+                        onPress={() => { setReorderType('grail'); setReorderModalVisible(true); }}
+                        className="absolute left-0 p-2"
+                      >
+                        <Ionicons name="options-outline" size={16} color="#f59e0b" />
+                      </Pressable>
+                    )}
                     <Pressable 
                       onPress={() => Share.share({ message: `Check out ${profile.username}'s Grails:\n\n` + grails.map((i: any, idx: number) => `${idx + 1}. ${i.movies?.title || i.shows?.name}`).join('\n') })}
                       className="absolute right-0 p-2"
@@ -673,6 +706,13 @@ export default function UserProfileScreen() {
         </View>
 
       </ScrollView>
+      <ReorderShelfModal
+        visible={reorderModalVisible}
+        onClose={() => setReorderModalVisible(false)}
+        items={reorderType === 'display' ? onDisplayItems : grails}
+        userId={id!}
+        type={reorderType}
+      />
     </View>
   );
 }
