@@ -455,7 +455,7 @@ export default function CommunityScreen() {
                 key={tab.key}
                 onPress={() => { 
                   if (tab.key === 'profile') {
-                    router.push(`/profile/${userId}`);
+                    router.push({ pathname: `/profile/${userId}`, params: { from: 'community' } } as any);
                     return;
                   }
                   setActiveTab(tab.key as Tab); 

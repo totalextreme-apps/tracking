@@ -529,6 +529,8 @@ export default function MovieDetailScreen() {
                         onPress={() => {
                             if (fromStack) {
                                 router.replace(`/stack/${fromStack}` as any);
+                            } else if (ownerId) {
+                                router.push({ pathname: `/profile/${ownerId}`, params: { from: 'community' } } as any);
                             } else {
                                 router.back();
                             }

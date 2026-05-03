@@ -383,7 +383,18 @@ export default function ShowDetailScreen() {
                         <NoPosterPlaceholder width="100%" height="100%" />
                     )}
                     <LinearGradient colors={['transparent', '#0a0a0a']} style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 160 }} />
-                    <Pressable onPress={() => router.back()} className="absolute top-12 right-4 bg-black/50 p-2 rounded-full">
+                    <Pressable 
+                        onPress={() => {
+                            if (fromStack) {
+                                router.replace(`/stack/${fromStack}` as any);
+                            } else if (ownerId) {
+                                router.push({ pathname: `/profile/${ownerId}`, params: { from: 'community' } } as any);
+                            } else {
+                                router.back();
+                            }
+                        }}
+                        className="absolute top-12 right-4 bg-black/50 p-2 rounded-full"
+                    >
                         <Ionicons name="close" size={24} color="white" />
                     </Pressable>
                     <Pressable onPress={() => setShowShareModal(true)} className="absolute top-12 right-16 bg-black/50 p-2 rounded-full">

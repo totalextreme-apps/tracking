@@ -16,6 +16,8 @@ export function useCollection(userId: string | undefined) {
           .from('collection_items')
           .select(`*, movies (id, tmdb_id, title, poster_path, backdrop_path, release_date, primary_color, genres), shows (id, tmdb_id, name, poster_path, backdrop_path, first_air_date, primary_color, genres)`)
           .eq('user_id', userId)
+          .order('display_order', { ascending: true })
+          .order('grail_order', { ascending: true })
           .order('created_at', { ascending: false })
           .range(from, to);
 
