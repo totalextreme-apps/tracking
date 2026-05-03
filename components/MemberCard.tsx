@@ -58,10 +58,10 @@ export function MemberCard({ userId, profile, onEditPress, onAvatarPress, isRead
                             <Text className="text-white font-bold text-lg tracking-widest uppercase italic">MEMBERSHIP CARD</Text>
                         </View>
 
-                        <View>
+                        <View className="w-full pr-4">
                             <Text className="text-amber-600 font-bold text-[10px] uppercase">HANDLE</Text>
-                            <View className="border-b border-neutral-600 pb-0.5 border-dashed mr-4 w-full" style={{ maxWidth: 160 }}>
-                                <Text className="text-amber-500 font-mono font-bold tracking-widest" style={{ fontSize: 18 }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.2}>{profile?.username ? '@' + profile.username.toUpperCase() : 'UNKNOWN'}</Text>
+                            <View className="flex-row border-b border-neutral-600 pb-0.5 border-dashed w-full overflow-hidden">
+                                <Text className="flex-1 text-amber-500 font-mono font-bold tracking-widest" style={{ fontSize: 16 }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.3}>{profile?.username ? '@' + profile.username.toUpperCase() : 'UNKNOWN'}</Text>
                             </View>
                         </View>
                     </View>
