@@ -55,14 +55,15 @@ async function tmdbFetch<T>(path: string): Promise<T> {
 export async function searchMedia(query: string, page = 1): Promise<TmdbSearchResponse> {
   const trimmedQuery = query.trim();
   
-  // Detect Year at end of query (e.g. "The Reaper 2000")
-  const yearMatch = trimmedQuery.match(/\b(19|20)\d{2}\b$/);
+  // Detect Year (e.g. "The Reaper 2000" or "The Reaper (2000)")
+  const yearMatch = trimmedQuery.match(/\(?\b(19|20)\d{2}\b\)?$/);
   let year: string | null = null;
   let cleanQuery = trimmedQuery;
   
   if (yearMatch) {
-    year = yearMatch[0];
-    cleanQuery = trimmedQuery.replace(year, '').trim();
+    const rawMatch = yearMatch[0];
+    year = rawMatch.replace(/[()]/g, ''); // Extract just the digits
+    cleanQuery = trimmedQuery.replace(rawMatch, '').trim();
   }
 
   const encoded = encodeURIComponent(cleanQuery);
