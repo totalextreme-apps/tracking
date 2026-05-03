@@ -22,7 +22,8 @@ import { getGenres, getOnDisplayItems, getGrailItems, getStacks } from '@/lib/co
 import type { CollectionItemWithMedia } from '@/types/database';
 
 export default function HomeScreen() {
-  const { userId, isLoading: authLoading, authPhase, showCaptcha, onCaptchaSuccess } = useAuth();
+  const { userId, session, isLoading: authLoading, authPhase, showCaptcha, onCaptchaSuccess } = useAuth();
+  const isGuest = !userId || session?.user?.is_anonymous;
   const { thriftMode } = useThriftMode();
   const { playSound } = useSound();
 
@@ -425,7 +426,7 @@ export default function HomeScreen() {
                 <Slider style={{ width: '100%', height: 30 }} minimumValue={1} maximumValue={isDesktop ? 8 : 4} step={1} value={numColumns} onValueChange={(val) => { setNumColumns(val); setViewMode('custom'); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }} minimumTrackTintColor="#f59e0b" maximumTrackTintColor="#333" thumbTintColor="#f59e0b" />
             </View>
 
-            {!userId ? (
+            {isGuest ? (
                <View className="items-center py-20 px-10">
                   <Ionicons name="lock-closed-outline" size={48} color="#333" />
                   <Text className="text-neutral-500 font-mono text-center mt-4 mb-6">LOGIN TO TRACK YOUR COLLECTION</Text>
