@@ -44,6 +44,11 @@ export default function HomeScreen() {
   const [genreFilter, setGenreFilter] = useState<string | null>(null);
   const [mediaTypeFilter, setMediaTypeFilter] = useState<'movie' | 'tv' | null>(null);
   const [isGenreDropdownOpen, setIsGenreDropdownOpen] = useState(false);
+  const [displayLimit, setDisplayLimit] = useState(50);
+
+  useEffect(() => {
+    setDisplayLimit(50);
+  }, [searchQuery, formatFilter, genreFilter, mediaTypeFilter, sortBy, sortOrder, thriftMode]);
   
   const shelfRef = useRef<ScrollView>(null);
   const grailRef = useRef<ScrollView>(null);
@@ -441,12 +446,26 @@ export default function HomeScreen() {
                   <Text className="text-neutral-500 font-mono text-center mt-4">NO MATCHES FOUND</Text>
                </View>
             ) : (
-                <View className="flex-row flex-wrap" style={{ marginHorizontal: -10 }}>
-                  {filteredStacks.map((stack: any) => (
-                    <View key={stack[0]?.id} style={{ width: `${100 / resolvedColumns}%`, paddingHorizontal: 10, marginBottom: 32 }}>
-                      <StackCard stack={stack} onPress={() => navigateToDetail(stack[0])} onToggleFavorite={toggleFavorite} onLongPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); setQuickActionItem(stack[0]); }} onRatePress={(rating) => handleGridRate(stack[0], rating)} width={(windowWidth - 48 - (resolvedColumns * 20)) / resolvedColumns} mode={viewMode === 'list' ? 'list' : 'grid'} activeFormatFilter={formatFilter} />
-                    </View>
-                  ))}
+                <View>
+                  <View className="flex-row flex-wrap" style={{ marginHorizontal: -10 }}>
+                    {filteredStacks.slice(0, displayLimit).map((stack: any) => (
+                      <View key={stack[0]?.id} style={{ width: `${100 / resolvedColumns}%`, paddingHorizontal: 10, marginBottom: 32 }}>
+                        <StackCard stack={stack} onPress={() => navigateToDetail(stack[0])} onToggleFavorite={toggleFavorite} onLongPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); setQuickActionItem(stack[0]); }} onRatePress={(rating) => handleGridRate(stack[0], rating)} width={(windowWidth - 48 - (resolvedColumns * 20)) / resolvedColumns} mode={viewMode === 'list' ? 'list' : 'grid'} activeFormatFilter={formatFilter} />
+                      </View>
+                    ))}
+                  </View>
+                  {displayLimit < filteredStacks.length && (
+                    <Pressable 
+                      onPress={() => {
+                        setDisplayLimit(d => d + 50);
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                      }}
+                      className="bg-neutral-900 border border-neutral-800 rounded-xl py-4 items-center justify-center mt-4 mb-10"
+                    >
+                      <Text className="text-amber-500 font-mono font-bold tracking-widest">LOAD MORE</Text>
+                      <Text className="text-neutral-500 font-mono text-[10px] mt-1">{filteredStacks.length - displayLimit} REMAINING</Text>
+                    </Pressable>
+                  )}
                 </View>
             )}
           </View>
