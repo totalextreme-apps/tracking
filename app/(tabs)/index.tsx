@@ -11,6 +11,7 @@ import { Modal, Platform, Pressable, RefreshControl, ScrollView, Text, TextInput
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { EmptyState } from '@/components/EmptyState';
 import { OnDisplayCard } from '@/components/OnDisplayCard';
+import { ReorderShelfModal } from '@/components/ReorderShelfModal';
 import { QuickActionModal } from '@/components/QuickActionModal';
 import { StackCard } from '@/components/StackCard';
 import { useAuth } from '@/context/AuthContext';
@@ -55,6 +56,8 @@ export default function HomeScreen() {
 
   const [refreshing, setRefreshing] = useState(false);
   const [showRewind, setShowRewind] = useState(false);
+  const [reorderModalVisible, setReorderModalVisible] = useState(false);
+  const [reorderType, setReorderType] = useState<'display' | 'grail'>('display');
 
   useFocusEffect(
     useCallback(() => {

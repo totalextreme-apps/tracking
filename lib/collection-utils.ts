@@ -40,12 +40,26 @@ function filterByThriftMode(
 
 export function getOnDisplayItems(collection: CollectionItemWithMedia[] | undefined) {
   if (!collection) return [];
-  return collection.filter((item) => item.is_on_display && item.status === 'owned');
+  return collection
+    .filter((item) => item.is_on_display && item.status === 'owned')
+    .sort((a: any, b: any) => {
+      if (a.display_order && b.display_order) return a.display_order - b.display_order;
+      if (a.display_order) return -1;
+      if (b.display_order) return 1;
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
 }
 
 export function getGrailItems(collection: CollectionItemWithMedia[] | undefined) {
   if (!collection) return [];
-  return collection.filter((item) => item.is_grail && item.status === 'wishlist');
+  return collection
+    .filter((item) => item.is_grail && item.status === 'wishlist')
+    .sort((a: any, b: any) => {
+      if (a.grail_order && b.grail_order) return a.grail_order - b.grail_order;
+      if (a.grail_order) return -1;
+      if (b.grail_order) return 1;
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
 }
 
 export function getWishlistItems(collection: CollectionItemWithMedia[] | undefined) {
