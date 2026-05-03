@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
 import { supabase } from '@/lib/supabase';
+import { shareImageWebFallback } from '@/lib/share-utils';
 
 export function BulletinPostItem({ post, userId, idx, startEditing, setShowDeleteConfirm, toggleComments, isExpanded, CommentSectionComponent }: any) {
   const router = useRouter();
@@ -14,22 +15,26 @@ export function BulletinPostItem({ post, userId, idx, startEditing, setShowDelet
 
   const handleShare = async () => {
     try {
-      if (Platform.OS === 'web') {
-        const title = post.movies?.title || post.shows?.name || 'this post';
-        Share.share({ message: `Check out this note by @${post.profiles?.username} about ${title} on the Tracking App: "${post.content}"` });
-        return;
-      }
+      const title = post.movies?.title || post.shows?.name || 'this post';
+      const fallbackText = `Check out this note by @${post.profiles?.username} about ${title} on the Tracking App: "${post.content}"`;
+
       // Capture the visual post
       const uri = await captureRef(viewRef, {
         format: 'jpg',
         quality: 0.9,
       });
+
+      if (Platform.OS === 'web') {
+        const success = await shareImageWebFallback(uri, fallbackText);
+        if (success) return;
+        Share.share({ message: fallbackText });
+        return;
+      }
+
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(uri, { UTI: 'public.jpeg', mimeType: 'image/jpeg', dialogTitle: 'Share on Tracking App' });
       } else {
-        // Fallback for environments without sharing
-        const title = post.movies?.title || post.shows?.name || 'this post';
-        Share.share({ message: `Check out this note by @${post.profiles?.username} about ${title} on the Tracking App: "${post.content}"` });
+        Share.share({ message: fallbackText });
       }
     } catch (e) {
       console.error('Share error:', e);
