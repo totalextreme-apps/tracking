@@ -430,7 +430,7 @@ export default function HomeScreen() {
                <View className="items-center py-20 px-10">
                   <Ionicons name="lock-closed-outline" size={48} color="#333" />
                   <Text className="text-neutral-500 font-mono text-center mt-4 mb-6">LOGIN TO TRACK YOUR COLLECTION</Text>
-                  <Pressable onPress={() => router.push('/(auth)' as any)} className="bg-amber-600 px-6 py-3 rounded-lg flex-row items-center">
+                  <Pressable onPress={() => router.push('/auth' as any)} className="bg-amber-600 px-6 py-3 rounded-lg flex-row items-center">
                       <Ionicons name="log-in-outline" size={20} color="white" />
                       <Text className="text-white font-mono font-bold ml-2">LOGIN / SIGN UP</Text>
                   </Pressable>
