@@ -38,6 +38,7 @@ export default function UserProfileScreen() {
   const [mediaTypeFilter, setMediaTypeFilter] = useState<'movie' | 'tv' | null>(null);
   const [isGenreDropdownOpen, setIsGenreDropdownOpen] = useState(false);
   const [reorderModalVisible, setReorderModalVisible] = useState(false);
+  const [displayLimit, setDisplayLimit] = useState(50);
   const [reorderType, setReorderType] = useState<'display' | 'grail'>('display');
 
   const genres = useMemo(() => getGenres(collection), [collection]);
@@ -132,6 +133,11 @@ export default function UserProfileScreen() {
     });
   const stackedCollection = useMemo(() => stackItems(filterAndSortItems(collection?.filter((item: any) => item.status === 'owned') || []), false), [collection, searchQuery, sortBy, sortOrder, formatFilter, genreFilter, mediaTypeFilter]);
   const stackedWishlist = useMemo(() => stackItems(filterAndSortItems(collection?.filter((i: any) => i.status === 'wishlist') || []), true), [collection, searchQuery, sortBy, sortOrder, formatFilter, genreFilter, mediaTypeFilter]);
+  
+  // Reset limit when tab or filters change
+  React.useEffect(() => {
+    setDisplayLimit(50);
+  }, [activeTab, searchQuery, sortBy, sortOrder, formatFilter, genreFilter, mediaTypeFilter]);
   
   const commonItems = useMemo(() => {
     if (!collection || !myCollection || id === currentUserId) return [];
@@ -521,7 +527,7 @@ export default function UserProfileScreen() {
                   </View>
                   {stackedCollection.length > 0 ? (
                     <View className="flex-row flex-wrap">
-                      {stackedCollection.map((stack: any) => (
+                      {stackedCollection.slice(0, displayLimit).map((stack: any) => (
                         <View key={stack[0].id} style={{ width: '25%', padding: 4 }}>
                           <StackCard 
                             stack={stack} 
@@ -546,6 +552,15 @@ export default function UserProfileScreen() {
                       <Text className="text-neutral-500 font-mono text-center">Collection is empty.</Text>
                     </View>
                   )}
+
+                  {stackedCollection.length > displayLimit && (
+                    <Pressable 
+                      onPress={() => setDisplayLimit(prev => prev + 50)}
+                      className="mt-6 mb-12 bg-neutral-900 border border-neutral-800 py-3 rounded-lg items-center"
+                    >
+                      <Text className="text-amber-500 font-mono font-bold text-xs">LOAD MORE ({stackedCollection.length - displayLimit} REMAINING)</Text>
+                    </Pressable>
+                  )}
                 </View>
               )}
 
@@ -562,7 +577,7 @@ export default function UserProfileScreen() {
                   </View>
                   {stackedWishlist.length > 0 ? (
                     <View className="flex-row flex-wrap">
-                      {stackedWishlist.map((stack: any) => (
+                      {stackedWishlist.slice(0, displayLimit).map((stack: any) => (
                         <View key={stack[0].id} style={{ width: '25%', padding: 4 }}>
                           <StackCard 
                             stack={stack} 
@@ -587,6 +602,15 @@ export default function UserProfileScreen() {
                       <Text className="text-neutral-500 font-mono text-center">Wishlist is empty.</Text>
                     </View>
                   )}
+
+                  {stackedWishlist.length > displayLimit && (
+                    <Pressable 
+                      onPress={() => setDisplayLimit(prev => prev + 50)}
+                      className="mt-6 mb-12 bg-neutral-900 border border-neutral-800 py-3 rounded-lg items-center"
+                    >
+                      <Text className="text-amber-500 font-mono font-bold text-xs">LOAD MORE ({stackedWishlist.length - displayLimit} REMAINING)</Text>
+                    </Pressable>
+                  )}
                 </View>
               )}
 
@@ -597,7 +621,7 @@ export default function UserProfileScreen() {
                   </View>
                   {stackedCommon.length > 0 ? (
                     <View className="flex-row flex-wrap">
-                      {stackedCommon.map((stack: any) => (
+                      {stackedCommon.slice(0, displayLimit).map((stack: any) => (
                         <View key={stack[0].id} style={{ width: '25%', padding: 4 }}>
                           <StackCard 
                             stack={stack} 
@@ -619,8 +643,17 @@ export default function UserProfileScreen() {
                     </View>
                   ) : (
                     <View className="p-6 items-center border-dashed border border-neutral-800 rounded-lg">
-                      <Text className="text-neutral-500 font-mono text-center">No titles in common yet.</Text>
+                      <Text className="text-neutral-500 font-mono text-center">No items in common.</Text>
                     </View>
+                  )}
+
+                  {stackedCommon.length > displayLimit && (
+                    <Pressable 
+                      onPress={() => setDisplayLimit(prev => prev + 50)}
+                      className="mt-6 mb-12 bg-neutral-900 border border-neutral-800 py-3 rounded-lg items-center"
+                    >
+                      <Text className="text-amber-500 font-mono font-bold text-xs">LOAD MORE ({stackedCommon.length - displayLimit} REMAINING)</Text>
+                    </Pressable>
                   )}
                 </View>
               )}
