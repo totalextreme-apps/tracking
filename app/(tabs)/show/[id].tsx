@@ -5,7 +5,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, Text, TextInput, View, Share } from 'react-native';
+import * as Sharing from 'expo-sharing';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GlossyCard } from '@/components/GlossyCard';
@@ -28,6 +29,7 @@ import { getTvShowById } from '@/lib/tmdb';
 import type { MovieFormat } from '@/types/database';
 import { useQuery } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
+import { ShareableCard } from '@/components/ShareableCard';
 import ViewShot from 'react-native-view-shot';
 
 const FORMATS: MovieFormat[] = ['VHS', 'DVD', 'BluRay', '4K', 'Digital'];
@@ -810,6 +812,52 @@ export default function ShowDetailScreen() {
                             <Pressable onPress={() => setShowEditionModal(false)} className="flex-1 bg-neutral-800 py-3 rounded-lg items-center text-neutral-400 font-mono text-sm font-bold"><Text className="text-neutral-400">CANCEL</Text></Pressable>
                             <Pressable onPress={handleConfirmAddFormat} className="flex-1 bg-amber-600 py-3 rounded-lg items-center text-white font-mono text-sm font-bold"><Text className="text-white">ADD</Text></Pressable>
                         </View>
+                    </View>
+                </View>
+            </Modal>
+            
+            {/* Share Modal */}
+            <Modal
+                visible={showShareModal}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setShowShareModal(false)}
+            >
+                <View className="flex-1 bg-black/90 items-center justify-center p-4">
+                    <Text className="text-white font-mono text-lg mb-8">SHARE YOUR STACK</Text>
+
+                    <ViewShot ref={viewShotRef} options={{ format: 'png', quality: 0.9 }}>
+                        <ShareableCard media={show} items={showItems} />
+                    </ViewShot>
+
+                    <View className="flex-row gap-4 mt-8">
+                        <Pressable
+                            onPress={() => setShowShareModal(false)}
+                            className="bg-neutral-800 px-6 py-3 rounded-full border border-neutral-700"
+                        >
+                            <Text className="text-white font-mono">Close</Text>
+                        </Pressable>
+                        <Pressable
+                            onPress={() => Share.share({ message: `Check out ${show.name} on Tracking!\n\nhttps://mediatracking.app/show/${id}${ownerId ? `?ownerId=${ownerId}` : ''}` })}
+                            className="bg-blue-600 px-6 py-3 rounded-full"
+                        >
+                            <Text className="text-white font-mono font-bold">Share Link</Text>
+                        </Pressable>
+                        <Pressable
+                            onPress={async () => {
+                                if (viewShotRef.current?.capture) {
+                                    try {
+                                        const uri = await viewShotRef.current.capture();
+                                        await Sharing.shareAsync(uri);
+                                    } catch (e) {
+                                        Alert.alert('Error', 'Could not share image');
+                                    }
+                                }
+                            }}
+                            className="bg-amber-600 px-6 py-3 rounded-full"
+                        >
+                            <Text className="text-white font-mono font-bold">Share Image</Text>
+                        </Pressable>
                     </View>
                 </View>
             </Modal>

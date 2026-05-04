@@ -217,7 +217,7 @@ export default function UserProfileScreen() {
         <Pressable 
             onPress={() => {
                 Share.share({
-                    message: `Check out ${profile?.username || 'this member'}'s collection on Tracking!\n\ntrackingapp://profile/${id}`,
+                    message: `Check out ${profile?.username || 'this member'}'s collection on Tracking!\n\nhttps://mediatracking.app/profile/${id}`,
                 });
             }} 
             className="p-2"
@@ -440,7 +440,7 @@ export default function UserProfileScreen() {
                       </Pressable>
                     )}
                     <Pressable 
-                      onPress={() => Share.share({ message: `Check out ${profile.username}'s On Display items:\n\n` + onDisplayItems.map((i: any, idx: number) => `${idx + 1}. ${i.movies?.title || i.shows?.name}`).join('\n') })}
+                      onPress={() => Share.share({ message: `Check out ${profile.username}'s On Display items:\n\n` + onDisplayItems.map((i: any, idx: number) => `${idx + 1}. ${i.movies?.title || i.shows?.name}`).join('\n') + `\n\nView full collection: https://mediatracking.app/profile/${id}` })}
                       className="absolute right-0 p-2"
                     >
                       <Ionicons name="share-outline" size={16} color="#f59e0b" />
@@ -481,7 +481,7 @@ export default function UserProfileScreen() {
                       </Pressable>
                     )}
                     <Pressable 
-                      onPress={() => Share.share({ message: `Check out ${profile.username}'s Grails:\n\n` + grails.map((i: any, idx: number) => `${idx + 1}. ${i.movies?.title || i.shows?.name}`).join('\n') })}
+                      onPress={() => Share.share({ message: `Check out ${profile.username}'s Grails:\n\n` + grails.map((i: any, idx: number) => `${idx + 1}. ${i.movies?.title || i.shows?.name}`).join('\n') + `\n\nView full collection: https://mediatracking.app/profile/${id}` })}
                       className="absolute right-0 p-2"
                     >
                       <Ionicons name="share-outline" size={16} color="#f59e0b" />
@@ -513,7 +513,7 @@ export default function UserProfileScreen() {
                   <View className="flex-row items-center justify-center mb-4 relative">
                     <Text className="text-white font-mono text-xs uppercase tracking-widest">COLLECTION / {stackedCollection.length}</Text>
                     <Pressable 
-                      onPress={() => Share.share({ message: `Check out ${profile.username}'s Collection:\n\n` + stackedCollection.map((s: any, idx: number) => `${idx + 1}. ${s[0].movies?.title || s[0].shows?.name}`).join('\n') })}
+                      onPress={() => Share.share({ message: `Check out ${profile.username}'s Collection:\n\n` + stackedCollection.map((s: any, idx: number) => `${idx + 1}. ${s[0].movies?.title || s[0].shows?.name}`).join('\n') + `\n\nView full collection: https://mediatracking.app/profile/${id}` })}
                       className="absolute right-0 p-2"
                     >
                       <Ionicons name="share-outline" size={16} color="#f59e0b" />
@@ -554,7 +554,7 @@ export default function UserProfileScreen() {
                   <View className="flex-row items-center justify-center mb-4 relative">
                     <Text className="text-white font-mono text-xs uppercase tracking-widest">WANTED / {stackedWishlist.length}</Text>
                     <Pressable 
-                      onPress={() => Share.share({ message: `Check out ${profile.username}'s Wishlist:\n\n` + stackedWishlist.map((s: any, idx: number) => `${idx + 1}. ${s[0].movies?.title || s[0].shows?.name}`).join('\n') })}
+                      onPress={() => Share.share({ message: `Check out ${profile.username}'s Wishlist:\n\n` + stackedWishlist.map((s: any, idx: number) => `${idx + 1}. ${s[0].movies?.title || s[0].shows?.name}`).join('\n') + `\n\nView full wishlist: https://mediatracking.app/profile/${id}` })}
                       className="absolute right-0 p-2"
                     >
                       <Ionicons name="share-outline" size={16} color="#f59e0b" />
@@ -630,7 +630,7 @@ export default function UserProfileScreen() {
                   <View className="flex-row items-center justify-center mb-4 relative">
                     <Text className="text-white font-mono text-xs uppercase tracking-widest">THE BIN / {binItems.length}</Text>
                     <Pressable 
-                      onPress={() => Share.share({ message: `Check out what ${profile.username} is selling/trading:\n\n` + binItems.map((i: any, idx: number) => `${idx + 1}. ${i.movies?.title || i.shows?.name}`).join('\n') })}
+                      onPress={() => Share.share({ message: `Check out what ${profile.username} is selling/trading:\n\n` + binItems.map((i: any, idx: number) => `${idx + 1}. ${i.movies?.title || i.shows?.name}`).join('\n') + `\n\nBrowse shop: https://mediatracking.app/profile/${id}` })}
                       className="absolute right-0 p-2"
                     >
                       <Ionicons name="share-outline" size={16} color="#f59e0b" />

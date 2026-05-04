@@ -39,7 +39,9 @@ export function BulletinPostItem({ post, userId, idx, startEditing, setShowDelet
     } catch (e) {
       console.error('Share error:', e);
       const title = post.movies?.title || post.shows?.name || 'this post';
-      Share.share({ message: `Check out this note by @${post.profiles?.username} about ${title} on the Tracking App: "${post.content}"` });
+      Share.share({ 
+        message: `Check out this note by @${post.profiles?.username} about ${title} on the Tracking App: "${post.content}"\n\nView @${post.profiles?.username}'s collection: https://mediatracking.app/profile/${post.user_id}` 
+      });
     }
   };
 

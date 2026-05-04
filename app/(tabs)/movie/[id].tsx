@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, Text, TextInput, View, Share } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GlossyCard } from '@/components/GlossyCard';
@@ -1125,6 +1125,12 @@ export default function MovieDetailScreen() {
                             className="bg-neutral-800 px-6 py-3 rounded-full border border-neutral-700"
                         >
                             <Text className="text-white font-mono">Close</Text>
+                        </Pressable>
+                        <Pressable
+                            onPress={() => Share.share({ message: `Check out ${displayMovie.title} on Tracking!\n\nhttps://mediatracking.app/movie/${id}${ownerId ? `?ownerId=${ownerId}` : ''}` })}
+                            className="bg-blue-600 px-6 py-3 rounded-full"
+                        >
+                            <Text className="text-white font-mono font-bold">Share Link</Text>
                         </Pressable>
                         <Pressable
                             onPress={async () => {
