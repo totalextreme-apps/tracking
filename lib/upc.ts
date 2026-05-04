@@ -70,34 +70,38 @@ function cleanTitle(title: string): string {
     let clean = title;
 
     // 1. Remove common VHS/DVD eBay/Amazon listing garbage
-    const garbageRegex = /\b(VHS|DVD|Blu-?ray|4K|Ultra HD|Widescreen|Full Screen|Edition|Brand New|New Sealed|Sealed|Tape|Tapes|Cassette|Movie|Movies|Build Your Own|Pick & Choose|Updated|Lot|Digital(?: Code| Copy| HD)?|No Digital Code|\d+-Disc(?: Set)?|Disc(?: Set)?|Set)\b/gi;
+    const garbageRegex = /\b(VHS|DVD|Blu-?ray|4K|Ultra HD|Widescreen|Full Screen|Edition|Brand New|New Sealed|Sealed|Tape|Tapes|Cassette|Movie|Movies|Build Your Own|Pick & Choose|Updated|Lot|Digital(?: Code| Copy| HD)?|No Digital Code|\d+-Disc(?: Set)?|Disc(?: Set)?|Set|Used|Pre-owned|Rental|Library|Copy|Format|Collectors?|Special|Limited|Anniversary|Deluxe|Standard|Remastered|Restored|Unrated|Theatrical|Director's Cut|Extended|Anthology|Collection|Boxset|Box Set|Series|Trilogy|Quadrilogy|Franchise|Bundle|Pack|Volume|Vol|vols?|Double Feature|Two-Pack|Multi-Pack|Season|Seasons|Complete|Series)\b/gi;
     clean = clean.replace(garbageRegex, '');
 
     // 2. Remove "part 1 & 2"
     clean = clean.replace(/\bpart\s+\d+(\s*&\s*\d+)?\b/gi, '');
 
-    // 3. Remove typical Studio / Genre trash usually appended at the end
-    const studioRegex = /(?:Lions Gate|Lionsgate|Sony Pictures|Warner Bros|Universal Studios|Paramount|Disney|Twentieth Century Fox|20th Century Fox)\s*(?:Sci-Fi|Fantasy|Horror|Comedy|Action|Drama|Thriller|&|\s|-)*$/gi;
+    // 3. Remove common Studios and Production Companies
+    const studioRegex = /\b(Universal|Monsters|Warner|Sony|Paramount|Disney|Fox|Lionsgate|MGM|Columbia|TriStar|Dreamworks|Pixar|Marvel|DC|HBO|Showtime|A24|Neon|Criterion|Kino Lorber|Shout Factory|Scream Factory|Vinegar Syndrome|Arrow Video|Blue Underground|Severin|Vestron|Anchor Bay|Artisan|Live Home Video|Republic Pictures|Miramax|Dimension)\b/gi;
     clean = clean.replace(studioRegex, '');
 
-    // 4. Remove literal characters often used for emphasis or stray tags
+    // 4. Remove Common Actor Names (Heuristic: long lists of names at the end)
+    const actorHeuristic = /\b(Lon Chaney Jr|Bela Lugosi|Boris Karloff|Vincent Price|Christopher Lee|Peter Cushing|Patrick Swayze|Tom Cruise|Brad Pitt|Johnny Depp|Arnold Schwarzenegger|Sylvester Stallone|Bruce Willis|Harrison Ford|Mel Gibson|Nicolas Cage|Keanu Reeves|Samuel L Jackson|Morgan Freeman|Denzel Washington|Robert De Niro|Al Pacino|Dustin Hoffman|Meryl Streep|Julia Roberts|Sandra Bullock|Scarlett Johansson|Angelina Jolie)\b/gi;
+    clean = clean.replace(actorHeuristic, '');
+
+    // 5. Remove literal characters often used for emphasis or stray tags
     clean = clean.replace(/\[.*?\]/g, '');
     clean = clean.replace(/[!]/g, '');
+    clean = clean.replace(/[*]/g, '');
 
-    // 5. Remove trailing dates like 8/25
+    // 6. Remove trailing dates like 8/25
     clean = clean.replace(/\b\d{1,2}\/\d{1,2}\b/g, '');
 
-    // 6. Clean up orphaned punctuation inside parentheses, e.g., ( + ) or ( / , ) or ()
+    // 7. Clean up orphaned punctuation inside parentheses, e.g., ( + ) or ( / , ) or ()
     clean = clean.replace(/\([\s\-\/+,&]*\)/g, '');
 
-    // 7. Clean up parenthesis that only have leftover junk after previous replaces
-    // e.g., "( Set- )" - specific fallback just in case
+    // 8. Clean up parenthesis that only have leftover junk after previous replaces
     clean = clean.replace(/\(\s*(?:set|-)+\s*\)/gi, '');
 
-    // 8. Clean multiple spaces
+    // 9. Clean multiple spaces
     clean = clean.replace(/\s+/g, ' ').trim();
 
-    // 9. Clean trailing punctuation like:, - /
+    // 10. Clean trailing punctuation like:, - /
     clean = clean.replace(/[:,\-\/]+$/, '').trim();
 
     // If the UPC API returned a string of purely numbers that looks like a UPC/EAN (5+ digits), reject it.

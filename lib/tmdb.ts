@@ -167,6 +167,25 @@ export async function searchMedia(query: string, page = 1): Promise<TmdbSearchRe
     }
   }
 
+  // ─── NEW: Descriptive String Fallback (for noisy Barcode titles) ───
+  if ((!data.results || data.results.length === 0) && cleanQuery.includes(' ')) {
+    const words = cleanQuery.split(' ').filter(w => w.length > 0);
+    if (words.length >= 4) {
+      // Try searching for the first 3, 4, 5 words respectively
+      for (let i = 5; i >= 3; i--) {
+        if (words.length < i) continue;
+        const subQuery = words.slice(0, i).join(' ');
+        try {
+          const fallbackData = await tmdbFetch<any>(`/search/multi?query=${encodeURIComponent(subQuery)}&page=${page}`);
+          if (fallbackData.results && fallbackData.results.length > 0) {
+            data = fallbackData;
+            break;
+          }
+        } catch (e) { /* ignore */ }
+      }
+    }
+  }
+
   const mediaResults = new Map<string, TmdbMediaResult>();
   let personIdToFetch: number | null = null;
 
