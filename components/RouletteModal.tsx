@@ -211,9 +211,20 @@ export const RouletteModal: React.FC<RouletteModalProps> = ({
                   </View>
                 ) : (
                   <View className="w-full">
-                    <Text className="text-neutral-400 font-mono text-center mb-4 tracking-widest text-xs uppercase">
+                    <Text className="text-neutral-400 font-mono text-center mb-2 tracking-widest text-xs uppercase">
                       THE DICE HAVE SPOKEN:
                     </Text>
+
+                    {(selectedGenres.length > 0 || selectedType) && (
+                      <View className="flex-row justify-center mb-4 flex-wrap gap-2">
+                        {selectedType && (
+                           <Text className="font-mono text-[10px] text-amber-500 bg-amber-500/10 px-2 py-1 rounded border border-amber-500/20">{selectedType === 'movie' ? 'FILM' : 'TV SHOW'}</Text>
+                        )}
+                        {selectedGenres.map(g => (
+                           <Text key={g} className="font-mono text-[10px] text-amber-500 bg-amber-500/10 px-2 py-1 rounded border border-amber-500/20">{g}</Text>
+                        ))}
+                      </View>
+                    )}
                     
                     <View className="bg-neutral-900 rounded-xl overflow-hidden border border-amber-500/30 mb-6">
                       <Image 
