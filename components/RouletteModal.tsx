@@ -23,7 +23,7 @@ export const RouletteModal: React.FC<RouletteModalProps> = ({
   const [step, setStep] = useState<'setup' | 'rolling' | 'result'>('setup');
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [selectedType, setSelectedType] = useState<'movie' | 'tv' | null>(null);
-  const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
+  const [selectedFormats, setSelectedFormats] = useState<string[]>([]);
   
   const [result, setResult] = useState<any | null>(null);
   
@@ -35,7 +35,7 @@ export const RouletteModal: React.FC<RouletteModalProps> = ({
       setStep('setup');
       setSelectedGenres([]);
       setSelectedType(null);
-      setSelectedFormat(null);
+      setSelectedFormats([]);
       setResult(null);
     }
   }, [visible]);
@@ -52,8 +52,8 @@ export const RouletteModal: React.FC<RouletteModalProps> = ({
       pool = pool.filter(item => item.media_type === selectedType);
     }
     
-    if (selectedFormat) {
-      pool = pool.filter(item => item.format === selectedFormat);
+    if (selectedFormats.length > 0) {
+      pool = pool.filter(item => selectedFormats.includes(item.format));
     }
     
     if (selectedGenres.length > 0) {
@@ -157,16 +157,16 @@ export const RouletteModal: React.FC<RouletteModalProps> = ({
                   ))}
                 </View>
 
-                <Text className="text-neutral-500 font-mono text-[10px] uppercase tracking-tighter mb-2">FORMAT</Text>
+                <Text className="text-neutral-500 font-mono text-[10px] uppercase tracking-tighter mb-2">FORMAT (OPTIONAL, SELECT MULTIPLE)</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-6">
-                  <View className="flex-row gap-2 pb-2">
-                    {['ANY', 'VHS', 'DVD', 'BluRay', '4K', 'Digital'].map(f => {
-                      const isActive = selectedFormat === f || (f === 'ANY' && !selectedFormat);
+                  <View className="flex-row gap-2 pb-2 px-1">
+                    {['VHS', 'DVD', 'BluRay', '4K', 'Digital'].map(f => {
+                      const isActive = selectedFormats.includes(f);
                       return (
                         <Pressable 
                           key={f}
                           onPress={() => {
-                            setSelectedFormat(f === 'ANY' ? null : f);
+                            setSelectedFormats(prev => prev.includes(f) ? prev.filter(item => item !== f) : [...prev, f]);
                             playSound('click');
                           }}
                           className={`px-4 py-2 rounded-full border ${isActive ? 'bg-amber-500/20 border-amber-500/50' : 'bg-neutral-800 border-neutral-700'}`}
@@ -244,13 +244,13 @@ export const RouletteModal: React.FC<RouletteModalProps> = ({
                       THE DICE HAVE SPOKEN:
                     </Text>
 
-                    {(selectedGenres.length > 0 || selectedType || selectedFormat) && (
+                    {(selectedGenres.length > 0 || selectedType || selectedFormats.length > 0) && (
                       <View className="flex-row justify-center mb-4 flex-wrap gap-2">
                         {selectedType && (
                            <Text className="font-mono text-[10px] text-amber-500 bg-amber-500/10 px-2 py-1 rounded border border-amber-500/20">{selectedType === 'movie' ? 'FILM' : 'TV SHOW'}</Text>
                         )}
-                        {selectedFormat && (
-                           <Text className="font-mono text-[10px] text-amber-500 bg-amber-500/10 px-2 py-1 rounded border border-amber-500/20">{selectedFormat === 'BluRay' ? 'Blu-ray' : selectedFormat}</Text>
+                        {selectedFormats.map(f => (
+                           <Text key={f} className="font-mono text-[10px] text-amber-500 bg-amber-500/10 px-2 py-1 rounded border border-amber-500/20">{f === 'BluRay' ? 'Blu-ray' : f}</Text>
                         )}
                         {selectedGenres.map(g => (
                            <Text key={g} className="font-mono text-[10px] text-amber-500 bg-amber-500/10 px-2 py-1 rounded border border-amber-500/20">{g}</Text>
