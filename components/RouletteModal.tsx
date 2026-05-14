@@ -23,6 +23,7 @@ export const RouletteModal: React.FC<RouletteModalProps> = ({
   const [step, setStep] = useState<'setup' | 'rolling' | 'result'>('setup');
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [selectedType, setSelectedType] = useState<'movie' | 'tv' | null>(null);
+  const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
   
   const [result, setResult] = useState<any | null>(null);
   
@@ -34,6 +35,7 @@ export const RouletteModal: React.FC<RouletteModalProps> = ({
       setStep('setup');
       setSelectedGenres([]);
       setSelectedType(null);
+      setSelectedFormat(null);
       setResult(null);
     }
   }, [visible]);
@@ -48,6 +50,10 @@ export const RouletteModal: React.FC<RouletteModalProps> = ({
     
     if (selectedType) {
       pool = pool.filter(item => item.media_type === selectedType);
+    }
+    
+    if (selectedFormat) {
+      pool = pool.filter(item => item.format === selectedFormat);
     }
     
     if (selectedGenres.length > 0) {
@@ -151,6 +157,29 @@ export const RouletteModal: React.FC<RouletteModalProps> = ({
                   ))}
                 </View>
 
+                <Text className="text-neutral-500 font-mono text-[10px] uppercase tracking-tighter mb-2">FORMAT</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-6">
+                  <View className="flex-row gap-2 pb-2">
+                    {['ANY', 'VHS', 'DVD', 'BluRay', '4K', 'Digital'].map(f => {
+                      const isActive = selectedFormat === f || (f === 'ANY' && !selectedFormat);
+                      return (
+                        <Pressable 
+                          key={f}
+                          onPress={() => {
+                            setSelectedFormat(f === 'ANY' ? null : f);
+                            playSound('click');
+                          }}
+                          className={`px-4 py-2 rounded-full border ${isActive ? 'bg-amber-500/20 border-amber-500/50' : 'bg-neutral-800 border-neutral-700'}`}
+                        >
+                          <Text className={`font-mono text-xs font-bold ${isActive ? 'text-amber-500' : 'text-neutral-400'}`}>
+                            {f === 'BluRay' ? 'Blu-ray' : f}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </ScrollView>
+
                 <Text className="text-neutral-500 font-mono text-[10px] uppercase tracking-tighter mb-2">GENRE (OPTIONAL, SELECT MULTIPLE)</Text>
                 <ScrollView style={{ maxHeight: 200 }} nestedScrollEnabled className="mb-6 bg-neutral-900 rounded-lg border border-neutral-800">
                   <View className="flex-row flex-wrap p-3 gap-2">
@@ -215,10 +244,13 @@ export const RouletteModal: React.FC<RouletteModalProps> = ({
                       THE DICE HAVE SPOKEN:
                     </Text>
 
-                    {(selectedGenres.length > 0 || selectedType) && (
+                    {(selectedGenres.length > 0 || selectedType || selectedFormat) && (
                       <View className="flex-row justify-center mb-4 flex-wrap gap-2">
                         {selectedType && (
                            <Text className="font-mono text-[10px] text-amber-500 bg-amber-500/10 px-2 py-1 rounded border border-amber-500/20">{selectedType === 'movie' ? 'FILM' : 'TV SHOW'}</Text>
+                        )}
+                        {selectedFormat && (
+                           <Text className="font-mono text-[10px] text-amber-500 bg-amber-500/10 px-2 py-1 rounded border border-amber-500/20">{selectedFormat === 'BluRay' ? 'Blu-ray' : selectedFormat}</Text>
                         )}
                         {selectedGenres.map(g => (
                            <Text key={g} className="font-mono text-[10px] text-amber-500 bg-amber-500/10 px-2 py-1 rounded border border-amber-500/20">{g}</Text>
