@@ -21,7 +21,7 @@ export const RouletteModal: React.FC<RouletteModalProps> = ({
 }) => {
   const { playSound } = useSound();
   const [step, setStep] = useState<'setup' | 'rolling' | 'result'>('setup');
-  const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
+  const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [selectedType, setSelectedType] = useState<'movie' | 'tv' | null>(null);
   
   const [result, setResult] = useState<any | null>(null);
@@ -32,7 +32,7 @@ export const RouletteModal: React.FC<RouletteModalProps> = ({
   useEffect(() => {
     if (visible) {
       setStep('setup');
-      setSelectedGenre(null);
+      setSelectedGenres([]);
       setSelectedType(null);
       setResult(null);
     }
@@ -50,10 +50,10 @@ export const RouletteModal: React.FC<RouletteModalProps> = ({
       pool = pool.filter(item => item.media_type === selectedType);
     }
     
-    if (selectedGenre) {
+    if (selectedGenres.length > 0) {
       pool = pool.filter(item => {
         const m = item.movies || item.shows;
-        return m?.genres?.some((g: any) => g?.name === selectedGenre);
+        return m?.genres?.some((g: any) => selectedGenres.includes(g?.name));
       });
     }
 
@@ -151,21 +151,24 @@ export const RouletteModal: React.FC<RouletteModalProps> = ({
                   ))}
                 </View>
 
-                <Text className="text-neutral-500 font-mono text-[10px] uppercase tracking-tighter mb-2">GENRE (OPTIONAL)</Text>
+                <Text className="text-neutral-500 font-mono text-[10px] uppercase tracking-tighter mb-2">GENRE (OPTIONAL, SELECT MULTIPLE)</Text>
                 <ScrollView style={{ maxHeight: 200 }} nestedScrollEnabled className="mb-6 bg-neutral-900 rounded-lg border border-neutral-800">
                   <View className="flex-row flex-wrap p-3 gap-2">
-                    {genres.map(g => (
-                      <Pressable 
-                        key={g}
-                        onPress={() => {
-                          setSelectedGenre(selectedGenre === g ? null : g);
-                          playSound('click');
-                        }}
-                        className={`px-3 py-1.5 rounded-full border ${selectedGenre === g ? 'bg-amber-500/20 border-amber-500/50' : 'bg-neutral-800 border-neutral-700'}`}
-                      >
-                        <Text className={`font-mono text-[10px] uppercase font-bold ${selectedGenre === g ? 'text-amber-500' : 'text-neutral-400'}`}>{g}</Text>
-                      </Pressable>
-                    ))}
+                    {genres.map(g => {
+                      const isSelected = selectedGenres.includes(g);
+                      return (
+                        <Pressable 
+                          key={g}
+                          onPress={() => {
+                            setSelectedGenres(prev => prev.includes(g) ? prev.filter(item => item !== g) : [...prev, g]);
+                            playSound('click');
+                          }}
+                          className={`px-3 py-1.5 rounded-full border ${isSelected ? 'bg-amber-500/20 border-amber-500/50' : 'bg-neutral-800 border-neutral-700'}`}
+                        >
+                          <Text className={`font-mono text-[10px] uppercase font-bold ${isSelected ? 'text-amber-500' : 'text-neutral-400'}`}>{g}</Text>
+                        </Pressable>
+                      );
+                    })}
                   </View>
                 </ScrollView>
 
