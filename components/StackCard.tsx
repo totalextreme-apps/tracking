@@ -257,7 +257,7 @@ export function StackCard({
       { rotateY: `${interpolate(tiltX.value, [0, 10], [0, -6])}deg` },
       { scale: isGrail ? grailPulse.value : 1 },
     ],
-    opacity: isWishlist ? 0.6 : 1,
+    opacity: 1,
   }));
 
   // Border Logic
@@ -288,7 +288,7 @@ export function StackCard({
           borderWidth: 1,
           borderColor: isWishlist ? '#404040' : '#262626',
           borderStyle: isWishlist ? 'dashed' : 'solid',
-        }, isWishlist ? { opacity: 0.6 } : {}]}
+        }]}
       >
         {/* Thumbnail Section */}
         <View style={{ height: '100%', aspectRatio, backgroundColor: '#262626' }}>
@@ -532,7 +532,7 @@ export function StackCard({
             )}
             
             {isWishlist && (
-              <View className="absolute inset-0 bg-black/40 border-2 border-dashed border-neutral-600 rounded-sm" style={{ zIndex: 60 }} />
+              <View className="absolute inset-0 bg-black/5 border-2 border-dashed border-neutral-600 rounded-sm" style={{ zIndex: 60 }} />
             )}
           </View>
 
@@ -597,7 +597,7 @@ export function StackCard({
           {isWishlist && (
             <View
               className="absolute inset-0 rounded-xl z-10"
-              style={{ backgroundColor: 'rgba(100,100,100,0.35)' }}
+              style={{ backgroundColor: 'rgba(100,100,100,0.05)' }}
             />
           )}
           {posterUrl ? (

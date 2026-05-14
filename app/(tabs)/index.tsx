@@ -14,6 +14,7 @@ import { OnDisplayCard } from '@/components/OnDisplayCard';
 import { ReorderShelfModal } from '@/components/ReorderShelfModal';
 import { QuickActionModal } from '@/components/QuickActionModal';
 import { StackCard } from '@/components/StackCard';
+import { RouletteModal } from '@/components/RouletteModal';
 import { useAuth } from '@/context/AuthContext';
 import { useSound } from '@/context/SoundContext';
 import { useThriftMode } from '@/context/ThriftModeContext';
@@ -58,6 +59,7 @@ export default function HomeScreen() {
   const [showRewind, setShowRewind] = useState(false);
   const [reorderModalVisible, setReorderModalVisible] = useState(false);
   const [reorderType, setReorderType] = useState<'display' | 'grail'>('display');
+  const [showRouletteModal, setShowRouletteModal] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -336,6 +338,12 @@ export default function HomeScreen() {
                   >
                     <Ionicons name="share-outline" size={14} color="#f59e0b" />
                   </Pressable>
+                  <Pressable
+                    onPress={() => { setShowRouletteModal(true); playSound('click'); }}
+                    className="ml-2 flex-row items-center justify-center p-2 rounded-full bg-neutral-900 border border-neutral-800"
+                  >
+                    <Ionicons name="dice-outline" size={14} color="#f59e0b" />
+                  </Pressable>
                 </View>
               </View>
 
@@ -498,6 +506,13 @@ export default function HomeScreen() {
         type={reorderType} 
         items={reorderType === 'display' ? onDisplay : grailList}
         userId={userId || ''}
+      />
+      
+      <RouletteModal
+        visible={showRouletteModal}
+        onClose={() => setShowRouletteModal(false)}
+        collection={collection || []}
+        genres={genres}
       />
 
       {showRewind && (
