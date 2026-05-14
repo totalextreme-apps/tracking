@@ -251,7 +251,7 @@ export const RouletteModal: React.FC<RouletteModalProps> = ({
                         )}
                         {selectedFormats.map(f => (
                            <Text key={f} className="font-mono text-[10px] text-amber-500 bg-amber-500/10 px-2 py-1 rounded border border-amber-500/20">{f === 'BluRay' ? 'Blu-ray' : f}</Text>
-                        )}
+                        ))}
                         {selectedGenres.map(g => (
                            <Text key={g} className="font-mono text-[10px] text-amber-500 bg-amber-500/10 px-2 py-1 rounded border border-amber-500/20">{g}</Text>
                         ))}
