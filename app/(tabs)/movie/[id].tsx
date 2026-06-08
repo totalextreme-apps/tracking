@@ -303,7 +303,7 @@ export default function MovieDetailScreen() {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     };
 
-    if (!activeMovie || !movieId) {
+    if (!movieId || (tmdbLoading && !activeMovie)) {
         return (
             <View className="flex-1 bg-neutral-950 items-center justify-center">
                 <ActivityIndicator color="#f59e0b" />
@@ -312,6 +312,22 @@ export default function MovieDetailScreen() {
     }
 
     const displayMovie = { ...activeMovie, ...tmdbMovie }; // Merge DB and TMDB data
+
+    // Resolve movie cast & director
+    const resolvedCast = displayMovie?.movie_cast || (tmdbMovie?.credits?.cast ? [
+        ...(tmdbMovie.credits.crew?.filter((c: any) => c.job === 'Director').map((c: any) => ({
+            id: c.id,
+            name: c.name,
+            character: 'Director',
+            profile_path: c.profile_path
+        })) || []),
+        ...tmdbMovie.credits.cast.slice(0, 25).map((c: any) => ({
+            id: c.id,
+            name: c.name,
+            character: c.character,
+            profile_path: c.profile_path
+        }))
+    ] : []);
 
     // Use displayMovie for standard fields
     const backdropUrl = getBackdropUrl(displayMovie.backdrop_path);
@@ -537,7 +553,8 @@ export default function MovieDetailScreen() {
                                 router.back();
                             }
                         }}
-                        className="absolute top-12 right-4 bg-black/50 p-2 rounded-full"
+                        style={{ top: Math.max(insets.top, 16) }}
+                        className="absolute right-4 bg-black/50 p-2 rounded-full z-10"
                     >
                         <Ionicons name="close" size={24} color="white" />
                     </Pressable>
@@ -545,7 +562,8 @@ export default function MovieDetailScreen() {
                     {/* Share Button */}
                     <Pressable
                         onPress={() => setShowShareModal(true)}
-                        className="absolute top-12 right-16 bg-black/50 p-2 rounded-full"
+                        style={{ top: Math.max(insets.top, 16) }}
+                        className="absolute right-16 bg-black/50 p-2 rounded-full z-10"
                     >
                         <Ionicons name="share-outline" size={24} color="white" />
                     </Pressable>
@@ -632,9 +650,8 @@ export default function MovieDetailScreen() {
                                 </View>
                             )}
 
-                            <Text className="text-white font-bold text-xl leading-6 mb-0.5">{displayMovie.title}</Text>
-                            <Text className="text-neutral-500 font-mono text-xs">
-                                {displayMovie.release_date?.slice(0, 4) || '????'}
+                            <Text className="text-white font-bold text-xl leading-6 mb-0.5">
+                                {displayMovie.title} {displayMovie.release_date ? `(${displayMovie.release_date.slice(0, 4)})` : ''}
                             </Text>
                         </View>
                     </View>
@@ -715,11 +732,11 @@ export default function MovieDetailScreen() {
                     )}
 
                     {/* Cast Section */}
-                    {activeMovie.movie_cast && activeMovie.movie_cast.length > 0 && (
+                    {resolvedCast && resolvedCast.length > 0 && (
                         <View className="mt-4 mb-2 px-4 md:px-8">
                             <Text className="text-amber-500 font-bold text-xl mb-3 font-mono uppercase tracking-widest" style={{ fontFamily: 'VCR_OSD_MONO' }}>STARRING</Text>
                             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                                {activeMovie.movie_cast.map((member: any) => (
+                                {resolvedCast.map((member: any) => (
                                     <View key={member.id} className="mr-4 items-center w-20">
                                         <View className="w-16 h-16 rounded-full overflow-hidden bg-neutral-800 mb-2 border border-neutral-700">
                                             {member.profile_path ? (

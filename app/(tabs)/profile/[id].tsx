@@ -48,16 +48,44 @@ export default function UserProfileScreen() {
     let result = [...(items || [])];
 
     if (searchQuery) {
-       const q = searchQuery.toLowerCase();
-       result = result.filter(item => {
-         const m = item.movies || item.shows;
-         const inCast = m?.movie_cast?.some((c: any) => c.name.toLowerCase().includes(q)) || 
-                        m?.show_cast?.some((c: any) => c.name.toLowerCase().includes(q));
-         return (item.movies?.title?.toLowerCase().includes(q) || 
-           item.shows?.name?.toLowerCase().includes(q) ||
-           item.edition?.toLowerCase().includes(q) ||
-           inCast);
-       });
+      const noiseWords = new Set(['remake', 'original', 'reboot', 'sequel', 'movie', 'tv', 'show', 'series', 'film', 'version', 'cut', 'edition']);
+      const tokens = searchQuery
+        .toLowerCase()
+        .split(/[\s,()]+/)
+        .map(t => t.trim())
+        .filter(t => t.length > 0 && !noiseWords.has(t));
+
+      if (tokens.length > 0) {
+        result = result.filter((item: any) => {
+          const m = item.movies || item.shows;
+          if (!m) return false;
+
+          const title = (m.title || m.name || '').toLowerCase();
+          const year = (m.release_date || m.first_air_date || '').slice(0, 4);
+          const format = (item.format || '').toLowerCase();
+          const edition = (item.edition || '').toLowerCase();
+          
+          const searchableTexts: string[] = [title, year, format, edition];
+          
+          if (m.genres && Array.isArray(m.genres)) {
+            m.genres.forEach((g: any) => {
+              if (g?.name) searchableTexts.push(g.name.toLowerCase());
+            });
+          }
+
+          const cast = m.movie_cast || m.show_cast;
+          if (cast && Array.isArray(cast)) {
+            cast.forEach((c: any) => {
+              if (c?.name) searchableTexts.push(c.name.toLowerCase());
+              if (c?.character) searchableTexts.push(c.character.toLowerCase());
+            });
+          }
+
+          return tokens.every(token => 
+            searchableTexts.some(text => text.includes(token))
+          );
+        });
+      }
     }
 
     if (formatFilter && formatFilter !== 'ALL') {

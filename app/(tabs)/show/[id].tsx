@@ -314,6 +314,14 @@ export default function ShowDetailScreen() {
     const backdropUrl = getBackdropUrl(displayShow.backdrop_path);
     const posterUrl = getPosterUrl(displayShow.poster_path);
 
+    // Resolve show cast & director
+    const resolvedShowCast = displayShow?.show_cast || (tmdbShow?.credits?.cast ? tmdbShow.credits.cast.slice(0, 25).map((c: any) => ({
+        id: c.id,
+        name: c.name,
+        character: c.character,
+        profile_path: c.profile_path
+    })) : []);
+
     const ownedFormats = showItems.map((i: any) => i.format);
     const isGrail = showItems.some((i: any) => i.is_grail);
 
@@ -397,11 +405,16 @@ export default function ShowDetailScreen() {
                                 router.back();
                             }
                         }}
-                        className="absolute top-12 right-4 bg-black/50 p-2 rounded-full"
+                        style={{ top: Math.max(insets.top, 16) }}
+                        className="absolute right-4 bg-black/50 p-2 rounded-full z-10"
                     >
                         <Ionicons name="close" size={24} color="white" />
                     </Pressable>
-                    <Pressable onPress={() => setShowShareModal(true)} className="absolute top-12 right-16 bg-black/50 p-2 rounded-full">
+                    <Pressable
+                        onPress={() => setShowShareModal(true)}
+                        style={{ top: Math.max(insets.top, 16) }}
+                        className="absolute right-16 bg-black/50 p-2 rounded-full z-10"
+                    >
                         <Ionicons name="share-outline" size={24} color="white" />
                     </Pressable>
                 </View>
@@ -454,9 +467,11 @@ export default function ShowDetailScreen() {
                                     </View>
                                 </View>
                             )}
-                            <Text className="text-white font-bold text-xl leading-6 mb-0.5">{displayShow.name}</Text>
+                            <Text className="text-white font-bold text-xl leading-6 mb-0.5">
+                                {displayShow.name} {displayShow.first_air_date ? `(${displayShow.first_air_date.slice(0, 4)})` : ''}
+                            </Text>
                             <Text className="text-neutral-500 font-mono text-xs">
-                                Season {seasonNumber} • {displayShow.first_air_date?.slice(0, 4) || '????'}
+                                Season {seasonNumber}
                             </Text>
                         </View>
                     </View>
@@ -513,11 +528,11 @@ export default function ShowDetailScreen() {
                         )}
                     </View>
 
-                    {activeShow.show_cast && activeShow.show_cast.length > 0 && (
+                    {resolvedShowCast && resolvedShowCast.length > 0 && (
                         <View className="mt-6 mb-2">
                             <Text className="text-amber-500 font-bold text-xl mb-3 font-mono uppercase tracking-widest" style={{ fontFamily: 'VCR_OSD_MONO' }}>STARRING</Text>
                             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                                {activeShow.show_cast.map((member: any) => (
+                                {resolvedShowCast.map((member: any) => (
                                     <View key={member.id} className="mr-4 items-center w-20">
                                         <View className="w-16 h-16 rounded-full overflow-hidden bg-neutral-800 mb-2 border border-neutral-700">
                                             {member.profile_path ? (

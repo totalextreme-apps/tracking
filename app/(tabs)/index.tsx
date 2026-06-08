@@ -164,11 +164,44 @@ export default function HomeScreen() {
     }
 
     if (searchQuery) {
-      const q = searchQuery.trim().toLowerCase();
-      items = items.filter((item: any) => {
-        const m = item.movies || item.shows;
-        return (m?.title || m?.name || '').toLowerCase().includes(q);
-      });
+      const noiseWords = new Set(['remake', 'original', 'reboot', 'sequel', 'movie', 'tv', 'show', 'series', 'film', 'version', 'cut', 'edition']);
+      const tokens = searchQuery
+        .toLowerCase()
+        .split(/[\s,()]+/)
+        .map(t => t.trim())
+        .filter(t => t.length > 0 && !noiseWords.has(t));
+
+      if (tokens.length > 0) {
+        items = items.filter((item: any) => {
+          const m = item.movies || item.shows;
+          if (!m) return false;
+
+          const title = (m.title || m.name || '').toLowerCase();
+          const year = (m.release_date || m.first_air_date || '').slice(0, 4);
+          const format = (item.format || '').toLowerCase();
+          const edition = (item.edition || '').toLowerCase();
+          
+          const searchableTexts: string[] = [title, year, format, edition];
+          
+          if (m.genres && Array.isArray(m.genres)) {
+            m.genres.forEach((g: any) => {
+              if (g?.name) searchableTexts.push(g.name.toLowerCase());
+            });
+          }
+
+          const cast = m.movie_cast || m.show_cast;
+          if (cast && Array.isArray(cast)) {
+            cast.forEach((c: any) => {
+              if (c?.name) searchableTexts.push(c.name.toLowerCase());
+              if (c?.character) searchableTexts.push(c.character.toLowerCase());
+            });
+          }
+
+          return tokens.every(token => 
+            searchableTexts.some(text => text.includes(token))
+          );
+        });
+      }
     }
 
     if (genreFilter) items = items.filter((item: any) => (item.movies || item.shows)?.genres?.some((g: any) => g?.name === genreFilter));
@@ -315,14 +348,18 @@ export default function HomeScreen() {
           )}
 
           <View className="px-4 md:px-8 pb-4 max-w-7xl mx-auto w-full">
-            <View className="flex-row items-center justify-between mb-6 flex-wrap gap-2">
-              <View className="flex-row items-baseline gap-2 flex-wrap">
-                <Text className="text-amber-500 font-bold text-2xl md:text-3xl tracking-tighter uppercase" style={{ fontFamily: 'VCR_OSD_MONO' }}>
-                  {thriftMode ? 'WISH LIST' : 'THE STACKS'}
-                </Text>
-                <View className="flex-row items-baseline">
-                  <Text className="text-neutral-500 font-mono text-xs ml-2">{filteredStacks.length} STACKS</Text>
-                  <Text className="text-neutral-500 font-mono text-[8px] ml-1">/ {filteredCollection.length} ITEMS</Text>
+            <View className="flex-row items-center justify-between mb-6 flex-wrap gap-4">
+              <View className="flex-row items-center gap-4 flex-wrap flex-1 min-w-[200px]">
+                <View>
+                  <Text className="text-amber-500 font-bold text-2xl md:text-3xl tracking-tighter uppercase" style={{ fontFamily: 'VCR_OSD_MONO' }}>
+                    {thriftMode ? 'WISH LIST' : 'THE STACKS'}
+                  </Text>
+                  <View className="flex-row items-center mt-0.5">
+                    <Text className="text-neutral-500 font-mono text-[10px]">{filteredStacks.length} STACKS</Text>
+                    <Text className="text-neutral-600 font-mono text-[8px] ml-1">/ {filteredCollection.length} ITEMS</Text>
+                  </View>
+                </View>
+                <View className="flex-row items-center gap-2">
                   <Pressable 
                     onPress={() => {
                       import('react-native').then(({ Share }) => {
@@ -334,13 +371,13 @@ export default function HomeScreen() {
                         Share.share({ message: `Check out my ${thriftMode ? 'Wishlist' : 'Collection'}:\n\n${itemsText}` });
                       });
                     }}
-                    className="ml-4 flex-row items-center justify-center p-2 rounded-full bg-neutral-900 border border-neutral-800"
+                    className="flex-row items-center justify-center p-2 rounded-full bg-neutral-900 border border-neutral-800"
                   >
                     <Ionicons name="share-outline" size={14} color="#f59e0b" />
                   </Pressable>
                   <Pressable
                     onPress={() => { setShowRouletteModal(true); playSound('click'); }}
-                    className="ml-2 flex-row items-center justify-center p-2 rounded-full bg-neutral-900 border border-neutral-800"
+                    className="flex-row items-center justify-center p-2 rounded-full bg-neutral-900 border border-neutral-800"
                   >
                     <Ionicons name="dice-outline" size={14} color="#f59e0b" />
                   </Pressable>

@@ -55,7 +55,10 @@ export default function AddScreen() {
   const [manualPoster, setManualPoster] = useState('');
   const [manualBackdrop, setManualBackdrop] = useState('');
 
-  const searchQuery = useTmdbSearch(debouncedQuery);
+  const [page, setPage] = useState(1);
+  const [searchResults, setSearchResults] = useState<TmdbMediaResult[]>([]);
+
+  const searchQuery = useTmdbSearch(debouncedQuery, page);
   const addMutation = useAddToCollection(userId);
   const updateMutation = useUpdateCollectionItem(userId);
 
@@ -73,6 +76,8 @@ export default function AddScreen() {
     useCallback(() => {
       setQuery('');
       setDebouncedQuery('');
+      setPage(1);
+      setSearchResults([]);
       setSelectedItem(null);
       setSelectedFormats([]);
       setSelectedSeasons([]);
@@ -138,9 +143,34 @@ export default function AddScreen() {
   };
 
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedQuery(query), 300);
+    const t = setTimeout(() => {
+      setDebouncedQuery(query);
+      setPage(1);
+    }, 300);
     return () => clearTimeout(t);
   }, [query]);
+
+  // Accumulate page-by-page results
+  useEffect(() => {
+    if (searchQuery.data?.results) {
+      if (page === 1) {
+        setSearchResults(searchQuery.data.results);
+      } else {
+        setSearchResults((prev) => {
+          const existingIds = new Set(prev.map(item => `${item.media_type}-${item.id}`));
+          const newItems = searchQuery.data.results.filter(item => !existingIds.has(`${item.media_type}-${item.id}`));
+          return [...prev, ...newItems];
+        });
+      }
+    }
+  }, [searchQuery.data, page]);
+
+  // Reset results when query becomes empty
+  useEffect(() => {
+    if (debouncedQuery.trim() === '') {
+      setSearchResults([]);
+    }
+  }, [debouncedQuery]);
 
   // Detect Manual Barcode Entry (12–13 digit UPC/EAN)
   useEffect(() => {
@@ -281,7 +311,7 @@ export default function AddScreen() {
     }
   };
 
-  const results = searchQuery.data?.results ?? [];
+  const results = searchResults;
 
   return (
     <KeyboardAvoidingView
@@ -611,9 +641,16 @@ export default function AddScreen() {
                   </Pressable>
                </View>
 
-                  keyboardType="numeric"
-                  maxLength={4}
-               />
+                <Text className="text-neutral-500 font-mono text-[10px] mb-2 tracking-widest">RELEASE YEAR</Text>
+                <TextInput 
+                   value={manualYear}
+                   onChangeText={setManualYear}
+                   className="bg-neutral-950 border border-neutral-800 text-white px-4 py-3 rounded-lg font-mono text-sm mb-5"
+                   placeholder="e.g. 1999"
+                   placeholderTextColor="#444"
+                   keyboardType="numeric"
+                   maxLength={4}
+                />
                
                <Text className="text-neutral-500 font-mono text-[10px] mb-2 tracking-widest">SYNOPSIS / OVERVIEW</Text>
                <TextInput 
@@ -736,6 +773,29 @@ export default function AddScreen() {
                     </Pressable>
                   );
                 })}
+                {searchQuery.data?.total_pages && searchQuery.data.total_pages > page && (
+                  <View className="items-center mt-2 mb-4">
+                    <Pressable
+                      onPress={() => {
+                        setPage(p => p + 1);
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      }}
+                      disabled={searchQuery.isFetching}
+                      className="bg-[#0000FF] border border-blue-900/50 px-8 py-3.5 rounded-full active:bg-blue-800 flex-row items-center gap-2"
+                      style={{ minHeight: 44 }}
+                    >
+                      {searchQuery.isFetching ? (
+                        <ActivityIndicator color="white" size="small" />
+                      ) : (
+                        <FontAwesome name="plus" size={12} color="white" />
+                      )}
+                      <Text className="text-white font-mono text-[10px] uppercase font-bold tracking-widest">
+                        {searchQuery.isFetching ? 'RETRIEVING...' : 'FIND MORE RESULTS'}
+                      </Text>
+                    </Pressable>
+                  </View>
+                )}
+
                 <View className="flex-row justify-center mt-6 mb-8">
                    <Pressable
                      onPress={() => setShowManualEntry(true)}

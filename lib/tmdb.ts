@@ -55,8 +55,8 @@ async function tmdbFetch<T>(path: string): Promise<T> {
 export async function searchMedia(query: string, page = 1): Promise<TmdbSearchResponse> {
   const trimmedQuery = query.trim();
   
-  // Detect Year (e.g. "The Reaper 2000" or "The Reaper (2000)")
-  const yearMatch = trimmedQuery.match(/\(?\b(19|20)\d{2}\b\)?$/);
+  // Detect Year (e.g. "The Reaper 2000" or "The Reaper (2000)" or "(2000) The Reaper")
+  const yearMatch = trimmedQuery.match(/\((19|20)\d{2}\)/) || trimmedQuery.match(/\b(19|20)\d{2}\b$/);
   let year: string | null = null;
   let cleanQuery = trimmedQuery;
   
@@ -164,6 +164,33 @@ export async function searchMedia(query: string, page = 1): Promise<TmdbSearchRe
 
     if (fallbackData && fallbackData.results && fallbackData.results.length > 0) {
       data = fallbackData;
+    }
+  }
+
+  // Forgiving Search Fallback: Noise Qualifiers Removal (e.g. "Wicker Man Remake" -> "Wicker Man")
+  const noiseRegex = /\b(remake|original|reboot|sequel|version|director'?s cut|extended (cut|edition)|uncut)\b/gi;
+  if ((!data.results || data.results.length < 2) && noiseRegex.test(cleanQuery)) {
+    const stripped = cleanQuery.replace(noiseRegex, '').replace(/\s+/g, ' ').trim();
+    if (stripped.length > 0) {
+      try {
+        let fallbackData = null;
+        if (year) {
+          const movieSearch = await tmdbFetch<any>(`/search/movie?query=${encodeURIComponent(stripped)}&primary_release_year=${year}&page=${page}`);
+          const tvSearch = await tmdbFetch<any>(`/search/tv?query=${encodeURIComponent(stripped)}&first_air_date_year=${year}&page=${page}`);
+          fallbackData = {
+            page: page,
+            results: [
+              ...(movieSearch.results || []).map((r: any) => ({ ...r, media_type: 'movie' })),
+              ...(tvSearch.results || []).map((r: any) => ({ ...r, media_type: 'tv' }))
+            ]
+          };
+        } else {
+          fallbackData = await tmdbFetch<any>(`/search/multi?query=${encodeURIComponent(stripped)}&page=${page}`);
+        }
+        if (fallbackData && fallbackData.results && fallbackData.results.length > 0) {
+          data = fallbackData;
+        }
+      } catch (e) { /* ignore */ }
     }
   }
 
