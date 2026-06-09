@@ -473,6 +473,11 @@ export default function ShowDetailScreen() {
                             <Text className="text-neutral-500 font-mono text-xs">
                                 Season {seasonNumber}
                             </Text>
+                            {displayShow.genres && Array.isArray(displayShow.genres) && displayShow.genres.length > 0 && (
+                                <Text className="text-neutral-500 font-mono text-[10px] mt-1.5 uppercase tracking-wider">
+                                    {displayShow.genres.map((g: any) => g?.name).filter(Boolean).join('  •  ')}
+                                </Text>
+                            )}
                         </View>
                     </View>
                     <View className="flex-row mt-4 gap-2">

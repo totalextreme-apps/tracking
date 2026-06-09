@@ -653,6 +653,11 @@ export default function MovieDetailScreen() {
                             <Text className="text-white font-bold text-xl leading-6 mb-0.5">
                                 {displayMovie.title} {displayMovie.release_date ? `(${displayMovie.release_date.slice(0, 4)})` : ''}
                             </Text>
+                            {displayMovie.genres && Array.isArray(displayMovie.genres) && displayMovie.genres.length > 0 && (
+                                <Text className="text-neutral-500 font-mono text-[10px] mt-1 uppercase tracking-wider">
+                                    {displayMovie.genres.map((g: any) => g?.name).filter(Boolean).join('  •  ')}
+                                </Text>
+                            )}
                         </View>
                     </View>
                     {/* Actions Bar (Full width style from attachment 2) */}
