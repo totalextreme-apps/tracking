@@ -66,6 +66,7 @@ export default function ShowDetailScreen() {
     const [cropModalVisible, setCropModalVisible] = useState(false);
     const [pendingImageUri, setPendingImageUri] = useState<string | null>(null);
     const [showEditionModal, setShowEditionModal] = useState(false);
+    const [modalStatus, setModalStatus] = useState<'owned' | 'wishlist'>('owned');
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [pendingFormat, setPendingFormat] = useState<string | null>(null);
     const [editionInput, setEditionInput] = useState('');
@@ -359,7 +360,7 @@ export default function ShowDetailScreen() {
             await addMutation.mutateAsync({
                 tmdbItem: activeShow,
                 formats: [pendingFormat as MovieFormat],
-                status: thriftMode ? 'wishlist' : 'owned',
+                status: modalStatus,
                 edition: editionInput.trim() || null,
                 seasonNumber: seasonNumber
             });
@@ -602,13 +603,24 @@ export default function ShowDetailScreen() {
 
                     {ownedFormats.length > 0 && !isReadOnly && (
                         <View className="mt-6">
-                            <Text className="text-white font-bold mb-3">Format Notes</Text>
+                            <Text className="text-white font-bold mb-3">
+                                {showItems.every((i: any) => i.status === 'wishlist')
+                                    ? 'Wishlist Format Notes'
+                                    : showItems.every((i: any) => i.status === 'owned')
+                                        ? 'Format Notes'
+                                        : 'Format Notes (Owned & Wishlist)'}
+                            </Text>
                             {showItems.map((item: any) => (
                                 <View key={item.id} className="mb-4">
                                     <View className="flex-row items-center flex-wrap mb-2">
                                         <View className={`px-2 py-1 rounded shrink-0 ${FORMAT_COLORS[item.format] || 'bg-neutral-800'}`}>
                                             <Text className="text-white font-mono text-xs font-bold">{item.format === 'BluRay' ? 'Blu-ray' : item.format}</Text>
                                         </View>
+                                        {item.status === 'wishlist' && (
+                                            <View className="border border-dashed border-neutral-500 px-1.5 py-0.5 rounded-sm ml-2">
+                                                <Text className="text-neutral-400 font-mono text-[9px] font-bold uppercase tracking-wider">WISHLIST</Text>
+                                            </View>
+                                        )}
                                         <Pressable
                                             onPress={async () => {
                                                 const isBoot = localBootlegs[item.id] !== undefined ? localBootlegs[item.id] : (item.is_bootleg || false);
@@ -755,7 +767,7 @@ export default function ShowDetailScreen() {
                             <Text className="text-white font-bold mb-3">Add Format</Text>
                             <View className="flex-row flex-wrap gap-2">
                                 {FORMATS.map(fmt => (
-                                    <Pressable key={fmt} onPress={() => { setPendingFormat(fmt); setEditionInput(''); setShowEditionModal(true); }} className={`px-4 py-2 border rounded-full ${FORMAT_COLORS[fmt] || 'bg-neutral-800'} border-neutral-700`}>
+                                    <Pressable key={fmt} onPress={() => { setPendingFormat(fmt); setEditionInput(''); setModalStatus(thriftMode ? 'wishlist' : 'owned'); setShowEditionModal(true); }} className={`px-4 py-2 border rounded-full ${FORMAT_COLORS[fmt] || 'bg-neutral-800'} border-neutral-700`}>
                                         <Text className="text-white font-mono font-bold">{fmt === 'BluRay' ? 'Blu-ray' : fmt}</Text>
                                     </Pressable>
                                 ))}
@@ -867,6 +879,27 @@ export default function ShowDetailScreen() {
                 <View className="flex-1 bg-black/80 items-center justify-center p-4">
                     <View className="bg-neutral-900 rounded-lg p-6 w-full max-w-md border border-neutral-800">
                         <Text className="text-white font-bold text-lg mb-4">Add {pendingFormat}</Text>
+
+                        {/* Owned / Wishlist Selection inside Modal */}
+                        <View className="flex-row gap-2 mb-4">
+                            <Pressable
+                                onPress={() => setModalStatus('owned')}
+                                className={`flex-1 py-2 rounded ${modalStatus === 'owned' ? 'bg-amber-600' : 'bg-neutral-800'}`}
+                            >
+                                <Text className={`font-mono text-sm text-center ${modalStatus === 'owned' ? 'text-white' : 'text-neutral-400'}`}>
+                                    OWNED
+                                </Text>
+                            </Pressable>
+                            <Pressable
+                                onPress={() => setModalStatus('wishlist')}
+                                className={`flex-1 py-2 rounded ${modalStatus === 'wishlist' ? 'bg-amber-600' : 'bg-neutral-800'}`}
+                            >
+                                <Text className={`font-mono text-sm text-center ${modalStatus === 'wishlist' ? 'text-white' : 'text-neutral-400'}`}>
+                                    WISHLIST
+                                </Text>
+                            </Pressable>
+                        </View>
+
                         <TextInput
                             className="bg-neutral-800 text-white p-3 rounded-lg border border-neutral-700 font-mono text-sm mb-4"
                             placeholder="Edition (e.g., Box Set)"

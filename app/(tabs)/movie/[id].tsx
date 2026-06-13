@@ -66,6 +66,7 @@ export default function MovieDetailScreen() {
     const [cropModalVisible, setCropModalVisible] = useState(false);
     const [pendingImageUri, setPendingImageUri] = useState<string | null>(null);
     const [showEditionModal, setShowEditionModal] = useState(false);
+    const [modalStatus, setModalStatus] = useState<'owned' | 'wishlist'>('owned');
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [pendingFormat, setPendingFormat] = useState<string | null>(null);
     const [editionInput, setEditionInput] = useState('');
@@ -401,6 +402,7 @@ export default function MovieDetailScreen() {
         // Show edition modal for adding format
         setPendingFormat(fmt);
         setEditionInput('');
+        setModalStatus(thriftMode ? 'wishlist' : 'owned');
         setShowEditionModal(true);
         playSound('click');
     };
@@ -429,7 +431,7 @@ export default function MovieDetailScreen() {
                     media_type: 'movie',
                 } as any,
                 formats: [pendingFormat as MovieFormat],
-                status: thriftMode ? 'wishlist' : 'owned',
+                status: modalStatus,
                 edition: editionInput.trim() || null
             });
 
@@ -1047,7 +1049,13 @@ export default function MovieDetailScreen() {
                     {
                         movieItems.length > 0 && (
                             <View className="mt-8">
-                                <Text className="text-white font-bold mb-3">Owned Formats</Text>
+                                <Text className="text-white font-bold mb-3">
+                                    {movieItems.every((i: any) => i.status === 'wishlist')
+                                        ? 'Wishlist Formats'
+                                        : movieItems.every((i: any) => i.status === 'owned')
+                                            ? 'Owned Formats'
+                                            : 'Formats in Library'}
+                                </Text>
                                 <View className="gap-2">
                                     {movieItems.map((item: any) => (
                                         <View key={item.id} className="flex-row items-center justify-between bg-neutral-900 p-3 rounded-lg border border-neutral-800">
@@ -1070,6 +1078,11 @@ export default function MovieDetailScreen() {
                                                         </View>
                                                     </View>
                                                 </Pressable>
+                                                {item.status === 'wishlist' && (
+                                                    <View className="border border-dashed border-neutral-500 px-1.5 py-0.5 rounded-sm">
+                                                        <Text className="text-neutral-400 font-mono text-[9px] font-bold uppercase tracking-wider">WISHLIST</Text>
+                                                    </View>
+                                                )}
                                                 {item.edition && (
                                                     <Text className="text-neutral-400 font-mono text-sm flex-1" numberOfLines={2}>({item.edition})</Text>
                                                 )}
@@ -1335,6 +1348,26 @@ export default function MovieDetailScreen() {
                                 ? '⚠️ Edition required (duplicate format)'
                                 : 'Edition optional (e.g., Theatrical, Unrated, Box Set)'}
                         </Text>
+
+                        {/* Owned / Wishlist Selection inside Modal */}
+                        <View className="flex-row gap-2 mb-4">
+                            <Pressable
+                                onPress={() => setModalStatus('owned')}
+                                className={`flex-1 py-2 rounded ${modalStatus === 'owned' ? 'bg-amber-600' : 'bg-neutral-800'}`}
+                            >
+                                <Text className={`font-mono text-sm text-center ${modalStatus === 'owned' ? 'text-white' : 'text-neutral-400'}`}>
+                                    OWNED
+                                </Text>
+                            </Pressable>
+                            <Pressable
+                                onPress={() => setModalStatus('wishlist')}
+                                className={`flex-1 py-2 rounded ${modalStatus === 'wishlist' ? 'bg-amber-600' : 'bg-neutral-800'}`}
+                            >
+                                <Text className={`font-mono text-sm text-center ${modalStatus === 'wishlist' ? 'text-white' : 'text-neutral-400'}`}>
+                                    WISHLIST
+                                </Text>
+                            </Pressable>
+                        </View>
 
                         <TextInput
                             nativeID="modal-edition-input"
