@@ -376,7 +376,7 @@ export default function ShowDetailScreen() {
                 const title = activeShow.name;
                 if (Platform.OS === 'web') {
                   if (window.confirm(`${title} (${formatName}) is on your wishlist. Do you want to mark it as acquired?`)) {
-                    updateMutation.mutate({ itemId: conflictId, updates: { status: 'owned', created_at: new Date().toISOString() } });
+                    updateMutation.mutate({ itemId: conflictId, updates: { status: 'owned', is_grail: false, created_at: new Date().toISOString() } });
                     setShowEditionModal(false);
                     setPendingFormat(null);
                   }
@@ -384,7 +384,7 @@ export default function ShowDetailScreen() {
                   Alert.alert('On Wishlist', `${title} (${formatName}) is on your wishlist. Do you want to mark it as acquired?`, [
                     { text: 'Cancel', style: 'cancel' },
                     { text: 'Mark as Acquired', onPress: () => {
-                        updateMutation.mutate({ itemId: conflictId, updates: { status: 'owned', created_at: new Date().toISOString() } });
+                        updateMutation.mutate({ itemId: conflictId, updates: { status: 'owned', is_grail: false, created_at: new Date().toISOString() } });
                         setShowEditionModal(false);
                         setPendingFormat(null);
                     }}
@@ -513,21 +513,20 @@ export default function ShowDetailScreen() {
                         </View>
                     </View>
                     <View className="flex-row mt-4 gap-2">
-                        {thriftMode ? (
+                        {thriftMode || isGrail ? (
                             <Pressable
                                 onPress={async () => {
-                                    const isGrail = showItems.some((i: any) => i.is_grail);
                                     await Promise.all(showItems.map((item: any) =>
                                         updateMutation.mutateAsync({ itemId: item.id, updates: { is_grail: !isGrail } })
                                     ));
                                     playSound('peel');
                                     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                                 }}
-                                className={`flex-1 flex-row items-center justify-center p-3 rounded-lg border ${showItems.some((i: any) => i.is_grail) ? 'bg-amber-500/10 border-amber-500' : 'bg-neutral-900 border-neutral-800'}`}
+                                className={`flex-1 flex-row items-center justify-center p-3 rounded-lg border ${isGrail ? 'bg-amber-500/10 border-amber-500' : 'bg-neutral-900 border-neutral-800'}`}
                             >
-                                <Ionicons name={showItems.some((i: any) => i.is_grail) ? "trophy" : "trophy-outline"} size={16} color={showItems.some((i: any) => i.is_grail) ? "#f59e0b" : "#404040"} />
-                                <Text className={`ml-2 font-mono text-xs font-bold tracking-widest ${showItems.some((i: any) => i.is_grail) ? 'text-amber-500' : 'text-neutral-600'}`}>
-                                    {showItems.some((i: any) => i.is_grail) ? 'GRAIL' : 'MAKE GRAIL'}
+                                <Ionicons name={isGrail ? "trophy" : "trophy-outline"} size={16} color={isGrail ? "#f59e0b" : "#404040"} />
+                                <Text className={`ml-2 font-mono text-xs font-bold tracking-widest ${isGrail ? 'text-amber-500' : 'text-neutral-600'}`}>
+                                    {isGrail ? 'GRAIL' : 'MAKE GRAIL'}
                                 </Text>
                             </Pressable>
                         ) : (

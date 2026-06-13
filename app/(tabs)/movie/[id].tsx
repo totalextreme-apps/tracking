@@ -456,7 +456,7 @@ export default function MovieDetailScreen() {
                 const title = activeMovie.title;
                 if (Platform.OS === 'web') {
                   if (window.confirm(`${title} (${formatName}) is on your wishlist. Do you want to mark it as acquired?`)) {
-                    updateMutation.mutate({ itemId: conflictId, updates: { status: 'owned', created_at: new Date().toISOString() } });
+                    updateMutation.mutate({ itemId: conflictId, updates: { status: 'owned', is_grail: false, created_at: new Date().toISOString() } });
                     setShowEditionModal(false);
                     setPendingFormat(null);
                   }
@@ -464,7 +464,7 @@ export default function MovieDetailScreen() {
                   Alert.alert('On Wishlist', `${title} (${formatName}) is on your wishlist. Do you want to mark it as acquired?`, [
                     { text: 'Cancel', style: 'cancel' },
                     { text: 'Mark as Acquired', onPress: () => {
-                        updateMutation.mutate({ itemId: conflictId, updates: { status: 'owned', created_at: new Date().toISOString() } });
+                        updateMutation.mutate({ itemId: conflictId, updates: { status: 'owned', is_grail: false, created_at: new Date().toISOString() } });
                         setShowEditionModal(false);
                         setPendingFormat(null);
                     }}
@@ -696,7 +696,7 @@ export default function MovieDetailScreen() {
                     <View className="max-w-7xl mx-auto w-full px-4 md:px-8 flex-row mt-4 gap-2">
                         {!isReadOnly && (
                             <>
-                                {thriftMode ? (
+                                {thriftMode || isGrail ? (
                                     <Pressable
                                         onPress={toggleGrail}
                                         className={`flex-1 flex-row items-center justify-center p-3 rounded-lg border ${isGrail ? 'bg-amber-500/10 border-amber-500' : 'bg-neutral-900 border-neutral-800'}`}

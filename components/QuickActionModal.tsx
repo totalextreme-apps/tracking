@@ -80,6 +80,7 @@ export function QuickActionModal({
         itemId: targetItem.id,
         updates: { 
           status: 'owned',
+          is_grail: false,
           created_at: new Date().toISOString()
         }
       });
