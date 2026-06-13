@@ -4,12 +4,14 @@ import { View, Text, ScrollView, Pressable, ActivityIndicator, Alert, Platform }
 import { useAuth } from '@/context/AuthContext';
 import { useBatchImportMetadata } from '@/hooks/useCollection';
 import { useRouter } from 'expo-router';
+import { searchMedia } from '@/lib/tmdb';
 
 export default function ImportScreen() {
   const { userId } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
+  const [matchingProgress, setMatchingProgress] = useState<{ current: number; total: number; title: string } | null>(null);
   const importMutation = useBatchImportMetadata(userId ?? undefined);
 
   // Use standard HTML input for web (since user is on Chrome)
@@ -23,10 +25,10 @@ export default function ImportScreen() {
     setLoading(true);
 
     const reader = new FileReader();
-    reader.onload = (e: any) => {
+    reader.onload = async (e: any) => {
       try {
         const text = e.target.result;
-        processCsv(text);
+        await processCsv(text, file.name);
       } catch (err) {
         Alert.alert('Error', 'Failed to read file.');
       } finally {
@@ -36,7 +38,7 @@ export default function ImportScreen() {
     reader.readAsText(file);
   };
 
-  const processCsv = (csvText: string) => {
+  const processCsv = async (csvText: string, nameOfFile: string) => {
     // Basic CSV Parser that handles quotes
     const parseCsvLine = (line: string) => {
       const result = [];
@@ -70,55 +72,137 @@ export default function ImportScreen() {
 
     // Identify columns by header name
     const headerRow = parseCsvLine(lines[0].toLowerCase());
-    const colIdx = {
-      tmdbId: headerRow.findIndex(h => h.includes('tmdb id') || h.includes('id')),
-      title: headerRow.findIndex(h => h.includes('title')),
-      mediaType: headerRow.findIndex(h => h.includes('media type') || h.includes('type')),
-      format: headerRow.findIndex(h => h.includes('format')),
-      status: headerRow.findIndex(h => h.includes('status')),
-      notes: headerRow.findIndex(h => h.includes('notes') || h.includes('edition'))
-    };
+    
+    const isLetterboxd = headerRow.some(h => h.includes('letterboxd')) || 
+                        (!headerRow.some(h => h.includes('tmdb')) && headerRow.some(h => h.includes('name')));
 
-    // Skip header row
-    const dataRows = lines.slice(1);
-    const rows = dataRows.map(line => {
-      const cols = parseCsvLine(line);
-      const tmdbIdStr = colIdx.tmdbId !== -1 ? cols[colIdx.tmdbId] : '';
-      const tmdbId = parseInt(tmdbIdStr);
-      
-      const mediaTypeRaw = colIdx.mediaType !== -1 ? (cols[colIdx.mediaType] || '').toLowerCase() : '';
-      const mediaType = mediaTypeRaw === 'tv' ? 'tv' : 'movie';
-      
-      const format = colIdx.format !== -1 ? (cols[colIdx.format] || 'DVD') : 'DVD';
-      const statusRaw = colIdx.status !== -1 ? (cols[colIdx.status] || '').toLowerCase() : '';
-      const status = statusRaw.includes('wishlist') ? 'wishlist' : 'owned';
-      
-      const notes = colIdx.notes !== -1 ? (cols[colIdx.notes] || '') : '';
-      const title = colIdx.title !== -1 ? (cols[colIdx.title] || '') : '';
+    if (isLetterboxd) {
+      const nameIdx = headerRow.findIndex(h => h === 'name' || h === 'title');
+      const yearIdx = headerRow.findIndex(h => h === 'year');
+      const ratingIdx = headerRow.findIndex(h => h === 'rating');
 
-      return {
-        tmdb_id: tmdbId,
-        media_type: mediaType,
-        format: format,
-        status: status,
-        notes_match: notes || title
-      };
-    }).filter((r): r is { tmdb_id: number; media_type: string; format: string; status: string; notes_match: string } => !!r && !isNaN(r.tmdb_id));
-
-    if (rows.length === 0) {
-      Alert.alert('Error', 'No valid TMDB IDs found in the file.');
-      return;
-    }
-
-    importMutation.mutate(rows, {
-      onSuccess: () => {
-        Alert.alert('Success', `Imported metadata for ${rows.length} items. Your collection should be restored!`);
-        router.back();
-      },
-      onError: (err: any) => {
-        Alert.alert('Import Failed', err.message);
+      if (nameIdx === -1) {
+        Alert.alert('Error', 'Could not find movie name column in Letterboxd file.');
+        return;
       }
-    });
+
+      const status = nameOfFile.toLowerCase().includes('watchlist') ? 'wishlist' : 'owned';
+
+      const dataRows = lines.slice(1);
+      const rawItems = dataRows.map(line => {
+        const cols = parseCsvLine(line);
+        const title = cols[nameIdx];
+        const year = yearIdx !== -1 ? cols[yearIdx] : '';
+        const ratingRaw = ratingIdx !== -1 ? cols[ratingIdx] : '';
+        const rating = ratingRaw ? parseFloat(ratingRaw) : undefined;
+        return { title, year, rating, status };
+      }).filter(item => !!item.title);
+
+      if (rawItems.length === 0) {
+        Alert.alert('Error', 'No valid movies found in Letterboxd file.');
+        return;
+      }
+
+      setLoading(true);
+      setMatchingProgress({ current: 0, total: rawItems.length, title: '' });
+      const resolvedRows = [];
+
+      for (let i = 0; i < rawItems.length; i++) {
+        const item = rawItems[i];
+        setMatchingProgress({ current: i + 1, total: rawItems.length, title: item.title });
+        
+        try {
+          const searchQuery = item.year ? `${item.title} (${item.year})` : item.title;
+          const searchResult = await searchMedia(searchQuery);
+          const bestMatch = searchResult.results?.[0];
+          
+          if (bestMatch && bestMatch.id) {
+            resolvedRows.push({
+              tmdb_id: bestMatch.id,
+              media_type: 'movie' as const,
+              format: 'Digital',
+              status: item.status,
+              notes_match: item.title,
+              rating: (item.rating !== undefined && !isNaN(item.rating)) ? item.rating : undefined,
+              watch_count: item.status === 'owned' ? 1 : undefined,
+              last_watched_at: item.status === 'owned' ? new Date().toISOString() : undefined
+            });
+          }
+        } catch (e) {
+          console.warn(`Failed TMDB lookup for: ${item.title}`, e);
+        }
+        await new Promise(r => setTimeout(r, 150));
+      }
+
+      setMatchingProgress(null);
+      setLoading(false);
+
+      if (resolvedRows.length === 0) {
+        Alert.alert('Error', 'No movies could be matched on TMDB.');
+        return;
+      }
+
+      importMutation.mutate(resolvedRows, {
+        onSuccess: () => {
+          Alert.alert('Success', `Imported ${resolvedRows.length} items from Letterboxd!`);
+          router.back();
+        },
+        onError: (err: any) => {
+          Alert.alert('Import Failed', err.message);
+        }
+      });
+
+    } else {
+      // Standard app backup CSV
+      const colIdx = {
+        tmdbId: headerRow.findIndex(h => h.includes('tmdb id') || h.includes('id')),
+        title: headerRow.findIndex(h => h.includes('title')),
+        mediaType: headerRow.findIndex(h => h.includes('media type') || h.includes('type')),
+        format: headerRow.findIndex(h => h.includes('format')),
+        status: headerRow.findIndex(h => h.includes('status')),
+        notes: headerRow.findIndex(h => h.includes('notes') || h.includes('edition'))
+      };
+
+      const dataRows = lines.slice(1);
+      const rows = dataRows.map(line => {
+        const cols = parseCsvLine(line);
+        const tmdbIdStr = colIdx.tmdbId !== -1 ? cols[colIdx.tmdbId] : '';
+        const tmdbId = parseInt(tmdbIdStr);
+        
+        const mediaTypeRaw = colIdx.mediaType !== -1 ? (cols[colIdx.mediaType] || '').toLowerCase() : '';
+        const mediaType = mediaTypeRaw === 'tv' ? 'tv' : 'movie';
+        
+        const format = colIdx.format !== -1 ? (cols[colIdx.format] || 'DVD') : 'DVD';
+        const statusRaw = colIdx.status !== -1 ? (cols[colIdx.status] || '').toLowerCase() : '';
+        const status = statusRaw.includes('wishlist') ? 'wishlist' : 'owned';
+        
+        const notes = colIdx.notes !== -1 ? (cols[colIdx.notes] || '') : '';
+        const title = colIdx.title !== -1 ? (cols[colIdx.title] || '') : '';
+
+        return {
+          tmdb_id: tmdbId,
+          media_type: mediaType,
+          format: format,
+          status: status,
+          notes_match: notes || title
+        };
+      }).filter((r): r is { tmdb_id: number; media_type: string; format: string; status: string; notes_match: string } => !!r && !isNaN(r.tmdb_id));
+
+      if (rows.length === 0) {
+        Alert.alert('Error', 'No valid TMDB IDs found in the file.');
+        return;
+      }
+
+      importMutation.mutate(rows, {
+        onSuccess: () => {
+          Alert.alert('Success', `Imported metadata for ${rows.length} items. Your collection should be restored!`);
+          router.back();
+        },
+        onError: (err: any) => {
+          Alert.alert('Import Failed', err.message);
+        }
+      });
+    }
   };
 
   return (
@@ -137,8 +221,7 @@ export default function ImportScreen() {
         </View>
         <Text className="text-white font-mono font-bold text-lg mb-2">RESTORE FROM FILE</Text>
         <Text className="text-neutral-400 font-mono text-center text-xs mb-8 leading-5">
-           Upload the exact CSV file you exported from your settings.
-           We'll use it to re-link all your movie titles and posters.
+           Upload the exact CSV file you exported from settings, or export files from Letterboxd (watched.csv, watchlist.csv, ratings.csv).
         </Text>
 
         {Platform.OS === 'web' ? (
@@ -152,8 +235,8 @@ export default function ImportScreen() {
             />
             <Pressable 
               onPress={() => fileInputRef.current?.click()}
-              disabled={importMutation.isPending || loading}
-              className={`w-full bg-amber-500 p-5 rounded-2xl flex-row items-center justify-center ${importMutation.isPending || loading ? 'opacity-50' : ''}`}
+              disabled={importMutation.isPending || loading || !!matchingProgress}
+              className={`w-full bg-amber-500 p-5 rounded-2xl flex-row items-center justify-center ${importMutation.isPending || loading || !!matchingProgress ? 'opacity-50' : ''}`}
             >
               <Ionicons name="document-text-outline" size={20} color="black" className="mr-2" />
               <Text className="text-black font-bold font-mono uppercase">
@@ -167,6 +250,25 @@ export default function ImportScreen() {
           </Text>
         )}
       </View>
+
+      {matchingProgress && (
+        <View className="items-center mb-6">
+          <ActivityIndicator color="#f59e0b" size="large" className="mb-4" />
+          <Text className="text-amber-500 font-mono text-lg font-bold">MATCHING WITH TMDB...</Text>
+          <Text className="text-white font-mono text-sm mt-2 text-center">
+            "{matchingProgress.title}"
+          </Text>
+          <Text className="text-neutral-500 font-mono text-xs mt-1">
+            Processed {matchingProgress.current} of {matchingProgress.total} items
+          </Text>
+          <View className="w-full h-2 bg-neutral-900 rounded-full mt-6 overflow-hidden">
+             <View 
+               style={{ width: `${(matchingProgress.current / matchingProgress.total) * 100}%` }}
+               className="h-full bg-amber-500" 
+             />
+          </View>
+        </View>
+      )}
 
       {importMutation.isPending && (
         <View className="items-center">
@@ -184,11 +286,16 @@ export default function ImportScreen() {
         </View>
       )}
 
-      {!importMutation.isPending && !loading && (
+      {!importMutation.isPending && !loading && !matchingProgress && (
         <View className="bg-neutral-950 p-4 rounded-xl border border-neutral-900">
-           <Text className="text-neutral-600 font-mono text-[10px] uppercase mb-2">EXPECTED FORMAT:</Text>
-           <Text className="text-neutral-700 font-mono text-[9px]">
-             "TMDB ID","Title","Media Type","Season","Release Date","Format","Status"...
+           <Text className="text-neutral-600 font-mono text-[10px] uppercase mb-2">EXPECTED FORMATS:</Text>
+           <Text className="text-amber-500/80 font-mono text-[10px] uppercase mb-1">Standard Backup:</Text>
+           <Text className="text-neutral-500 font-mono text-[9px] mb-4">
+             "TMDB ID","Title","Media Type","Format","Status"...
+           </Text>
+           <Text className="text-amber-500/80 font-mono text-[10px] uppercase mb-1">Letterboxd CSV:</Text>
+           <Text className="text-neutral-500 font-mono text-[9px]">
+             "Date","Name","Year","Letterboxd URI","Rating"
            </Text>
         </View>
       )}

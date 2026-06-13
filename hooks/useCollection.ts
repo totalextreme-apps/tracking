@@ -597,8 +597,8 @@ export function useDeepRepair(userId?: string) {
       const { data: items } = await supabase.from('collection_items').select('*').eq('user_id', userId);
       if (!items) return;
 
-      const orphans = items.filter(i => !i.movies && !i.shows && (i.movie_id || i.show_id));
-      const totallyNull = items.filter(i => !i.movie_id && !i.show_id);
+      const orphans = items.filter((i: any) => !i.movies && !i.shows && (i.movie_id || i.show_id));
+      const totallyNull = items.filter((i: any) => !i.movie_id && !i.show_id);
       const total = orphans.length + totallyNull.length;
       setProgress({ current: 0, total });
 
@@ -676,7 +676,16 @@ export function useBatchImportMetadata(userId?: string) {
   const [progress, setProgress] = useState({ current: 0, total: 0 });
 
   const mutation = useMutation({
-    mutationFn: async (rows: { tmdb_id: number; media_type: string; notes_match?: string; format?: string; status?: string }[]) => {
+    mutationFn: async (rows: {
+      tmdb_id: number;
+      media_type: string;
+      notes_match?: string;
+      format?: string;
+      status?: string;
+      rating?: number;
+      watch_count?: number;
+      last_watched_at?: string;
+    }[]) => {
       if (!userId) return;
       const total = rows.length;
       setProgress({ current: 0, total });
@@ -705,18 +714,28 @@ export function useBatchImportMetadata(userId?: string) {
                  .is('show_id', null);
                
                if (orphans && orphans.length > 0) {
-                   const target = orphans.find(o => o.notes?.includes(row.notes_match || '')) || orphans[0];
-                   await supabase.from('collection_items').update({ [row.media_type === 'movie' ? 'movie_id' : 'show_id']: movieRow.id }).eq('id', target.id);
+                   const target = orphans.find((o: any) => o.notes?.includes(row.notes_match || '')) || orphans[0];
+                   const updates: any = {
+                     [row.media_type === 'movie' ? 'movie_id' : 'show_id']: movieRow.id,
+                   };
+                   if (row.rating !== undefined) updates.rating = row.rating;
+                   if (row.watch_count !== undefined) updates.watch_count = row.watch_count;
+                   if (row.last_watched_at !== undefined) updates.last_watched_at = row.last_watched_at;
+                   await supabase.from('collection_items').update(updates).eq('id', target.id);
                } else {
                    // 3. IF NO ORPHANS (Purged), RE-CREATE THE ITEM
-                   await supabase.from('collection_items').insert({
+                   const insertData: any = {
                      user_id: userId,
                      [row.media_type === 'movie' ? 'movie_id' : 'show_id']: movieRow.id,
                      media_type: row.media_type,
                      format: row.format || 'DVD',
                      status: row.status || 'owned',
                      notes: row.notes_match || ''
-                   });
+                   };
+                   if (row.rating !== undefined) insertData.rating = row.rating;
+                   if (row.watch_count !== undefined) insertData.watch_count = row.watch_count;
+                   if (row.last_watched_at !== undefined) insertData.last_watched_at = row.last_watched_at;
+                   await supabase.from('collection_items').insert(insertData);
                }
             }
           }

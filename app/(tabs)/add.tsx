@@ -25,9 +25,7 @@ import { getPosterUrl } from '@/lib/dummy-data';
 import { getTvShowById, type TmdbMediaResult } from '@/lib/tmdb';
 import type { MovieFormat } from '@/types/database';
 
-import BarcodeScanner from '@/components/BarcodeScanner';
 import { lookupUPC } from '@/lib/upc';
-import { useCameraPermissions } from 'expo-camera';
 
 const FORMATS: MovieFormat[] = ['VHS', 'DVD', 'BluRay', '4K', 'Digital'];
 
@@ -62,13 +60,10 @@ export default function AddScreen() {
   const addMutation = useAddToCollection(userId);
   const updateMutation = useUpdateCollectionItem(userId);
 
-  // Camera Logic
-  const [permission, requestPermission] = useCameraPermissions();
-  const [isScanning, setIsScanning] = useState(false);
+  // Voice Search Logic
+  const [isListening, setIsListening] = useState(false);
   const [isLookingUp, setIsLookingUp] = useState(false);
-
-  // Prevent rapid multiple scans using ref for immediate blocking
-  const isProcessingScan = useRef(false);
+  const recognitionRef = useRef<any>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // Reset all search/form state every time this screen comes into focus
@@ -95,51 +90,48 @@ export default function AddScreen() {
     }, [])
   );
 
-  const handleBarCodeScanned = async ({ type, data }: { type: string; data: string }) => {
-    if (isProcessingScan.current) return;
-
-    isProcessingScan.current = true;
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-    setIsScanning(false);
-    setIsLookingUp(true);
-
-    abortControllerRef.current = new AbortController();
+  const startVoiceSearch = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      Alert.alert('Not Supported', 'Voice search is supported in web browsers like Chrome and Safari.');
+      return;
+    }
 
     try {
-      const title = await lookupUPC(data, abortControllerRef.current.signal);
-      if (title) {
-        setQuery(title);
-      } else {
-        Alert.alert(
-          'Not Found',
-          `Could not identify product for barcode: ${data}`,
-          [{ text: 'OK', onPress: () => (isProcessingScan.current = false) }]
-        );
-      }
-    } catch (e: any) {
-      if (e.name !== 'AbortError') {
-        Alert.alert('Error', 'Failed to lookup barcode');
-      }
-    } finally {
-      setIsLookingUp(false);
-      abortControllerRef.current = null;
-    }
-  };
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
 
-  const startScanning = async () => {
-    if (!permission) {
-      await requestPermission();
+      recognition.onstart = () => {
+        setIsListening(true);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      };
+
+      recognition.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        if (transcript) {
+          setQuery(transcript);
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
+        setIsListening(false);
+      };
+
+      recognition.onerror = (event: any) => {
+        console.error('Speech recognition error', event.error);
+        setIsListening(false);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch (e) {
+      console.error(e);
+      setIsListening(false);
     }
-    if (!permission?.granted) {
-      const { status } = await requestPermission();
-      if (status !== 'granted') {
-        Alert.alert('Permission needed', 'Camera permission is required to scan barcodes.');
-        return;
-      }
-    }
-    isProcessingScan.current = false;
-    setIsScanning(true);
   };
 
   useEffect(() => {
@@ -201,7 +193,6 @@ export default function AddScreen() {
       abortControllerRef.current.abort();
     }
     setIsLookingUp(false);
-    isProcessingScan.current = false;
   };
 
   const handleSelectItem = async (item: TmdbMediaResult) => {
@@ -321,14 +312,32 @@ export default function AddScreen() {
     >
       <Stack.Screen options={{ headerShown: false }} />
 
-      {/* Camera Modal Overlay */}
-      {isScanning && (
-        <View style={{ position: 'absolute', inset: 0, zIndex: 50, backgroundColor: '#000' }}>
-          <BarcodeScanner
-            onScanned={handleBarCodeScanned}
-            onClose={() => setIsScanning(false)}
-            barcodeTypes={['upc_a', 'upc_e', 'ean13', 'ean8', 'qr', 'code128', 'code39']}
-          />
+      {/* Voice Search Modal Overlay */}
+      {isListening && (
+        <View style={{ position: 'absolute', inset: 0, zIndex: 50, backgroundColor: 'rgba(0,0,0,0.95)', justifyContent: 'center', alignItems: 'center' }}>
+          <View className="items-center justify-center p-8 bg-neutral-900 border border-neutral-800 rounded-3xl w-11/12 max-w-sm shadow-2xl">
+            <View className="w-24 h-24 bg-amber-500/10 rounded-full items-center justify-center mb-6 border-2 border-amber-500/50 relative overflow-hidden">
+              <View className="absolute inset-0 rounded-full bg-amber-500/20 animate-ping" />
+              <FontAwesome name="microphone" size={44} color="#f59e0b" />
+            </View>
+            <Text className="text-amber-500 font-mono font-bold text-xl tracking-widest mb-2">LISTENING...</Text>
+            <Text className="text-neutral-400 font-mono text-center text-xs mb-8 leading-5">
+              Speak the title of a movie or TV show.
+            </Text>
+            <Pressable 
+              onPress={() => {
+                if (recognitionRef.current) {
+                  try {
+                    recognitionRef.current.abort();
+                  } catch (e) { /* ignore */ }
+                }
+                setIsListening(false);
+              }}
+              className="px-6 py-3 bg-neutral-800 border border-neutral-700 rounded-xl active:bg-neutral-700"
+            >
+              <Text className="text-neutral-300 font-mono text-xs uppercase font-bold">Cancel</Text>
+            </Pressable>
+          </View>
         </View>
       )}
 
@@ -372,7 +381,7 @@ export default function AddScreen() {
           <TextInput
             nativeID="add-search-input"
             {...({ name: 'add-query' } as any)}
-            placeholder="Search movies & shows or UPC..."
+            placeholder="Search movies, shows or speak..."
             placeholderTextColor="#6b7280"
             value={query}
             onChangeText={setQuery}
@@ -391,10 +400,10 @@ export default function AddScreen() {
             </Pressable>
           ) : (
             <Pressable
-              onPress={startScanning}
-              className="bg-neutral-900 w-12 items-center justify-center rounded-lg border border-neutral-800"
+              onPress={startVoiceSearch}
+              className="bg-neutral-900 w-12 items-center justify-center rounded-lg border border-neutral-800 active:bg-neutral-800"
             >
-              <FontAwesome name="barcode" size={20} color="#f59e0b" />
+              <FontAwesome name="microphone" size={20} color="#f59e0b" />
             </Pressable>
           )}
         </View>

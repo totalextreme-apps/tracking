@@ -64,7 +64,7 @@ export function ReorderShelfModal({ visible, onClose, items, userId, type }: Reo
 
   const renderItem = ({ item, index }: { item: any, index: number }) => {
     const title = item.movies?.title || item.shows?.name;
-    const poster = getPosterUrl(item.movies?.poster_path || item.shows?.poster_path);
+    const poster = getPosterUrl(item.movies?.poster_path || item.shows?.poster_path) || undefined;
     
     return (
       <View

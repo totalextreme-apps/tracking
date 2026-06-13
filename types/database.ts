@@ -135,7 +135,7 @@ export interface PostComment {
   created_at: string;
 }
 
-export type Database = {
+export interface Database {
   public: {
     Tables: {
       movies: {

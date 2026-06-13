@@ -316,7 +316,7 @@ export function StackCard({
         {/* Info Section */}
         <View className="flex-1 px-3 py-1 justify-center">
           <Text className="text-white font-bold text-sm leading-tight" numberOfLines={2}>
-            {media ? (media.title || media.name) : `ID: ${topItem.movie_id || topItem.show_id}`}
+            {media ? ((media as any).title || (media as any).name) : `ID: ${topItem.movie_id || topItem.show_id}`}
           </Text>
           <View className="flex-row my-1">
               {topItem.rating ? (
@@ -515,7 +515,7 @@ export function StackCard({
                   <View className="flex-1 items-center justify-center p-2">
                     <FontAwesome name="film" size={width * 0.4} color="#333" />
                     <Text className="text-[10px] font-mono text-neutral-500 text-center mt-2 uppercase px-4 truncate">
-                      {media ? (media.title || media.name) : `ID: ${topItem.movie_id || topItem.show_id}`}
+                      {media ? ((media as any).title || (media as any).name) : `ID: ${topItem.movie_id || topItem.show_id}`}
                     </Text>
                   </View>
                 )}
@@ -610,7 +610,7 @@ export function StackCard({
             <View className="flex-1 items-center justify-center bg-neutral-800 p-2">
               <FontAwesome name="film" size={width * 0.4} color="#222" />
               <Text className="text-neutral-500 font-mono text-[10px] text-center mt-2 uppercase">
-                {media ? (media.title || media.name) : `REPAIR PENDING: ${topItem.movie_id || topItem.show_id}`}
+                {media ? ((media as any).title || (media as any).name) : `REPAIR PENDING: ${topItem.movie_id || topItem.show_id}`}
               </Text>
             </View>
           )}

@@ -505,7 +505,7 @@ export default function HomeScreen() {
                         className="flex-1 bg-black/40 justify-center items-center p-6"
                         onPress={() => setIsGenreDropdownOpen(false)}
                       >
-                        <View 
+                        <Pressable 
                           className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl"
                           onPress={(e: any) => e.stopPropagation()}
                         >
@@ -538,7 +538,7 @@ export default function HomeScreen() {
                               </Pressable>
                             ))}
                           </ScrollView>
-                        </View>
+                        </Pressable>
                       </Pressable>
                     </Modal>
                   </View>
@@ -587,7 +587,7 @@ export default function HomeScreen() {
         </View>
       </ScrollView>
 
-      {quickActionItem && <QuickActionModal item={quickActionItem} visible={!!quickActionItem} collection={collection || []} userId={userId} onClose={() => setQuickActionItem(null)} />}
+      {quickActionItem && <QuickActionModal item={quickActionItem} visible={!!quickActionItem} collection={collection || []} userId={userId || ''} onClose={() => setQuickActionItem(null)} />}
       <ReorderShelfModal 
         visible={reorderModalVisible} 
         onClose={() => setReorderModalVisible(false)} 

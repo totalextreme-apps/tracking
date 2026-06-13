@@ -94,7 +94,7 @@ export default function DebugScreen() {
         </Pressable>
 
         <Pressable 
-          onPress={() => router.push('/import')}
+          onPress={() => router.push('/import' as any)}
           className="bg-emerald-500/10 border border-emerald-500 p-4 rounded-xl flex-row items-center justify-between"
         >
           <View>

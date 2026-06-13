@@ -411,6 +411,17 @@ export default function SettingsScreen() {
               {isExporting ? <ActivityIndicator size="small" color="#FFE92F" /> : <FontAwesome name="chevron-right" size={10} color="white" />}
             </Pressable>
 
+            <Pressable
+              onPress={() => router.push('/import' as any)}
+              className="p-4 flex-row items-center justify-between border-b-2 border-white/20 active:bg-[#1a3366]"
+            >
+              <View className="flex-row items-center">
+                <View className="w-8 items-center"><FontAwesome name="upload" size={14} color="#FFE92F" /></View>
+                <Text className="font-mono text-sm font-bold" style={{ color: '#FFE92F' }}>Import Collection / Letterboxd (CSV)</Text>
+              </View>
+              <FontAwesome name="chevron-right" size={10} color="white" />
+            </Pressable>
+
             {/* PRINT RECEIPT */}
             <Pressable
               onPress={async () => {
@@ -564,7 +575,7 @@ export default function SettingsScreen() {
               style={{ width: 121, height: 40, opacity: 0.8 }}
               contentFit="contain"
             />
-            <Pressable onPress={() => router.push('/debug')}>
+            <Pressable onPress={() => router.push('/debug' as any)}>
               <Text className="text-neutral-700 font-mono text-[10px] mt-2">v1.0.0 (Troubleshoot)</Text>
             </Pressable>
 

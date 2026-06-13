@@ -140,7 +140,7 @@ export default function UserProfileScreen() {
   };
 
   const stackItems = (items: any[], isWishlist = false) => {
-    return getStacks(items, isWishlist, sortBy, sortOrder);
+    return getStacks(items, isWishlist, sortBy as any, sortOrder);
   };
 
   const onDisplayItems = filterAndSortItems(collection?.filter((item: any) => item.is_on_display) || [])
@@ -224,6 +224,8 @@ export default function UserProfileScreen() {
   }
 
   const totalItems = collection?.length || 0;
+  const totalGrails = collection?.filter((i: any) => i.is_grail).length || 0;
+  const uniqueFormats = new Set(collection?.map((i: any) => i.format)).size || 0;
 
   return (
     <View className="flex-1 bg-neutral-950">
@@ -234,9 +236,9 @@ export default function UserProfileScreen() {
         <Pressable 
           onPress={() => {
             if (from === 'community') {
-              router.push('/(tabs)/community');
-            } else if (fromStack) {
-              router.push('/(tabs)/');
+              router.push('/(tabs)/community' as any);
+            } else if (from === 'stack') {
+              router.push('/(tabs)/' as any);
             } else {
               router.back();
             }
@@ -436,7 +438,7 @@ export default function UserProfileScreen() {
 
             <Modal visible={isGenreDropdownOpen} transparent animationType="fade" onRequestClose={() => setIsGenreDropdownOpen(false)}>
               <Pressable className="flex-1 bg-black/60 justify-center items-center p-6" onPress={() => setIsGenreDropdownOpen(false)}>
-                <View className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-sm overflow-hidden" onPress={(e: any) => e.stopPropagation()}>
+                <Pressable className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-sm overflow-hidden" onPress={(e: any) => e.stopPropagation()}>
                   <View className="p-4 border-b border-neutral-800 flex-row justify-between items-center bg-neutral-950">
                     <Text className="text-amber-500 font-mono text-[10px] font-bold tracking-widest uppercase">Select Genre</Text>
                     <Pressable onPress={() => setIsGenreDropdownOpen(false)}><Ionicons name="close" size={18} color="#525252" /></Pressable>
@@ -449,7 +451,7 @@ export default function UserProfileScreen() {
                       </Pressable>
                     ))}
                   </ScrollView>
-                </View>
+                </Pressable>
               </Pressable>
             </Modal>
           </View>

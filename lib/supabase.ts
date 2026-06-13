@@ -44,7 +44,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
         persistSession: true,
         detectSessionInUrl: false,
     },
-});
+}) as any;
 
 // Update auth polling for React Native - Only if AppState is available (Native)
 if (Platform.OS !== 'web') {

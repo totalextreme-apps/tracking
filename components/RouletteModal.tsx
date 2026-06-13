@@ -94,7 +94,7 @@ export const RouletteModal: React.FC<RouletteModalProps> = ({
       const winner = uniqueItems[Math.floor(Math.random() * uniqueItems.length)];
       setResult(winner);
       setStep('result');
-      playSound('success');
+      playSound('insert');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     });
   };
