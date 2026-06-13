@@ -1,4 +1,3 @@
-
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { GlobalStatsSection } from '@/components/GlobalStatsSection';
 import { MemberCard } from '@/components/MemberCard';
@@ -54,7 +53,6 @@ export default function SettingsScreen() {
   const uniqueFormats = new Set(collection?.map((i: any) => i.format)).size || 0;
 
   const handleExport = async () => {
-    // ... export logic (keep existing)
     let itemsToExport = collection || [];
     if (itemsToExport.length === 0) {
       Alert.alert('No items', 'Add items to your collection before exporting.');
@@ -106,13 +104,10 @@ export default function SettingsScreen() {
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.5,
-        base64: true, // Required for web upload to Supabase if URI is blob
+        base64: true,
       });
 
       if (!result.canceled) {
-        // On web, we might need the base64 or the blob uri.
-        // useProfile.ts needs to handle it.
-        // For now, pass the URI, but ensures clean usage.
         await uploadAvatar(result.assets[0].uri, result.assets[0].base64);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
@@ -420,7 +415,6 @@ export default function SettingsScreen() {
             <Pressable
               onPress={async () => {
                 try {
-                  // Filter for "The Stacks" only (Owned items)
                   const inventoryItems = collection?.filter((i: any) => i.status === 'owned') || [];
 
                   if (inventoryItems.length === 0) {
@@ -428,7 +422,6 @@ export default function SettingsScreen() {
                     return;
                   }
 
-                  // Play mechanical sound
                   const player = createAudioPlayer(require('@/assets/sounds/dotmatrix_noise.mp3'));
                   player.play();
 
@@ -460,112 +453,108 @@ export default function SettingsScreen() {
         </View>
 
         {/* MAINTENANCE SECTION */}
-          <View className="mb-8">
-            <Text className="text-amber-500/90 font-mono text-xs font-bold tracking-widest mb-2 opacity-50">
-              MAINTENANCE
-            </Text>
-            <View
-              className="bg-[#2B4A8C] mb-6 border-2"
-              style={{
-                borderTopColor: '#ffffff',
-                borderLeftColor: '#ffffff',
-                borderBottomColor: '#525252',
-                borderRightColor: '#525252',
-                borderWidth: 2,
-              }}
+        <View className="mb-8">
+          <Text className="text-amber-500/90 font-mono text-xs font-bold tracking-widest mb-2 opacity-50">
+            MAINTENANCE
+          </Text>
+          <View
+            className="bg-[#2B4A8C] mb-6 border-2"
+            style={{
+              borderTopColor: '#ffffff',
+              borderLeftColor: '#ffffff',
+              borderBottomColor: '#525252',
+              borderRightColor: '#525252',
+              borderWidth: 2,
+            }}
+          >
+            <Pressable
+              onPress={() => refreshLibrary.mutate()}
+              disabled={refreshLibrary.isPending}
+              className="p-4 flex-row items-center justify-between border-b-2 border-white/20 active:bg-[#1a3366]"
             >
-              <Pressable
-                onPress={() => refreshLibrary.mutate()}
-                disabled={refreshLibrary.isPending}
-                className="p-4 flex-row items-center justify-between border-b-2 border-white/20 active:bg-[#1a3366]"
-              >
-                <View className="flex-row items-center">
-                  <View className="w-8 items-center">
-                    {refreshLibrary.isPending ? (
-                      <ActivityIndicator size="small" color="#FFE92F" />
-                    ) : (
-                      <FontAwesome name="refresh" size={14} color="#FFE92F" />
-                    )}
-                  </View>
-                  <View>
-                    <Text className="font-mono text-sm font-bold" style={{ color: '#FFE92F' }}>
-                      Refresh Library Metadata
-                    </Text>
-                    {refreshLibrary.isPending && (
-                      <Text className="text-white/50 text-xs font-mono">
-                        Updating {refreshLibrary.progress.current} / {refreshLibrary.progress.total}
-                      </Text>
-                    )}
-                  </View>
+              <View className="flex-row items-center">
+                <View className="w-8 items-center">
+                  {refreshLibrary.isPending ? (
+                    <ActivityIndicator size="small" color="#FFE92F" />
+                  ) : (
+                    <FontAwesome name="refresh" size={14} color="#FFE92F" />
+                  )}
                 </View>
-                {!refreshLibrary.isPending && <FontAwesome name="chevron-right" size={10} color="white" />}
-              </Pressable>
+                <View>
+                  <Text className="font-mono text-sm font-bold" style={{ color: '#FFE92F' }}>
+                    Refresh Library Metadata
+                  </Text>
+                  {refreshLibrary.isPending && (
+                    <Text className="text-white/50 text-xs font-mono">
+                      Updating {refreshLibrary.progress.current} / {refreshLibrary.progress.total}
+                    </Text>
+                  )}
+                </View>
+              </View>
+              {!refreshLibrary.isPending && <FontAwesome name="chevron-right" size={10} color="white" />}
+            </Pressable>
+          </View>
+        </View>
+
+        {/* GLOBAL COMMUNITY STATS */}
+        <GlobalStatsSection />
+
+        {/* INFO / ABOUT */}
+        <View className="bg-neutral-900 rounded-lg overflow-hidden mt-6">
+          <Pressable
+            onPress={() => setShowQuiz(true)}
+            className="p-4 flex-row items-center justify-between active:bg-neutral-800 border-t border-neutral-800"
+          >
+            <View className="flex-row items-center">
+              <View className="w-8 items-center"><FontAwesome name="list-alt" size={14} color="#f59e0b" /></View>
+              <Text className="text-amber-500 font-mono text-sm">Update Collector Quiz</Text>
             </View>
-          </View>
+            <FontAwesome name="chevron-right" size={10} color="#525252" />
+          </Pressable>
+          <Pressable
+            onPress={() => router.push('/about')}
+            className="p-4 flex-row items-center justify-between active:bg-neutral-800 border-t border-neutral-800"
+          >
+            <View className="flex-row items-center">
+              <View className="w-8 items-center"><FontAwesome name="info-circle" size={14} color="#d1d5db" /></View>
+              <Text className="text-neutral-200 font-mono text-sm">About Tracking</Text>
+            </View>
+            <FontAwesome name="chevron-right" size={10} color="#525252" />
+          </Pressable>
+          <Pressable
+            onPress={async () => {
+              await resetOnboarding();
+              Alert.alert('Reset', 'Tutorial will show immediately.');
+            }}
+            className="p-4 flex-row items-center justify-between active:bg-neutral-800 border-t border-neutral-800"
+          >
+            <View className="flex-row items-center">
+              <View className="w-8 items-center"><FontAwesome name="question-circle" size={14} color="#525252" /></View>
+              <Text className="text-neutral-500 font-mono text-xs">Reset Tutorial</Text>
+            </View>
+          </Pressable>
 
-          {/* Custom Covers Section (Web Only) */}
-          {/* Custom Covers Section - TEMPORARILY DISABLED */}
-          {/* <CustomCoversSection /> */}
-
-          {/* GLOBAL COMMUNITY STATS */}
-          <GlobalStatsSection />
-
-          {/* INFO / ABOUT */}
-          <View className="bg-neutral-900 rounded-lg overflow-hidden mt-6">
-            <Pressable
-              onPress={() => setShowQuiz(true)}
-              className="p-4 flex-row items-center justify-between active:bg-neutral-800 border-t border-neutral-800"
-            >
-              <View className="flex-row items-center">
-                <View className="w-8 items-center"><FontAwesome name="list-alt" size={14} color="#f59e0b" /></View>
-                <Text className="text-amber-500 font-mono text-sm">Update Collector Quiz</Text>
-              </View>
-              <FontAwesome name="chevron-right" size={10} color="#525252" />
-            </Pressable>
-            <Pressable
-              onPress={() => router.push('/about')}
-              className="p-4 flex-row items-center justify-between active:bg-neutral-800 border-t border-neutral-800"
-            >
-              <View className="flex-row items-center">
-                <View className="w-8 items-center"><FontAwesome name="info-circle" size={14} color="#d1d5db" /></View>
-                <Text className="text-neutral-200 font-mono text-sm">About Tracking</Text>
-              </View>
-              <FontAwesome name="chevron-right" size={10} color="#525252" />
-            </Pressable>
-            <Pressable
-              onPress={async () => {
-                await resetOnboarding();
-                Alert.alert('Reset', 'Tutorial will show immediately.');
-              }}
-              className="p-4 flex-row items-center justify-between active:bg-neutral-800 border-t border-neutral-800"
-            >
-              <View className="flex-row items-center">
-                <View className="w-8 items-center"><FontAwesome name="question-circle" size={14} color="#525252" /></View>
-                <Text className="text-neutral-500 font-mono text-xs">Reset Tutorial</Text>
-              </View>
-            </Pressable>
-
-            <Pressable
-              onPress={() => router.push('/privacy')}
-              className="p-4 flex-row items-center justify-between active:bg-neutral-800 border-t border-neutral-800"
-            >
-              <View className="flex-row items-center">
-                <View className="w-8 items-center"><FontAwesome name="shield" size={14} color="#d1d5db" /></View>
-                <Text className="text-neutral-200 font-mono text-sm">Privacy Policy</Text>
-              </View>
-              <FontAwesome name="chevron-right" size={10} color="#525252" />
-            </Pressable>
-            <Pressable
-              onPress={() => router.push('/developer')}
-              className="p-4 flex-row items-center justify-between active:bg-neutral-800 border-t border-neutral-800"
-            >
-              <View className="flex-row items-center">
-                <View className="w-8 items-center"><FontAwesome name="code" size={14} color="#d1d5db" /></View>
-                <Text className="text-neutral-200 font-mono text-sm">About the Developer</Text>
-              </View>
-              <FontAwesome name="chevron-right" size={10} color="#525252" />
-            </Pressable>
-          </View>
+          <Pressable
+            onPress={() => router.push('/privacy')}
+            className="p-4 flex-row items-center justify-between active:bg-neutral-800 border-t border-neutral-800"
+          >
+            <View className="flex-row items-center">
+              <View className="w-8 items-center"><FontAwesome name="shield" size={14} color="#d1d5db" /></View>
+              <Text className="text-neutral-200 font-mono text-sm">Privacy Policy</Text>
+            </View>
+            <FontAwesome name="chevron-right" size={10} color="#525252" />
+          </Pressable>
+          <Pressable
+            onPress={() => router.push('/developer')}
+            className="p-4 flex-row items-center justify-between active:bg-neutral-800 border-t border-neutral-800"
+          >
+            <View className="flex-row items-center">
+              <View className="w-8 items-center"><FontAwesome name="code" size={14} color="#d1d5db" /></View>
+              <Text className="text-neutral-200 font-mono text-sm">About the Developer</Text>
+            </View>
+            <FontAwesome name="chevron-right" size={10} color="#525252" />
+          </Pressable>
+        </View>
 
         {/* App Version */}
         <View className="mt-8 mb-32 items-center">
@@ -592,9 +581,6 @@ export default function SettingsScreen() {
             </View>
           </View>
         </View>
-
-
-
       </ScrollView>
     </View>
   );

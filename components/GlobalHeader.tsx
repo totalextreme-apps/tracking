@@ -18,7 +18,7 @@ export function GlobalHeader() {
     const insets = useSafeAreaInsets();
 
     const isHome = pathname === '/' || pathname === '/(tabs)';
-    const isSettings = pathname === '/two' || pathname === '/(tabs)/two';
+    const isSettings = pathname === '/settings' || pathname === '/(tabs)/settings';
     const isAbout = pathname === '/about' || pathname === '/(tabs)/about';
     const isPrivacy = pathname === '/privacy' || pathname === '/(tabs)/privacy';
     const isDeveloper = pathname === '/developer' || pathname === '/(tabs)/developer';

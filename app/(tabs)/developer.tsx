@@ -30,7 +30,7 @@ export default function DeveloperScreen() {
             >
                 <View style={{ maxWidth: 800, alignSelf: 'center', width: '100%' }}>
                     <Pressable
-                        onPress={() => router.push('/two')}
+                        onPress={() => router.push('/settings')}
                         className="mb-8 bg-[#0000FF] px-4 py-1.5 rounded-md self-start shadow-sm"
                     >
                         <Text

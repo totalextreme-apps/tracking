@@ -54,6 +54,7 @@ export default function HomeScreen() {
   
   const shelfRef = useRef<ScrollView>(null);
   const grailRef = useRef<ScrollView>(null);
+  const recentlyWatchedRef = useRef<ScrollView>(null);
 
   const [refreshing, setRefreshing] = useState(false);
   const [showRewind, setShowRewind] = useState(false);
@@ -107,6 +108,22 @@ export default function HomeScreen() {
       playSound('click');
       if (Platform.OS === 'web') (grailRef.current as any).scrollTo({ x: (grailRef.current as any).scrollLeft - 400, animated: true });
       else grailRef.current.scrollTo({ x: 0, animated: true });
+    }
+  };
+
+  const scrollRecentlyWatchedRight = () => {
+    if (recentlyWatchedRef.current) {
+      playSound('click');
+      if (Platform.OS === 'web') (recentlyWatchedRef.current as any).scrollTo({ x: (recentlyWatchedRef.current as any).scrollLeft + 400, animated: true });
+      else recentlyWatchedRef.current.scrollTo({ x: 500, animated: true });
+    }
+  };
+
+  const scrollRecentlyWatchedLeft = () => {
+    if (recentlyWatchedRef.current) {
+      playSound('click');
+      if (Platform.OS === 'web') (recentlyWatchedRef.current as any).scrollTo({ x: (recentlyWatchedRef.current as any).scrollLeft - 400, animated: true });
+      else recentlyWatchedRef.current.scrollTo({ x: 0, animated: true });
     }
   };
 
@@ -226,6 +243,16 @@ export default function HomeScreen() {
     return raw.filter((item: any) => item.format === formatFilter);
   }, [collection, formatFilter]);
 
+  const recentlyWatched = useMemo(() => {
+    if (!collection) return [];
+    const raw = collection
+      .filter((i: any) => i.status === 'owned' && i.last_watched_at)
+      .sort((a: any, b: any) => new Date(b.last_watched_at).getTime() - new Date(a.last_watched_at).getTime())
+      .slice(0, 10);
+    if (!formatFilter || formatFilter === 'ALL') return raw;
+    return raw.filter((item: any) => item.format === formatFilter);
+  }, [collection, formatFilter]);
+
   const getFormatPillStyles = (fmt: string, isSelected: boolean) => {
     if (isSelected) return { container: 'bg-amber-500/20 border-amber-500/50', text: 'text-amber-500' };
     const baseText = 'text-neutral-300'; // CRISP READABLE TEXT
@@ -293,6 +320,30 @@ export default function HomeScreen() {
                 <Image source={require('@/assets/images/shelf_background.png')} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.8 }} contentFit="cover" />
                 <ScrollView ref={shelfRef} horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingLeft: 24, paddingRight: 40 }} className="py-12">
                   {onDisplay.map((item: any) => (
+                    <OnDisplayCard key={item.id} item={item} onSingleTapAction={() => navigateToDetail(item)} onLongPressAction={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); setQuickActionItem(item); }} onToggleFavorite={toggleFavorite} onRatePress={(rating) => handleGridRate(item, rating)} />
+                  ))}
+                </ScrollView>
+              </View>
+            </View>
+          )}
+
+          {/* RECENTLY WATCHED SECTION (OWNED) - ONLY IN STACKS MODE */}
+          {recentlyWatched.length > 0 && !thriftMode && (
+            <View className="mb-8 mt-2">
+              <View className="px-4 md:px-8 flex-row items-center justify-between mb-2 max-w-7xl mx-auto w-full gap-2 flex-wrap">
+                <View className="flex-row items-baseline gap-2 flex-wrap flex-1 min-w-[200px]">
+                  <Text className="text-emerald-500 font-bold text-2xl tracking-tighter uppercase" style={{ fontFamily: 'VCR_OSD_MONO' }}>RECENTLY WATCHED</Text>
+                  <Text className="text-neutral-500 font-mono text-xs ml-1">/ {recentlyWatched.length}</Text>
+                </View>
+                <View className="flex-row items-center gap-2">
+                  <Pressable onPress={scrollRecentlyWatchedLeft} className="p-2 bg-neutral-900 rounded-full border border-neutral-800 active:bg-neutral-800"><Ionicons name="chevron-back" size={16} color="#10b981" /></Pressable>
+                  <Pressable onPress={scrollRecentlyWatchedRight} className="p-2 bg-neutral-900 rounded-full border border-neutral-800 active:bg-neutral-800"><Ionicons name="chevron-forward" size={16} color="#10b981" /></Pressable>
+                </View>
+              </View>
+              <View className="relative">
+                <Image source={require('@/assets/images/shelf_background.png')} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.8 }} contentFit="cover" />
+                <ScrollView ref={recentlyWatchedRef} horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingLeft: 24, paddingRight: 40 }} className="py-12">
+                  {recentlyWatched.map((item: any) => (
                     <OnDisplayCard key={item.id} item={item} onSingleTapAction={() => navigateToDetail(item)} onLongPressAction={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); setQuickActionItem(item); }} onToggleFavorite={toggleFavorite} onRatePress={(rating) => handleGridRate(item, rating)} />
                   ))}
                 </ScrollView>

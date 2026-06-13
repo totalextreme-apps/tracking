@@ -17,7 +17,7 @@ import { ImageCropModal } from '@/components/ImageCropModal';
 import { useAuth } from '@/context/AuthContext';
 import { useSound } from '@/context/SoundContext';
 import { useThriftMode } from '@/context/ThriftModeContext';
-import { useAddToCollection, useCollection, useDeleteCollectionItem, useUpdateCollectionItem } from '@/hooks/useCollection';
+import { useAddToCollection, useCollection, useDeleteCollectionItem, useUpdateCollectionItem, useLogWatchEvent } from '@/hooks/useCollection';
 import { useCreatePost } from '@/hooks/useSocial';
 import { ReviewSection } from '@/components/ReviewSection';
 import { CommentSection } from '@/components/CommentSection';
@@ -102,6 +102,22 @@ export default function ShowDetailScreen() {
     const updateMutation = useUpdateCollectionItem(userId);
     const deleteMutation = useDeleteCollectionItem(userId);
     const addMutation = useAddToCollection(userId);
+    const logWatchEventMutation = useLogWatchEvent(userId);
+
+    const handleLogWatch = async () => {
+        if (!activeItem) return;
+        playSound('peel');
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        try {
+            await logWatchEventMutation.mutateAsync({
+                itemId: activeItem.id,
+                currentWatchCount: activeItem.watch_count || 0,
+            });
+            refetch();
+        } catch (e) {
+            Alert.alert('Error', 'Failed to log watch event');
+        }
+    };
 
     // For TV shows, we group by show_id and season_number.
     const showIdNum = typeof id === 'string' ? parseInt(id, 10) : undefined;
@@ -478,6 +494,22 @@ export default function ShowDetailScreen() {
                                     {displayShow.genres.map((g: any) => g?.name).filter(Boolean).join('  •  ')}
                                 </Text>
                             )}
+                            {activeItem && activeItem.status === 'owned' && (
+                                <View className="mt-2 flex-row items-center gap-4 bg-neutral-900/40 p-2 rounded-lg border border-neutral-800 self-start">
+                                    <View>
+                                        <Text className="text-neutral-500 font-mono text-[8px] uppercase tracking-wider">Watched</Text>
+                                        <Text className="text-white font-mono text-[11px] font-bold">{activeItem.watch_count || 0}x</Text>
+                                    </View>
+                                    {activeItem.last_watched_at && (
+                                        <View>
+                                            <Text className="text-neutral-500 font-mono text-[8px] uppercase tracking-wider">Last Watched</Text>
+                                            <Text className="text-white font-mono text-[11px] font-bold">
+                                                {new Date(activeItem.last_watched_at).toLocaleDateString()}
+                                            </Text>
+                                        </View>
+                                    )}
+                                </View>
+                            )}
                         </View>
                     </View>
                     <View className="flex-row mt-4 gap-2">
@@ -527,6 +559,16 @@ export default function ShowDetailScreen() {
                                         className="bg-amber-600/10 px-4 rounded-lg border border-amber-600/40 items-center justify-center"
                                     >
                                         <Ionicons name="pin" size={20} color="#f59e0b" />
+                                    </Pressable>
+                                )}
+
+                                {/* LOG WATCH EVENT */}
+                                {!thriftMode && activeItem && activeItem.status === 'owned' && (
+                                    <Pressable 
+                                        onPress={handleLogWatch}
+                                        className="bg-green-600/10 px-4 rounded-lg border border-green-600/40 items-center justify-center"
+                                    >
+                                        <Ionicons name="eye" size={20} color="#10b981" />
                                     </Pressable>
                                 )}
                             </>

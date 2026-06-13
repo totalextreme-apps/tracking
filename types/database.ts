@@ -1,6 +1,5 @@
 /**
  * TypeScript types for the "Tracking" Supabase schema.
- * Generated from the SQL schema in the Master Prompt.
  */
 
 export type MovieFormat = 'VHS' | 'DVD' | 'BluRay' | '4K' | 'Digital';
@@ -57,9 +56,14 @@ export interface CollectionItem {
   for_trade: boolean;
   price: number | null;
   custom_poster_url: string | null;
+  custom_backdrop_url: string | null;
   custom_lists: string[] | null;
   rating?: number; // 0-5
   notes?: string | null;
+  display_order?: number;
+  grail_order?: number;
+  last_watched_at?: string | null;
+  watch_count?: number;
   created_at: string;
 }
 
@@ -104,38 +108,68 @@ export interface BulletinPostWithMedia extends BulletinPost {
   collection_items: CollectionItem | null;
 }
 
-export interface Database {
+export interface Message {
+  id: string;
+  sender_id: string;
+  receiver_id: string;
+  content: string;
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  actor_id: string;
+  type: string;
+  reference_id: string;
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface PostComment {
+  id: string;
+  post_id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+}
+
+export type Database = {
   public: {
     Tables: {
       movies: {
         Row: Movie;
-        Insert: Omit<Movie, 'id'> & { id?: number };
+        Insert: Partial<Omit<Movie, 'id'>> & { id?: number };
         Update: Partial<Omit<Movie, 'id'>>;
+        Relationships: [];
       };
       shows: {
         Row: Show;
-        Insert: Omit<Show, 'id'> & { id?: number };
+        Insert: Partial<Omit<Show, 'id'>> & { id?: number };
         Update: Partial<Omit<Show, 'id'>>;
+        Relationships: [];
       };
       collection_items: {
         Row: CollectionItem;
-        Insert: Omit<CollectionItem, 'id' | 'created_at'> & {
+        Insert: Partial<Omit<CollectionItem, 'id' | 'created_at'>> & {
           id?: string;
           created_at?: string;
         };
-        Update: Partial<Omit<CollectionItem, 'id' | 'user_id'>> & {
-          custom_poster_url?: string | null;
-        };
+        Update: Partial<Omit<CollectionItem, 'id' | 'user_id'>>;
+        Relationships: [];
       };
       profiles: {
         Row: Profile;
-        Insert: Profile;
+        Insert: Partial<Profile> & Pick<Profile, 'id'>;
         Update: Partial<Profile>;
+        Relationships: [];
       };
       follows: {
         Row: Follow;
         Insert: Omit<Follow, 'created_at'> & { created_at?: string };
         Update: Partial<Omit<Follow, 'created_at'>>;
+        Relationships: [];
       };
       bulletin_posts: {
         Row: BulletinPost;
@@ -144,6 +178,7 @@ export interface Database {
           created_at?: string;
         };
         Update: Partial<Omit<BulletinPost, 'id' | 'user_id'>>;
+        Relationships: [];
       };
       item_comments: {
         Row: ItemComment;
@@ -152,7 +187,46 @@ export interface Database {
           created_at?: string;
         };
         Update: Partial<Omit<ItemComment, 'id' | 'user_id' | 'collection_item_id'>>;
+        Relationships: [];
       };
+      messages: {
+        Row: Message;
+        Insert: Omit<Message, 'id' | 'created_at' | 'is_read'> & {
+          id?: string;
+          created_at?: string;
+          is_read?: boolean;
+        };
+        Update: Partial<Omit<Message, 'id' | 'sender_id'>>;
+        Relationships: [];
+      };
+      notifications: {
+        Row: Notification;
+        Insert: Omit<Notification, 'id' | 'created_at' | 'is_read'> & {
+          id?: string;
+          created_at?: string;
+          is_read?: boolean;
+        };
+        Update: Partial<Omit<Notification, 'id' | 'user_id'>>;
+        Relationships: [];
+      };
+      post_comments: {
+        Row: PostComment;
+        Insert: Omit<PostComment, 'id' | 'created_at'> & {
+          id?: string;
+          created_at?: string;
+        };
+        Update: Partial<Omit<PostComment, 'id' | 'user_id' | 'post_id'>>;
+        Relationships: [];
+      };
+    };
+    Views: {
+      [_ in never]: never;
+    };
+    Functions: {
+      [_ in never]: never;
+    };
+    Enums: {
+      [_ in never]: never;
     };
   };
 }

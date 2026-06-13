@@ -733,3 +733,30 @@ export function useBatchImportMetadata(userId?: string) {
 
   return { ...mutation, progress };
 }
+
+export function useLogWatchEvent(userId: string | undefined) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ itemId, currentWatchCount }: { itemId: string; currentWatchCount: number }) => {
+      if (!userId) throw new Error('User not logged in');
+
+      const { data, error } = await supabase
+        .from('collection_items')
+        .update({
+          watch_count: currentWatchCount + 1,
+          last_watched_at: new Date().toISOString(),
+        } as any)
+        .eq('id', itemId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['collection', userId] });
+      queryClient.invalidateQueries({ queryKey: ['collection'] });
+    },
+  });
+}

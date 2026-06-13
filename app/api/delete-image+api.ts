@@ -1,7 +1,21 @@
 import crypto from 'crypto';
+import { supabase } from '@/lib/supabase';
 
 export async function POST(request: Request) {
     try {
+        const authHeader = request.headers.get('Authorization') || '';
+        const token = authHeader.replace('Bearer ', '');
+
+        if (!token) {
+            return Response.json({ error: 'Unauthorized: Missing token' }, { status: 401 });
+        }
+
+        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+        if (authError || !user) {
+            return Response.json({ error: 'Unauthorized: Invalid token' }, { status: 401 });
+        }
+
         const { imageUrl } = await request.json();
 
         if (!imageUrl || !imageUrl.includes('cloudinary.com')) {

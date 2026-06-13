@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext } from 'react';
+import { usePersistedState } from '@/hooks/usePersistedState';
 
 type ThriftModeContextType = {
   thriftMode: boolean;
@@ -8,7 +9,7 @@ type ThriftModeContextType = {
 const ThriftModeContext = createContext<ThriftModeContextType | null>(null);
 
 export function ThriftModeProvider({ children }: { children: React.ReactNode }) {
-  const [thriftMode, setThriftMode] = useState(false);
+  const [thriftMode, setThriftMode] = usePersistedState('thrift_mode', false);
   return (
     <ThriftModeContext.Provider value={{ thriftMode, setThriftMode }}>
       {children}
