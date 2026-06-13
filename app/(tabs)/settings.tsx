@@ -281,6 +281,32 @@ export default function SettingsScreen() {
             </View>
           )}
 
+          {/* Letterboxd Import Highlight Banner */}
+          {!isEditing && (
+            <Pressable
+              onPress={() => {
+                playSound('click');
+                router.push('/import' as any);
+              }}
+              className="mt-6 bg-neutral-900 p-4 rounded-xl border border-amber-500/30 flex-row items-center justify-between active:border-amber-500"
+            >
+              <View className="flex-1 mr-4">
+                <View className="flex-row items-center gap-2 mb-1">
+                  <View className="bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">
+                    <Text className="text-amber-500 font-mono text-[9px] font-bold tracking-widest uppercase">IMPORT</Text>
+                  </View>
+                  <Text className="text-white font-bold text-base font-mono uppercase tracking-wider">Letterboxd Sync</Text>
+                </View>
+                <Text className="text-neutral-400 font-mono text-xs leading-4">
+                  Import watched films, ratings, and watchlists from your Letterboxd CSV export directly.
+                </Text>
+              </View>
+              <View className="bg-amber-500 p-2.5 rounded-lg">
+                <FontAwesome name="upload" size={16} color="#000" />
+              </View>
+            </Pressable>
+          )}
+
           {/* ACCOUNT UPGRADE (If Anonymous) */}
           {session?.user?.is_anonymous && (
             <View className="mt-8 bg-[#2B4A8C] p-5 rounded-lg border-2 border-white shadow-xl">
