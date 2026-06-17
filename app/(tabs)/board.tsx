@@ -216,7 +216,13 @@ export default function BulletinBoardScreen() {
               placeholderTextColor="#737373"
               value={searchQuery}
               onChangeText={setSearchQuery}
+              style={{ padding: 0 }}
             />
+            {searchQuery.length > 0 && (
+              <Pressable onPress={() => setSearchQuery('')} className="p-1 pr-2">
+                <Ionicons name="close-circle" size={16} color="#737373" />
+              </Pressable>
+            )}
           </View>
         </View>
 
@@ -291,7 +297,13 @@ export default function BulletinBoardScreen() {
                       value={mediaQuery}
                       onChangeText={setMediaQuery}
                       placeholderTextColor="#78716c"
+                      style={{ padding: 0 }}
                     />
+                    {mediaQuery.length > 0 && (
+                      <Pressable onPress={() => setMediaQuery('')} className="p-1 pr-1">
+                        <Ionicons name="close-circle" size={14} color="#78716c" />
+                      </Pressable>
+                    )}
                   </View>
                   
                   {isSearchingMedia && <ActivityIndicator size="small" color="#525252" className="mt-2" />}

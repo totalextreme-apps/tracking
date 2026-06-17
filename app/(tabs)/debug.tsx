@@ -71,13 +71,21 @@ export default function DebugScreen() {
       </View>
 
       <View className="mb-6">
-        <TextInput
-          placeholder="SEARCH RAW DATA (ID, TITLE, NOTES...)"
-          placeholderTextColor="#444"
-          value={search}
-          onChangeText={setSearch}
-          className="bg-neutral-900 border border-neutral-800 p-3 rounded-lg text-white font-mono text-xs"
-        />
+        <View className="flex-row items-center bg-neutral-900 border border-neutral-800 rounded-lg px-3">
+          <TextInput
+            placeholder="SEARCH RAW DATA (ID, TITLE, NOTES...)"
+            placeholderTextColor="#444"
+            value={search}
+            onChangeText={setSearch}
+            className="flex-1 text-white font-mono text-xs py-3"
+            style={{ padding: 0 }}
+          />
+          {search.length > 0 && (
+            <Pressable onPress={() => setSearch('')} className="p-1 -mr-2">
+              <Ionicons name="close-circle" size={16} color="#444" />
+            </Pressable>
+          )}
+        </View>
       </View>
 
       <View className="mb-8 gap-3">

@@ -273,14 +273,22 @@ export default function CreateListScreen() {
 
                 {/* Search + Format Filters */}
                 <View className="flex-row items-center gap-2 mb-2">
-                    <TextInput
-                        nativeID="create-list-search-input"
-                        placeholder="Search collection..."
-                        placeholderTextColor="#525252"
-                        value={searchQuery}
-                        onChangeText={setSearchQuery}
-                        className="bg-neutral-900 border border-neutral-800 text-white font-mono rounded-md px-3 py-2 flex-1 text-xs"
-                    />
+                    <View className="flex-row items-center bg-neutral-900 border border-neutral-800 rounded-md px-3 flex-1">
+                        <TextInput
+                            nativeID="create-list-search-input"
+                            placeholder="Search collection..."
+                            placeholderTextColor="#525252"
+                            value={searchQuery}
+                            onChangeText={setSearchQuery}
+                            className="text-white font-mono flex-1 text-xs py-2"
+                            style={{ padding: 0 }}
+                        />
+                        {searchQuery.length > 0 && (
+                            <Pressable onPress={() => { setSearchQuery(''); playSound('click'); }} className="p-1 -mr-2">
+                                <FontAwesome name="times-circle" size={14} color="#525252" />
+                            </Pressable>
+                        )}
+                    </View>
                     {['ALL', 'VHS', 'DVD', 'BluRay', '4K', 'Digital'].map((fmt) => {
                         const isActive = formatFilter === fmt || (fmt === 'ALL' && !formatFilter);
                         return (

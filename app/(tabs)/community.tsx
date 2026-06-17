@@ -810,6 +810,11 @@ export default function CommunityScreen() {
                           value={mediaQuery}
                           onChangeText={setMediaQuery}
                         />
+                        {mediaQuery.length > 0 && (
+                          <Pressable onPress={() => setMediaQuery('')} style={{ padding: 2 }}>
+                            <Ionicons name="close-circle" size={12} color="#a89880" />
+                          </Pressable>
+                        )}
                       </View>
                       {mediaResults.length > 0 && (
                         <View style={{ marginTop: 4, backgroundColor: '#fff', borderRadius: 4, borderWidth: 1, borderColor: 'rgba(0,0,0,0.1)', overflow: 'hidden' }}>

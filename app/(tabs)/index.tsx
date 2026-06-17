@@ -447,6 +447,11 @@ export default function HomeScreen() {
                 <View className="flex-row items-center bg-neutral-900 rounded-lg border border-neutral-800 px-4 py-2.5 flex-1">
                   <Ionicons name="search" size={16} color="#444" style={{ marginRight: 8 }} />
                   <TextInput placeholder="SEARCH TITLE..." placeholderTextColor="#444" value={searchQuery} onChangeText={setSearchQuery} className="flex-1 text-white font-mono text-xs" autoCapitalize="none" style={{ padding: 0 }} />
+                  {searchQuery.length > 0 && (
+                    <Pressable onPress={() => { setSearchQuery(''); playSound('click'); }} className="p-1 -mr-2">
+                      <Ionicons name="close-circle" size={16} color="#444" />
+                    </Pressable>
+                  )}
                 </View>
               </View>
 

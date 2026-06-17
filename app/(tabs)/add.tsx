@@ -378,19 +378,27 @@ export default function AddScreen() {
 
         {/* Search Row */}
         <View className="p-4 flex-row">
-          <TextInput
-            nativeID="add-search-input"
-            {...({ name: 'add-query' } as any)}
-            placeholder="Search movies, shows or speak..."
-            placeholderTextColor="#6b7280"
-            value={query}
-            onChangeText={setQuery}
-            onSubmitEditing={() => Keyboard.dismiss()}
-            className="bg-neutral-900 text-white px-4 py-3 rounded-lg font-mono flex-1 mr-2"
-            autoCapitalize="none"
-            autoCorrect={false}
-            returnKeyType="search"
-          />
+          <View className="flex-row items-center bg-neutral-900 rounded-lg px-4 flex-1 mr-2">
+            <TextInput
+              nativeID="add-search-input"
+              {...({ name: 'add-query' } as any)}
+              placeholder="Search movies, shows or speak..."
+              placeholderTextColor="#6b7280"
+              value={query}
+              onChangeText={setQuery}
+              onSubmitEditing={() => Keyboard.dismiss()}
+              className="text-white py-3 font-mono flex-1 text-sm"
+              autoCapitalize="none"
+              autoCorrect={false}
+              returnKeyType="search"
+              style={{ padding: 0 }}
+            />
+            {query.length > 0 && (
+              <Pressable onPress={() => { setQuery(''); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }} className="p-1 -mr-2">
+                <FontAwesome name="times-circle" size={16} color="#6b7280" />
+              </Pressable>
+            )}
+          </View>
           {isLookingUp ? (
             <Pressable
               onPress={cancelLookup}
