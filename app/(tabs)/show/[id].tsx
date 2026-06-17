@@ -17,7 +17,7 @@ import { ImageCropModal } from '@/components/ImageCropModal';
 import { useAuth } from '@/context/AuthContext';
 import { useSound } from '@/context/SoundContext';
 import { useThriftMode } from '@/context/ThriftModeContext';
-import { useAddToCollection, useCollection, useDeleteCollectionItem, useUpdateCollectionItem, useLogWatchEvent } from '@/hooks/useCollection';
+import { useAddToCollection, useCollection, useDeleteCollectionItem, useUpdateCollectionItem, useLogWatchEvent, useDecrementWatchEvent } from '@/hooks/useCollection';
 import { useCreatePost } from '@/hooks/useSocial';
 import { ReviewSection } from '@/components/ReviewSection';
 import { CommentSection } from '@/components/CommentSection';
@@ -104,6 +104,7 @@ export default function ShowDetailScreen() {
     const deleteMutation = useDeleteCollectionItem(userId);
     const addMutation = useAddToCollection(userId);
     const logWatchEventMutation = useLogWatchEvent(userId);
+    const decrementWatchEventMutation = useDecrementWatchEvent(userId);
 
     const handleLogWatch = async () => {
         if (!activeItem) return;
@@ -117,6 +118,21 @@ export default function ShowDetailScreen() {
             refetch();
         } catch (e) {
             Alert.alert('Error', 'Failed to log watch event');
+        }
+    };
+
+    const handleDecrementWatch = async () => {
+        if (!activeItem) return;
+        playSound('click');
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        try {
+            await decrementWatchEventMutation.mutateAsync({
+                itemId: activeItem.id,
+                currentWatchCount: activeItem.watch_count || 0,
+            });
+            refetch();
+        } catch (e) {
+            Alert.alert('Error', 'Failed to decrement watch event');
         }
     };
 
@@ -497,9 +513,19 @@ export default function ShowDetailScreen() {
                             )}
                             {activeItem && activeItem.status === 'owned' && (
                                 <View className="mt-2 flex-row items-center gap-4 bg-neutral-900/40 p-2 rounded-lg border border-neutral-800 self-start">
-                                    <View>
-                                        <Text className="text-neutral-500 font-mono text-[8px] uppercase tracking-wider">Watched</Text>
-                                        <Text className="text-white font-mono text-[11px] font-bold">{activeItem.watch_count || 0}x</Text>
+                                    <View className="flex-row items-end">
+                                        <View>
+                                            <Text className="text-neutral-500 font-mono text-[8px] uppercase tracking-wider">Watched</Text>
+                                            <Text className="text-white font-mono text-[11px] font-bold">{activeItem.watch_count || 0}x</Text>
+                                        </View>
+                                        {!isReadOnly && activeItem.watch_count > 0 && (
+                                            <Pressable 
+                                                onPress={handleDecrementWatch}
+                                                className="ml-2.5 bg-neutral-800 border border-neutral-700 p-1 rounded active:bg-neutral-700"
+                                            >
+                                                <Ionicons name="remove-circle-outline" size={12} color="#888" />
+                                            </Pressable>
+                                        )}
                                     </View>
                                     {activeItem.last_watched_at && (
                                         <View>

@@ -779,3 +779,36 @@ export function useLogWatchEvent(userId: string | undefined) {
     },
   });
 }
+
+export function useDecrementWatchEvent(userId: string | undefined) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ itemId, currentWatchCount }: { itemId: string; currentWatchCount: number }) => {
+      if (!userId) throw new Error('User not logged in');
+
+      const newCount = Math.max(0, currentWatchCount - 1);
+      const updates: any = {
+        watch_count: newCount,
+      };
+
+      if (newCount === 0) {
+        updates.last_watched_at = null;
+      }
+
+      const { data, error } = await supabase
+        .from('collection_items')
+        .update(updates)
+        .eq('id', itemId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['collection', userId] });
+      queryClient.invalidateQueries({ queryKey: ['collection'] });
+    },
+  });
+}
