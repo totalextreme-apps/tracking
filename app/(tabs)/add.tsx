@@ -25,6 +25,8 @@ import { getPosterUrl } from '@/lib/dummy-data';
 import { getTvShowById, type TmdbMediaResult } from '@/lib/tmdb';
 import type { MovieFormat } from '@/types/database';
 
+import BarcodeScanner from '@/components/BarcodeScanner';
+import { useCameraPermissions } from 'expo-camera';
 import { lookupUPC } from '@/lib/upc';
 
 const FORMATS: MovieFormat[] = ['VHS', 'DVD', 'BluRay', '4K', 'Digital'];
@@ -66,6 +68,11 @@ export default function AddScreen() {
   const recognitionRef = useRef<any>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  // Camera / Barcode Scanner Logic
+  const [permission, requestPermission] = useCameraPermissions();
+  const [isScanning, setIsScanning] = useState(false);
+  const isProcessingScan = useRef(false);
+
   // Reset all search/form state every time this screen comes into focus
   useFocusEffect(
     useCallback(() => {
@@ -87,6 +94,8 @@ export default function AddScreen() {
       setManualCastStr('');
       setManualPoster('');
       setManualBackdrop('');
+      setIsScanning(false);
+      isProcessingScan.current = false;
     }, [])
   );
 
@@ -188,11 +197,59 @@ export default function AddScreen() {
     }
   };
 
+  const handleBarCodeScanned = async ({ type, data }: { type: string; data: string }) => {
+    if (isProcessingScan.current) return;
+
+    isProcessingScan.current = true;
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+    setIsScanning(false);
+    setIsLookingUp(true);
+
+    abortControllerRef.current = new AbortController();
+
+    try {
+      const title = await lookupUPC(data, abortControllerRef.current.signal);
+      if (title) {
+        setQuery(title);
+      } else {
+        Alert.alert(
+          'Not Found',
+          `Could not identify product for barcode: ${data}`,
+          [{ text: 'OK', onPress: () => (isProcessingScan.current = false) }]
+        );
+      }
+    } catch (e: any) {
+      if (e.name !== 'AbortError') {
+        Alert.alert('Error', 'Failed to lookup barcode');
+      }
+    } finally {
+      setIsLookingUp(false);
+      abortControllerRef.current = null;
+    }
+  };
+
+  const startScanning = async () => {
+    if (!permission) {
+      await requestPermission();
+    }
+    if (!permission?.granted) {
+      const { status } = await requestPermission();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Camera permission is required to scan barcodes.');
+        return;
+      }
+    }
+    isProcessingScan.current = false;
+    setIsScanning(true);
+  };
+
   const cancelLookup = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
     setIsLookingUp(false);
+    isProcessingScan.current = false;
   };
 
   const handleSelectItem = async (item: TmdbMediaResult) => {
@@ -341,6 +398,17 @@ export default function AddScreen() {
         </View>
       )}
 
+      {/* Camera Modal Overlay */}
+      {isScanning && (
+        <View style={{ position: 'absolute', inset: 0, zIndex: 50, backgroundColor: '#000' }}>
+          <BarcodeScanner
+            onScanned={handleBarCodeScanned}
+            onClose={() => setIsScanning(false)}
+            barcodeTypes={['upc_a', 'upc_e', 'ean13', 'ean8', 'qr', 'code128', 'code39']}
+          />
+        </View>
+      )}
+
       <ScrollView
         className="flex-1 bg-neutral-950"
         contentContainerStyle={{
@@ -382,7 +450,7 @@ export default function AddScreen() {
             <TextInput
               nativeID="add-search-input"
               {...({ name: 'add-query' } as any)}
-              placeholder="Search movies, shows or speak..."
+              placeholder="Search movies, shows, speak or scan..."
               placeholderTextColor="#6b7280"
               value={query}
               onChangeText={setQuery}
@@ -402,17 +470,25 @@ export default function AddScreen() {
           {isLookingUp ? (
             <Pressable
               onPress={cancelLookup}
-              className="bg-neutral-900 w-12 items-center justify-center rounded-lg border border-red-900/50"
+              className="bg-neutral-900 w-12 h-12 items-center justify-center rounded-lg border border-red-900/50"
             >
               <FontAwesome name="times" size={20} color="#ef4444" />
             </Pressable>
           ) : (
-            <Pressable
-              onPress={startVoiceSearch}
-              className="bg-neutral-900 w-12 items-center justify-center rounded-lg border border-neutral-800 active:bg-neutral-800"
-            >
-              <FontAwesome name="microphone" size={20} color="#f59e0b" />
-            </Pressable>
+            <View className="flex-row gap-2">
+              <Pressable
+                onPress={startVoiceSearch}
+                className="bg-neutral-900 w-12 h-12 items-center justify-center rounded-lg border border-neutral-800 active:bg-neutral-800"
+              >
+                <FontAwesome name="microphone" size={20} color="#f59e0b" />
+              </Pressable>
+              <Pressable
+                onPress={startScanning}
+                className="bg-neutral-900 w-12 h-12 items-center justify-center rounded-lg border border-neutral-800 active:bg-neutral-800"
+              >
+                <FontAwesome name="barcode" size={20} color="#f59e0b" />
+              </Pressable>
+            </View>
           )}
         </View>
 
