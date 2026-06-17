@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, Text, TextInput, View, Share } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, Text, TextInput, View, Share, Linking } from 'react-native';
 import * as Sharing from 'expo-sharing';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -510,6 +510,17 @@ export default function ShowDetailScreen() {
                                 <Text className="text-neutral-500 font-mono text-[10px] mt-1.5 uppercase tracking-wider">
                                     {displayShow.genres.map((g: any) => g?.name).filter(Boolean).join('  •  ')}
                                 </Text>
+                            )}
+                            {displayShow.tmdb_id && (
+                                <Pressable
+                                    onPress={() => Linking.openURL(`https://letterboxd.com/tmdb/${displayShow.tmdb_id}`)}
+                                    className="mt-2.5 flex-row items-center self-start bg-neutral-900/80 border border-neutral-800/80 px-2.5 py-1 rounded-full active:bg-neutral-800"
+                                >
+                                    <Ionicons name="link-outline" size={10} color="#f59e0b" />
+                                    <Text className="text-amber-500 font-mono text-[8px] ml-1.5 uppercase font-bold tracking-wider">
+                                        LETTERBOXD
+                                    </Text>
+                                </Pressable>
                             )}
                             {activeItem && activeItem.status === 'owned' && (
                                 <View className="mt-2 flex-row items-center gap-4 bg-neutral-900/40 p-2 rounded-lg border border-neutral-800 self-start">

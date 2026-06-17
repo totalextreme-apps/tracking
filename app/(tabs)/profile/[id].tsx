@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, Pressable, TextInput, Modal, Alert, Share } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, Pressable, TextInput, Modal, Alert, Share, Linking } from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useProfile, useFollowers, useFollowing, useToggleFollow, useToggleTopFive } from '@/hooks/useSocial';
@@ -277,6 +277,18 @@ export default function UserProfileScreen() {
             <Text className="text-neutral-400 font-mono text-center mt-3 px-6 text-sm leading-5">
               {profile.bio}
             </Text>
+          )}
+
+          {profile.letterboxd_username && (
+            <Pressable
+              onPress={() => Linking.openURL(`https://letterboxd.com/${profile.letterboxd_username}`)}
+              className="mt-4 flex-row items-center bg-neutral-900 border border-neutral-800 px-4 py-2 rounded-full"
+            >
+              <Ionicons name="link" size={12} color="#f59e0b" />
+              <Text className="text-amber-500 font-mono text-xs ml-2 uppercase font-bold tracking-wider">
+                LETTERBOXD: @{profile.letterboxd_username}
+              </Text>
+            </Pressable>
           )}
 
           {(profile.movie_preferences?.length || profile.format_preferences?.length) && (

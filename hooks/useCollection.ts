@@ -704,38 +704,63 @@ export function useBatchImportMetadata(userId?: string) {
             }, { onConflict: 'tmdb_id' }).select('id').single();
 
             if (movieRow) {
-               // 2. Find internal orphan to link
-               const { data: orphans } = await supabase
+               // First check if user already has this movie/show to prevent duplicates
+               const mediaCol = row.media_type === 'movie' ? 'movie_id' : 'show_id';
+               const { data: existingItems } = await supabase
                  .from('collection_items')
                  .select('*')
                  .eq('user_id', userId)
-                 .eq('media_type', row.media_type)
-                 .is('movie_id', null)
-                 .is('show_id', null);
-               
-               if (orphans && orphans.length > 0) {
-                   const target = orphans.find((o: any) => o.notes?.includes(row.notes_match || '')) || orphans[0];
-                   const updates: any = {
-                     [row.media_type === 'movie' ? 'movie_id' : 'show_id']: movieRow.id,
-                   };
-                   if (row.rating !== undefined) updates.rating = row.rating;
-                   if (row.watch_count !== undefined) updates.watch_count = row.watch_count;
-                   if (row.last_watched_at !== undefined) updates.last_watched_at = row.last_watched_at;
-                   await supabase.from('collection_items').update(updates).eq('id', target.id);
+                 .eq(mediaCol, movieRow.id);
+
+               if (existingItems && existingItems.length > 0) {
+                   const target = existingItems[0];
+                   const updates: any = {};
+                   if (row.rating !== undefined) {
+                     updates.rating = row.rating;
+                   }
+                   if (row.watch_count !== undefined) {
+                     updates.watch_count = Math.max(target.watch_count || 0, row.watch_count);
+                   }
+                   if (row.last_watched_at !== undefined && (!target.last_watched_at || new Date(row.last_watched_at) > new Date(target.last_watched_at))) {
+                     updates.last_watched_at = row.last_watched_at;
+                   }
+                   if (Object.keys(updates).length > 0) {
+                     await supabase.from('collection_items').update(updates).eq('id', target.id);
+                   }
                } else {
-                   // 3. IF NO ORPHANS (Purged), RE-CREATE THE ITEM
-                   const insertData: any = {
-                     user_id: userId,
-                     [row.media_type === 'movie' ? 'movie_id' : 'show_id']: movieRow.id,
-                     media_type: row.media_type,
-                     format: row.format || 'DVD',
-                     status: row.status || 'owned',
-                     notes: row.notes_match || ''
-                   };
-                   if (row.rating !== undefined) insertData.rating = row.rating;
-                   if (row.watch_count !== undefined) insertData.watch_count = row.watch_count;
-                   if (row.last_watched_at !== undefined) insertData.last_watched_at = row.last_watched_at;
-                   await supabase.from('collection_items').insert(insertData);
+                   // 2. Find internal orphan to link
+                   const { data: orphans } = await supabase
+                     .from('collection_items')
+                     .select('*')
+                     .eq('user_id', userId)
+                     .eq('media_type', row.media_type)
+                     .is('movie_id', null)
+                     .is('show_id', null);
+                   
+                   if (orphans && orphans.length > 0) {
+                       const target = orphans.find((o: any) => o.notes?.includes(row.notes_match || '')) || orphans[0];
+                       const updates: any = {
+                         [row.media_type === 'movie' ? 'movie_id' : 'show_id']: movieRow.id,
+                       };
+                       if (row.rating !== undefined) updates.rating = row.rating;
+                       if (row.watch_count !== undefined) updates.watch_count = row.watch_count;
+                       if (row.last_watched_at !== undefined) updates.last_watched_at = row.last_watched_at;
+                       await supabase.from('collection_items').update(updates).eq('id', target.id);
+                   } else {
+                       // 3. IF NO ORPHANS (Purged), RE-CREATE THE ITEM
+                       const insertData: any = {
+                         user_id: userId,
+                         [row.media_type === 'movie' ? 'movie_id' : 'show_id']: movieRow.id,
+                         media_type: row.media_type,
+                         format: row.format || 'Digital',
+                         status: row.status || 'owned',
+                         notes: row.notes_match || ''
+                       };
+                       if (row.rating !== undefined) insertData.rating = row.rating;
+                       if (row.watch_count !== undefined) insertData.watch_count = row.watch_count;
+                       if (row.last_watched_at !== undefined) insertData.last_watched_at = row.last_watched_at;
+                       await supabase.from('collection_items').insert(insertData);
+                   }
                }
             }
           }

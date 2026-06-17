@@ -239,5 +239,6 @@ export interface Profile {
   bio: string | null;
   movie_preferences?: string[] | null;
   format_preferences?: string[] | null;
+  letterboxd_username?: string | null;
   updated_at: string | null;
 }

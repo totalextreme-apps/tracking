@@ -17,7 +17,7 @@ import { Image as ExpoImage } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, Switch, Text, TextInput, View, Linking } from 'react-native';
 import { PreferenceQuizModal } from '@/components/PreferenceQuizModal';
 
 const logoSource = Platform.OS === 'web'
@@ -35,6 +35,7 @@ export default function SettingsScreen() {
   const [isEditing, setIsEditing] = useState(false);
   const [editUsername, setEditUsername] = useState('');
   const [editBio, setEditBio] = useState('');
+  const [editLetterboxdUsername, setEditLetterboxdUsername] = useState('');
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
 
   // Account Upgrade State
@@ -119,13 +120,18 @@ export default function SettingsScreen() {
   const startEditing = () => {
     setEditUsername(profile?.username || '');
     setEditBio(profile?.bio || '');
+    setEditLetterboxdUsername(profile?.letterboxd_username || '');
     setIsEditing(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
   const saveProfile = async () => {
     try {
-      await updateProfile({ username: editUsername, bio: editBio });
+      await updateProfile({ 
+        username: editUsername, 
+        bio: editBio,
+        letterboxd_username: editLetterboxdUsername
+      } as any);
       setIsEditing(false);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (e) {
@@ -219,6 +225,18 @@ export default function SettingsScreen() {
                   {profile.bio}
                 </Text>
               )}
+
+              {profile?.letterboxd_username && (
+                <Pressable
+                  onPress={() => Linking.openURL(`https://letterboxd.com/${profile.letterboxd_username}`)}
+                  className="mt-3 flex-row items-center self-start bg-neutral-900 border border-neutral-800 px-3 py-1.5 rounded-full"
+                >
+                  <FontAwesome name="external-link" size={10} color="#f59e0b" />
+                  <Text className="text-amber-500 font-mono text-[10px] ml-1.5 uppercase font-bold tracking-wider">
+                    LETTERBOXD: @{profile.letterboxd_username}
+                  </Text>
+                </Pressable>
+              )}
             </View>
           )}
 
@@ -249,6 +267,19 @@ export default function SettingsScreen() {
                     placeholderTextColor="#525252"
                     multiline
                     maxLength={80}
+                  />
+                </View>
+                <View>
+                  <TextInput
+                    nativeID="edit-letterboxd-input"
+                    {...({ name: 'letterboxd_username' } as any)}
+                    value={editLetterboxdUsername}
+                    onChangeText={setEditLetterboxdUsername}
+                    className="bg-neutral-800 text-white p-3 rounded text-sm font-mono border border-neutral-700"
+                    placeholder="Letterboxd Username"
+                    placeholderTextColor="#525252"
+                    autoCapitalize="none"
+                    autoCorrect={false}
                   />
                 </View>
                 <View className="flex-row gap-3 mt-2">
