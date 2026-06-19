@@ -20,11 +20,11 @@ export function getEbaySearchUrl(title: string, format: string): string {
  */
 export function parseEbayPrices(html: string): number[] {
     const prices: number[] = [];
-    const priceRegex = /class="[^"]*s-item__price[^"]*">([\s\S]*?)<\/span>/g;
+    const priceRegex = /class="[^"]*(s-item__price|s-card__price)[^"]*">([\s\S]*?)<\/span>/g;
     let match;
 
     while ((match = priceRegex.exec(html)) !== null) {
-        let priceText = match[1].replace(/<[^>]*>/g, '').trim();
+        let priceText = match[2].replace(/<[^>]*>/g, '').trim();
         
         // Handle price ranges (e.g. "$10.00 to $15.00") by taking the first value
         if (priceText.includes('to')) {

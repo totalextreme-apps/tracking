@@ -20,6 +20,7 @@ import { useRouter } from 'expo-router';
 import { useState, useMemo, useRef } from 'react';
 import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, Switch, Text, TextInput, View, Linking } from 'react-native';
 import { PreferenceQuizModal } from '@/components/PreferenceQuizModal';
+import { useQueryClient } from '@tanstack/react-query';
 
 const logoSource = Platform.OS === 'web'
   ? { uri: '/logo_tracking.png' }
@@ -31,6 +32,7 @@ export default function SettingsScreen() {
   const { data: collection, isLoading: isCollectionLoading } = useCollection(userId);
   const refreshLibrary = useRefreshLibrary(userId);
   const { data: profile, isLoading: isProfileLoading, updateProfile, uploadAvatar, isUpdating } = useProfile(userId ?? null);
+  const queryClient = useQueryClient();
 
   const [isExporting, setIsExporting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -61,36 +63,43 @@ export default function SettingsScreen() {
     setAutoValuingTotal(unvaluedItems.length);
     cancelAutoValuingRef.current = false;
 
-    for (let i = 0; i < unvaluedItems.length; i++) {
+    const CONCURRENCY = 3;
+    for (let i = 0; i < unvaluedItems.length; i += CONCURRENCY) {
       if (cancelAutoValuingRef.current) {
         break;
       }
 
-      const item = unvaluedItems[i];
-      const media = item.movies || item.shows;
-      if (media) {
-        const title = item.media_type === 'movie' ? media.title : media.name;
-        try {
-          const queryParam = `${title} ${item.format === 'BluRay' ? 'Blu-ray' : item.format}`;
-          const res = await fetch(`/api/market-value?s=${encodeURIComponent(queryParam)}`);
-          if (res.ok) {
-            const data = await res.json();
-            if (data.value !== null && data.value !== undefined) {
-              await updateItemMutation.mutateAsync({
-                itemId: item.id,
-                updates: { value_estimate: data.value }
-              });
+      const batch = unvaluedItems.slice(i, i + CONCURRENCY);
+      await Promise.all(batch.map(async (item: any) => {
+        const media = item.movies || item.shows;
+        if (media) {
+          const title = item.media_type === 'movie' ? media.title : media.name;
+          try {
+            const queryParam = `${title} ${item.format === 'BluRay' ? 'Blu-ray' : item.format}`;
+            const res = await fetch(`/api/market-value?s=${encodeURIComponent(queryParam)}`);
+            if (res.ok) {
+              const data = await res.ok ? await res.json() : null;
+              if (data && data.value !== null && data.value !== undefined) {
+                // Update Supabase directly to avoid mass query cache invalidation on every item
+                await supabase
+                  .from('collection_items')
+                  .update({ value_estimate: data.value })
+                  .eq('id', item.id)
+                  .eq('user_id', userId);
+              }
             }
+          } catch (err) {
+            console.error(`Auto-valuing failed for ${title}:`, err);
           }
-        } catch (err) {
-          console.error(`Auto-valuing failed for ${title}:`, err);
         }
-      }
+      }));
 
-      setAutoValuingProgress(i + 1);
-      await new Promise(r => setTimeout(r, 1500));
+      setAutoValuingProgress(Math.min(unvaluedItems.length, i + CONCURRENCY));
+      await new Promise(r => setTimeout(r, 1000));
     }
 
+    // Invalidate queries ONCE at the end of the entire loop
+    await queryClient.invalidateQueries({ queryKey: ['collection', userId] });
     setAutoValuingActive(false);
     playSound('click');
   };
@@ -133,29 +142,33 @@ export default function SettingsScreen() {
   const valuationStats = useMemo(() => {
     let totalVal = 0;
     let valuedCount = 0;
-    const formatBreakdown: Record<string, number> = {
-      '4K': 0,
-      'BluRay': 0,
-      'DVD': 0,
-      'VHS': 0,
-      'Digital': 0,
+    const formatStats: Record<string, { sum: number; valued: number; total: number }> = {
+      '4K': { sum: 0, valued: 0, total: 0 },
+      'BluRay': { sum: 0, valued: 0, total: 0 },
+      'DVD': { sum: 0, valued: 0, total: 0 },
+      'VHS': { sum: 0, valued: 0, total: 0 },
+      'Digital': { sum: 0, valued: 0, total: 0 },
     };
 
     if (collection) {
       collection.forEach((item: any) => {
-        if (item.status === 'owned' && item.value_estimate !== null && item.value_estimate !== undefined) {
+        if (item.status !== 'owned') return;
+
+        let fmt = item.format || 'DVD';
+        if (fmt === 'Blu-ray') fmt = 'BluRay';
+
+        if (!formatStats[fmt]) {
+          formatStats[fmt] = { sum: 0, valued: 0, total: 0 };
+        }
+
+        formatStats[fmt].total += 1;
+
+        if (item.value_estimate !== null && item.value_estimate !== undefined) {
           const val = Number(item.value_estimate);
           totalVal += val;
           valuedCount += 1;
-
-          let fmt = item.format || 'DVD';
-          if (fmt === 'Blu-ray') fmt = 'BluRay';
-          
-          if (formatBreakdown[fmt] !== undefined) {
-            formatBreakdown[fmt] += val;
-          } else {
-            formatBreakdown[fmt] = val;
-          }
+          formatStats[fmt].sum += val;
+          formatStats[fmt].valued += 1;
         }
       });
     }
@@ -166,7 +179,7 @@ export default function SettingsScreen() {
       total: totalVal,
       valuedCount,
       totalOwned,
-      breakdown: formatBreakdown
+      formatStats
     };
   }, [collection]);
 
@@ -449,16 +462,19 @@ export default function SettingsScreen() {
               </View>
 
               <View className="border-t border-dashed border-neutral-800 pt-3 gap-2">
-                {Object.entries(valuationStats.breakdown)
-                  .filter(([_, val]) => val > 0)
-                  .map(([fmt, val]) => (
+                {Object.entries(valuationStats.formatStats)
+                  .filter(([_, stats]) => stats.total > 0)
+                  .map(([fmt, stats]) => (
                     <View key={fmt} className="flex-row items-center justify-between">
                       <View className="flex-row items-center gap-2">
                         <View className={`w-2.5 h-2.5 rounded-full ${FORMAT_COLOR_DOTS[fmt] || 'bg-neutral-600'}`} />
-                        <Text className="text-neutral-400 font-mono text-xs">{fmt === 'BluRay' ? 'Blu-ray' : fmt}</Text>
+                        <Text className="text-neutral-400 font-mono text-xs">
+                          {fmt === 'BluRay' ? 'Blu-ray' : fmt}
+                          <Text className="text-neutral-600 text-[10px]"> ({stats.valued}/{stats.total} valued)</Text>
+                        </Text>
                       </View>
                       <Text className="text-white font-mono text-xs font-bold">
-                        ${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        ${stats.sum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </Text>
                     </View>
                 ))}
