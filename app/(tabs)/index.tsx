@@ -22,6 +22,140 @@ import { useCollection, useUpdateCollectionItem } from '@/hooks/useCollection';
 import { usePersistedState } from '@/hooks/usePersistedState';
 import { getGenres, getOnDisplayItems, getGrailItems, getStacks } from '@/lib/collection-utils';
 import type { CollectionItemWithMedia } from '@/types/database';
+import { getBackdropUrl, getPosterUrl } from '@/lib/dummy-data';
+
+
+function getRelativeTimeString(dateString?: string | null): string {
+  if (!dateString) return '';
+  const now = new Date();
+  const date = new Date(dateString);
+  const diffMs = now.getTime() - date.getTime();
+  
+  if (isNaN(diffMs)) return '';
+
+  const diffMins = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffMins < 60) {
+    return `${Math.max(1, diffMins)}m AGO`;
+  }
+  if (diffHours < 24) {
+    return `${diffHours}h AGO`;
+  }
+  if (diffDays === 1) {
+    return 'YESTERDAY';
+  }
+  if (diffDays < 7) {
+    return `${diffDays}d AGO`;
+  }
+  
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  return `${mm}/${dd}`;
+}
+
+function RecentlyWatchedCard({ item, navigateToDetail, playSound, onLongPressAction }: {
+  item: CollectionItemWithMedia;
+  navigateToDetail: (item: CollectionItemWithMedia) => void;
+  playSound: any;
+  onLongPressAction: () => void;
+}) {
+  const media = item.movies || item.shows;
+  if (!media) return null;
+
+  const title = item.media_type === 'movie' ? (media as any).title : (media as any).name;
+  const tmdbBackdrop = getBackdropUrl(media.backdrop_path, 'w300');
+  const backdropUrl = item.custom_backdrop_url || tmdbBackdrop || item.custom_poster_url || getPosterUrl(media.poster_path, 'w185');
+  const format = item.format;
+  const rating = item.rating;
+  const watchCount = item.watch_count || 1;
+  const lastWatchedStr = getRelativeTimeString(item.last_watched_at);
+
+  const formatColors: Record<string, { bg: string, text: string, border: string }> = {
+    'VHS': { bg: 'bg-red-950/80', text: 'text-red-400', border: 'border-red-500/30' },
+    'DVD': { bg: 'bg-purple-950/80', text: 'text-purple-400', border: 'border-purple-500/30' },
+    'BluRay': { bg: 'bg-blue-950/80', text: 'text-blue-400', border: 'border-blue-500/30' },
+    '4K': { bg: 'bg-yellow-950/80', text: 'text-yellow-400', border: 'border-yellow-500/30' },
+    'Digital': { bg: 'bg-green-950/80', text: 'text-green-400', border: 'border-green-500/30' },
+  };
+
+  const colors = formatColors[format] || { bg: 'bg-neutral-900', text: 'text-neutral-400', border: 'border-neutral-800' };
+
+  return (
+    <Pressable
+      onPress={() => {
+        playSound('click');
+        navigateToDetail(item);
+      }}
+      onLongPress={() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+        onLongPressAction();
+      }}
+      className="mr-4 w-72 h-[100px] flex-row bg-neutral-900 rounded-xl border border-neutral-800/80 overflow-hidden active:border-emerald-500/50 shadow-md shadow-black"
+    >
+      {/* Backdrop Section (Left) */}
+      <View className="w-28 h-full bg-neutral-950 relative justify-center items-center">
+        {backdropUrl ? (
+          <Image
+            source={{ uri: backdropUrl }}
+            style={{ width: '100%', height: '100%', opacity: 0.85 }}
+            contentFit="cover"
+          />
+        ) : (
+          <View className="flex-1 items-center justify-center bg-neutral-800 w-full h-full">
+            <Ionicons name="film-outline" size={20} color="#525252" />
+          </View>
+        )}
+
+        {/* Vintage OSD Play Badge */}
+        <View className="absolute top-2 left-2 bg-black/60 px-1.5 py-0.5 rounded flex-row items-center gap-1 border border-emerald-500/30">
+          <View className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+          <Text className="text-[7px] text-emerald-400 font-mono font-bold tracking-wider">PLAY</Text>
+        </View>
+
+        {/* Format Badge Overlay bottom right of image */}
+        <View className={`absolute bottom-2 right-2 px-1.5 py-0.5 rounded border ${colors.bg} ${colors.border}`}>
+          <Text className={`text-[7px] font-mono font-bold ${colors.text}`}>{format === 'BluRay' ? 'Blu-ray' : format}</Text>
+        </View>
+      </View>
+
+      {/* Info Section (Right) */}
+      <View className="flex-1 p-2.5 justify-between">
+        <View>
+          <Text className="text-white font-mono text-xs font-bold leading-tight" numberOfLines={2}>
+            {title.toUpperCase()}
+          </Text>
+          <View className="flex-row items-center gap-1.5 mt-1">
+            <Ionicons name="time-outline" size={10} color="#10b981" />
+            <Text className="text-emerald-400 font-mono text-[9px] font-semibold">{lastWatchedStr}</Text>
+          </View>
+        </View>
+
+        {/* Bottom stats: Stars and Tape counter */}
+        <View className="flex-row items-center justify-between border-t border-neutral-800/60 pt-1.5">
+          {/* Rating */}
+          <View className="flex-row gap-0.5">
+            {[...Array(5)].map((_, i) => (
+              <FontAwesome
+                key={i}
+                name={i < (rating || 0) ? 'star' : 'star-o'}
+                size={8}
+                color={i < (rating || 0) ? '#f59e0b' : '#404040'}
+              />
+            ))}
+          </View>
+
+          {/* Tape watch counter */}
+          <View className="flex-row items-center gap-1 bg-neutral-950 px-1.5 py-0.5 rounded border border-neutral-800">
+            <Text className="text-neutral-500 font-mono text-[7px] font-bold">CNT</Text>
+            <Text className="text-emerald-500 font-mono text-[8px] font-bold">{String(watchCount).padStart(3, '0')}</Text>
+          </View>
+        </View>
+      </View>
+    </Pressable>
+  );
+}
 
 export default function HomeScreen() {
   const { userId, session, isLoading: authLoading, authPhase, showCaptcha, onCaptchaSuccess } = useAuth();
@@ -330,7 +464,7 @@ export default function HomeScreen() {
           {/* RECENTLY WATCHED SECTION (OWNED) - ONLY IN STACKS MODE */}
           {recentlyWatched.length > 0 && !thriftMode && (
             <View className="mb-8 mt-2">
-              <View className="px-4 md:px-8 flex-row items-center justify-between mb-2 max-w-7xl mx-auto w-full gap-2 flex-wrap">
+              <View className="px-4 md:px-8 flex-row items-center justify-between mb-3 max-w-7xl mx-auto w-full gap-2 flex-wrap">
                 <View className="flex-row items-baseline gap-2 flex-wrap flex-1 min-w-[200px]">
                   <Text className="text-emerald-500 font-bold text-2xl tracking-tighter uppercase" style={{ fontFamily: 'VCR_OSD_MONO' }}>RECENTLY WATCHED</Text>
                   <Text className="text-neutral-500 font-mono text-xs ml-1">/ {recentlyWatched.length}</Text>
@@ -340,11 +474,16 @@ export default function HomeScreen() {
                   <Pressable onPress={scrollRecentlyWatchedRight} className="p-2 bg-neutral-900 rounded-full border border-neutral-800 active:bg-neutral-800"><Ionicons name="chevron-forward" size={16} color="#10b981" /></Pressable>
                 </View>
               </View>
-              <View className="relative">
-                <Image source={require('@/assets/images/shelf_background.png')} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.8 }} contentFit="cover" />
-                <ScrollView ref={recentlyWatchedRef} horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingLeft: 24, paddingRight: 40 }} className="py-12">
+              <View className="bg-neutral-900/30 border-y border-neutral-900/60 py-4 relative">
+                <ScrollView ref={recentlyWatchedRef} horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingLeft: 24, paddingRight: 40 }} className="py-2">
                   {recentlyWatched.map((item: any) => (
-                    <OnDisplayCard key={item.id} item={item} onSingleTapAction={() => navigateToDetail(item)} onLongPressAction={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); setQuickActionItem(item); }} onToggleFavorite={toggleFavorite} onRatePress={(rating) => handleGridRate(item, rating)} />
+                    <RecentlyWatchedCard
+                      key={item.id}
+                      item={item}
+                      navigateToDetail={navigateToDetail}
+                      playSound={playSound}
+                      onLongPressAction={() => setQuickActionItem(item)}
+                    />
                   ))}
                 </ScrollView>
               </View>
