@@ -63,7 +63,7 @@ export default function SettingsScreen() {
     setAutoValuingTotal(unvaluedItems.length);
     cancelAutoValuingRef.current = false;
 
-    const CONCURRENCY = 3;
+    const CONCURRENCY = 4;
     for (let i = 0; i < unvaluedItems.length; i += CONCURRENCY) {
       if (cancelAutoValuingRef.current) {
         break;
@@ -75,7 +75,9 @@ export default function SettingsScreen() {
         if (media) {
           const title = item.media_type === 'movie' ? media.title : media.name;
           try {
-            const queryParam = `${title} ${item.format === 'BluRay' ? 'Blu-ray' : item.format}`;
+            const formatSuffix = item.format === 'BluRay' ? 'Blu-ray' : item.format;
+            const editionPart = item.edition ? ` ${item.edition}` : '';
+            const queryParam = `${title}${editionPart} ${formatSuffix}`;
             const res = await fetch(`/api/market-value?s=${encodeURIComponent(queryParam)}`);
             if (res.ok) {
               const data = await res.ok ? await res.json() : null;
@@ -95,7 +97,7 @@ export default function SettingsScreen() {
       }));
 
       setAutoValuingProgress(Math.min(unvaluedItems.length, i + CONCURRENCY));
-      await new Promise(r => setTimeout(r, 1000));
+      await new Promise(r => setTimeout(r, 250));
     }
 
     // Invalidate queries ONCE at the end of the entire loop
@@ -663,38 +665,41 @@ export default function SettingsScreen() {
               disabled={isExporting || isCollectionLoading}
               className="p-4 flex-row items-center justify-between border-b-2 border-white/20 active:bg-[#1a3366]"
             >
-              <View className="flex-row items-center">
+              <View className="flex-row items-center flex-1 mr-2">
                 <View className="w-8 items-center"><FontAwesome name="download" size={14} color="#FFE92F" /></View>
-                <Text className="font-mono text-sm font-bold" style={{ color: '#FFE92F' }}>Export Collection (CSV)</Text>
+                <Text className="font-mono text-sm font-bold flex-1" style={{ color: '#FFE92F' }}>Export Collection (CSV)</Text>
               </View>
               {isExporting ? <ActivityIndicator size="small" color="#FFE92F" /> : <FontAwesome name="chevron-right" size={10} color="white" />}
             </Pressable>
-
+ 
             <Pressable
               onPress={() => router.push('/import' as any)}
               className="p-4 flex-row items-center justify-between border-b-2 border-white/20 active:bg-[#1a3366]"
             >
-              <View className="flex-row items-center">
+              <View className="flex-row items-center flex-1 mr-2">
                 <View className="w-8 items-center"><FontAwesome name="upload" size={14} color="#FFE92F" /></View>
-                <Text className="font-mono text-sm font-bold" style={{ color: '#FFE92F' }}>Import Collection / Letterboxd (CSV)</Text>
+                <View style={{ flex: 1 }}>
+                  <Text className="font-mono text-sm font-bold" style={{ color: '#FFE92F' }}>Import Collection /</Text>
+                  <Text className="font-mono text-sm font-bold" style={{ color: '#FFE92F' }}>Letterboxd (CSV)</Text>
+                </View>
               </View>
               <FontAwesome name="chevron-right" size={10} color="white" />
             </Pressable>
-
+ 
             {/* PRINT RECEIPT */}
             <Pressable
               onPress={async () => {
                 try {
                   const inventoryItems = collection?.filter((i: any) => i.status === 'owned') || [];
-
+ 
                   if (inventoryItems.length === 0) {
                     Alert.alert('No Items', 'No owned items in The Stacks to print.');
                     return;
                   }
-
+ 
                   const player = createAudioPlayer(require('@/assets/sounds/dotmatrix_noise.mp3'));
                   player.play();
-
+ 
                   await printInventoryReceipt(inventoryItems);
                 } catch (e) {
                   Alert.alert('Error', (e as Error).message);
@@ -703,9 +708,9 @@ export default function SettingsScreen() {
               disabled={isCollectionLoading}
               className="p-4 flex-row items-center justify-between border-b-2 border-white/20 active:bg-[#1a3366]"
             >
-              <View className="flex-row items-center">
+              <View className="flex-row items-center flex-1 mr-2">
                 <View className="w-8 items-center"><FontAwesome name="print" size={14} color="#FFE92F" /></View>
-                <Text className="font-mono text-sm font-bold" style={{ color: '#FFE92F' }}>Print Inventory Receipt (PDF)</Text>
+                <Text className="font-mono text-sm font-bold flex-1" style={{ color: '#FFE92F' }}>Print Inventory Receipt (PDF)</Text>
               </View>
               <FontAwesome name="chevron-right" size={10} color="white" />
             </Pressable>

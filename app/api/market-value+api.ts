@@ -16,11 +16,16 @@ export async function GET(request: Request) {
     // Going straight to Firecrawl saves 15-20 seconds of direct timeout delays.
     try {
         console.log(`Scraping eBay completed values for "${search}" via Firecrawl HTML...`);
+        const headers: Record<string, string> = {
+            'Content-Type': 'application/json'
+        };
+        if (process.env.FIRECRAWL_API_KEY) {
+            headers['Authorization'] = `Bearer ${process.env.FIRECRAWL_API_KEY}`;
+        }
+
         const firecrawlRes = await fetch('https://api.firecrawl.dev/v2/scrape', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers,
             body: JSON.stringify({
                 url: ebayUrl,
                 formats: ['html'],

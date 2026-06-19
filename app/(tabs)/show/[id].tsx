@@ -196,7 +196,7 @@ export default function ShowDetailScreen() {
             console.log(`Lazily checking eBay sold value for: ${activeShow.name} (${item.format})`);
 
             try {
-                const res = await fetchEbaySoldValue(activeShow.name, item.format);
+                const res = await fetchEbaySoldValue(activeShow.name, item.format, item.edition);
                 if (res.value !== null) {
                     await updateMutation.mutateAsync({
                         itemId: item.id,

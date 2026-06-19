@@ -188,7 +188,7 @@ export default function MovieDetailScreen() {
             console.log(`Lazily checking eBay sold value for: ${movie.title} (${item.format})`);
 
             try {
-                const res = await fetchEbaySoldValue(movie.title, item.format);
+                const res = await fetchEbaySoldValue(movie.title, item.format, item.edition);
                 if (res.value !== null) {
                     await updateMutation.mutateAsync({
                         itemId: item.id,

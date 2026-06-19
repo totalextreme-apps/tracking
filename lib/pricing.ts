@@ -7,11 +7,12 @@ export interface MarketValueResult {
 }
 
 /**
- * Builds the eBay Completed/Sold search URL for a given title and format.
+ * Builds the eBay Completed/Sold search URL for a given title, format, and edition.
  */
-export function getEbaySearchUrl(title: string, format: string): string {
+export function getEbaySearchUrl(title: string, format: string, edition?: string | null): string {
     const formatSuffix = format === 'BluRay' ? 'Blu-ray' : format;
-    const query = `${title} ${formatSuffix}`;
+    const editionPart = edition ? ` ${edition}` : '';
+    const query = `${title}${editionPart} ${formatSuffix}`;
     return `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(query)}&LH_Complete=1&LH_Sold=1`;
 }
 
@@ -64,13 +65,15 @@ export function calculateMedianPrice(prices: number[]): number | null {
  * - On Native: Direct client-side fetch to bypass CORS and Akamai blocks (using residential IPs).
  * - On Web: Calls local API route proxy.
  */
-export async function fetchEbaySoldValue(title: string, format: string, signal?: AbortSignal): Promise<MarketValueResult> {
-    const url = getEbaySearchUrl(title, format);
+export async function fetchEbaySoldValue(title: string, format: string, edition?: string | null, signal?: AbortSignal): Promise<MarketValueResult> {
+    const url = getEbaySearchUrl(title, format, edition);
     const fetchOptions = signal ? { signal } : {};
 
     if (Platform.OS === 'web') {
         try {
-            const queryParam = `${title} ${format === 'BluRay' ? 'Blu-ray' : format}`;
+            const formatSuffix = format === 'BluRay' ? 'Blu-ray' : format;
+            const editionPart = edition ? ` ${edition}` : '';
+            const queryParam = `${title}${editionPart} ${formatSuffix}`;
             const apiRes = await fetch(`/api/market-value?s=${encodeURIComponent(queryParam)}`, fetchOptions);
             if (apiRes.ok) {
                 const data = await apiRes.json();
