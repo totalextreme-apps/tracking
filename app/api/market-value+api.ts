@@ -9,7 +9,11 @@ export async function GET(request: Request) {
     }
 
     const ebayUrl = `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(search)}&LH_Complete=1&LH_Sold=1`;
+    let prices: number[] = [];
+    let source = 'ebay-api-success';
+    let directOk = false;
 
+    // 1. Try direct scraper query first
     try {
         const response = await fetch(ebayUrl, {
             headers: {
@@ -19,30 +23,65 @@ export async function GET(request: Request) {
             }
         });
 
-        if (!response.ok) {
-            return Response.json({ 
-                value: null, 
-                error: `eBay returned status: ${response.status}`, 
-                source: 'ebay-api-failed' 
-            });
+        if (response.ok) {
+            const html = await response.text();
+            prices = parseEbayPrices(html);
+            if (prices.length > 0) {
+                directOk = true;
+            } else {
+                console.warn(`Direct eBay query returned 0 parsed prices for "${search}".`);
+            }
+        } else {
+            console.warn(`Direct eBay query returned non-OK status: ${response.status} for "${search}".`);
         }
-
-        const html = await response.text();
-        const prices = parseEbayPrices(html);
-        const median = calculateMedianPrice(prices);
-
-        return Response.json({
-            value: median,
-            pricesCount: prices.length,
-            source: 'ebay-api-success'
-        });
-
-    } catch (error) {
-        console.error('eBay market-value API error:', error);
-        return Response.json({ 
-            value: null, 
-            error: (error as Error).message, 
-            source: 'ebay-api-error' 
-        }, { status: 500 });
+    } catch (e) {
+        console.warn(`Direct eBay query failed or threw error for "${search}":`, e);
     }
+
+    // 2. Fallback to Firecrawl keyless scrape if direct query fails or returns no prices
+    if (!directOk) {
+        console.log(`Attempting Firecrawl fallback for: "${search}"`);
+        try {
+            const firecrawlRes = await fetch('https://api.firecrawl.dev/v2/scrape', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    url: ebayUrl,
+                    formats: ['markdown']
+                })
+            });
+
+            if (firecrawlRes.ok) {
+                const firecrawlData = await firecrawlRes.json();
+                if (firecrawlData.success && firecrawlData.data?.markdown) {
+                    const markdown = firecrawlData.data.markdown;
+                    const priceRegex = /^\$(\d+\.\d{2})$/gm;
+                    let match;
+                    while ((match = priceRegex.exec(markdown)) !== null) {
+                        prices.push(parseFloat(match[1]));
+                    }
+                    source = 'firecrawl-fallback-success';
+                } else {
+                    console.error('Firecrawl response success is false or missing markdown:', firecrawlData);
+                    source = 'firecrawl-no-data';
+                }
+            } else {
+                console.error(`Firecrawl response error status: ${firecrawlRes.status}`);
+                source = 'firecrawl-request-failed';
+            }
+        } catch (err) {
+            console.error('Firecrawl fallback request threw error:', err);
+            source = 'firecrawl-exception';
+        }
+    }
+
+    const median = calculateMedianPrice(prices);
+
+    return Response.json({
+        value: median,
+        pricesCount: prices.length,
+        source
+    });
 }

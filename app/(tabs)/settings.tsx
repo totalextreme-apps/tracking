@@ -5,18 +5,19 @@ import { StatsSection } from '@/components/StatsSection';
 import { useAuth } from '@/context/AuthContext';
 import { useSettings } from '@/context/SettingsContext';
 import { useSound } from '@/context/SoundContext';
-import { useCollection, useRefreshLibrary } from '@/hooks/useCollection';
+import { useCollection, useRefreshLibrary, useUpdateCollectionItem } from '@/hooks/useCollection';
 import { useProfile } from '@/hooks/useProfile';
 import { exportCollection } from '@/lib/export-utils';
 import { printInventoryReceipt } from '@/lib/receipt-utils';
 import { supabase } from '@/lib/supabase';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { Ionicons } from '@expo/vector-icons';
 import { createAudioPlayer } from 'expo-audio';
 import * as Haptics from 'expo-haptics';
 import { Image as ExpoImage } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, Switch, Text, TextInput, View, Linking } from 'react-native';
 import { PreferenceQuizModal } from '@/components/PreferenceQuizModal';
 
@@ -33,6 +34,72 @@ export default function SettingsScreen() {
 
   const [isExporting, setIsExporting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [autoValuingActive, setAutoValuingActive] = useState(false);
+  const [autoValuingProgress, setAutoValuingProgress] = useState(0);
+  const [autoValuingTotal, setAutoValuingTotal] = useState(0);
+  const cancelAutoValuingRef = useRef(false);
+
+  const updateItemMutation = useUpdateCollectionItem(userId);
+
+  const handleAutoValuation = async () => {
+    if (!collection) return;
+    playSound('click');
+
+    const unvaluedItems = collection.filter(
+      (item: any) =>
+        item.status === 'owned' &&
+        (item.value_estimate === null || item.value_estimate === undefined)
+    );
+
+    if (unvaluedItems.length === 0) {
+      Alert.alert('Finished', 'All items in your collection are already valued!');
+      return;
+    }
+
+    setAutoValuingActive(true);
+    setAutoValuingProgress(0);
+    setAutoValuingTotal(unvaluedItems.length);
+    cancelAutoValuingRef.current = false;
+
+    for (let i = 0; i < unvaluedItems.length; i++) {
+      if (cancelAutoValuingRef.current) {
+        break;
+      }
+
+      const item = unvaluedItems[i];
+      const media = item.movies || item.shows;
+      if (media) {
+        const title = item.media_type === 'movie' ? media.title : media.name;
+        try {
+          const queryParam = `${title} ${item.format === 'BluRay' ? 'Blu-ray' : item.format}`;
+          const res = await fetch(`/api/market-value?s=${encodeURIComponent(queryParam)}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.value !== null && data.value !== undefined) {
+              await updateItemMutation.mutateAsync({
+                itemId: item.id,
+                updates: { value_estimate: data.value }
+              });
+            }
+          }
+        } catch (err) {
+          console.error(`Auto-valuing failed for ${title}:`, err);
+        }
+      }
+
+      setAutoValuingProgress(i + 1);
+      await new Promise(r => setTimeout(r, 1500));
+    }
+
+    setAutoValuingActive(false);
+    playSound('click');
+  };
+
+  const handleCancelAutoValuation = () => {
+    cancelAutoValuingRef.current = true;
+    setAutoValuingActive(false);
+    playSound('click');
+  };
   const [editUsername, setEditUsername] = useState('');
   const [editBio, setEditBio] = useState('');
   const [editLetterboxdUsername, setEditLetterboxdUsername] = useState('');
@@ -396,6 +463,38 @@ export default function SettingsScreen() {
                     </View>
                 ))}
               </View>
+
+              {/* Auto Valuation Trigger Button */}
+              {valuationStats.totalOwned > valuationStats.valuedCount && (
+                <View className="mt-4 border-t border-neutral-800 pt-3">
+                  {autoValuingActive ? (
+                    <View className="flex-row items-center justify-between bg-neutral-950 p-2.5 rounded-lg border border-neutral-800">
+                      <View className="flex-row items-center gap-2 flex-1 mr-2">
+                        <ActivityIndicator size="small" color="#10b981" />
+                        <Text className="text-neutral-400 font-mono text-[10px] uppercase font-bold">
+                          VALUING: {autoValuingProgress}/{autoValuingTotal} ITEMS...
+                        </Text>
+                      </View>
+                      <Pressable 
+                        onPress={handleCancelAutoValuation}
+                        className="bg-red-950/40 border border-red-900/50 px-2 py-1 rounded"
+                      >
+                        <Text className="text-red-400 font-mono text-[9px] font-bold uppercase">CANCEL</Text>
+                      </Pressable>
+                    </View>
+                  ) : (
+                    <Pressable
+                      onPress={handleAutoValuation}
+                      className="bg-amber-600/10 border border-amber-600/50 p-2.5 rounded-lg flex-row items-center justify-center gap-2 active:bg-amber-600/20"
+                    >
+                      <Ionicons name="sparkles-outline" size={12} color="#f59e0b" />
+                      <Text className="text-amber-500 font-mono text-[10px] font-bold uppercase tracking-wider">
+                        AUTO-VALUE {valuationStats.totalOwned - valuationStats.valuedCount} UNESTIMATED ITEMS
+                      </Text>
+                    </Pressable>
+                  )}
+                </View>
+              )}
             </View>
           )}
 
