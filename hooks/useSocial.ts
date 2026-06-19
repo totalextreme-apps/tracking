@@ -297,13 +297,32 @@ export function useMarketplaceFeed() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('collection_items')
-        .select(`*, profiles:user_id(username, avatar_url), movies(*), shows(*)`)
+        .select(`*, movies(*), shows(*)`)
         .or(`for_sale.eq.true,for_trade.eq.true`)
         .order('created_at', { ascending: false })
         .limit(20);
 
       if (error) throw error;
-      return data;
+      if (!data || data.length === 0) return [];
+
+      // Fetch profiles in memory to avoid missing foreign key relation errors
+      const userIds = [...new Set(data.map((item: any) => item.user_id).filter(Boolean))];
+      let profilesMap: Record<string, any> = {};
+      if (userIds.length > 0) {
+        const { data: profiles, error: profErr } = await supabase
+          .from('profiles')
+          .select('id, username, avatar_url')
+          .in('id', userIds);
+        if (profErr) throw profErr;
+        profiles?.forEach((p: any) => {
+          profilesMap[p.id] = p;
+        });
+      }
+
+      return data.map((item: any) => ({
+        ...item,
+        profiles: profilesMap[item.user_id] || null
+      }));
     },
   });
 }
@@ -577,9 +596,9 @@ export const useCommunityFeed = (userId?: string) => {
         .eq('follower_id', userId);
         
       const followingIds = follows?.map((f: any) => f.following_id) || [];
-      if (followingIds.length === 0) return [];
+      const interestingIds = [...followingIds, userId];
 
-      // Fetch bulletin posts from people you follow
+      // Fetch bulletin posts from interestingIds
       const { data: posts, error: postErr } = await supabase
         .from('bulletin_posts')
         .select(`
@@ -588,32 +607,92 @@ export const useCommunityFeed = (userId?: string) => {
           movies(*),
           shows(*)
         `)
-        .in('user_id', followingIds)
+        .in('user_id', interestingIds)
         .order('created_at', { ascending: false })
         .limit(25);
 
       if (postErr) throw postErr;
 
-      // Fetch collection additions from people you follow
+      // Fetch collection additions from interestingIds
       const { data: updates, error: updateErr } = await supabase
         .from('collection_items')
         .select(`
           *,
           movies (*),
-          shows (*),
-          profiles:user_id (username, avatar_url)
+          shows (*)
         `)
-        .in('user_id', followingIds)
+        .in('user_id', interestingIds)
         .eq('status', 'owned')
         .order('created_at', { ascending: false })
-        .limit(25) as any;
+        .limit(25);
 
       if (updateErr) throw updateErr;
 
-      // Interleave and sort by date
+      // Fetch comments from interestingIds
+      const { data: comments, error: commentErr } = await supabase
+        .from('item_comments')
+        .select(`
+          *,
+          profiles(*),
+          collection_items(
+            *,
+            movies(*),
+            shows(*)
+          )
+        `)
+        .in('user_id', interestingIds)
+        .order('created_at', { ascending: false })
+        .limit(25);
+
+      if (commentErr) throw commentErr;
+
+      // Fetch profiles in memory for owners of updates/collection items to avoid missing relation errors
+      const profileIdsToFetch = new Set<string>();
+      updates?.forEach((u: any) => { if (u.user_id) profileIdsToFetch.add(u.user_id); });
+      comments?.forEach((c: any) => {
+        if (c.collection_items?.user_id) profileIdsToFetch.add(c.collection_items.user_id);
+      });
+
+      let profilesMap: Record<string, any> = {};
+      if (profileIdsToFetch.size > 0) {
+        const { data: profiles, error: profErr } = await supabase
+          .from('profiles')
+          .select('id, username, avatar_url')
+          .in('id', Array.from(profileIdsToFetch));
+        if (profErr) throw profErr;
+        profiles?.forEach((p: any) => {
+          profilesMap[p.id] = p;
+        });
+      }
+
+      const processedUpdates = (updates || []).map((u: any) => ({
+        ...u,
+        profiles: profilesMap[u.user_id] || null,
+        activity_type: 'update'
+      }));
+
+      const processedComments = (comments || []).map((c: any) => {
+        const itemOwnerId = c.collection_items?.user_id;
+        const ownerProfile = itemOwnerId ? (profilesMap[itemOwnerId] || null) : null;
+        return {
+          ...c,
+          activity_type: 'comment',
+          collection_items: c.collection_items ? {
+            ...c.collection_items,
+            profiles: ownerProfile
+          } : null
+        };
+      });
+
+      const processedPosts = (posts || []).map((p: any) => ({
+        ...p,
+        activity_type: 'post'
+      }));
+
       const activity = [
-        ...(posts || []).map((p: any) => ({ ...p, activity_type: 'post' })),
-        ...(updates || []).map((u: any) => ({ ...u, activity_type: 'update' }))
+        ...processedPosts,
+        ...processedUpdates,
+        ...processedComments
       ];
       
       return activity.sort((a, b) => 

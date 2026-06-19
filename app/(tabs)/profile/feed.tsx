@@ -194,6 +194,7 @@ export default function SocialFeedScreen() {
             feed?.map((item: any, idx: number) => {
               const profile = item.profiles || item.profiles_user_id; // Handle the joined alias
               const isPost = item.activity_type === 'post';
+              const isComment = item.activity_type === 'comment';
               
               return (
                 <View key={item.id + idx} className="mb-8 border-b border-neutral-900 pb-6">
@@ -218,7 +219,7 @@ export default function SocialFeedScreen() {
                          </Text>
                       </View>
                       <Text className="text-neutral-500 font-mono text-[10px] uppercase">
-                        {isPost ? 'Pinned a new note' : `Added to ${item.format} collection`}
+                        {isPost ? 'Pinned a new note' : isComment ? `Commented on @${item.collection_items?.profiles?.username || 'member'}'s title` : `Added to ${item.format} collection`}
                       </Text>
                     </View>
                   </View>
@@ -259,6 +260,40 @@ export default function SocialFeedScreen() {
                           <View className="flex-1">
                              <Text className="text-white font-mono text-xs" numberOfLines={1}>{item.movies?.title || item.shows?.name}</Text>
                              <Text className="text-neutral-600 font-mono text-[9px] uppercase">{item.movies ? 'Movie' : 'Show'}</Text>
+                          </View>
+                          <Ionicons name="chevron-forward" size={14} color="#525252" />
+                        </Pressable>
+                      )}
+                    </View>
+                  ) : isComment ? (
+                    <View className="bg-neutral-900/50 p-4 rounded-lg border border-neutral-800">
+                      <Text className="text-neutral-300 font-mono text-sm leading-5 italic">"{item.content}"</Text>
+                      
+                      {item.collection_items && (
+                        <Pressable 
+                          onPress={() => {
+                            const mId = item.collection_items.movies?.id || item.collection_items.shows?.id;
+                            const type = item.collection_items.movies ? 'movie' : 'show';
+                            router.push(`/(tabs)/${type}/${mId}?ownerId=${item.collection_items.user_id}`);
+                          }}
+                          className="flex-row items-center mt-4 bg-black/40 p-2 rounded border border-neutral-800"
+                        >
+                          <Image 
+                            source={{ uri: getPosterUrl(item.collection_items.movies?.poster_path || item.collection_items.shows?.poster_path) || '' }} 
+                            className="w-8 h-12 rounded mr-3 bg-neutral-900"
+                          />
+                          <View className="flex-1">
+                             <Text className="text-white font-mono text-xs" numberOfLines={1}>
+                               {item.collection_items.movies?.title || item.collection_items.shows?.name}
+                             </Text>
+                             <View className="flex-row items-center mt-0.5">
+                               <View className="bg-amber-500 px-1 rounded mr-2">
+                                 <Text className="text-black font-bold font-mono text-[7px]">{item.collection_items.format}</Text>
+                               </View>
+                               <Text className="text-neutral-600 font-mono text-[8px] uppercase">
+                                 @{item.collection_items.profiles?.username || 'member'}'s shelf
+                               </Text>
+                             </View>
                           </View>
                           <Ionicons name="chevron-forward" size={14} color="#525252" />
                         </Pressable>

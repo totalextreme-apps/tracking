@@ -255,7 +255,7 @@ export default function CommunityScreen() {
   const [boardSort, setBoardSort] = useState<'recent' | 'rating'>('recent');
 
   // Pulse Filter
-  const [pulseFilter, setPulseFilter] = useState<'all' | 'collection' | 'notes'>('all');
+  const [pulseFilter, setPulseFilter] = useState<'all' | 'collection' | 'notes' | 'comments'>('all');
 
   // Data
   const { data: following } = useFollowing(userId);
@@ -282,8 +282,9 @@ export default function CommunityScreen() {
     
     let sorted = [...communityFeed]
       .filter((item: any) => {
-          if (pulseFilter === 'collection' && item.activity_type === 'post') return false;
+          if (pulseFilter === 'collection' && item.activity_type !== 'update') return false;
           if (pulseFilter === 'notes' && item.activity_type !== 'post') return false;
+          if (pulseFilter === 'comments' && item.activity_type !== 'comment') return false;
           return true;
       })
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
@@ -291,7 +292,7 @@ export default function CommunityScreen() {
     let grouped: any[] = [];
     
     for (let item of sorted) {
-      if (item.activity_type === 'post') {
+      if (item.activity_type === 'post' || item.activity_type === 'comment') {
         grouped.push(item);
       } else {
         const itemDate = new Date(item.created_at).toDateString();
@@ -575,7 +576,8 @@ export default function CommunityScreen() {
                 {[
                   { id: 'all', label: 'ALL' },
                   { id: 'collection', label: 'ADDS' },
-                  { id: 'notes', label: 'NOTES' }
+                  { id: 'notes', label: 'NOTES' },
+                  { id: 'comments', label: 'COMMENTS' }
                 ].map(p => (
                   <Pressable key={p.id} onPress={() => setPulseFilter(p.id as any)} style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 2, backgroundColor: pulseFilter === p.id ? '#1c1c1c' : 'transparent' }}>
                     <Text style={{ color: pulseFilter === p.id ? '#f59e0b' : '#333', fontFamily: 'SpaceMono', fontSize: 7, fontWeight: 'bold' }}>{p.label}</Text>
@@ -587,7 +589,7 @@ export default function CommunityScreen() {
                <View style={{ padding: 24, alignItems: 'center', backgroundColor: '#111', borderRadius: 10, borderWidth: 1, borderColor: '#1f1f1f', marginBottom: 24 }}>
                   <Ionicons name="pulse" size={32} color="#f59e0b" style={{ marginBottom: 16 }} />
                   <Text style={{ color: '#fff', fontFamily: 'SpaceMono', fontSize: 13, fontWeight: 'bold', textAlign: 'center', marginBottom: 8 }}>The Pulse is Quiet</Text>
-                  <Text style={{ color: '#525252', fontFamily: 'SpaceMono', fontSize: 11, textAlign: 'center', lineHeight: 18 }}>When your network adds titles to their shelf or pins notes to the board, they will appear here.</Text>
+                  <Text style={{ color: '#525252', fontFamily: 'SpaceMono', fontSize: 11, textAlign: 'center', lineHeight: 18 }}>When your network adds titles, pins notes, or comments on movies, they will appear here.</Text>
                </View>
             ) : (
               processedCommunityFeed.map((item: any, idx: number) => {
@@ -624,6 +626,58 @@ export default function CommunityScreen() {
                    );
                 }
                 
+                if (item.activity_type === 'comment') {
+                   const profile = item.profiles;
+                   const collectionItem = item.collection_items;
+                   const mediaTitle = collectionItem?.movies?.title || collectionItem?.shows?.name || 'a title';
+                   const mediaType = collectionItem?.movies ? 'movie' : 'show';
+                   const mediaId = collectionItem?.movies?.id || collectionItem?.shows?.id;
+                   const ownerUsername = collectionItem?.profiles?.username || 'member';
+                   const ownerId = collectionItem?.user_id;
+
+                   return (
+                     <View key={item.id + '-' + idx} style={{ marginBottom: 20 }}>
+                       <Pressable onPress={() => router.push(`/profile/${item.user_id}?from=community`)} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                         <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#1a1a1a', overflow: 'hidden', marginRight: 8, borderWidth: 1, borderColor: '#222' }}>
+                           {profile?.avatar_url ? <Image source={{ uri: profile.avatar_url }} style={{ width: '100%', height: '100%' }} /> : <Ionicons name="person" size={12} color="#444" />}
+                         </View>
+                         <View style={{ flex: 1 }}>
+                           <Text style={{ color: '#ddd', fontFamily: 'SpaceMono', fontSize: 11, fontWeight: 'bold' }}>@{profile?.username || 'member'}</Text>
+                           <Text style={{ color: '#333', fontFamily: 'SpaceMono', fontSize: 8, textTransform: 'uppercase' }}>
+                             commented on @{ownerUsername}'s title · {new Date(item.created_at).toLocaleDateString()}
+                           </Text>
+                         </View>
+                       </Pressable>
+                       
+                       <View style={{ backgroundColor: '#111', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#1a1a1a', borderLeftWidth: 3, borderLeftColor: '#f59e0b' }}>
+                         <Text style={{ color: '#ccc', fontFamily: 'SpaceMono', fontSize: 12, lineHeight: 18, fontStyle: 'italic', marginBottom: 8 }}>"{item.content}"</Text>
+                         
+                         {collectionItem && (
+                           <Pressable 
+                             onPress={() => { if (mediaId) router.push(`/(tabs)/${mediaType}/${mediaId}?ownerId=${ownerId}`); }}
+                             style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#0a0a0a', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#222' }}
+                           >
+                             <Image 
+                               source={{ uri: getPosterUrl(collectionItem.movies?.poster_path || collectionItem.shows?.poster_path) || '' }} 
+                               style={{ width: 24, height: 36, borderRadius: 4, marginRight: 8, backgroundColor: '#1a1a1a' }} 
+                             />
+                             <View style={{ flex: 1 }}>
+                               <Text style={{ color: '#fff', fontFamily: 'SpaceMono', fontSize: 10, fontWeight: 'bold' }} numberOfLines={1}>{mediaTitle}</Text>
+                               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+                                 <View style={{ backgroundColor: '#f59e0b22', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 2, borderWidth: 1, borderColor: '#f59e0b44', marginRight: 4 }}>
+                                   <Text style={{ color: '#f59e0b', fontSize: 6, fontFamily: 'SpaceMono', fontWeight: 'bold' }}>{collectionItem.format}</Text>
+                                 </View>
+                                 <Text style={{ color: '#444', fontFamily: 'SpaceMono', fontSize: 8 }}>@{ownerUsername}'S SHELF</Text>
+                               </View>
+                             </View>
+                             <Ionicons name="chevron-forward" size={12} color="#444" />
+                           </Pressable>
+                         )}
+                       </View>
+                     </View>
+                   );
+                }
+
                 const profile = item.profiles;
                 return (
                   <View key={item.id + '-' + idx} style={{ marginBottom: 20 }}>
