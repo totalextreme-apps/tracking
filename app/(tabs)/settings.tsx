@@ -16,7 +16,7 @@ import * as Haptics from 'expo-haptics';
 import { Image as ExpoImage } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, Switch, Text, TextInput, View, Linking } from 'react-native';
 import { PreferenceQuizModal } from '@/components/PreferenceQuizModal';
 
@@ -52,6 +52,56 @@ export default function SettingsScreen() {
   const totalGrails = collection?.filter((i: any) => i.is_grail).length || 0;
   // Unique formats count?
   const uniqueFormats = new Set(collection?.map((i: any) => i.format)).size || 0;
+
+  // Valuation Stats Logic
+  const FORMAT_COLOR_DOTS: Record<string, string> = {
+    '4K': 'bg-yellow-500',
+    'BluRay': 'bg-blue-500',
+    'Blu-ray': 'bg-blue-500',
+    'DVD': 'bg-purple-500',
+    'VHS': 'bg-red-500',
+    'Digital': 'bg-green-500',
+  };
+
+  const valuationStats = useMemo(() => {
+    let totalVal = 0;
+    let valuedCount = 0;
+    const formatBreakdown: Record<string, number> = {
+      '4K': 0,
+      'BluRay': 0,
+      'DVD': 0,
+      'VHS': 0,
+      'Digital': 0,
+    };
+
+    if (collection) {
+      collection.forEach((item: any) => {
+        if (item.status === 'owned' && item.value_estimate !== null && item.value_estimate !== undefined) {
+          const val = Number(item.value_estimate);
+          totalVal += val;
+          valuedCount += 1;
+
+          let fmt = item.format || 'DVD';
+          if (fmt === 'Blu-ray') fmt = 'BluRay';
+          
+          if (formatBreakdown[fmt] !== undefined) {
+            formatBreakdown[fmt] += val;
+          } else {
+            formatBreakdown[fmt] = val;
+          }
+        }
+      });
+    }
+
+    const totalOwned = collection?.filter((item: any) => item.status === 'owned').length || 0;
+
+    return {
+      total: totalVal,
+      valuedCount,
+      totalOwned,
+      breakdown: formatBreakdown
+    };
+  }, [collection]);
 
   const handleExport = async () => {
     let itemsToExport = collection || [];
@@ -308,6 +358,43 @@ export default function SettingsScreen() {
               <View className="flex-1 bg-neutral-900 p-3 rounded-lg border border-neutral-800 items-center">
                 <Text className="text-2xl font-bold text-white font-mono">{uniqueFormats}</Text>
                 <Text className="text-[10px] text-neutral-500 font-bold tracking-widest uppercase">Formats</Text>
+              </View>
+            </View>
+          )}
+
+          {/* Valuation Stats Card */}
+          {!isEditing && valuationStats.totalOwned > 0 && (
+            <View className="mt-6 bg-neutral-900 p-4 rounded-xl border border-neutral-800">
+              <View className="flex-row items-center justify-between mb-3">
+                <Text className="text-amber-500/90 font-mono text-xs font-bold tracking-widest uppercase">
+                  VALUATION STATS
+                </Text>
+                <Text className="text-neutral-500 font-mono text-[10px] font-bold">
+                  COVERAGE: {valuationStats.valuedCount}/{valuationStats.totalOwned} ITEMS
+                </Text>
+              </View>
+              
+              <View className="flex-row items-baseline mb-4">
+                <Text className="text-white font-mono text-3xl font-bold">
+                  ${valuationStats.total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </Text>
+                <Text className="text-neutral-500 font-mono text-xs ml-2 uppercase font-bold">Est. Portfolio Value</Text>
+              </View>
+
+              <View className="border-t border-dashed border-neutral-800 pt-3 gap-2">
+                {Object.entries(valuationStats.breakdown)
+                  .filter(([_, val]) => val > 0)
+                  .map(([fmt, val]) => (
+                    <View key={fmt} className="flex-row items-center justify-between">
+                      <View className="flex-row items-center gap-2">
+                        <View className={`w-2.5 h-2.5 rounded-full ${FORMAT_COLOR_DOTS[fmt] || 'bg-neutral-600'}`} />
+                        <Text className="text-neutral-400 font-mono text-xs">{fmt === 'BluRay' ? 'Blu-ray' : fmt}</Text>
+                      </View>
+                      <Text className="text-white font-mono text-xs font-bold">
+                        ${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </Text>
+                    </View>
+                ))}
               </View>
             </View>
           )}

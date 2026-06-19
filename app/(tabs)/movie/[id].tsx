@@ -23,6 +23,7 @@ import { ReviewSection } from '@/components/ReviewSection';
 import { CommentSection } from '@/components/CommentSection';
 import { deleteFromCloudinary, uploadToCloudinary } from '@/lib/cloudinary';
 import { getCustomLists } from '@/lib/collection-utils';
+import { fetchEbaySoldValue, getEbaySearchUrl } from '@/lib/pricing';
 
 import { getBackdropUrl, getPosterUrl } from '@/lib/dummy-data';
 import { getMovieById } from '@/lib/tmdb';
@@ -55,6 +56,7 @@ export default function MovieDetailScreen() {
     const [localNotes, setLocalNotes] = useState<Record<string, string>>({});
     const [localEditions, setLocalEditions] = useState<Record<string, string>>({});
     const [localBootlegs, setLocalBootlegs] = useState<Record<string, boolean>>({});
+    const [localValues, setLocalValues] = useState<Record<string, string>>({});
     const [localForSale, setLocalForSale] = useState<Record<string, boolean>>({});
     const [localForTrade, setLocalForTrade] = useState<Record<string, boolean>>({});
     const [persistedMovie, setPersistedMovie] = useState<any>(null);
@@ -171,6 +173,34 @@ export default function MovieDetailScreen() {
 
     // Final movie object to use for display
     const movie = internalMovie || tmdbMovie || persistedMovie;
+
+    const checkedItemsRef = useRef<Record<string, boolean>>({});
+
+    useEffect(() => {
+        if (isReadOnly || !movie || !movie.title || movieItems.length === 0) return;
+
+        movieItems.forEach(async (item: any) => {
+            if (item.status !== 'owned') return;
+            if (item.value_estimate !== null && item.value_estimate !== undefined) return;
+            if (checkedItemsRef.current[item.id]) return;
+
+            checkedItemsRef.current[item.id] = true;
+            console.log(`Lazily checking eBay sold value for: ${movie.title} (${item.format})`);
+
+            try {
+                const res = await fetchEbaySoldValue(movie.title, item.format);
+                if (res.value !== null) {
+                    await updateMutation.mutateAsync({
+                        itemId: item.id,
+                        updates: { value_estimate: res.value }
+                    });
+                    refetch();
+                }
+            } catch (err) {
+                console.error(`Failed to auto-lookup price for ${movie.title} (${item.format}):`, err);
+            }
+        });
+    }, [movieItems, movie?.title, isReadOnly]);
 
     // Load custom art from ANY collection item for this movie
     const customArtUrl = movieItems.find((i: any) => i.custom_poster_url)?.custom_poster_url;
@@ -899,6 +929,13 @@ export default function MovieDetailScreen() {
                                             <View className={`px-2 py-1 rounded shrink-0 ${FORMAT_COLORS[item.format] || 'bg-neutral-800'}`}>
                                                 <Text className="text-white font-mono text-xs font-bold">{item.format === 'BluRay' ? 'Blu-ray' : item.format}</Text>
                                             </View>
+                                            {item.value_estimate !== null && item.value_estimate !== undefined && (
+                                                <View className="bg-neutral-800 border border-neutral-700/50 px-2 py-0.5 rounded ml-2">
+                                                    <Text className="text-amber-400 font-mono text-[10px] font-bold">
+                                                        EST: ${Number(item.value_estimate).toFixed(2)}
+                                                    </Text>
+                                                </View>
+                                            )}
                                             <Pressable
                                                 onPress={async () => {
                                                     const isBoot = localBootlegs[item.id] !== undefined ? localBootlegs[item.id] : (item.is_bootleg || false);
@@ -939,6 +976,34 @@ export default function MovieDetailScreen() {
                                             value={localNotes[item.id] !== undefined ? localNotes[item.id] : (item.notes || '')}
                                             onChangeText={(text) => setLocalNotes(prev => ({ ...prev, [item.id]: text }))}
                                         />
+
+                                        <View className="mt-2 mb-1">
+                                            <View className="flex-row items-center justify-between mb-1">
+                                                <Text className="text-neutral-500 font-mono text-[10px] font-bold uppercase">Estimated Market Value ($)</Text>
+                                                {Platform.OS === 'web' && (
+                                                    <Pressable
+                                                        onPress={() => {
+                                                            playSound('click');
+                                                            Linking.openURL(getEbaySearchUrl(movie?.title || '', item.format));
+                                                        }}
+                                                        className="bg-neutral-800 px-2 py-1 rounded border border-neutral-700 flex-row items-center gap-1 active:opacity-75"
+                                                    >
+                                                        <Ionicons name="search-outline" size={10} color="#f59e0b" style={{ marginTop: -1 }} />
+                                                        <Text className="text-amber-500 font-mono text-[9px] font-bold uppercase">Search eBay</Text>
+                                                    </Pressable>
+                                                )}
+                                            </View>
+                                            <TextInput
+                                                nativeID={`value-input-${item.id}`}
+                                                {...({ name: `value-${item.id}` } as any)}
+                                                className="bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm"
+                                                placeholder="Enter custom value..."
+                                                placeholderTextColor="#525252"
+                                                keyboardType="decimal-pad"
+                                                value={localValues[item.id] !== undefined ? localValues[item.id] : (item.value_estimate?.toString() || '')}
+                                                onChangeText={(text) => setLocalValues(prev => ({ ...prev, [item.id]: text }))}
+                                            />
+                                        </View>
                                         
                                         <View className="flex-row gap-2 my-2">
                                             <Pressable
@@ -993,12 +1058,16 @@ export default function MovieDetailScreen() {
                                                 const noteToSave = localNotes[item.id] !== undefined ? localNotes[item.id] : (item.notes || '');
                                                 const editionToSave = localEditions[item.id] !== undefined ? localEditions[item.id] : (item.edition || '');
                                                 const bootToSave = localBootlegs[item.id] !== undefined ? localBootlegs[item.id] : (item.is_bootleg || false);
+                                                const valRaw = localValues[item.id] !== undefined ? localValues[item.id] : (item.value_estimate?.toString() || '');
+                                                const valToSave = valRaw.trim() === '' ? null : parseFloat(valRaw);
+
                                                 await updateMutation.mutateAsync({
                                                     itemId: item.id,
                                                     updates: {
                                                         notes: noteToSave,
                                                         edition: editionToSave || null,
-                                                        is_bootleg: bootToSave
+                                                        is_bootleg: bootToSave,
+                                                        value_estimate: isNaN(valToSave as any) ? null : valToSave
                                                     }
                                                 });
                                                 playSound('click');
@@ -1118,6 +1187,13 @@ export default function MovieDetailScreen() {
                                                 {item.status === 'wishlist' && (
                                                     <View className="border border-dashed border-neutral-500 px-1.5 py-0.5 rounded-sm">
                                                         <Text className="text-neutral-400 font-mono text-[9px] font-bold uppercase tracking-wider">WISHLIST</Text>
+                                                    </View>
+                                                )}
+                                                {item.value_estimate !== null && item.value_estimate !== undefined && (
+                                                    <View className="bg-neutral-800 border border-neutral-700/50 px-2 py-0.5 rounded">
+                                                        <Text className="text-amber-400 font-mono text-[10px] font-bold">
+                                                            EST: ${Number(item.value_estimate).toFixed(2)}
+                                                        </Text>
                                                     </View>
                                                 )}
                                                 {item.edition && (

@@ -55,6 +55,7 @@ export interface CollectionItem {
   for_sale: boolean;
   for_trade: boolean;
   price: number | null;
+  value_estimate: number | null;
   custom_poster_url: string | null;
   custom_backdrop_url: string | null;
   custom_lists: string[] | null;
