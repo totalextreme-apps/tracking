@@ -43,7 +43,7 @@ export default function SettingsScreen() {
 
   const updateItemMutation = useUpdateCollectionItem(userId);
 
-  const handleAutoValuation = async () => {
+  const handleAutoValuation = async (limit: number | null = null) => {
     if (!collection) return;
     playSound('click');
 
@@ -58,19 +58,22 @@ export default function SettingsScreen() {
       return;
     }
 
+    const itemsToProcess = limit ? unvaluedItems.slice(0, limit) : unvaluedItems;
+
     setAutoValuingActive(true);
     setAutoValuingProgress(0);
-    setAutoValuingTotal(unvaluedItems.length);
+    setAutoValuingTotal(itemsToProcess.length);
     cancelAutoValuingRef.current = false;
 
     const CONCURRENCY = 4;
-    for (let i = 0; i < unvaluedItems.length; i += CONCURRENCY) {
-      if (cancelAutoValuingRef.current) {
-        break;
-      }
+    let nextIndex = 0;
 
-      const batch = unvaluedItems.slice(i, i + CONCURRENCY);
-      await Promise.all(batch.map(async (item: any) => {
+    const worker = async () => {
+      while (nextIndex < itemsToProcess.length && !cancelAutoValuingRef.current) {
+        const currentIndex = nextIndex++;
+        if (currentIndex >= itemsToProcess.length) break;
+
+        const item = itemsToProcess[currentIndex];
         const media = item.movies || item.shows;
         if (media) {
           const title = item.media_type === 'movie' ? media.title : media.name;
@@ -80,7 +83,7 @@ export default function SettingsScreen() {
             const queryParam = `${title}${editionPart} ${formatSuffix}`;
             const res = await fetch(`/api/market-value?s=${encodeURIComponent(queryParam)}`);
             if (res.ok) {
-              const data = await res.ok ? await res.json() : null;
+              const data = await res.json();
               if (data && data.value !== null && data.value !== undefined) {
                 // Update Supabase directly to avoid mass query cache invalidation on every item
                 await supabase
@@ -94,11 +97,19 @@ export default function SettingsScreen() {
             console.error(`Auto-valuing failed for ${title}:`, err);
           }
         }
-      }));
 
-      setAutoValuingProgress(Math.min(unvaluedItems.length, i + CONCURRENCY));
-      await new Promise(r => setTimeout(r, 250));
+        setAutoValuingProgress(prev => Math.min(itemsToProcess.length, prev + 1));
+        await new Promise(r => setTimeout(r, 200));
+      }
+    };
+
+    const numWorkers = Math.min(CONCURRENCY, itemsToProcess.length);
+    const workerPromises = [];
+    for (let w = 0; w < numWorkers; w++) {
+      workerPromises.push(worker());
     }
+
+    await Promise.all(workerPromises);
 
     // Invalidate queries ONCE at the end of the entire loop
     await queryClient.invalidateQueries({ queryKey: ['collection', userId] });
@@ -501,15 +512,34 @@ export default function SettingsScreen() {
                       </Pressable>
                     </View>
                   ) : (
-                    <Pressable
-                      onPress={handleAutoValuation}
-                      className="bg-amber-600/10 border border-amber-600/50 p-2.5 rounded-lg flex-row items-center justify-center gap-2 active:bg-amber-600/20"
-                    >
-                      <Ionicons name="sparkles-outline" size={12} color="#f59e0b" />
-                      <Text className="text-amber-500 font-mono text-[10px] font-bold uppercase tracking-wider">
+                    <View className="p-1">
+                      <Text className="text-amber-500 font-mono text-[10px] font-bold uppercase tracking-wider text-center mb-3">
                         AUTO-VALUE {valuationStats.totalOwned - valuationStats.valuedCount} UNESTIMATED ITEMS
                       </Text>
-                    </Pressable>
+                      <View className="flex-row flex-wrap gap-2 justify-center">
+                        {[10, 50, 100].map(amt => (
+                          <Pressable
+                            key={amt}
+                            onPress={() => handleAutoValuation(amt)}
+                            className="bg-amber-600/10 border border-amber-600/40 px-3 py-2 rounded-lg flex-row items-center gap-1.5 active:bg-amber-600/20"
+                          >
+                            <Ionicons name="sparkles-outline" size={10} color="#f59e0b" />
+                            <Text className="text-amber-500 font-mono text-[9px] font-bold">
+                              VALUE {amt}
+                            </Text>
+                          </Pressable>
+                        ))}
+                        <Pressable
+                          onPress={() => handleAutoValuation(null)}
+                          className="bg-amber-600/20 border border-amber-600 px-3 py-2 rounded-lg flex-row items-center gap-1.5 active:bg-amber-600/30"
+                        >
+                          <Ionicons name="sparkles" size={10} color="#f59e0b" />
+                          <Text className="text-amber-500 font-mono text-[9px] font-bold uppercase">
+                            VALUE ALL
+                          </Text>
+                        </Pressable>
+                      </View>
+                    </View>
                   )}
                 </View>
               )}
