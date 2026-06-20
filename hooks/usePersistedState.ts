@@ -12,6 +12,8 @@ export function usePersistedState<T>(
 ): [T, (value: T) => void, boolean] {
     const [value, setValueRaw] = useState<T>(defaultValue);
     const [isHydrated, setIsHydrated] = useState(false);
+    const hasStoredValue = useRef(false);
+    const writeTimeoutRef = useRef<any>(null);
 
     // Read persisted value on mount
     useEffect(() => {
@@ -20,6 +22,7 @@ export function usePersistedState<T>(
                 if (stored !== null) {
                     try {
                         setValueRaw(JSON.parse(stored) as T);
+                        hasStoredValue.current = true;
                     } catch {
                         // Ignore parse errors — fall back to default
                     }
@@ -31,9 +34,32 @@ export function usePersistedState<T>(
             });
     }, [storageKey]);
 
+    // Keep value in sync with defaultValue if no stored value exists yet
+    useEffect(() => {
+        if (!isHydrated || !hasStoredValue.current) {
+            setValueRaw(defaultValue);
+        }
+    }, [defaultValue, isHydrated]);
+
+    // Clean up timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (writeTimeoutRef.current) {
+                clearTimeout(writeTimeoutRef.current);
+            }
+        };
+    }, []);
+
     const setValue = (newValue: T) => {
         setValueRaw(newValue);
-        AsyncStorage.setItem(storageKey, JSON.stringify(newValue)).catch(() => { });
+        hasStoredValue.current = true;
+        
+        if (writeTimeoutRef.current) {
+            clearTimeout(writeTimeoutRef.current);
+        }
+        writeTimeoutRef.current = setTimeout(() => {
+            AsyncStorage.setItem(storageKey, JSON.stringify(newValue)).catch(() => { });
+        }, 150);
     };
 
     return [value, setValue, isHydrated];
