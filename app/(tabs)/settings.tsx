@@ -18,8 +18,9 @@ import * as Haptics from 'expo-haptics';
 import { Image as ExpoImage } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, Switch, Text, TextInput, View, Linking } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PreferenceQuizModal } from '@/components/PreferenceQuizModal';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -40,7 +41,22 @@ export default function SettingsScreen() {
   const [autoValuingActive, setAutoValuingActive] = useState(false);
   const [autoValuingProgress, setAutoValuingProgress] = useState(0);
   const [autoValuingTotal, setAutoValuingTotal] = useState(0);
+  const [autoValuingSuccess, setAutoValuingSuccess] = useState(0);
+  const [autoValuingFail, setAutoValuingFail] = useState(0);
+  const [firecrawlApiKey, setFirecrawlApiKey] = useState('');
+  const [showScraperSettings, setShowScraperSettings] = useState(false);
   const cancelAutoValuingRef = useRef(false);
+
+  useEffect(() => {
+    AsyncStorage.getItem('firecrawl_api_key').then(val => {
+      if (val) setFirecrawlApiKey(val);
+    });
+  }, []);
+
+  const saveFirecrawlApiKey = async (key: string) => {
+    setFirecrawlApiKey(key);
+    await AsyncStorage.setItem('firecrawl_api_key', key);
+  };
 
   const updateItemMutation = useUpdateCollectionItem(userId);
 
@@ -64,10 +80,14 @@ export default function SettingsScreen() {
     setAutoValuingActive(true);
     setAutoValuingProgress(0);
     setAutoValuingTotal(itemsToProcess.length);
+    setAutoValuingSuccess(0);
+    setAutoValuingFail(0);
     cancelAutoValuingRef.current = false;
 
     const CONCURRENCY = 4;
     let nextIndex = 0;
+    let successCount = 0;
+    let failCount = 0;
 
     const worker = async () => {
       while (nextIndex < itemsToProcess.length && !cancelAutoValuingRef.current) {
@@ -79,7 +99,7 @@ export default function SettingsScreen() {
         if (media) {
           const title = item.media_type === 'movie' ? media.title : media.name;
           try {
-            const data = await fetchEbaySoldValue(title, item.format, item.edition);
+            const data = await fetchEbaySoldValue(title, item.format, item.edition, undefined, firecrawlApiKey);
             if (data && data.value !== null && data.value !== undefined) {
               // Update Supabase directly to avoid mass query cache invalidation on every item
               await supabase
@@ -87,10 +107,20 @@ export default function SettingsScreen() {
                 .update({ value_estimate: data.value })
                 .eq('id', item.id)
                 .eq('user_id', userId);
+              successCount++;
+              setAutoValuingSuccess(successCount);
+            } else {
+              failCount++;
+              setAutoValuingFail(failCount);
             }
           } catch (err) {
             console.error(`Auto-valuing failed for ${title}:`, err);
+            failCount++;
+            setAutoValuingFail(failCount);
           }
+        } else {
+          failCount++;
+          setAutoValuingFail(failCount);
         }
 
         setAutoValuingProgress(prev => Math.min(itemsToProcess.length, prev + 1));
@@ -110,6 +140,16 @@ export default function SettingsScreen() {
     await queryClient.invalidateQueries({ queryKey: ['collection', userId] });
     setAutoValuingActive(false);
     playSound('click');
+
+    // Show summary Alert
+    Alert.alert(
+      'Finished',
+      `Auto-valuation complete!\n\n• Successfully Valued: ${successCount} items\n• Failed/Skipped: ${failCount} items${
+        failCount > 0 
+          ? '\n\nNote: eBay lookups can fail if there are no matching sold listings or if API rate limits are hit. You can add a Firecrawl API key in settings below for higher scraping success.'
+          : ''
+      }`
+    );
   };
 
   const handleCancelAutoValuation = () => {
@@ -487,7 +527,6 @@ export default function SettingsScreen() {
                     </View>
                 ))}
               </View>
-
               {/* Auto Valuation Trigger Button */}
               {valuationStats.totalOwned > valuationStats.valuedCount && (
                 <View className="mt-4 border-t border-neutral-800 pt-3">
@@ -496,7 +535,7 @@ export default function SettingsScreen() {
                       <View className="flex-row items-center gap-2 flex-1 mr-2">
                         <ActivityIndicator size="small" color="#10b981" />
                         <Text className="text-neutral-400 font-mono text-[10px] uppercase font-bold">
-                          VALUING: {autoValuingProgress}/{autoValuingTotal} ITEMS...
+                          VALUING: {autoValuingProgress}/{autoValuingTotal} ({autoValuingSuccess} OK, {autoValuingFail} ERR)...
                         </Text>
                       </View>
                       <Pressable 
@@ -538,8 +577,50 @@ export default function SettingsScreen() {
                   )}
                 </View>
               )}
+
+              {/* COLLAPSIBLE SCRAPER SETTINGS */}
+              <View className="mt-4 border-t border-neutral-800 pt-3">
+                <Pressable
+                  onPress={() => {
+                    playSound('click');
+                    setShowScraperSettings(prev => !prev);
+                  }}
+                  className="flex-row items-center justify-between py-1"
+                >
+                  <Text className="text-neutral-500 font-mono text-[10px] font-bold uppercase tracking-wider">
+                    Developer Scraper Settings {showScraperSettings ? '▲' : '▼'}
+                  </Text>
+                </Pressable>
+                
+                {showScraperSettings && (
+                  <View className="mt-3 gap-2 bg-neutral-950 p-3.5 rounded-lg border border-neutral-800/80">
+                    <Text className="text-neutral-400 font-mono text-[10px] leading-4">
+                      By default, local runs scrape eBay directly. On production servers or to bypass rate limits, you can enter your own free Firecrawl API key below:
+                    </Text>
+                    <TextInput
+                      nativeID="firecrawl-key-input"
+                      value={firecrawlApiKey}
+                      onChangeText={saveFirecrawlApiKey}
+                      className="bg-neutral-900 text-white p-2.5 rounded text-xs font-mono border border-neutral-800 mt-1"
+                      placeholder="Firecrawl API Key (fc-...)"
+                      placeholderTextColor="#525252"
+                      secureTextEntry
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                    <Pressable
+                      onPress={() => Linking.openURL('https://firecrawl.dev')}
+                      className="self-start mt-1"
+                    >
+                      <Text className="text-amber-500 font-mono text-[9px] font-bold underline uppercase tracking-wider">
+                        Get free API key at firecrawl.dev
+                      </Text>
+                    </Pressable>
+                  </View>
+                )}
             </View>
-          )}
+          </View>
+        )}
 
           {/* Letterboxd Import Highlight Banner */}
           {!isEditing && (

@@ -65,7 +65,7 @@ export function calculateMedianPrice(prices: number[]): number | null {
  * - On Native: Direct client-side fetch to bypass CORS and Akamai blocks (using residential IPs).
  * - On Web: Calls local API route proxy.
  */
-export async function fetchEbaySoldValue(title: string, format: string, edition?: string | null, signal?: AbortSignal): Promise<MarketValueResult> {
+export async function fetchEbaySoldValue(title: string, format: string, edition?: string | null, signal?: AbortSignal, firecrawlApiKey?: string): Promise<MarketValueResult> {
     const url = getEbaySearchUrl(title, format, edition);
     const fetchOptions = signal ? { signal } : {};
 
@@ -74,7 +74,16 @@ export async function fetchEbaySoldValue(title: string, format: string, edition?
             const formatSuffix = format === 'BluRay' ? 'Blu-ray' : format;
             const editionPart = edition ? ` ${edition}` : '';
             const queryParam = `${title}${editionPart} ${formatSuffix}`;
-            const apiRes = await fetch(`/api/market-value?s=${encodeURIComponent(queryParam)}`, fetchOptions);
+            
+            const headers: Record<string, string> = {};
+            if (firecrawlApiKey) {
+                headers['x-firecrawl-api-key'] = firecrawlApiKey;
+            }
+
+            const apiRes = await fetch(`/api/market-value?s=${encodeURIComponent(queryParam)}`, {
+                ...fetchOptions,
+                headers
+            });
             if (apiRes.ok) {
                 const data = await apiRes.json();
                 return {
