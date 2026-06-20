@@ -1,4 +1,5 @@
 import { ConfirmModal } from '@/components/ConfirmModal';
+import { fetchEbaySoldValue } from '@/lib/pricing';
 import { GlobalStatsSection } from '@/components/GlobalStatsSection';
 import { MemberCard } from '@/components/MemberCard';
 import { StatsSection } from '@/components/StatsSection';
@@ -78,20 +79,14 @@ export default function SettingsScreen() {
         if (media) {
           const title = item.media_type === 'movie' ? media.title : media.name;
           try {
-            const formatSuffix = item.format === 'BluRay' ? 'Blu-ray' : item.format;
-            const editionPart = item.edition ? ` ${item.edition}` : '';
-            const queryParam = `${title}${editionPart} ${formatSuffix}`;
-            const res = await fetch(`/api/market-value?s=${encodeURIComponent(queryParam)}`);
-            if (res.ok) {
-              const data = await res.json();
-              if (data && data.value !== null && data.value !== undefined) {
-                // Update Supabase directly to avoid mass query cache invalidation on every item
-                await supabase
-                  .from('collection_items')
-                  .update({ value_estimate: data.value })
-                  .eq('id', item.id)
-                  .eq('user_id', userId);
-              }
+            const data = await fetchEbaySoldValue(title, item.format, item.edition);
+            if (data && data.value !== null && data.value !== undefined) {
+              // Update Supabase directly to avoid mass query cache invalidation on every item
+              await supabase
+                .from('collection_items')
+                .update({ value_estimate: data.value })
+                .eq('id', item.id)
+                .eq('user_id', userId);
             }
           } catch (err) {
             console.error(`Auto-valuing failed for ${title}:`, err);
