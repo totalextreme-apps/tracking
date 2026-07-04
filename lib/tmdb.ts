@@ -322,3 +322,7 @@ export async function getPersonTvCredits(personId: number): Promise<any> {
   return tmdbFetch<any>(`/person/${personId}/tv_credits`);
 }
 
+export async function searchPerson(query: string, page = 1): Promise<any> {
+  return tmdbFetch<any>(`/search/person?query=${encodeURIComponent(query)}&page=${page}`);
+}
+

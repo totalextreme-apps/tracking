@@ -1,4 +1,4 @@
-import { searchMedia, getPersonMovieCredits, getPersonTvCredits } from '@/lib/tmdb';
+import { searchMedia, getPersonMovieCredits, getPersonTvCredits, searchPerson } from '@/lib/tmdb';
 import { useQuery } from '@tanstack/react-query';
 
 export function useTmdbSearch(query: string, page = 1, searchMode = 'title') {
@@ -10,8 +10,8 @@ export function useTmdbSearch(query: string, page = 1, searchMode = 'title') {
       }
 
       try {
-        const personRes = await searchMedia(query, 1);
-        const person = personRes.results.find(r => (r as any).media_type === 'person' || (r as any).known_for);
+        const personRes = await searchPerson(query, 1);
+        const person = personRes.results?.[0];
         if (!person) {
           return { page: 1, results: [], total_pages: 1, total_results: 0 };
         }

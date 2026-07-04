@@ -23,7 +23,7 @@ import { usePersistedState } from '@/hooks/usePersistedState';
 import { getGenres, getOnDisplayItems, getGrailItems, getStacks } from '@/lib/collection-utils';
 import type { CollectionItemWithMedia } from '@/types/database';
 import { getBackdropUrl, getPosterUrl } from '@/lib/dummy-data';
-import { searchMedia, getPersonMovieCredits, getPersonTvCredits } from '@/lib/tmdb';
+import { searchMedia, getPersonMovieCredits, getPersonTvCredits, searchPerson } from '@/lib/tmdb';
 
 
 function getRelativeTimeString(dateString?: string | null): string {
@@ -190,8 +190,8 @@ export default function HomeScreen() {
     const timer = setTimeout(async () => {
       setIsSearchingCredits(true);
       try {
-        const personRes = await searchMedia(searchQuery, 1);
-        const person = personRes.results.find(r => (r as any).media_type === 'person' || (r as any).known_for);
+        const personRes = await searchPerson(searchQuery, 1);
+        const person = personRes.results?.[0];
         if (person) {
           const personId = person.id;
           const movieCredits = await getPersonMovieCredits(personId);
