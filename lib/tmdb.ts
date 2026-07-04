@@ -66,6 +66,19 @@ export async function searchMedia(query: string, page = 1): Promise<TmdbSearchRe
     cleanQuery = trimmedQuery.replace(rawMatch, '').trim();
   }
 
+  // Strip common format terms and brackets/parentheses containing non-year metadata
+  const originalCleanQuery = cleanQuery;
+  cleanQuery = cleanQuery
+    .replace(/\[[^\]]*\]/g, '') // Remove brackets like [Blu-ray]
+    .replace(/\((?!19\d{2}|20\d{2})[^)]*\)/g, '') // Remove parentheses unless they are a year
+    .replace(/\b(blu-?ray|dvd|vhs|4k|ultrahd|uhd|steelbook|criterion|digital|hd|sd)\b/gi, '') // Remove format keywords
+    .replace(/\s+/g, ' ') // Collapse multiple spaces
+    .trim();
+
+  if (cleanQuery.length === 0) {
+    cleanQuery = originalCleanQuery; // Fallback to original if we stripped everything
+  }
+
   // ─── NEW: Multi-Cast Search Logic ───
   if (trimmedQuery.includes(',')) {
     const names = trimmedQuery.split(',').map(n => n.trim()).filter(n => n.length > 0);

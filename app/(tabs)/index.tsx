@@ -349,7 +349,10 @@ export default function HomeScreen() {
           }
 
           return tokens.every(token => 
-            searchableTexts.some(text => text.includes(token))
+            searchableTexts.some(text => {
+              const words = text.split(/[\s,().:;!?"'\-\[\]\/]+/);
+              return words.some(word => word.startsWith(token));
+            })
           );
         });
       }
