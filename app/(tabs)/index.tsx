@@ -178,7 +178,7 @@ export default function HomeScreen() {
   const resolvedColumns = viewMode === 'list' ? 1 : viewMode === 'grid2' ? 2 : viewMode === 'grid4' ? 4 : numColumns;
   const [searchQuery, setSearchQuery] = useState('');
   const [searchMode, setSearchMode] = useState<'title' | 'actor' | 'director'>('title');
-  const [creditTmdbIds, setCreditTmdbIds] = useState<Set<number> | null>(null);
+  const [creditTmdbIds, setCreditTmdbIds] = useState<Set<string> | null>(null);
   const [isSearchingCredits, setIsSearchingCredits] = useState(false);
 
   useEffect(() => {
@@ -197,29 +197,29 @@ export default function HomeScreen() {
           const movieCredits = await getPersonMovieCredits(personId);
           const tvCredits = await getPersonTvCredits(personId);
 
-          const ids = new Set();
+          const ids = new Set<string>();
           if (searchMode === 'actor') {
             if (movieCredits.cast) {
-              movieCredits.cast.forEach((c: any) => ids.add(c.id));
+              movieCredits.cast.forEach((c: any) => ids.add(`movie-${c.id}`));
             }
             if (tvCredits.cast) {
-              tvCredits.cast.forEach((c: any) => ids.add(c.id));
+              tvCredits.cast.forEach((c: any) => ids.add(`tv-${c.id}`));
             }
           } else if (searchMode === 'director') {
             if (movieCredits.crew) {
               movieCredits.crew.forEach((c: any) => {
-                if (c.job === 'Director') ids.add(c.id);
+                if (c.job === 'Director') ids.add(`movie-${c.id}`);
               });
             }
             if (tvCredits.crew) {
               tvCredits.crew.forEach((c: any) => {
-                if (c.job === 'Director') ids.add(c.id);
+                if (c.job === 'Director') ids.add(`tv-${c.id}`);
               });
             }
           }
-          setCreditTmdbIds(ids as any);
+          setCreditTmdbIds(ids);
         } else {
-          setCreditTmdbIds(new Set());
+          setCreditTmdbIds(new Set<string>());
         }
       } catch (e) {
         console.error('Failed to resolve credits:', e);
@@ -375,7 +375,8 @@ export default function HomeScreen() {
         if (creditTmdbIds) {
           items = items.filter((item: any) => {
             const m = item.movies || item.shows;
-            return m?.tmdb_id && creditTmdbIds.has(m.tmdb_id);
+            const type = item.movies ? 'movie' : 'tv';
+            return m?.tmdb_id && creditTmdbIds.has(`${type}-${m.tmdb_id}`);
           });
         } else {
           items = [];
