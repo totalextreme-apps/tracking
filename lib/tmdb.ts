@@ -314,3 +314,11 @@ export async function getTvShowById(tmdbId: number): Promise<TmdbMediaResult & {
   return tmdbFetch<any>(`/tv/${tmdbId}?append_to_response=credits`);
 }
 
+export async function getPersonMovieCredits(personId: number): Promise<any> {
+  return tmdbFetch<any>(`/person/${personId}/movie_credits`);
+}
+
+export async function getPersonTvCredits(personId: number): Promise<any> {
+  return tmdbFetch<any>(`/person/${personId}/tv_credits`);
+}
+

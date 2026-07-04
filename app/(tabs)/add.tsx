@@ -57,8 +57,9 @@ export default function AddScreen() {
 
   const [page, setPage] = useState(1);
   const [searchResults, setSearchResults] = useState<TmdbMediaResult[]>([]);
+  const [searchMode, setSearchMode] = useState<'title' | 'actor' | 'director'>('title');
 
-  const searchQuery = useTmdbSearch(debouncedQuery, page);
+  const searchQuery = useTmdbSearch(debouncedQuery, page, searchMode);
   const addMutation = useAddToCollection(userId);
   const updateMutation = useUpdateCollectionItem(userId);
 
@@ -83,6 +84,7 @@ export default function AddScreen() {
       setSelectedItem(null);
       setSelectedFormats([]);
       setSelectedSeasons([]);
+      setSearchMode('title');
       setEdition('');
       setIsBootleg(false);
       setStatus('owned');
@@ -445,12 +447,12 @@ export default function AddScreen() {
         )}
 
         {/* Search Row */}
-        <View className="p-4 flex-row">
+        <View className="p-4 flex-row pb-2">
           <View className="flex-row items-center bg-neutral-900 rounded-lg px-4 flex-1 mr-2">
             <TextInput
               nativeID="add-search-input"
               {...({ name: 'add-query' } as any)}
-              placeholder="Search movies, shows, speak or scan..."
+              placeholder={searchMode === 'title' ? 'Search movies, shows, speak or scan...' : (searchMode === 'actor' ? 'Search actor...' : 'Search director...')}
               placeholderTextColor="#6b7280"
               value={query}
               onChangeText={setQuery}
@@ -490,6 +492,23 @@ export default function AddScreen() {
               </Pressable>
             </View>
           )}
+        </View>
+
+        {/* Search Mode Toggle */}
+        <View className="px-4 pb-4">
+          <View className="flex-row gap-2 bg-neutral-950 p-1 rounded-lg border border-neutral-900">
+            {(['title', 'actor', 'director'] as const).map(mode => (
+              <Pressable
+                key={mode}
+                onPress={() => { setSearchMode(mode); setQuery(''); setSearchResults([]); setPage(1); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                className={`flex-1 py-1.5 rounded-md items-center justify-center ${searchMode === mode ? 'bg-amber-500/10 border border-amber-500/30' : 'border border-transparent'}`}
+              >
+                <Text className={`font-mono text-[9px] font-bold uppercase tracking-widest ${searchMode === mode ? 'text-amber-500' : 'text-neutral-500'}`}>
+                  {mode}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
         </View>
 
         {/* Item Selected: Show Add Form */}

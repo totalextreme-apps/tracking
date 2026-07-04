@@ -7,7 +7,7 @@ import { Image } from 'expo-image';
 import { router, Stack, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Modal, Platform, Pressable, RefreshControl, ScrollView, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Modal, Platform, Pressable, RefreshControl, ScrollView, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { EmptyState } from '@/components/EmptyState';
 import { OnDisplayCard } from '@/components/OnDisplayCard';
@@ -23,6 +23,7 @@ import { usePersistedState } from '@/hooks/usePersistedState';
 import { getGenres, getOnDisplayItems, getGrailItems, getStacks } from '@/lib/collection-utils';
 import type { CollectionItemWithMedia } from '@/types/database';
 import { getBackdropUrl, getPosterUrl } from '@/lib/dummy-data';
+import { searchMedia, getPersonMovieCredits, getPersonTvCredits } from '@/lib/tmdb';
 
 
 function getRelativeTimeString(dateString?: string | null): string {
@@ -176,6 +177,61 @@ export default function HomeScreen() {
 
   const resolvedColumns = viewMode === 'list' ? 1 : viewMode === 'grid2' ? 2 : viewMode === 'grid4' ? 4 : numColumns;
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchMode, setSearchMode] = useState<'title' | 'actor' | 'director'>('title');
+  const [creditTmdbIds, setCreditTmdbIds] = useState<Set<number> | null>(null);
+  const [isSearchingCredits, setIsSearchingCredits] = useState(false);
+
+  useEffect(() => {
+    if (searchQuery.trim().length < 2 || searchMode === 'title') {
+      setCreditTmdbIds(null);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setIsSearchingCredits(true);
+      try {
+        const personRes = await searchMedia(searchQuery, 1);
+        const person = personRes.results.find(r => (r as any).media_type === 'person' || (r as any).known_for);
+        if (person) {
+          const personId = person.id;
+          const movieCredits = await getPersonMovieCredits(personId);
+          const tvCredits = await getPersonTvCredits(personId);
+
+          const ids = new Set();
+          if (searchMode === 'actor') {
+            if (movieCredits.cast) {
+              movieCredits.cast.forEach((c: any) => ids.add(c.id));
+            }
+            if (tvCredits.cast) {
+              tvCredits.cast.forEach((c: any) => ids.add(c.id));
+            }
+          } else if (searchMode === 'director') {
+            if (movieCredits.crew) {
+              movieCredits.crew.forEach((c: any) => {
+                if (c.job === 'Director') ids.add(c.id);
+              });
+            }
+            if (tvCredits.crew) {
+              tvCredits.crew.forEach((c: any) => {
+                if (c.job === 'Director') ids.add(c.id);
+              });
+            }
+          }
+          setCreditTmdbIds(ids as any);
+        } else {
+          setCreditTmdbIds(new Set());
+        }
+      } catch (e) {
+        console.error('Failed to resolve credits:', e);
+        setCreditTmdbIds(new Set());
+      } finally {
+        setIsSearchingCredits(false);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, searchMode]);
+
   const [formatFilter, setFormatFilter] = useState<string | null>(null);
   const [genreFilter, setGenreFilter] = useState<string | null>(null);
   const [mediaTypeFilter, setMediaTypeFilter] = useState<'movie' | 'tv' | null>(null);
@@ -315,46 +371,49 @@ export default function HomeScreen() {
     }
 
     if (searchQuery) {
-      const noiseWords = new Set(['remake', 'original', 'reboot', 'sequel', 'movie', 'tv', 'show', 'series', 'film', 'version', 'cut', 'edition']);
-      const tokens = searchQuery
-        .toLowerCase()
-        .split(/[\s,()]+/)
-        .map(t => t.trim())
-        .filter(t => t.length > 0 && !noiseWords.has(t));
+      if (searchMode === 'actor' || searchMode === 'director') {
+        if (creditTmdbIds) {
+          items = items.filter((item: any) => {
+            const m = item.movies || item.shows;
+            return m?.tmdb_id && creditTmdbIds.has(m.tmdb_id);
+          });
+        } else {
+          items = [];
+        }
+      } else {
+        const noiseWords = new Set(['remake', 'original', 'reboot', 'sequel', 'movie', 'tv', 'show', 'series', 'film', 'version', 'cut', 'edition']);
+        const tokens = searchQuery
+          .toLowerCase()
+          .split(/[\s,()]+/)
+          .map(t => t.trim())
+          .filter(t => t.length > 0 && !noiseWords.has(t));
 
-      if (tokens.length > 0) {
-        items = items.filter((item: any) => {
-          const m = item.movies || item.shows;
-          if (!m) return false;
+        if (tokens.length > 0) {
+          items = items.filter((item: any) => {
+            const m = item.movies || item.shows;
+            if (!m) return false;
 
-          const title = (m.title || m.name || '').toLowerCase();
-          const year = (m.release_date || m.first_air_date || '').slice(0, 4);
-          const format = (item.format || '').toLowerCase();
-          const edition = (item.edition || '').toLowerCase();
-          
-          const searchableTexts: string[] = [title, year, format, edition];
-          
-          if (m.genres && Array.isArray(m.genres)) {
-            m.genres.forEach((g: any) => {
-              if (g?.name) searchableTexts.push(g.name.toLowerCase());
-            });
-          }
+            const title = (m.title || m.name || '').toLowerCase();
+            const year = (m.release_date || m.first_air_date || '').slice(0, 4);
+            const format = (item.format || '').toLowerCase();
+            const edition = (item.edition || '').toLowerCase();
+            
+            const searchableTexts: string[] = [title, year, format, edition];
+            
+            if (m.genres && Array.isArray(m.genres)) {
+              m.genres.forEach((g: any) => {
+                if (g?.name) searchableTexts.push(g.name.toLowerCase());
+              });
+            }
 
-          const cast = m.movie_cast || m.show_cast;
-          if (cast && Array.isArray(cast)) {
-            cast.forEach((c: any) => {
-              if (c?.name) searchableTexts.push(c.name.toLowerCase());
-              if (c?.character) searchableTexts.push(c.character.toLowerCase());
-            });
-          }
-
-          return tokens.every(token => 
-            searchableTexts.some(text => {
-              const words = text.split(/[\s,().:;!?"'\-\[\]\/]+/);
-              return words.some(word => word.startsWith(token));
-            })
-          );
-        });
+            return tokens.every(token => 
+              searchableTexts.some(text => {
+                const words = text.split(/[\s,().:;!?"'\-\[\]\/]+/);
+                return words.some(word => word.startsWith(token));
+              })
+            );
+          });
+        }
       }
     }
 
@@ -362,7 +421,7 @@ export default function HomeScreen() {
     if (mediaTypeFilter) items = items.filter((item: any) => item.media_type === mediaTypeFilter);
 
     return items;
-  }, [collection, thriftMode, formatFilter, searchQuery, genreFilter, mediaTypeFilter]);
+  }, [collection, thriftMode, formatFilter, searchQuery, genreFilter, mediaTypeFilter, searchMode, creditTmdbIds]);
 
   const filteredStacks = useMemo(() => {
     return getStacks(filteredCollection, thriftMode, sortBy, sortOrder, searchQuery);
@@ -585,16 +644,42 @@ export default function HomeScreen() {
             </View>
 
             <View className="pb-6 w-full">
-              <View className="flex-row items-center mb-4">
+              <View className="flex-row items-center mb-3">
                 <View className="flex-row items-center bg-neutral-900 rounded-lg border border-neutral-800 px-4 py-2.5 flex-1">
                   <Ionicons name="search" size={16} color="#444" style={{ marginRight: 8 }} />
-                  <TextInput placeholder="SEARCH TITLE..." placeholderTextColor="#444" value={searchQuery} onChangeText={setSearchQuery} className="flex-1 text-white font-mono text-xs" autoCapitalize="none" style={{ padding: 0 }} />
+                  <TextInput 
+                    placeholder={searchMode === 'title' ? 'SEARCH TITLE...' : (searchMode === 'actor' ? 'SEARCH ACTOR...' : 'SEARCH DIRECTOR...')} 
+                    placeholderTextColor="#444" 
+                    value={searchQuery} 
+                    onChangeText={setSearchQuery} 
+                    className="flex-1 text-white font-mono text-xs" 
+                    autoCapitalize="none" 
+                    style={{ padding: 0 }} 
+                  />
+                  {isSearchingCredits && (
+                    <ActivityIndicator size="small" color="#f59e0b" style={{ marginRight: 8 }} />
+                  )}
                   {searchQuery.length > 0 && (
                     <Pressable onPress={() => { setSearchQuery(''); playSound('click'); }} className="p-1 -mr-2">
                       <Ionicons name="close-circle" size={16} color="#444" />
                     </Pressable>
                   )}
                 </View>
+              </View>
+
+              {/* Search Mode Toggle */}
+              <View className="flex-row gap-2 mb-4 bg-neutral-950 p-1 rounded-lg border border-neutral-900">
+                {(['title', 'actor', 'director'] as const).map(mode => (
+                  <Pressable
+                    key={mode}
+                    onPress={() => { setSearchMode(mode); setSearchQuery(''); setCreditTmdbIds(null); playSound('click'); }}
+                    className={`flex-1 py-1.5 rounded-md items-center justify-center ${searchMode === mode ? 'bg-amber-500/10 border border-amber-500/30' : 'border border-transparent'}`}
+                  >
+                    <Text className={`font-mono text-[9px] font-bold uppercase tracking-widest ${searchMode === mode ? 'text-amber-500' : 'text-neutral-500'}`}>
+                      {mode}
+                    </Text>
+                  </Pressable>
+                ))}
               </View>
 
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }} className="mb-4">
