@@ -1,13 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import ConfettiCannon from 'react-native-confetti-cannon';
 
 import { useSound } from '@/context/SoundContext';
 import { useThriftMode } from '@/context/ThriftModeContext';
-import { useAddToCollection, useDeleteCollectionItem, useUpdateCollectionItem } from '@/hooks/useCollection';
+import { useAddToCollection, useDeleteCollectionItem, useUpdateCollectionItem, useLogWatchEvent, useDecrementWatchEvent } from '@/hooks/useCollection';
 import type { CollectionItemWithMedia, MovieFormat } from '@/types/database';
 
 const FORMATS: MovieFormat[] = ['VHS', 'DVD', 'BluRay', '4K', 'Digital'];
@@ -32,25 +32,26 @@ export function QuickActionModal({
   const confettiRef = useRef<ConfettiCannon>(null);
   const { thriftMode } = useThriftMode();
 
+  const liveItem = item ? (collection.find(i => i.id === item.id) || item) : null;
+
   const [viewState, setViewState] = useState<'main' | 'add-format' | 'remove-format'>('main');
   const [selectedFormat, setSelectedFormat] = useState<MovieFormat | null>(null);
   const [edition, setEdition] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [localRating, setLocalRating] = useState<number | null>(item?.rating || null);
+  const [localRating, setLocalRating] = useState<number | null>(liveItem?.rating || null);
 
-  // Sync localRating if item changes
-  useRef(() => {
-    setLocalRating(item?.rating || null);
-  });
+  useEffect(() => {
+    setLocalRating(liveItem?.rating || null);
+  }, [liveItem?.id, liveItem?.rating]);
 
   const updateMutation = useUpdateCollectionItem(userId);
   const addMutation = useAddToCollection(userId);
   const deleteMutation = useDeleteCollectionItem(userId);
 
-  if (!item) return null;
+  if (!item || !liveItem) return null;
 
-  const media = item.movies || item.shows;
-  const isWishlist = item.status === 'wishlist';
+  const media = liveItem.movies || liveItem.shows;
+  const isWishlist = liveItem.status === 'wishlist';
 
   // For TV Shows vs Movies
   const isMovie = item.media_type === 'movie';
@@ -115,6 +116,37 @@ export function QuickActionModal({
     } catch (e) {
       Alert.alert('Error', 'Failed to save rating');
       setLocalRating(item?.rating || null); // Revert on failure
+    }
+  };
+
+  const logWatchMutation = useLogWatchEvent(userId);
+  const decrementWatchMutation = useDecrementWatchEvent(userId);
+
+  const handleLogWatch = async () => {
+    if (!liveItem) return;
+    playSound('peel');
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    try {
+      await logWatchMutation.mutateAsync({
+        itemId: liveItem.id,
+        currentWatchCount: liveItem.watch_count ?? 0,
+      });
+    } catch (e) {
+      Alert.alert('Error', 'Failed to log watch event');
+    }
+  };
+
+  const handleDecrementWatch = async () => {
+    if (!liveItem) return;
+    playSound('click');
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      await decrementWatchMutation.mutateAsync({
+        itemId: liveItem.id,
+        currentWatchCount: liveItem.watch_count ?? 0,
+      });
+    } catch (e) {
+      Alert.alert('Error', 'Failed to decrement watch event');
     }
   };
 
@@ -190,6 +222,36 @@ export function QuickActionModal({
                 </Pressable>
               );
             })}
+          </View>
+        </View>
+      )}
+
+      {!isWishlist && (
+        <View className="bg-neutral-800 rounded-xl p-4 mb-3 flex-row items-center justify-between border border-neutral-750">
+          <View className="flex-1">
+            <Text className="text-neutral-400 font-mono text-[9px] uppercase tracking-wider">VIEWS: {liveItem.watch_count ?? 0}x</Text>
+            {liveItem.last_watched_at && (
+              <Text className="text-neutral-500 font-mono text-[8px] mt-0.5">
+                {new Date(liveItem.last_watched_at).toLocaleDateString()}
+              </Text>
+            )}
+          </View>
+          <View className="flex-row gap-2">
+            {(liveItem.watch_count ?? 0) > 0 && (
+              <Pressable
+                onPress={handleDecrementWatch}
+                className="bg-neutral-700 p-2 rounded-lg border border-neutral-600 active:bg-neutral-650"
+              >
+                <Ionicons name="remove" size={16} color="#ef4444" />
+              </Pressable>
+            )}
+            <Pressable
+              onPress={handleLogWatch}
+              className="bg-emerald-950/80 p-2 rounded-lg border border-emerald-800/40 flex-row items-center gap-1 active:bg-emerald-900/80"
+            >
+              <Ionicons name="add" size={16} color="#10b981" />
+              <Text className="text-emerald-400 font-mono text-[10px] font-bold">LOG VIEW</Text>
+            </Pressable>
           </View>
         </View>
       )}

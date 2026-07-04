@@ -74,7 +74,8 @@ export function getStacks(
   items: CollectionItemWithMedia[] | undefined,
   thriftMode = false,
   sortBy: SortOption = 'recent',
-  sortOrder: SortOrder = 'desc'
+  sortOrder: SortOrder = 'desc',
+  searchQuery = ''
 ): CollectionItemWithMedia[][] {
   const filtered = filterByThriftMode(items, thriftMode);
   if (filtered.length === 0) return [];
@@ -115,6 +116,27 @@ export function getStacks(
 
     const mediaA = itemA.movies || itemA.shows;
     const mediaB = itemB.movies || itemB.shows;
+
+    if (searchQuery) {
+      const titleA = ((mediaA as any)?.title || (mediaA as any)?.name || '').toLowerCase();
+      const titleB = ((mediaB as any)?.title || (mediaB as any)?.name || '').toLowerCase();
+      const q = searchQuery.toLowerCase().trim();
+
+      const getScore = (title: string) => {
+        if (title === q) return 100;
+        if (title.startsWith(q + ' ') || title.startsWith(q + ':')) return 80;
+        if (title.includes(' ' + q + ' ') || title.includes(' ' + q)) return 60;
+        if (title.includes(q)) return 40;
+        return 0;
+      };
+
+      const scoreA = getScore(titleA);
+      const scoreB = getScore(titleB);
+
+      if (scoreA !== scoreB) {
+        return scoreB - scoreA;
+      }
+    }
 
     let comparison = 0;
 

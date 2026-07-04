@@ -14,7 +14,7 @@ export function useCollection(userId: string | undefined) {
         const to = from + 999;
         const { data, error } = await supabase
           .from('collection_items')
-          .select(`*, movies (id, tmdb_id, title, poster_path, backdrop_path, release_date, primary_color, genres, movie_cast), shows (id, tmdb_id, name, poster_path, backdrop_path, first_air_date, primary_color, genres, show_cast)`)
+          .select(`*, movies (id, tmdb_id, title, poster_path, backdrop_path, release_date, primary_color, genres), shows (id, tmdb_id, name, poster_path, backdrop_path, first_air_date, primary_color, genres)`)
           .eq('user_id', userId)
           .order('display_order', { ascending: true })
           .order('grail_order', { ascending: true })

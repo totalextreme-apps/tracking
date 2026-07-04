@@ -69,7 +69,7 @@ function RecentlyWatchedCard({ item, navigateToDetail, playSound, onLongPressAct
   const backdropUrl = item.custom_backdrop_url || tmdbBackdrop || item.custom_poster_url || getPosterUrl(media.poster_path, 'w185');
   const format = item.format;
   const rating = item.rating;
-  const watchCount = item.watch_count || 1;
+  const watchCount = item.watch_count ?? 0;
   const lastWatchedStr = getRelativeTimeString(item.last_watched_at);
 
   const formatColors: Record<string, { bg: string, text: string, border: string }> = {
@@ -362,8 +362,8 @@ export default function HomeScreen() {
   }, [collection, thriftMode, formatFilter, searchQuery, genreFilter, mediaTypeFilter]);
 
   const filteredStacks = useMemo(() => {
-    return getStacks(filteredCollection, thriftMode, sortBy, sortOrder);
-  }, [filteredCollection, thriftMode, sortBy, sortOrder]);
+    return getStacks(filteredCollection, thriftMode, sortBy, sortOrder, searchQuery);
+  }, [filteredCollection, thriftMode, sortBy, sortOrder, searchQuery]);
 
   const onDisplay = useMemo(() => {
     const raw = getOnDisplayItems(collection);

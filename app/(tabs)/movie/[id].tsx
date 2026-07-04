@@ -23,6 +23,7 @@ import { ReviewSection } from '@/components/ReviewSection';
 import { CommentSection } from '@/components/CommentSection';
 import { deleteFromCloudinary, uploadToCloudinary } from '@/lib/cloudinary';
 import { getCustomLists } from '@/lib/collection-utils';
+import { supabase } from '@/lib/supabase';
 import { fetchEbaySoldValue, getEbaySearchUrl } from '@/lib/pricing';
 
 import { getBackdropUrl, getPosterUrl } from '@/lib/dummy-data';
@@ -86,6 +87,8 @@ export default function MovieDetailScreen() {
     const [showEditManualModal, setShowEditManualModal] = useState(false);
     const [editManualOverview, setEditManualOverview] = useState('');
     const [editManualCast, setEditManualCast] = useState('');
+    const [showWatchDateModal, setShowWatchDateModal] = useState(false);
+    const [customWatchDateText, setCustomWatchDateText] = useState('');
     const updateManualMovie = useUpdateManualMovie(userId);
 
     const handleCreatePost = () => {
@@ -147,6 +150,41 @@ export default function MovieDetailScreen() {
         }
     };
 
+    const handleResetWatch = async () => {
+        if (!activeItem) return;
+        playSound('click');
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        try {
+            await updateMutation.mutateAsync({
+                itemId: activeItem.id,
+                updates: {
+                    watch_count: 0,
+                    last_watched_at: null
+                }
+            });
+            refetch();
+        } catch (e) {
+            Alert.alert('Error', 'Failed to reset watch info');
+        }
+    };
+
+    const handleUpdateWatchDate = async (newDate: string | null) => {
+        if (!activeItem) return;
+        playSound('click');
+        try {
+            await updateMutation.mutateAsync({
+                itemId: activeItem.id,
+                updates: {
+                    last_watched_at: newDate ? new Date(newDate).toISOString() : null
+                }
+            });
+            refetch();
+            setShowWatchDateModal(false);
+        } catch (e) {
+            Alert.alert('Error', 'Failed to update watch date. Make sure format is correct.');
+        }
+    };
+
     const movieId = typeof id === 'string' ? parseInt(id, 10) : undefined;
     const itemUuid = typeof id === 'string' && isNaN(movieId as any) ? id : null;
 
@@ -157,9 +195,24 @@ export default function MovieDetailScreen() {
     ) ?? [];
 
     const internalMovie = movieItems[0]?.movies;
+    const { data: dbMovie } = useQuery({
+        queryKey: ['movies-db-detail', internalMovie?.id],
+        queryFn: async () => {
+            if (!internalMovie?.id) return null;
+            const { data, error } = await supabase
+                .from('movies')
+                .select('*')
+                .eq('id', internalMovie.id)
+                .single();
+            if (error) throw error;
+            return data;
+        },
+        enabled: !!internalMovie?.id,
+    });
+    const resolvedInternalMovie = dbMovie || internalMovie;
     const commentActiveItem = movieItems[0];
 
-    const activeMovie = internalMovie || persistedMovie;
+    const activeMovie = resolvedInternalMovie || persistedMovie;
     const tmdbIdToUse = activeMovie?.tmdb_id || (movieId && movieId > 0 ? movieId : null);
 
     const { data: tmdbMovie, isLoading: tmdbLoading } = useQuery({
@@ -172,7 +225,7 @@ export default function MovieDetailScreen() {
     });
 
     // Final movie object to use for display
-    const movie = internalMovie || tmdbMovie || persistedMovie;
+    const movie = resolvedInternalMovie || tmdbMovie || persistedMovie;
 
     const checkedItemsRef = useRef<Record<string, boolean>>({});
 
@@ -733,32 +786,6 @@ export default function MovieDetailScreen() {
                                     </Text>
                                 </Pressable>
                             )}
-                            {activeItem && activeItem.status === 'owned' && (
-                                <View className="mt-2 flex-row items-center gap-4 bg-neutral-900/40 p-2 rounded-lg border border-neutral-800 self-start">
-                                    <View className="flex-row items-end">
-                                        <View>
-                                            <Text className="text-neutral-500 font-mono text-[8px] uppercase tracking-wider">Watched</Text>
-                                            <Text className="text-white font-mono text-[11px] font-bold">{activeItem.watch_count || 0}x</Text>
-                                        </View>
-                                        {!isReadOnly && activeItem.watch_count > 0 && (
-                                            <Pressable 
-                                                onPress={handleDecrementWatch}
-                                                className="ml-2.5 bg-neutral-800 border border-neutral-700 p-1 rounded active:bg-neutral-700"
-                                            >
-                                                <Ionicons name="remove-circle-outline" size={12} color="#888" />
-                                            </Pressable>
-                                        )}
-                                    </View>
-                                    {activeItem.last_watched_at && (
-                                        <View>
-                                            <Text className="text-neutral-500 font-mono text-[8px] uppercase tracking-wider">Last Watched</Text>
-                                            <Text className="text-white font-mono text-[11px] font-bold">
-                                                {new Date(activeItem.last_watched_at).toLocaleDateString()}
-                                            </Text>
-                                        </View>
-                                    )}
-                                </View>
-                            )}
                         </View>
                     </View>
                     {/* Actions Bar (Full width style from attachment 2) */}
@@ -836,6 +863,88 @@ export default function MovieDetailScreen() {
                             </>
                         )}
                     </View>
+
+                    {/* Retro Watch Tracker Section */}
+                    {activeItem && activeItem.status === 'owned' && (
+                        <View className="max-w-7xl mx-auto w-full px-4 md:px-8 mt-6">
+                            <View className="bg-neutral-900/60 rounded-xl border border-neutral-800 p-4 shadow-lg shadow-black">
+                                <View className="flex-row justify-between items-center border-b border-neutral-850 pb-2 mb-3">
+                                    <View className="flex-row items-center gap-2">
+                                        <Ionicons name="eye" size={16} color="#10b981" />
+                                        <Text className="text-emerald-500 font-bold font-mono tracking-widest uppercase text-xs" style={{ fontFamily: 'VCR_OSD_MONO' }}>
+                                            WATCH TRACKER
+                                        </Text>
+                                    </View>
+                                    <View className="bg-emerald-950 px-2 py-0.5 rounded border border-emerald-500/20">
+                                        <Text className="text-emerald-400 font-mono text-[8px] font-bold">OSD ACTIVE</Text>
+                                    </View>
+                                </View>
+
+                                <View className="flex-row flex-wrap gap-4 items-center justify-between mb-4">
+                                    <View>
+                                        <Text className="text-neutral-500 font-mono text-[8px] uppercase tracking-wider">TOTAL VIEWS</Text>
+                                        <Text className="text-white font-mono text-lg font-bold">{activeItem.watch_count || 0}x</Text>
+                                    </View>
+
+                                    <View className="flex-1 ml-4">
+                                        <Text className="text-neutral-500 font-mono text-[8px] uppercase tracking-wider">LAST WATCHED</Text>
+                                        <Text className="text-white font-mono text-xs font-semibold leading-tight">
+                                            {activeItem.last_watched_at 
+                                                ? new Date(activeItem.last_watched_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+                                                : 'NEVER WATCHED'}
+                                        </Text>
+                                    </View>
+                                </View>
+
+                                {!isReadOnly && (
+                                    <View className="flex-row flex-wrap gap-2 pt-2 border-t border-neutral-850">
+                                        <Pressable
+                                            onPress={handleLogWatch}
+                                            className="flex-1 bg-green-950/80 border border-green-800/40 py-2.5 px-3 rounded-lg items-center justify-center flex-row gap-1.5 active:bg-green-900/80"
+                                        >
+                                            <Ionicons name="add-circle" size={14} color="#10b981" />
+                                            <Text className="text-green-400 font-mono text-[9px] font-bold tracking-wider">LOG VIEW</Text>
+                                        </Pressable>
+
+                                        {activeItem.watch_count > 0 && (
+                                            <Pressable
+                                                onPress={handleDecrementWatch}
+                                                className="flex-1 bg-neutral-800 border border-neutral-700 py-2.5 px-3 rounded-lg items-center justify-center flex-row gap-1.5 active:bg-neutral-750"
+                                            >
+                                                <Ionicons name="remove-circle" size={14} color="#a3a3a3" />
+                                                <Text className="text-neutral-300 font-mono text-[9px] font-bold tracking-wider">DECREMENT</Text>
+                                            </Pressable>
+                                        )}
+
+                                        <Pressable
+                                            onPress={() => {
+                                                setCustomWatchDateText(
+                                                    activeItem.last_watched_at 
+                                                        ? new Date(activeItem.last_watched_at).toLocaleDateString()
+                                                        : new Date().toLocaleDateString()
+                                                );
+                                                setShowWatchDateModal(true);
+                                            }}
+                                            className="bg-neutral-800 border border-neutral-700 p-2.5 rounded-lg items-center justify-center active:bg-neutral-700"
+                                            style={{ minWidth: 40 }}
+                                        >
+                                            <Ionicons name="calendar-outline" size={14} color="#a3a3a3" />
+                                        </Pressable>
+
+                                        {activeItem.watch_count > 0 && (
+                                            <Pressable
+                                                onPress={handleResetWatch}
+                                                className="bg-red-950/60 border border-red-900/30 p-2.5 rounded-lg items-center justify-center active:bg-red-900/30"
+                                                style={{ minWidth: 40 }}
+                                            >
+                                                <Ionicons name="trash-outline" size={14} color="#f87171" />
+                                            </Pressable>
+                                        )}
+                                    </View>
+                                )}
+                            </View>
+                        </View>
+                    )}
 
                     {/* Rating and Review Section (Bulletin Board Sync) */}
                     {activeItem && (
@@ -1301,6 +1410,80 @@ export default function MovieDetailScreen() {
                 )}
                 </View>
             </ScrollView >
+
+            {/* Custom Watch Date Modal */}
+            <Modal
+                visible={showWatchDateModal}
+                transparent
+                animationType="slide"
+                onRequestClose={() => setShowWatchDateModal(false)}
+            >
+                <View className="flex-1 bg-black/95 justify-center items-center px-4">
+                    <View className="bg-neutral-900 w-full max-w-sm rounded-xl border border-neutral-800 p-6 shadow-2xl">
+                        <Text className="text-emerald-500 font-mono text-lg font-bold mb-4 uppercase text-center" style={{ fontFamily: 'VCR_OSD_MONO' }}>
+                            EDIT WATCH DATE
+                        </Text>
+                        
+                        <Text className="text-neutral-500 font-mono text-[9px] mb-3 tracking-widest uppercase">Presets</Text>
+                        
+                        <View className="flex-row gap-2 mb-3">
+                            <Pressable 
+                                onPress={() => handleUpdateWatchDate(new Date().toISOString())}
+                                className="flex-1 bg-neutral-800 p-3 rounded-lg border border-neutral-705 items-center active:bg-neutral-700"
+                            >
+                                <Text className="text-white font-mono text-xs font-bold uppercase">TODAY</Text>
+                            </Pressable>
+                            
+                            <Pressable 
+                                onPress={() => handleUpdateWatchDate(new Date(Date.now() - 86400000).toISOString())}
+                                className="flex-1 bg-neutral-800 p-3 rounded-lg border border-neutral-705 items-center active:bg-neutral-700"
+                            >
+                                <Text className="text-white font-mono text-xs font-bold uppercase">YESTERDAY</Text>
+                            </Pressable>
+                        </View>
+
+                        <Pressable 
+                            onPress={() => handleUpdateWatchDate(null)}
+                            className="bg-neutral-800 p-3 rounded-lg border border-neutral-705 items-center mb-6 active:bg-neutral-700"
+                        >
+                            <Text className="text-red-400 font-mono text-xs font-bold uppercase">CLEAR WATCH DATE</Text>
+                        </Pressable>
+
+                        <Text className="text-neutral-500 font-mono text-[9px] mb-2 tracking-widest uppercase">Custom Date (YYYY-MM-DD or MM/DD/YYYY)</Text>
+                        <TextInput
+                            className="bg-black text-white p-3 rounded-lg font-mono text-sm border border-neutral-850 mb-6 text-center"
+                            value={customWatchDateText}
+                            onChangeText={setCustomWatchDateText}
+                            placeholder="e.g. 2026-07-04"
+                            placeholderTextColor="#444"
+                        />
+
+                        <View className="flex-row gap-3">
+                            <Pressable 
+                                onPress={() => setShowWatchDateModal(false)}
+                                className="flex-1 bg-neutral-800 py-3 rounded-lg border border-neutral-705 items-center active:bg-neutral-700"
+                            >
+                                <Text className="text-neutral-400 font-mono text-xs font-bold uppercase">Cancel</Text>
+                            </Pressable>
+                            
+                            <Pressable 
+                                onPress={() => {
+                                    if (!customWatchDateText.trim()) return;
+                                    const parsedDate = Date.parse(customWatchDateText.trim());
+                                    if (isNaN(parsedDate)) {
+                                        Alert.alert('Invalid Date', 'Could not parse the date string. Please use YYYY-MM-DD format.');
+                                        return;
+                                    }
+                                    handleUpdateWatchDate(new Date(parsedDate).toISOString());
+                                }}
+                                className="flex-1 bg-emerald-600 py-3 rounded-lg items-center active:bg-emerald-700"
+                            >
+                                <Text className="text-white font-mono text-xs font-bold uppercase">Save</Text>
+                            </Pressable>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
 
             <Modal
                 visible={showShareModal}
