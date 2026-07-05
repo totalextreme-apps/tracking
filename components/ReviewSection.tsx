@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Pressable, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useCreatePost } from '@/hooks/useSocial';
 import { useAuth } from '@/context/AuthContext';
+import { useUpdateCollectionItem, useCollection } from '@/hooks/useCollection';
 
 type ReviewSectionProps = {
   movieId?: number;
@@ -19,6 +20,36 @@ export function ReviewSection({ movieId, showId, collectionItemId, initialRating
   const [content, setContent] = useState(initialReview || '');
   
   const createPost = useCreatePost(userId);
+  const { data: collection } = useCollection(userId);
+  const updateMutation = useUpdateCollectionItem(userId);
+
+  useEffect(() => {
+    setRating(initialRating);
+  }, [initialRating]);
+
+  const handleStarPress = async (star: number) => {
+    const newRating = star === rating ? undefined : star;
+    setRating(newRating);
+    
+    // Find all formats of this movie/show in the user's collection to sync the rating
+    const itemsToUpdate = collection?.filter((i: any) => {
+      if (movieId) return i.movie_id === movieId;
+      if (showId) return i.show_id === showId;
+      return false;
+    }) || [];
+
+    try {
+      if (itemsToUpdate.length > 0) {
+        await Promise.all(itemsToUpdate.map((i: any) =>
+          updateMutation.mutateAsync({ itemId: i.id, updates: { rating: newRating ?? null } })
+        ));
+      } else if (collectionItemId) {
+        await updateMutation.mutateAsync({ itemId: collectionItemId, updates: { rating: newRating ?? null } });
+      }
+    } catch (e) {
+      console.error('Failed to save rating in ReviewSection', e);
+    }
+  };
 
   const handlePost = () => {
     if (!content.trim()) return;
@@ -71,7 +102,7 @@ export function ReviewSection({ movieId, showId, collectionItemId, initialRating
 
         <View className="flex-row items-center mb-4">
             {[1, 2, 3, 4, 5].map(star => (
-                <Pressable key={star} onPress={() => setRating(star === rating ? undefined : star)} className="mr-2">
+                <Pressable key={star} onPress={() => handleStarPress(star)} className="mr-2">
                     <Ionicons 
                         name={star <= (rating || 0) ? "star" : "star-outline"} 
                         size={24} 
