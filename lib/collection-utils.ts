@@ -117,7 +117,7 @@ export function getStacks(
     const mediaA = itemA.movies || itemA.shows;
     const mediaB = itemB.movies || itemB.shows;
 
-    if (searchQuery) {
+    if (searchQuery && sortBy === 'recent') {
       const titleA = ((mediaA as any)?.title || (mediaA as any)?.name || '').toLowerCase();
       const titleB = ((mediaB as any)?.title || (mediaB as any)?.name || '').toLowerCase();
       const q = searchQuery.toLowerCase().trim();

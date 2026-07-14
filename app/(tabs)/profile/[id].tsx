@@ -16,7 +16,7 @@ import { ReorderShelfModal } from '@/components/ReorderShelfModal';
 import { getGenres, getStacks } from '@/lib/collection-utils';
 
 type TabType = 'on-display' | 'grails' | 'collection' | 'wishlist' | 'bin' | 'analytics' | 'in-common';
-export type SortOption = 'recent' | 'title' | 'release' | 'rating' | 'genre' | 'format';
+export type SortOption = 'recent' | 'title' | 'release' | 'rating' | 'format';
 
 export default function UserProfileScreen() {
   const { id, from } = useLocalSearchParams<{ id: string; from?: string }>();
@@ -119,11 +119,6 @@ export default function UserProfileScreen() {
           break;
         case 'rating':
           comparison = (a.rating || 0) - (b.rating || 0);
-          break;
-        case 'genre':
-          const gA = mediaA?.genres?.[0]?.name || 'ZZZ';
-          const gB = mediaB?.genres?.[0]?.name || 'ZZZ';
-          comparison = gA.localeCompare(gB);
           break;
         case 'format':
           comparison = (FORMAT_ORDER[a.format] || 0) - (FORMAT_ORDER[b.format] || 0);
@@ -419,7 +414,7 @@ export default function UserProfileScreen() {
             <View className="bg-neutral-900 mb-6 p-4 rounded-xl border border-neutral-800 z-50">
                 <View className="flex-row items-center gap-2 mb-2 flex-wrap">
                   <Text className="text-neutral-500 font-mono text-[9px] uppercase tracking-tighter mr-1">SORT:</Text>
-                  {[{ id: 'recent', label: 'RECENT' }, { id: 'title', label: 'NAME' }, { id: 'release', label: 'YEAR' }, { id: 'rating', label: 'RATING' }, { id: 'genre', label: 'GENRE' }].map((s: any) => (
+                  {[{ id: 'recent', label: 'RECENT' }, { id: 'title', label: 'NAME' }, { id: 'release', label: 'YEAR' }, { id: 'rating', label: 'RATING' }].map((s: any) => (
                     <Pressable key={s.id} onPress={() => { if (sortBy === s.id) setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); else { setSortBy(s.id); setSortOrder(s.id === 'title' || s.id === 'release' ? 'asc' : 'desc'); } }} className={`px-2 py-1 rounded border flex-row items-center gap-1 ${sortBy === s.id ? 'bg-amber-500/10 border-amber-500/40' : 'bg-neutral-950 border-neutral-800'}`}>
                       <Text className={`font-mono text-[8px] font-bold ${sortBy === s.id ? 'text-amber-500' : 'text-neutral-500'}`}>{s.label}</Text>
                       {sortBy === s.id && <Ionicons name={sortOrder === 'asc' ? 'chevron-up' : 'chevron-down'} size={8} color="#f59e0b" />}
