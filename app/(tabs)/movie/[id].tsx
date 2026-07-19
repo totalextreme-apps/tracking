@@ -190,24 +190,24 @@ export default function MovieDetailScreen() {
 
     const movieItems = collection?.filter((item: any) => 
         item.movie_id === movieId || 
-        item.id === itemUuid ||
-        item.movies?.tmdb_id === movieId
+        item.id === itemUuid
     ) ?? [];
 
     const internalMovie = movieItems[0]?.movies;
     const { data: dbMovie } = useQuery({
-        queryKey: ['movies-db-detail', internalMovie?.id],
+        queryKey: ['movies-db-detail', movieId || internalMovie?.id],
         queryFn: async () => {
-            if (!internalMovie?.id) return null;
+            const targetId = movieId || internalMovie?.id;
+            if (!targetId) return null;
             const { data, error } = await supabase
                 .from('movies')
                 .select('*')
-                .eq('id', internalMovie.id)
+                .eq('id', targetId)
                 .single();
             if (error) throw error;
             return data;
         },
-        enabled: !!internalMovie?.id,
+        enabled: !!(movieId || internalMovie?.id),
     });
     const resolvedInternalMovie = dbMovie || internalMovie;
     const commentActiveItem = movieItems[0];
