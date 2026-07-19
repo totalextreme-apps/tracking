@@ -269,10 +269,8 @@ export default function ShowDetailScreen() {
     const customArtUrl = showItems.find((i: any) => i.custom_poster_url)?.custom_poster_url;
     const customBackdropUrl = showItems.find((i: any) => i.custom_backdrop_url)?.custom_backdrop_url;
 
-    const handleUploadCustomArt = async (type: 'poster' | 'backdrop' = 'poster') => {
-        setCustomArtType(type);
+    const launchLibrary = async (type: 'poster' | 'backdrop') => {
         try {
-            // Request permissions first
             const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
             if (status !== 'granted') {
                 Alert.alert('Permission Denied', 'We need permission to access your photos to upload custom art.');
@@ -291,8 +289,51 @@ export default function ShowDetailScreen() {
                 setCropModalVisible(true);
             }
         } catch (error) {
-            console.error('Upload initiation error:', error);
+            console.error('Library launch error:', error);
             Alert.alert('Error', 'Could not open image library');
+        }
+    };
+
+    const launchCamera = async (type: 'poster' | 'backdrop') => {
+        try {
+            const { status } = await ImagePicker.requestCameraPermissionsAsync();
+            if (status !== 'granted') {
+                Alert.alert('Permission Denied', 'We need permission to access your camera to take a photo.');
+                return;
+            }
+
+            const result = await ImagePicker.launchCameraAsync({
+                mediaTypes: ['images'],
+                allowsEditing: true,
+                aspect: type === 'poster' ? [2, 3] : [16, 9],
+                quality: 0.8,
+            });
+
+            if (!result.canceled && result.assets[0]) {
+                setPendingImageUri(result.assets[0].uri);
+                setCropModalVisible(true);
+            }
+        } catch (error) {
+            console.error('Camera launch error:', error);
+            Alert.alert('Error', 'Could not open camera');
+        }
+    };
+
+    const handleUploadCustomArt = async (type: 'poster' | 'backdrop' = 'poster') => {
+        setCustomArtType(type);
+
+        if (Platform.OS === 'web') {
+            launchLibrary(type);
+        } else {
+            Alert.alert(
+                'Upload Art',
+                'Choose a source for your custom image:',
+                [
+                    { text: 'Take Photo', onPress: () => launchCamera(type) },
+                    { text: 'Choose from Library', onPress: () => launchLibrary(type) },
+                    { text: 'Cancel', style: 'cancel' }
+                ]
+            );
         }
     };
 

@@ -226,7 +226,7 @@ export function useAddToCollection(userId: string | undefined) {
         throw itemError;
       }
 
-      return { internalId };
+      return { internalId, insertedIds: insertedItems?.map((i: any) => i.id) || [] };
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['collection', userId] });

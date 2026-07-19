@@ -51,7 +51,7 @@ export default function MovieDetailScreen() {
     const { thriftMode } = useThriftMode();
     const { playSound } = useSound();
     const insets = useSafeAreaInsets();
-    const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
+    const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
     const [ejecting, setEjecting] = useState(false);
     const [showShareModal, setShowShareModal] = useState(false);
     const [localNotes, setLocalNotes] = useState<Record<string, string>>({});
@@ -193,7 +193,18 @@ export default function MovieDetailScreen() {
         item.id === itemUuid
     ) ?? [];
 
-    const internalMovie = movieItems[0]?.movies;
+    const FORMAT_PRIORITY = ['4K', 'BluRay', 'DVD', 'VHS', 'Digital'];
+
+    // Derive activeItem and activeFormat
+    const activeItem = (selectedItemId && movieItems.some((i: any) => i.id === selectedItemId))
+        ? movieItems.find((i: any) => i.id === selectedItemId)
+        : (movieItems.length > 0
+            ? [...movieItems].sort((a, b) => FORMAT_PRIORITY.indexOf(a.format) - FORMAT_PRIORITY.indexOf(b.format))[0]
+            : null);
+
+    const activeFormat: string | null = activeItem ? activeItem.format : null;
+
+    const internalMovie = activeItem?.movies || movieItems[0]?.movies;
     const { data: dbMovie } = useQuery({
         queryKey: ['movies-db-detail', movieId || internalMovie?.id],
         queryFn: async () => {
@@ -210,7 +221,7 @@ export default function MovieDetailScreen() {
         enabled: !!(movieId || internalMovie?.id),
     });
     const resolvedInternalMovie = dbMovie || internalMovie;
-    const commentActiveItem = movieItems[0];
+    const commentActiveItem = activeItem || movieItems[0];
 
     const activeMovie = resolvedInternalMovie || persistedMovie;
     const tmdbIdToUse = activeMovie?.tmdb_id || (movieId && movieId > 0 ? movieId : null);
@@ -255,16 +266,12 @@ export default function MovieDetailScreen() {
         });
     }, [movieItems, movie?.title, isReadOnly]);
 
-    // Load custom art from ANY collection item for this movie
-    const customArtUrl = movieItems.find((i: any) => i.custom_poster_url)?.custom_poster_url;
-    const customBackdropUrl = movieItems.find((i: any) => i.custom_backdrop_url)?.custom_backdrop_url;
+    // Load custom art from only the active collection item for this movie
+    const customArtUrl = activeItem?.custom_poster_url;
+    const customBackdropUrl = activeItem?.custom_backdrop_url;
 
-    const handleUploadCustomArt = async (type: 'poster' | 'backdrop' = 'poster') => {
-        console.log(`Upload custom ${type} clicked`, Platform.OS);
-        setCustomArtType(type);
-
+    const launchLibrary = async (type: 'poster' | 'backdrop') => {
         try {
-            // Request permissions first
             const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
             if (status !== 'granted') {
                 Alert.alert('Permission Denied', 'We need permission to access your photos to upload custom art.');
@@ -283,15 +290,59 @@ export default function MovieDetailScreen() {
                 setCropModalVisible(true);
             }
         } catch (error) {
-            console.error('Upload initiation error:', error);
+            console.error('Library launch error:', error);
             Alert.alert('Error', 'Could not open image library');
+        }
+    };
+
+    const launchCamera = async (type: 'poster' | 'backdrop') => {
+        try {
+            const { status } = await ImagePicker.requestCameraPermissionsAsync();
+            if (status !== 'granted') {
+                Alert.alert('Permission Denied', 'We need permission to access your camera to take a photo.');
+                return;
+            }
+
+            const result = await ImagePicker.launchCameraAsync({
+                mediaTypes: ['images'],
+                allowsEditing: true,
+                aspect: type === 'poster' ? [2, 3] : [16, 9],
+                quality: 0.8,
+            });
+
+            if (!result.canceled && result.assets[0]) {
+                setPendingImageUri(result.assets[0].uri);
+                setCropModalVisible(true);
+            }
+        } catch (error) {
+            console.error('Camera launch error:', error);
+            Alert.alert('Error', 'Could not open camera');
+        }
+    };
+
+    const handleUploadCustomArt = async (type: 'poster' | 'backdrop' = 'poster') => {
+        console.log(`Upload custom ${type} clicked`, Platform.OS);
+        setCustomArtType(type);
+
+        if (Platform.OS === 'web') {
+            launchLibrary(type);
+        } else {
+            Alert.alert(
+                'Upload Art',
+                'Choose a source for your custom image:',
+                [
+                    { text: 'Take Photo', onPress: () => launchCamera(type) },
+                    { text: 'Choose from Library', onPress: () => launchLibrary(type) },
+                    { text: 'Cancel', style: 'cancel' }
+                ]
+            );
         }
     };
 
     // Removed handleWebFileChange as we now use ImagePicker for web too
 
     const handleSaveCustomArt = async (croppedDataUrl: string) => {
-        if (!movieItems[0]?.id) {
+        if (!activeItem?.id) {
             Alert.alert('Error', `No collection item found to attach this ${customArtType} to.`);
             return;
         }
@@ -323,7 +374,7 @@ export default function MovieDetailScreen() {
             else updates.custom_backdrop_url = uploadUrl;
 
             await updateMutation.mutateAsync({
-                itemId: movieItems[0].id,
+                itemId: activeItem.id,
                 updates
             });
 
@@ -351,7 +402,7 @@ export default function MovieDetailScreen() {
     };
 
     const handleRemoveCustomArt = async (type: 'poster' | 'backdrop' = 'poster') => {
-        if (!movieItems[0]?.id) return;
+        if (!activeItem?.id) return;
 
         const confirmRemove = async () => {
             const oldUrl = type === 'poster' ? customArtUrl : customBackdropUrl;
@@ -361,7 +412,7 @@ export default function MovieDetailScreen() {
             else updates.custom_backdrop_url = null;
 
             await updateMutation.mutateAsync({
-                itemId: movieItems[0].id,
+                itemId: activeItem.id,
                 updates
             });
 
@@ -450,19 +501,9 @@ export default function MovieDetailScreen() {
     const posterUrl = getPosterUrl(displayMovie.poster_path);
 
     const ownedFormats: string[] = movieItems.map((i: any) => i.format);
-    const isGrail = movieItems.some((i: any) => i.is_grail);
+    const isGrail = activeItem?.is_grail || false;
     const isWishlist = movieItems.every((i: any) => i.status === 'wishlist');
 
-    // Derive active format — plain const (no hook) so it's safe after the early return above.
-    // selectedFormat wins if it's still in the owned list; otherwise fall back to highest-priority owned format.
-    const FORMAT_PRIORITY = ['4K', 'BluRay', 'DVD', 'VHS', 'Digital'];
-    const activeFormat: string | null = (selectedFormat && ownedFormats.includes(selectedFormat))
-        ? selectedFormat
-        : (ownedFormats.length > 0
-            ? [...ownedFormats].sort((a, b) => FORMAT_PRIORITY.indexOf(a) - FORMAT_PRIORITY.indexOf(b))[0]
-            : null);
-
-    const activeItem = movieItems.find((i: any) => i.format === activeFormat);
     const isBootleg = (activeItem && localBootlegs[activeItem.id] !== undefined)
         ? localBootlegs[activeItem.id]
         : (activeItem?.is_bootleg || false);
@@ -478,7 +519,7 @@ export default function MovieDetailScreen() {
                 await Promise.all(existingItems.map((i: any) => deleteMutation.mutateAsync(i.id)));
             } else {
                 // Add format
-                await addMutation.mutateAsync({
+                const result = await addMutation.mutateAsync({
                     tmdbItem: {
                         id: activeMovie.tmdb_id,
                         title: activeMovie.title,
@@ -490,6 +531,9 @@ export default function MovieDetailScreen() {
                     formats: [format],
                     status: 'owned',
                 });
+                if (result?.insertedIds && result.insertedIds.length > 0) {
+                    setSelectedItemId(result.insertedIds[0]);
+                }
             }
         } catch (e) {
             Alert.alert('Error', 'Could not update format');
@@ -519,7 +563,7 @@ export default function MovieDetailScreen() {
 
         try {
             // Add the format with edition
-            await addMutation.mutateAsync({
+            const result = await addMutation.mutateAsync({
                 tmdbItem: {
                     id: activeMovie.tmdb_id,
                     title: activeMovie.title,
@@ -544,7 +588,9 @@ export default function MovieDetailScreen() {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
             // Switch active format to the one just added
-            setSelectedFormat(pendingFormat);
+            if (result?.insertedIds && result.insertedIds.length > 0) {
+                setSelectedItemId(result.insertedIds[0]);
+            }
 
             // Close modal and reset
             setShowEditionModal(false);
@@ -582,21 +628,17 @@ export default function MovieDetailScreen() {
 
     const handleFormatLongPress = async (fmt: MovieFormat) => {
         await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        setSelectedFormat(fmt);
+        const targetItem = movieItems.find((i: any) => i.format === fmt);
+        if (targetItem) {
+            setSelectedItemId(targetItem.id);
+        }
     };
 
-    const existingFormatItem = movieItems.find((i: any) => i.format === selectedFormat);
-
     const toggleGrail = async () => {
-        // Toggle grail for ALL items of this movie? Or just the "top" one?
-        // Usually grail applies to the physical copy. Let's toggle for all for now or the first one.
-        // A better model might be `is_grail` on the Movie? No, `collection_items`.
-        // Let's set it on all items for this movie.
+        if (!activeItem) return;
         try {
             const newGrail = !isGrail;
-            await Promise.all(movieItems.map((item: any) =>
-                updateMutation.mutateAsync({ itemId: item.id, updates: { is_grail: newGrail } })
-            ));
+            await updateMutation.mutateAsync({ itemId: activeItem.id, updates: { is_grail: newGrail } });
         } catch (e) {
             Alert.alert('Error', 'Could not update Grail status');
         }
@@ -805,17 +847,16 @@ export default function MovieDetailScreen() {
                                 ) : (
                                     <Pressable
                                         onPress={async () => {
-                                            const isOnDisplay = movieItems.some((i: any) => i.is_on_display);
-                                            await Promise.all(movieItems.map((item: any) =>
-                                                updateMutation.mutateAsync({ itemId: item.id, updates: { is_on_display: !isOnDisplay } })
-                                            ));
+                                            if (!activeItem) return;
+                                            const isOnDisplay = activeItem.is_on_display || false;
+                                            await updateMutation.mutateAsync({ itemId: activeItem.id, updates: { is_on_display: !isOnDisplay } });
                                             playSound('click');
                                         }}
-                                        className={`flex-1 flex-row items-center justify-center p-3 rounded-lg border ${movieItems.some((i: any) => i.is_on_display) ? 'bg-indigo-500/10 border-indigo-500' : 'bg-neutral-900 border-neutral-800'}`}
+                                        className={`flex-1 flex-row items-center justify-center p-3 rounded-lg border ${activeItem?.is_on_display ? 'bg-indigo-500/10 border-indigo-500' : 'bg-neutral-900 border-neutral-800'}`}
                                     >
-                                        <Ionicons name={movieItems.some((i: any) => i.is_on_display) ? "star" : "star-outline"} size={16} color={movieItems.some((i: any) => i.is_on_display) ? "#6366f1" : "#404040"} />
-                                        <Text className={`ml-2 font-mono text-xs font-bold tracking-widest ${movieItems.some((i: any) => i.is_on_display) ? 'text-indigo-500' : 'text-neutral-600'}`}>
-                                            {movieItems.some((i: any) => i.is_on_display) ? 'STAFF PICK' : 'MAKE STAFF PICK'}
+                                        <Ionicons name={activeItem?.is_on_display ? "star" : "star-outline"} size={16} color={activeItem?.is_on_display ? "#6366f1" : "#404040"} />
+                                        <Text className={`ml-2 font-mono text-xs font-bold tracking-widest ${activeItem?.is_on_display ? 'text-indigo-500' : 'text-neutral-600'}`}>
+                                            {activeItem?.is_on_display ? 'STAFF PICK' : 'MAKE STAFF PICK'}
                                         </Text>
                                     </Pressable>
                                 )}
@@ -1272,68 +1313,71 @@ export default function MovieDetailScreen() {
                                             : 'Formats in Library'}
                                 </Text>
                                 <View className="gap-2">
-                                    {movieItems.map((item: any) => (
-                                        <View key={item.id} className="flex-row items-center justify-between bg-neutral-900 p-3 rounded-lg border border-neutral-800">
-                                            <View className="flex-1 flex-row items-center flex-wrap gap-2 mr-2">
-                                                <Pressable
-                                                    className="flex-row items-center gap-2 active:opacity-70"
-                                                    onPress={() => {
-                                                        setSelectedFormat(item.format);
-                                                        playSound('click');
-                                                    }}
-                                                >
-                                                    <View style={{
-                                                        borderWidth: activeFormat === item.format ? 2 : 0,
-                                                        borderColor: '#fff',
-                                                        borderRadius: 6,
-                                                        padding: activeFormat === item.format ? 1 : 0,
-                                                    }}>
-                                                        <View className={`px-2 py-1 rounded shrink-0 ${FORMAT_COLORS[item.format] || 'bg-neutral-800'}`}>
-                                                            <Text className="text-white font-mono text-xs font-bold">{item.format === 'BluRay' ? 'Blu-ray' : item.format}</Text>
+                                    {movieItems.map((item: any) => {
+                                        const isLoaded = activeItem?.id === item.id;
+                                        return (
+                                            <View key={item.id} className={`flex-row items-center justify-between p-3 rounded-lg border ${isLoaded ? 'border-amber-500 bg-neutral-900' : 'border-neutral-800 bg-neutral-900'}`}>
+                                                <View className="flex-1 flex-row items-center flex-wrap gap-2 mr-2">
+                                                    <Pressable
+                                                        className="flex-row items-center gap-2 active:opacity-70"
+                                                        onPress={() => {
+                                                            setSelectedItemId(item.id);
+                                                            playSound('click');
+                                                        }}
+                                                    >
+                                                        <View style={{
+                                                            borderWidth: isLoaded ? 2 : 0,
+                                                            borderColor: '#fff',
+                                                            borderRadius: 6,
+                                                            padding: isLoaded ? 1 : 0,
+                                                        }}>
+                                                            <View className={`px-2 py-1 rounded shrink-0 ${FORMAT_COLORS[item.format] || 'bg-neutral-800'}`}>
+                                                                <Text className="text-white font-mono text-xs font-bold">{item.format === 'BluRay' ? 'Blu-ray' : item.format}</Text>
+                                                            </View>
                                                         </View>
-                                                    </View>
-                                                </Pressable>
-                                                {item.status === 'wishlist' && (
-                                                    <View className="border border-dashed border-neutral-500 px-1.5 py-0.5 rounded-sm">
-                                                        <Text className="text-neutral-400 font-mono text-[9px] font-bold uppercase tracking-wider">WISHLIST</Text>
-                                                    </View>
-                                                )}
-                                                {item.value_estimate !== null && item.value_estimate !== undefined && (
-                                                    <View className="bg-neutral-800 border border-neutral-700/50 px-2 py-0.5 rounded">
-                                                        <Text className="text-amber-400 font-mono text-[10px] font-bold">
-                                                            EST: ${Number(item.value_estimate).toFixed(2)}
-                                                        </Text>
-                                                    </View>
-                                                )}
-                                                {item.edition && (
-                                                    <Text className="text-neutral-400 font-mono text-sm flex-1" numberOfLines={2}>({item.edition})</Text>
+                                                    </Pressable>
+                                                    {item.status === 'wishlist' && (
+                                                        <View className="border border-dashed border-neutral-500 px-1.5 py-0.5 rounded-sm">
+                                                            <Text className="text-neutral-400 font-mono text-[9px] font-bold uppercase tracking-wider">WISHLIST</Text>
+                                                        </View>
+                                                    )}
+                                                    {item.value_estimate !== null && item.value_estimate !== undefined && (
+                                                        <View className="bg-neutral-800 border border-neutral-700/50 px-2 py-0.5 rounded">
+                                                            <Text className="text-amber-400 font-mono text-[10px] font-bold">
+                                                                EST: ${Number(item.value_estimate).toFixed(2)}
+                                                            </Text>
+                                                        </View>
+                                                    )}
+                                                    {item.edition && (
+                                                        <Text className="text-neutral-400 font-mono text-sm flex-1" numberOfLines={2}>({item.edition})</Text>
+                                                    )}
+                                                </View>
+                                                {!isReadOnly && (
+                                                    <Pressable
+                                                        onPress={async () => {
+                                                            await deleteMutation.mutateAsync(item.id);
+                                                            playSound('click');
+                                                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                                                            
+                                                            // Auto-pop if that was the last format we owned!
+                                                            if (movieItems.length <= 1) {
+                                                                if (fromStack) {
+                                                                    router.replace(`/stack/${fromStack}` as any);
+                                                                } else if (router.canGoBack()) {
+                                                                    router.back();
+                                                                } else {
+                                                                    router.replace('/(tabs)/home' as any);
+                                                                }
+                                                            }
+                                                        }}
+                                                        className="bg-red-900/20 px-3 py-1 rounded border border-red-900/50"
+                                                    >
+                                                        <Text className="text-red-400 font-mono text-xs">Remove</Text>
+                                                    </Pressable>
                                                 )}
                                             </View>
-                                            {!isReadOnly && (
-                                                <Pressable
-                                                    onPress={async () => {
-                                                        await deleteMutation.mutateAsync(item.id);
-                                                        playSound('click');
-                                                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                                                        
-                                                        // Auto-pop if that was the last format we owned!
-                                                        if (movieItems.length <= 1) {
-                                                            if (fromStack) {
-                                                                router.replace(`/stack/${fromStack}` as any);
-                                                            } else if (router.canGoBack()) {
-                                                                router.back();
-                                                            } else {
-                                                                router.replace('/(tabs)/home' as any);
-                                                            }
-                                                        }
-                                                    }}
-                                                    className="bg-red-900/20 px-3 py-1 rounded border border-red-900/50"
-                                                >
-                                                    <Text className="text-red-400 font-mono text-xs">Remove</Text>
-                                                </Pressable>
-                                            )}
-                                        </View>
-                                    ))}
+                                        );
+                                    })}
                                 </View>
                             </View>
                         )
