@@ -20,6 +20,7 @@ import { AuthErrorBanner } from '@/components/AuthErrorBanner';
 import { DesktopBlocker } from '@/components/DesktopBlocker';
 import { GlobalHeader } from '@/components/GlobalHeader';
 import { AppTour } from '@/components/AppTour'; // Added AppTour import
+import { FranchiseAnnouncement } from '@/components/FranchiseAnnouncement';
 import { StaticOverlay } from '@/components/StaticOverlay';
 import { useColorScheme } from '@/components/useColorScheme';
 import { AuthProvider } from '@/context/AuthContext';
@@ -182,6 +183,7 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
               </View>
               <StaticOverlay visible={showStatic} />
               <AppTour />
+              <FranchiseAnnouncement />
               {Platform.OS === 'web' && (
                 <>
                   <Analytics />
