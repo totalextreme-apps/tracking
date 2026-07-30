@@ -170,6 +170,7 @@ export default function HomeScreen() {
 
   const [sortBy, setSortBy] = useState<'recent' | 'title' | 'release' | 'rating'>('recent');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [useFranchiseSort, setUseFranchiseSort] = useState(true);
   const { width: windowWidth } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && windowWidth > 1024;
   const [viewMode, setViewMode] = usePersistedState<'list' | 'grid2' | 'grid4' | 'custom'>('stacks_viewMode', isDesktop ? 'grid4' : 'grid2');
@@ -398,8 +399,9 @@ export default function HomeScreen() {
             const year = (m.release_date || m.first_air_date || '').slice(0, 4);
             const format = (item.format || '').toLowerCase();
             const edition = (item.edition || '').toLowerCase();
+            const franchise = (item.franchise || '').toLowerCase();
             
-            const searchableTexts: string[] = [title, year, format, edition];
+            const searchableTexts: string[] = [title, year, format, edition, franchise];
             
             if (m.genres && Array.isArray(m.genres)) {
               m.genres.forEach((g: any) => {
@@ -425,8 +427,8 @@ export default function HomeScreen() {
   }, [collection, thriftMode, formatFilter, searchQuery, genreFilter, mediaTypeFilter, searchMode, creditTmdbIds]);
 
   const filteredStacks = useMemo(() => {
-    return getStacks(filteredCollection, thriftMode, sortBy, sortOrder, searchQuery);
-  }, [filteredCollection, thriftMode, sortBy, sortOrder, searchQuery]);
+    return getStacks(filteredCollection, thriftMode, sortBy, sortOrder, searchQuery, useFranchiseSort);
+  }, [filteredCollection, thriftMode, sortBy, sortOrder, searchQuery, useFranchiseSort]);
 
   const onDisplay = useMemo(() => {
     const raw = getOnDisplayItems(collection);
@@ -705,6 +707,15 @@ export default function HomeScreen() {
                       {sortBy === s.id && <Ionicons name={sortOrder === 'asc' ? 'chevron-up' : 'chevron-down'} size={10} color="#f59e0b" />}
                     </Pressable>
                   ))}
+                  {sortBy === 'title' && (
+                    <Pressable 
+                      onPress={() => { setUseFranchiseSort(!useFranchiseSort); playSound('click'); }} 
+                      className={`px-3 py-1.5 rounded border flex-row items-center gap-1.5 ${useFranchiseSort ? 'bg-amber-500/20 border-amber-500/50' : 'bg-neutral-950 border-neutral-800'}`}
+                    >
+                      <Ionicons name={useFranchiseSort ? "layers" : "layers-outline"} size={10} color={useFranchiseSort ? "#f59e0b" : "#666"} />
+                      <Text className={`font-mono text-[10px] font-bold ${useFranchiseSort ? 'text-amber-500' : 'text-neutral-500'}`}>FRANCHISE</Text>
+                    </Pressable>
+                  )}
                   <View className="h-4 w-[1px] bg-neutral-800 mx-1" />
                   <Text className="text-neutral-500 font-mono text-[10px] uppercase tracking-tighter mr-1">TYPE:</Text>
                   <View className="flex-row bg-neutral-950 rounded border border-neutral-800 p-0.5 mr-2">

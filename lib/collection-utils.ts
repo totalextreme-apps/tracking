@@ -75,7 +75,8 @@ export function getStacks(
   thriftMode = false,
   sortBy: SortOption = 'recent',
   sortOrder: SortOrder = 'desc',
-  searchQuery = ''
+  searchQuery = '',
+  useFranchiseSort = true
 ): CollectionItemWithMedia[][] {
   const filtered = filterByThriftMode(items, thriftMode);
   if (filtered.length === 0) return [];
@@ -142,9 +143,39 @@ export function getStacks(
 
     switch (sortBy) {
       case 'title':
-        const titleA = itemA.movies?.title ?? itemA.shows?.name ?? '';
-        const titleB = itemB.movies?.title ?? itemB.shows?.name ?? '';
-        comparison = titleA.localeCompare(titleB);
+        const rawTitleA = itemA.movies?.title ?? itemA.shows?.name ?? '';
+        const rawTitleB = itemB.movies?.title ?? itemB.shows?.name ?? '';
+
+        if (useFranchiseSort) {
+          const franchiseItemA = a.find(item => item.franchise && item.franchise.trim() !== '');
+          const franchiseItemB = b.find(item => item.franchise && item.franchise.trim() !== '');
+
+          const franchiseA = franchiseItemA?.franchise?.trim();
+          const franchiseB = franchiseItemB?.franchise?.trim();
+
+          if (franchiseA && franchiseB) {
+            if (franchiseA.toLowerCase() === franchiseB.toLowerCase()) {
+              const orderA = franchiseItemA?.franchise_order !== null && franchiseItemA?.franchise_order !== undefined ? Number(franchiseItemA.franchise_order) : Infinity;
+              const orderB = franchiseItemB?.franchise_order !== null && franchiseItemB?.franchise_order !== undefined ? Number(franchiseItemB.franchise_order) : Infinity;
+              if (orderA !== orderB) {
+                comparison = orderA - orderB;
+              } else {
+                comparison = rawTitleA.localeCompare(rawTitleB);
+              }
+            } else {
+              comparison = franchiseA.localeCompare(franchiseB);
+            }
+          } else if (franchiseA) {
+            comparison = franchiseA.localeCompare(rawTitleB);
+          } else if (franchiseB) {
+            comparison = rawTitleA.localeCompare(franchiseB);
+          } else {
+            comparison = rawTitleA.localeCompare(rawTitleB);
+          }
+        } else {
+          comparison = rawTitleA.localeCompare(rawTitleB);
+        }
+
         // If titles are same, sort by season
         if (comparison === 0 && itemA.show_id === itemB.show_id) {
           comparison = (itemA.season_number ?? 0) - (itemB.season_number ?? 0);

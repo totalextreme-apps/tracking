@@ -36,6 +36,7 @@ export default function UserProfileScreen() {
   const [formatFilter, setFormatFilter] = useState<string | null>(null);
   const [genreFilter, setGenreFilter] = useState<string | null>(null);
   const [mediaTypeFilter, setMediaTypeFilter] = useState<'movie' | 'tv' | null>(null);
+  const [useFranchiseSort, setUseFranchiseSort] = useState(true);
   const [isGenreDropdownOpen, setIsGenreDropdownOpen] = useState(false);
   const [reorderModalVisible, setReorderModalVisible] = useState(false);
   const [displayLimit, setDisplayLimit] = useState(50);
@@ -64,8 +65,9 @@ export default function UserProfileScreen() {
           const year = (m.release_date || m.first_air_date || '').slice(0, 4);
           const format = (item.format || '').toLowerCase();
           const edition = (item.edition || '').toLowerCase();
+          const franchise = (item.franchise || '').toLowerCase();
           
-          const searchableTexts: string[] = [title, year, format, edition];
+          const searchableTexts: string[] = [title, year, format, edition, franchise];
           
           if (m.genres && Array.isArray(m.genres)) {
             m.genres.forEach((g: any) => {
@@ -110,7 +112,35 @@ export default function UserProfileScreen() {
 
       switch (sortBy) {
         case 'title':
-          comparison = (mediaA?.title || mediaA?.name || '').localeCompare(mediaB?.title || mediaB?.name || '');
+          const rawTitleA = mediaA?.title || mediaA?.name || '';
+          const rawTitleB = mediaB?.title || mediaB?.name || '';
+
+          if (useFranchiseSort) {
+            const franchiseA = a.franchise?.trim();
+            const franchiseB = b.franchise?.trim();
+
+            if (franchiseA && franchiseB) {
+              if (franchiseA.toLowerCase() === franchiseB.toLowerCase()) {
+                const orderA = a.franchise_order !== null && a.franchise_order !== undefined ? Number(a.franchise_order) : Infinity;
+                const orderB = b.franchise_order !== null && b.franchise_order !== undefined ? Number(b.franchise_order) : Infinity;
+                if (orderA !== orderB) {
+                  comparison = orderA - orderB;
+                } else {
+                  comparison = rawTitleA.localeCompare(rawTitleB);
+                }
+              } else {
+                comparison = franchiseA.localeCompare(franchiseB);
+              }
+            } else if (franchiseA) {
+              comparison = franchiseA.localeCompare(rawTitleB);
+            } else if (franchiseB) {
+              comparison = rawTitleA.localeCompare(franchiseB);
+            } else {
+              comparison = rawTitleA.localeCompare(rawTitleB);
+            }
+          } else {
+            comparison = rawTitleA.localeCompare(rawTitleB);
+          }
           break;
         case 'release':
           const dateA = mediaA?.release_date || mediaA?.first_air_date || '';
@@ -135,7 +165,7 @@ export default function UserProfileScreen() {
   };
 
   const stackItems = (items: any[], isWishlist = false) => {
-    return getStacks(items, isWishlist, sortBy as any, sortOrder);
+    return getStacks(items, isWishlist, sortBy as any, sortOrder, '', useFranchiseSort);
   };
 
   const onDisplayItems = filterAndSortItems(collection?.filter((item: any) => item.is_on_display) || [])
@@ -420,6 +450,15 @@ export default function UserProfileScreen() {
                       {sortBy === s.id && <Ionicons name={sortOrder === 'asc' ? 'chevron-up' : 'chevron-down'} size={8} color="#f59e0b" />}
                     </Pressable>
                   ))}
+                  {sortBy === 'title' && (
+                    <Pressable 
+                      onPress={() => setUseFranchiseSort(!useFranchiseSort)} 
+                      className={`px-2 py-1 rounded border flex-row items-center gap-1 ${useFranchiseSort ? 'bg-amber-500/10 border-amber-500/40' : 'bg-neutral-950 border-neutral-800'}`}
+                    >
+                      <Ionicons name={useFranchiseSort ? "layers" : "layers-outline"} size={8} color={useFranchiseSort ? "#f59e0b" : "#666"} />
+                      <Text className={`font-mono text-[8px] font-bold ${useFranchiseSort ? 'text-amber-500' : 'text-neutral-500'}`}>FRANCHISE</Text>
+                    </Pressable>
+                  )}
                 </View>
 
                 <View className="flex-row items-center gap-2 mt-2 flex-wrap">

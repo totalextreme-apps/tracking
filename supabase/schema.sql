@@ -38,6 +38,10 @@ create table public.collection_items (
   notes text,
   custom_poster_url text,
 
+  -- Franchise Sorting
+  franchise text,
+  franchise_order numeric,
+
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   unique(user_id, movie_id, format)
 );

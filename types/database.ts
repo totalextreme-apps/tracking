@@ -63,6 +63,8 @@ export interface CollectionItem {
   notes?: string | null;
   display_order?: number;
   grail_order?: number;
+  franchise?: string | null;
+  franchise_order?: number | null;
   last_watched_at?: string | null;
   watch_count?: number;
   created_at: string;
