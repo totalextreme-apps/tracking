@@ -84,7 +84,7 @@ export default function SettingsScreen() {
     setAutoValuingFail(0);
     cancelAutoValuingRef.current = false;
 
-    const CONCURRENCY = 4;
+    const CONCURRENCY = 1; // Must be 1 to avoid eBay bot protection blocks
     let nextIndex = 0;
     let successCount = 0;
     let failCount = 0;
@@ -124,7 +124,8 @@ export default function SettingsScreen() {
         }
 
         setAutoValuingProgress(prev => Math.min(itemsToProcess.length, prev + 1));
-        await new Promise(r => setTimeout(r, 200));
+        // Add a long delay between scrapes to prevent IP ban / 403 Forbidden
+        await new Promise(r => setTimeout(r, 2000));
       }
     };
 
