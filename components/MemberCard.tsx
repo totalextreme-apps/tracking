@@ -27,18 +27,16 @@ export function MemberCard({ userId, profile, onEditPress, onAvatarPress, isRead
 
     return (
         <View className="w-full">
-            <View className="w-full aspect-[1.586] rounded-xl overflow-hidden relative shadow-2xl bg-[#0b2447] border border-white/20">
+            <View className="w-full aspect-[1.586] rounded-xl overflow-hidden relative shadow-2xl bg-[#1a1412] border border-[#f59e0b]/20">
                 
-                {/* Retro Yellow Banner */}
-                <View className="absolute top-[60%] left-0 right-0 h-10 bg-[#fbbf24] border-y-2 border-black/50 flex-row items-center overflow-hidden">
-                    {/* Repeating faint background text for the stripe */}
-                     <Text className="text-black font-black text-xl italic tracking-tighter opacity-10 ml-2">VIDEO RENTAL</Text>
-                     <Text className="text-black font-black text-xl italic tracking-tighter opacity-10 ml-4">VIDEO RENTAL</Text>
-                     <Text className="text-black font-black text-xl italic tracking-tighter opacity-10 ml-4">VIDEO RENTAL</Text>
+                {/* Amber/Brown Stripe */}
+                <View className="absolute top-[60%] left-0 right-0 h-10 bg-[#8a7060]/20 border-y border-[#f59e0b]/30 flex-row items-center overflow-hidden">
+                     <Text className="text-[#f59e0b] font-black text-xl italic tracking-widest opacity-[0.03] ml-2">TRACKING APP MEMBER</Text>
+                     <Text className="text-[#f59e0b] font-black text-xl italic tracking-widest opacity-[0.03] ml-4">TRACKING APP MEMBER</Text>
                 </View>
 
-                {/* Glossy Sheen Overlay (Top half) */}
-                <View className="absolute top-0 left-0 right-0 h-[45%] bg-white/5" pointerEvents="none" />
+                {/* Subtle Sheen */}
+                <View className="absolute top-0 left-0 right-0 h-[40%] bg-[#f59e0b]/5" pointerEvents="none" />
 
                 {/* Content Container */}
                 <View className="flex-1 flex-row px-5 py-4">
@@ -47,7 +45,7 @@ export function MemberCard({ userId, profile, onEditPress, onAvatarPress, isRead
                     <View className="flex-1 pr-4 justify-between relative z-10">
                         {/* Header Logo Area */}
                         <View className="mb-2">
-                            <View className="bg-black/90 rounded border border-white/10 p-1.5 self-start shadow-sm">
+                            <View className="bg-black/40 rounded border border-[#f59e0b]/10 p-1.5 self-start shadow-sm">
                                 <Image
                                     source={require('@/assets/images/logo_tracking.png')}
                                     style={{ width: 85, height: 28 }}
@@ -58,52 +56,51 @@ export function MemberCard({ userId, profile, onEditPress, onAvatarPress, isRead
 
                         {/* Member Details */}
                         <View className="mt-auto mb-2">
-                            <Text className="text-[#93c5fd] font-bold text-[9px] uppercase tracking-widest mb-1 shadow-black">MEMBER HANDLE</Text>
-                            <View className="bg-black/50 px-2.5 py-1.5 rounded-sm border border-white/10 self-start">
-                                <Text className="text-white font-mono font-bold tracking-widest text-sm" numberOfLines={1}>
+                            <Text className="text-[#a89880] font-bold text-[9px] uppercase tracking-widest mb-1">MEMBER HANDLE</Text>
+                            <View className="bg-black/60 px-2.5 py-1.5 rounded-sm border border-[#f59e0b]/20 self-start">
+                                <Text className="text-[#f59e0b] font-mono font-bold tracking-widest text-sm" numberOfLines={1}>
                                     {profile?.username ? '@' + profile.username.toUpperCase() : 'UNKNOWN'}
                                 </Text>
                             </View>
                         </View>
 
-                        {/* Barcode (Sticker Look) */}
-                        <View className="bg-white p-1.5 rounded-sm shadow-md flex-row items-end h-8 border border-neutral-300 self-start mt-1">
+                        {/* Barcode */}
+                        <View className="bg-[#f59e0b]/10 p-1.5 rounded-sm flex-row items-end h-8 border border-[#f59e0b]/20 self-start mt-1">
                             {barcodeLines.map((line: { width: number; margin: number }, i: number) => (
-                                <View key={i} style={{ width: line.width, height: '100%', backgroundColor: 'black', marginRight: line.margin }} />
+                                <View key={i} style={{ width: line.width, height: '100%', backgroundColor: '#f59e0b', opacity: 0.6, marginRight: line.margin }} />
                             ))}
                         </View>
                     </View>
 
-                    {/* RIGHT COLUMN: Photo & Chip */}
-                    <View className="w-[32%] items-center justify-between py-1 relative z-10">
-                        
-                        {/* Faux Smart Chip */}
-                        <View className="w-9 h-7 rounded-md bg-[#d4af37] border-2 border-[#b8860b] shadow-sm mb-2 opacity-90 overflow-hidden flex-row">
-                             <View className="flex-1 border-r border-[#b8860b]/50" />
-                             <View className="flex-1 border-r border-[#b8860b]/50" />
-                             <View className="flex-1" />
-                             <View className="absolute top-1/2 left-0 right-0 h-px bg-[#b8860b]/50" />
-                        </View>
-
+                    {/* RIGHT COLUMN: Photo */}
+                    <View className="w-[32%] items-center justify-center py-1 relative z-10">
                         {/* Embedded Photo */}
                         <View className="w-full aspect-[3/4] relative">
-                            <Pressable onPress={onAvatarPress} disabled={!onAvatarPress} className="w-full h-full bg-neutral-900 rounded-md border border-black shadow-lg overflow-hidden relative">
+                            <Pressable onPress={onAvatarPress} disabled={!onAvatarPress} className="w-full h-full bg-[#111] rounded-md border border-[#f59e0b]/30 shadow-lg overflow-hidden relative">
                                 {profile?.avatar_url ? (
-                                    <Image source={{ uri: profile.avatar_url }} style={{ width: '100%', height: '100%', opacity: 0.9 }} contentFit="cover" transition={400} />
+                                    <Image source={{ uri: profile.avatar_url }} style={{ width: '100%', height: '100%', opacity: 0.85 }} contentFit="cover" transition={400} />
                                 ) : (
-                                    <View className="flex-1 items-center justify-center bg-neutral-800">
-                                        <FontAwesome name="user" size={40} color="#525252" />
+                                    <View className="flex-1 items-center justify-center bg-black">
+                                        <FontAwesome name="user" size={40} color="#8a7060" />
                                     </View>
                                 )}
                                 {/* Vintage photo filter overlay */}
-                                <View className="absolute inset-0 bg-blue-900/10 pointer-events-none" />
+                                <View className="absolute inset-0 bg-[#f59e0b]/10 pointer-events-none" />
                             </Pressable>
-                            {/* Edit Icon Badge */}
+
+                            {/* Editable Badge */}
                             {!isReadOnly && onEditPress && (
-                                <Pressable onPress={onEditPress} className="absolute -bottom-2 -right-2 bg-[#fbbf24] p-2 rounded-full border-2 border-[#0b2447] shadow-sm z-30">
-                                    <FontAwesome name="camera" size={12} color="black" />
+                                <Pressable
+                                    onPress={onEditPress}
+                                    className="absolute -bottom-2 -right-2 bg-[#2d2016] p-1.5 rounded-full border border-[#f59e0b]/50 shadow-md"
+                                >
+                                    <FontAwesome name="camera" size={10} color="#f59e0b" />
                                 </Pressable>
                             )}
+                        </View>
+                        
+                        <View className="mt-4 bg-black/40 px-2 py-0.5 rounded border border-[#f59e0b]/10">
+                            <Text className="text-[#8a7060] font-mono text-[8px] tracking-widest uppercase">ID: {displayId}</Text>
                         </View>
                     </View>
                 </View>
