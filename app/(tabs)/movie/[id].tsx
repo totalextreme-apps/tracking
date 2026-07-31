@@ -481,7 +481,7 @@ export default function MovieDetailScreen() {
         );
     }
 
-    const displayMovie = { ...activeMovie, ...tmdbMovie }; // Merge DB and TMDB data
+    const displayMovie = { ...tmdbMovie, ...activeMovie }; // DB data should override TMDB data
 
     const franchiseValue = localFranchise !== undefined ? localFranchise : (displayMovie?.franchise || '');
     const franchiseOrderValue = localFranchiseOrder !== undefined ? localFranchiseOrder : (displayMovie?.franchise_order?.toString() || '');
