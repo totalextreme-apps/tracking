@@ -22,7 +22,7 @@ export function getEbaySearchUrl(title: string, format: string, edition?: string
  */
 export function parseEbayPrices(html: string): number[] {
     const prices: number[] = [];
-    const priceRegex = /class="[^"]*(s-item__price|s-card__price)[^"]*">([\s\S]*?)<\/span>/g;
+    const priceRegex = /class="[^"]*(s-item__price|s-card__price|POSITIVE|text-positive)[^"]*">([\s\S]*?)<\/span>/gi;
     let match;
 
     while ((match = priceRegex.exec(html)) !== null) {
