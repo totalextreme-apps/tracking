@@ -53,7 +53,7 @@ export async function GET(request: Request) {
                 headers['Authorization'] = `Bearer ${apiKey}`;
             }
 
-            const firecrawlRes = await fetch('https://api.firecrawl.dev/v2/scrape', {
+            const firecrawlRes = await fetch('https://api.firecrawl.dev/v1/scrape', {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({

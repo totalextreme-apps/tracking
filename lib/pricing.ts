@@ -129,7 +129,7 @@ export async function fetchEbaySoldValue(title: string, format: string, edition?
 
         if (!directSuccess && firecrawlApiKey) {
             console.log('Direct scrape failed or yielded 0 prices on native, falling back to Firecrawl...');
-            const firecrawlRes = await fetch('https://api.firecrawl.dev/v2/scrape', {
+            const firecrawlRes = await fetch('https://api.firecrawl.dev/v1/scrape', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
