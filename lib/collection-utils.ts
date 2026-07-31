@@ -110,6 +110,33 @@ export function getStacks(
     stacks.push(sorted);
   }
 
+  // Pre-calculate max relevance score for each franchise
+  const franchiseMaxScores = new Map<string, number>();
+  if (searchQuery && sortBy === 'recent' && useFranchiseSort) {
+    const q = searchQuery.toLowerCase().trim();
+    const getScore = (title: string) => {
+      if (title === q) return 100;
+      if (title.startsWith(q + ' ') || title.startsWith(q + ':')) return 80;
+      if (title.includes(' ' + q + ' ') || title.includes(' ' + q)) return 60;
+      if (title.includes(q)) return 40;
+      return 0;
+    };
+
+    for (const stack of stacks) {
+      const item = stack[0];
+      const media = item.movies || item.shows;
+      const franchise = media?.franchise?.trim()?.toLowerCase();
+      if (franchise) {
+        const title = ((media as any)?.title || (media as any)?.name || '').toLowerCase();
+        const score = getScore(title);
+        const currentMax = franchiseMaxScores.get(franchise) || 0;
+        if (score > currentMax) {
+          franchiseMaxScores.set(franchise, score);
+        }
+      }
+    }
+  }
+
   // Sort stacks
   stacks.sort((a, b) => {
     const itemA = a[0];
@@ -146,8 +173,16 @@ export function getStacks(
         return 0;
       };
 
-      const scoreA = getScore(titleA);
-      const scoreB = getScore(titleB);
+      let scoreA = getScore(titleA);
+      let scoreB = getScore(titleB);
+
+      // If Franchise Sort is on, boost the item's score to its franchise's max score
+      if (useFranchiseSort) {
+        const franchiseA = mediaA?.franchise?.trim()?.toLowerCase();
+        const franchiseB = mediaB?.franchise?.trim()?.toLowerCase();
+        if (franchiseA) scoreA = Math.max(scoreA, franchiseMaxScores.get(franchiseA) || 0);
+        if (franchiseB) scoreB = Math.max(scoreB, franchiseMaxScores.get(franchiseB) || 0);
+      }
 
       if (scoreA !== scoreB) {
         return scoreB - scoreA;
