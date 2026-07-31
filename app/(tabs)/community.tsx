@@ -631,51 +631,44 @@ export default function CommunityScreen() {
                   </Pressable>
                 )}
               </View>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 16 }}>
-                {top5.map((f: any) => (
-                  <View key={f.following_id} style={{ width: 280, marginBottom: 8 }}>
-                    <MemberCard 
-                       userId={f.following_id} 
-                       profile={f.profiles} 
-                       isReadOnly={true}
-                       onAvatarPress={() => router.push(`/profile/${f.following_id}?from=community`)}
-                       onDisplayItems={f.profiles?.on_display || []}
-                    />
-                  </View>
-                ))}
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 24 }}>
+                {top5.map((f: any) => {
+                  const profile = f.profiles;
+                  return (
+                    <Pressable 
+                      key={f.following_id} 
+                      onPress={() => router.push(`/profile/${f.following_id}?from=community`)}
+                      style={{ alignItems: 'center', width: 72 }}
+                    >
+                      <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: '#1a1a1a', borderWidth: 2, borderColor: '#f59e0b', overflow: 'hidden', marginBottom: 8, justifyContent: 'center', alignItems: 'center', shadowColor: '#f59e0b', shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } }}>
+                        {profile?.avatar_url ? (
+                          <Image source={{ uri: profile.avatar_url }} style={{ width: '100%', height: '100%' }} />
+                        ) : (
+                          <Ionicons name="person" size={24} color="#525252" />
+                        )}
+                      </View>
+                      <Text style={{ color: '#fff', fontFamily: 'SpaceMono', fontSize: 10, fontWeight: 'bold', textAlign: 'center' }} numberOfLines={1}>
+                        @{profile?.username || 'member'}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
               </ScrollView>
             </View>
           )}
 
-          {/* More Members (Vertical list) */}
+          {/* More Members (Button to Directory) */}
           {others && others.length > 0 && (
             <View style={{ paddingHorizontal: 16, marginBottom: 24, paddingBottom: 24, borderBottomWidth: 1, borderBottomColor: '#1a1a1a' }}>
-              <Text style={{ color: '#888', fontFamily: 'SpaceMono', fontSize: 11, fontWeight: 'bold', letterSpacing: 2, marginBottom: 16, textTransform: 'uppercase' }}>
-                More Members ({others.length})
-              </Text>
-              
-              {(isNetworkExpanded ? others : others.slice(0, 3)).map((f: any) => (
-                 <View key={f.following_id} style={{ marginBottom: 24 }}>
-                   <MemberCard 
-                      userId={f.following_id} 
-                      profile={f.profiles} 
-                      isReadOnly={true}
-                      onAvatarPress={() => router.push(`/profile/${f.following_id}?from=community`)}
-                      onDisplayItems={f.profiles?.on_display || []}
-                   />
-                 </View>
-              ))}
-
-              {others.length > 3 && (
-                 <Pressable 
-                    onPress={() => setIsNetworkExpanded(!isNetworkExpanded)}
-                    style={{ backgroundColor: '#111', paddingVertical: 12, borderRadius: 8, alignItems: 'center', borderWidth: 1, borderColor: '#f59e0b33' }}
-                 >
-                    <Text style={{ color: '#f59e0b', fontFamily: 'SpaceMono', fontSize: 11, fontWeight: 'bold' }}>
-                       {isNetworkExpanded ? 'COLLAPSE LIST' : `SEE ALL MEMBERS (${others.length})`}
-                    </Text>
-                 </Pressable>
-              )}
+              <Pressable 
+                onPress={() => setActiveTab('directory')}
+                style={{ backgroundColor: '#111', paddingVertical: 16, borderRadius: 8, alignItems: 'center', borderWidth: 1, borderColor: '#f59e0b33', flexDirection: 'row', justifyContent: 'center' }}
+              >
+                <Ionicons name="people" size={16} color="#f59e0b" style={{ marginRight: 8 }} />
+                <Text style={{ color: '#f59e0b', fontFamily: 'SpaceMono', fontSize: 12, fontWeight: 'bold', letterSpacing: 1 }}>
+                  SEE ALL MEMBERS ({others.length})
+                </Text>
+              </Pressable>
             </View>
           )}
 
