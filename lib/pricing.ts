@@ -47,7 +47,7 @@ export function parseEbayPrices(html: string): number[] {
  */
 export function calculateMedianPrice(prices: number[]): number | null {
     // Filter out potential outliers (e.g., shipping costs or extremely high bundles)
-    const validPrices = prices.filter(p => p >= 1.00 && p <= 200.00);
+    const validPrices = prices.filter(p => p >= 0.10 && p <= 2000.00);
     if (validPrices.length === 0) return null;
 
     const sorted = [...validPrices].sort((a, b) => a - b);

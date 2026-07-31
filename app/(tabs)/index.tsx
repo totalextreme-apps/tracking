@@ -707,7 +707,7 @@ export default function HomeScreen() {
                       {sortBy === s.id && <Ionicons name={sortOrder === 'asc' ? 'chevron-up' : 'chevron-down'} size={10} color="#f59e0b" />}
                     </Pressable>
                   ))}
-                  {sortBy === 'title' && (
+                  {(sortBy === 'title' || sortBy === 'recent') && (
                     <Pressable 
                       onPress={() => { setUseFranchiseSort(!useFranchiseSort); playSound('click'); }} 
                       className={`px-3 py-1.5 rounded border flex-row items-center gap-1.5 ${useFranchiseSort ? 'bg-amber-500/20 border-amber-500/50' : 'bg-neutral-950 border-neutral-800'}`}

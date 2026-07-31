@@ -1050,7 +1050,7 @@ export default function ShowDetailScreen() {
                                             // Save title franchise updates
                                             if (displayShow?.id) {
                                                 await updateShowFranchiseMutation.mutateAsync({
-                                                    showId: displayShow.id,
+                                                    tmdbId: displayShow.tmdb_id || displayShow.id,
                                                     franchise: franchiseToSave || null,
                                                     franchiseOrder: isNaN(franchiseOrderToSave as any) ? null : franchiseOrderToSave
                                                 });

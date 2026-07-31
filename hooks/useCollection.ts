@@ -841,12 +841,12 @@ export function useDecrementWatchEvent(userId: string | undefined) {
 export function useUpdateMovieFranchise(userId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ movieId, franchise, franchiseOrder }: { movieId: number, franchise: string | null, franchiseOrder: number | null }) => {
+    mutationFn: async ({ tmdbId, franchise, franchiseOrder }: { tmdbId: number, franchise: string | null, franchiseOrder: number | null }) => {
       if (!userId) throw new Error('Not authenticated');
       const { error } = await supabase
         .from('movies')
         .update({ franchise, franchise_order: franchiseOrder })
-        .eq('id', movieId);
+        .eq('tmdb_id', tmdbId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -859,12 +859,12 @@ export function useUpdateMovieFranchise(userId: string | undefined) {
 export function useUpdateShowFranchise(userId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ showId, franchise, franchiseOrder }: { showId: number, franchise: string | null, franchiseOrder: number | null }) => {
+    mutationFn: async ({ tmdbId, franchise, franchiseOrder }: { tmdbId: number, franchise: string | null, franchiseOrder: number | null }) => {
       if (!userId) throw new Error('Not authenticated');
       const { error } = await supabase
         .from('shows')
         .update({ franchise, franchise_order: franchiseOrder })
-        .eq('id', showId);
+        .eq('tmdb_id', tmdbId);
       if (error) throw error;
     },
     onSuccess: () => {

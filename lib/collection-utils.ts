@@ -137,11 +137,26 @@ export function getStacks(
       if (scoreA !== scoreB) {
         return scoreB - scoreA;
       }
+      
+      // If scores are tied, fallback to franchise sort if enabled
+      if (useFranchiseSort) {
+        const franchiseA = mediaA?.franchise?.trim();
+        const franchiseB = mediaB?.franchise?.trim();
+        if (franchiseA && franchiseB && franchiseA.toLowerCase() === franchiseB.toLowerCase()) {
+          const orderA = mediaA?.franchise_order !== null && mediaA?.franchise_order !== undefined ? Number(mediaA.franchise_order) : Infinity;
+          const orderB = mediaB?.franchise_order !== null && mediaB?.franchise_order !== undefined ? Number(mediaB.franchise_order) : Infinity;
+          if (orderA !== orderB) {
+            return orderA - orderB;
+          }
+        }
+      }
     }
 
     let comparison = 0;
 
     switch (sortBy) {
+      case 'recent':
+        break; // If recent, it's already sorted by recent when passed in. Search ties are handled above.
       case 'title':
         const rawTitleA = itemA.movies?.title ?? itemA.shows?.name ?? '';
         const rawTitleB = itemB.movies?.title ?? itemB.shows?.name ?? '';
