@@ -679,6 +679,21 @@ export const useCommunityFeed = (userId?: string) => {
 
       if (watchErr) throw watchErr;
 
+      // Fetch items marked for sale or trade from interestingIds
+      const { data: listings, error: listingErr } = await supabase
+        .from('collection_items')
+        .select(`
+          *,
+          movies (*),
+          shows (*)
+        `)
+        .in('user_id', interestingIds)
+        .or('for_sale.eq.true,for_trade.eq.true')
+        .order('updated_at', { ascending: false })
+        .limit(25);
+
+      if (listingErr) throw listingErr;
+
       // Fetch comments from interestingIds
       const { data: comments, error: commentErr } = await supabase
         .from('item_comments')
@@ -701,6 +716,7 @@ export const useCommunityFeed = (userId?: string) => {
       const profileIdsToFetch = new Set<string>();
       updates?.forEach((u: any) => { if (u.user_id) profileIdsToFetch.add(u.user_id); });
       watches?.forEach((w: any) => { if (w.user_id) profileIdsToFetch.add(w.user_id); });
+      listings?.forEach((l: any) => { if (l.user_id) profileIdsToFetch.add(l.user_id); });
       comments?.forEach((c: any) => {
         if (c.collection_items?.user_id) profileIdsToFetch.add(c.collection_items.user_id);
       });
@@ -748,11 +764,19 @@ export const useCommunityFeed = (userId?: string) => {
         activity_type: 'post'
       }));
 
+      const processedListings = (listings || []).map((l: any) => ({
+        ...l,
+        profiles: profilesMap[l.user_id] || null,
+        activity_type: 'listing',
+        created_at: l.updated_at
+      }));
+
       const activity = [
         ...processedPosts,
         ...processedUpdates,
         ...processedComments,
-        ...processedWatches
+        ...processedWatches,
+        ...processedListings
       ];
       
       return activity.sort((a, b) => 

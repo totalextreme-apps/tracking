@@ -859,6 +859,60 @@ export default function CommunityScreen() {
                     );
                  }
 
+                if (item.activity_type === 'listing') {
+                    const profile = item.profiles;
+                    const mediaTitle = item.movies?.title || item.shows?.name || 'a title';
+                    const mediaType = item.movies ? 'movie' : 'show';
+                    const mediaId = item.movies?.id || item.shows?.id;
+                    const format = item.format;
+                    const actionText = (item.for_sale && item.for_trade) ? 'listed a title for sale & trade' : item.for_sale ? 'listed a title for sale' : 'listed a title for trade';
+
+                    return (
+                      <View key={item.id + '-' + idx} style={{ marginBottom: 20 }}>
+                        <Pressable onPress={() => router.push(`/profile/${item.user_id}?from=community`)} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                          <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#1a1a1a', overflow: 'hidden', marginRight: 8, borderWidth: 1, borderColor: '#222' }}>
+                            {profile?.avatar_url ? <Image source={{ uri: profile.avatar_url }} style={{ width: '100%', height: '100%' }} /> : <Ionicons name="person" size={12} color="#444" />}
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ color: '#ddd', fontFamily: 'SpaceMono', fontSize: 11, fontWeight: 'bold' }}>@{profile?.username || 'member'}</Text>
+                            <Text style={{ color: '#525252', fontFamily: 'SpaceMono', fontSize: 8, textTransform: 'uppercase' }}>
+                              {actionText} · {new Date(item.created_at).toLocaleDateString()}
+                            </Text>
+                          </View>
+                        </Pressable>
+                        
+                        <Pressable 
+                          onPress={() => { if (mediaId) router.push(`/(tabs)/${mediaType}/${mediaId}?ownerId=${item.user_id}`); }}
+                          style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#111', padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#1a1a1a', borderLeftWidth: 3, borderLeftColor: '#10b981' }}
+                        >
+                          <Image 
+                            source={{ uri: getPosterUrl(item.movies?.poster_path || item.shows?.poster_path) || '' }} 
+                            style={{ width: 40, height: 60, borderRadius: 6, marginRight: 12, backgroundColor: '#1a1a1a' }} 
+                          />
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ color: '#fff', fontFamily: 'SpaceMono', fontSize: 12, fontWeight: 'bold' }} numberOfLines={1}>{mediaTitle}</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                              <View style={{ backgroundColor: '#f59e0b22', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: '#f59e0b44', marginRight: 8 }}>
+                                <Text style={{ color: '#f59e0b', fontSize: 8, fontFamily: 'SpaceMono', fontWeight: 'bold' }}>{format}</Text>
+                              </View>
+                              {item.for_sale && (
+                                <View style={{ backgroundColor: '#10b98122', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: '#10b98144', marginRight: 4 }}>
+                                  <Text style={{ color: '#10b981', fontSize: 8, fontFamily: 'SpaceMono', fontWeight: 'bold' }}>FOR SALE</Text>
+                                </View>
+                              )}
+                              {item.for_trade && (
+                                <View style={{ backgroundColor: '#3b82f622', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: '#3b82f644' }}>
+                                  <Text style={{ color: '#3b82f6', fontSize: 8, fontFamily: 'SpaceMono', fontWeight: 'bold' }}>FOR TRADE</Text>
+                                </View>
+                              )}
+                            </View>
+                          </View>
+                          <Ionicons name="chevron-forward" size={16} color="#444" />
+                        </Pressable>
+                      </View>
+                    );
+                 }
+
                 const profile = item.profiles;
                 return (
                   <View key={item.id + '-' + idx} style={{ marginBottom: 20 }}>

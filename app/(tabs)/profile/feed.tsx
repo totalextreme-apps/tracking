@@ -195,6 +195,8 @@ export default function SocialFeedScreen() {
               const profile = item.profiles || item.profiles_user_id; // Handle the joined alias
               const isPost = item.activity_type === 'post';
               const isComment = item.activity_type === 'comment';
+              const isWatch = item.activity_type === 'watch';
+              const isListing = item.activity_type === 'listing';
               
               return (
                 <View key={item.id + idx} className="mb-8 border-b border-neutral-900 pb-6">
@@ -219,7 +221,11 @@ export default function SocialFeedScreen() {
                          </Text>
                       </View>
                       <Text className="text-neutral-500 font-mono text-[10px] uppercase">
-                        {isPost ? 'Pinned a new note' : isComment ? `Commented on @${item.collection_items?.profiles?.username || 'member'}'s title` : `Added to ${item.format} collection`}
+                        {isPost ? 'Pinned a new note' : 
+                         isComment ? `Commented on @${item.collection_items?.profiles?.username || 'member'}'s title` : 
+                         isWatch ? (item.format === 'VHS' ? 'Popped in a VHS tape' : item.format === 'Digital' ? 'Streamed a title' : `Spun a ${item.format} disc`) :
+                         isListing ? ((item.for_sale && item.for_trade) ? 'Listed a title for sale & trade' : item.for_sale ? 'Listed a title for sale' : 'Listed a title for trade') :
+                         `Added to ${item.format} collection`}
                       </Text>
                     </View>
                   </View>
@@ -314,11 +320,26 @@ export default function SocialFeedScreen() {
                       />
                       <View className="flex-1">
                         <Text className="text-white font-bold font-mono text-sm" numberOfLines={1}>{item.movies?.title || item.shows?.name}</Text>
-                        <View className="flex-row items-center mt-1">
+                        <View className="flex-row items-center mt-1 flex-wrap gap-y-1">
                            <View className="bg-amber-500 px-1.5 py-0.5 rounded mr-2">
                              <Text className="text-black font-bold font-mono text-[8px]">{item.format}</Text>
                            </View>
-                           <Text className="text-neutral-500 font-mono text-[9px]">ENRICHED THE STACKS</Text>
+                           {isListing && item.for_sale && (
+                             <View className="bg-emerald-500 px-1.5 py-0.5 rounded mr-2">
+                               <Text className="text-black font-bold font-mono text-[8px]">FOR SALE</Text>
+                             </View>
+                           )}
+                           {isListing && item.for_trade && (
+                             <View className="bg-blue-500 px-1.5 py-0.5 rounded mr-2">
+                               <Text className="text-black font-bold font-mono text-[8px]">FOR TRADE</Text>
+                             </View>
+                           )}
+                           {isWatch && (
+                             <Text className="text-neutral-500 font-mono text-[9px] mr-2">WATCH COUNT: {item.watch_count}</Text>
+                           )}
+                           {!isListing && !isWatch && (
+                             <Text className="text-neutral-500 font-mono text-[9px]">ENRICHED THE STACKS</Text>
+                           )}
                         </View>
                       </View>
                       <Ionicons name="chevron-forward" size={16} color="#525252" />
