@@ -27,76 +27,87 @@ export function MemberCard({ userId, profile, onEditPress, onAvatarPress, isRead
 
     return (
         <View className="w-full">
-            <View className="w-full aspect-[1.586] rounded-xl overflow-hidden relative shadow-xl bg-[#262626]">
-            {/* Top Orange Stripe */}
-            <View className="absolute top-4 left-0 right-0 h-1 bg-amber-600" />
-            <View className="absolute top-[18px] left-0 right-0 h-0.5 bg-black/50" />
+            <View className="w-full aspect-[1.586] rounded-xl overflow-hidden relative shadow-2xl bg-[#0b2447] border border-white/20">
+                
+                {/* Retro Yellow Banner */}
+                <View className="absolute top-[60%] left-0 right-0 h-10 bg-[#fbbf24] border-y-2 border-black/50 flex-row items-center overflow-hidden">
+                    {/* Repeating faint background text for the stripe */}
+                     <Text className="text-black font-black text-xl italic tracking-tighter opacity-10 ml-2">VIDEO RENTAL</Text>
+                     <Text className="text-black font-black text-xl italic tracking-tighter opacity-10 ml-4">VIDEO RENTAL</Text>
+                     <Text className="text-black font-black text-xl italic tracking-tighter opacity-10 ml-4">VIDEO RENTAL</Text>
+                </View>
 
-            {/* Bottom Orange Stripe */}
-            <View className="absolute bottom-4 left-0 right-0 h-1 bg-amber-600/50" />
-            <View className="absolute bottom-[18px] left-0 right-0 h-0.5 bg-black/50" />
+                {/* Glossy Sheen Overlay (Top half) */}
+                <View className="absolute top-0 left-0 right-0 h-[45%] bg-white/5" pointerEvents="none" />
 
-            {/* Content Container */}
-            <View className="flex-1 flex-row px-5 py-4 pt-8">
+                {/* Content Container */}
+                <View className="flex-1 flex-row px-5 py-4">
 
-                {/* LEFT COLUMN */}
-                <View className="flex-1 pr-4 justify-between">
-                    {/* Header Logo Area */}
-                    <View className="mb-2 relative">
-                        <View className="bg-black border-2 border-amber-600 p-1 self-start shadow-sm">
-                            <Image
-                                source={require('@/assets/images/logo_tracking.png')}
-                                style={{ width: 91, height: 30 }}
-                                contentFit="contain"
-                            />
-                        </View>
-                    </View>
-
-                    {/* Member Details */}
-                    <View className="gap-3 mt-4">
-                        <View className="border-b-2 border-amber-600 pb-1 mr-4">
-                            <Text className="text-white font-bold text-lg tracking-widest uppercase italic">MEMBERSHIP CARD</Text>
-                        </View>
-
-                        <View className="w-full pr-4">
-                            <Text className="text-amber-600 font-bold text-[10px] uppercase">HANDLE</Text>
-                            <View className="flex-row border-b border-neutral-600 pb-0.5 border-dashed w-full overflow-hidden">
-                                <Text className="flex-1 text-amber-500 font-mono font-bold tracking-widest" style={{ fontSize: 16 }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.3}>{profile?.username ? '@' + profile.username.toUpperCase() : 'UNKNOWN'}</Text>
+                    {/* LEFT COLUMN */}
+                    <View className="flex-1 pr-4 justify-between relative z-10">
+                        {/* Header Logo Area */}
+                        <View className="mb-2">
+                            <View className="bg-black/90 rounded border border-white/10 p-1.5 self-start shadow-sm">
+                                <Image
+                                    source={require('@/assets/images/logo_tracking.png')}
+                                    style={{ width: 85, height: 28 }}
+                                    contentFit="contain"
+                                />
                             </View>
                         </View>
+
+                        {/* Member Details */}
+                        <View className="mt-auto mb-2">
+                            <Text className="text-[#93c5fd] font-bold text-[9px] uppercase tracking-widest mb-1 shadow-black">MEMBER HANDLE</Text>
+                            <View className="bg-black/50 px-2.5 py-1.5 rounded-sm border border-white/10 self-start">
+                                <Text className="text-white font-mono font-bold tracking-widest text-sm" numberOfLines={1}>
+                                    {profile?.username ? '@' + profile.username.toUpperCase() : 'UNKNOWN'}
+                                </Text>
+                            </View>
+                        </View>
+
+                        {/* Barcode (Sticker Look) */}
+                        <View className="bg-white p-1.5 rounded-sm shadow-md flex-row items-end h-8 border border-neutral-300 self-start mt-1">
+                            {barcodeLines.map((line: { width: number; margin: number }, i: number) => (
+                                <View key={i} style={{ width: line.width, height: '100%', backgroundColor: 'black', marginRight: line.margin }} />
+                            ))}
+                        </View>
                     </View>
 
-                    {/* Barcode */}
-                    <View style={{ flexDirection: 'row', height: 32, alignItems: 'flex-end', overflow: 'hidden', marginTop: 'auto', backgroundColor: 'white', paddingHorizontal: 6, paddingVertical: 4, borderRadius: 2, marginRight: 16 }}>
-                        {barcodeLines.map((line: { width: number; margin: number }, i: number) => (
-                            <View key={i} style={{ width: line.width, height: '100%', backgroundColor: 'black', marginRight: line.margin }} />
-                        ))}
-                    </View>
+                    {/* RIGHT COLUMN: Photo & Chip */}
+                    <View className="w-[32%] items-center justify-between py-1 relative z-10">
+                        
+                        {/* Faux Smart Chip */}
+                        <View className="w-9 h-7 rounded-md bg-[#d4af37] border-2 border-[#b8860b] shadow-sm mb-2 opacity-90 overflow-hidden flex-row">
+                             <View className="flex-1 border-r border-[#b8860b]/50" />
+                             <View className="flex-1 border-r border-[#b8860b]/50" />
+                             <View className="flex-1" />
+                             <View className="absolute top-1/2 left-0 right-0 h-px bg-[#b8860b]/50" />
+                        </View>
 
-                </View>
-
-                {/* RIGHT COLUMN: Photo */}
-                <View className="w-[35%] justify-center items-center pb-2">
-                    <Pressable onPress={onAvatarPress} disabled={!onAvatarPress} className="w-full aspect-[3/4] bg-neutral-200 p-1 shadow-lg">
-                        <View className="w-full h-full bg-neutral-800 border-2 border-white overflow-hidden relative">
-                            {profile?.avatar_url ? (
-                                <Image source={{ uri: profile.avatar_url }} style={{ width: '100%', height: '100%' }} contentFit="cover" transition={400} />
-                            ) : (
-                                <View className="flex-1 items-center justify-center bg-neutral-800">
-                                    <FontAwesome name="user" size={40} color="#525252" />
-                                </View>
+                        {/* Embedded Photo */}
+                        <View className="w-full aspect-[3/4] relative">
+                            <Pressable onPress={onAvatarPress} disabled={!onAvatarPress} className="w-full h-full bg-neutral-900 rounded-md border border-black shadow-lg overflow-hidden relative">
+                                {profile?.avatar_url ? (
+                                    <Image source={{ uri: profile.avatar_url }} style={{ width: '100%', height: '100%', opacity: 0.9 }} contentFit="cover" transition={400} />
+                                ) : (
+                                    <View className="flex-1 items-center justify-center bg-neutral-800">
+                                        <FontAwesome name="user" size={40} color="#525252" />
+                                    </View>
+                                )}
+                                {/* Vintage photo filter overlay */}
+                                <View className="absolute inset-0 bg-blue-900/10 pointer-events-none" />
+                            </Pressable>
+                            {/* Edit Icon Badge */}
+                            {!isReadOnly && onEditPress && (
+                                <Pressable onPress={onEditPress} className="absolute -bottom-2 -right-2 bg-[#fbbf24] p-2 rounded-full border-2 border-[#0b2447] shadow-sm z-30">
+                                    <FontAwesome name="camera" size={12} color="black" />
+                                </Pressable>
                             )}
                         </View>
-                        {/* Edit Icon Badge */}
-                        {!isReadOnly && onEditPress && (
-                            <Pressable onPress={onEditPress} className="absolute -bottom-3 -right-3 bg-amber-600 p-2 rounded-full border-2 border-white shadow-sm z-10">
-                                <FontAwesome name="camera" size={14} color="white" />
-                            </Pressable>
-                        )}
-                    </Pressable>
+                    </View>
                 </View>
             </View>
-        </View>
 
         {/* 3 Most Recent On Display Items */}
         {onDisplayItems && onDisplayItems.length > 0 && (
