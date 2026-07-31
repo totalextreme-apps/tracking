@@ -17,7 +17,7 @@ import { ImageCropModal } from '@/components/ImageCropModal';
 import { useAuth } from '@/context/AuthContext';
 import { useSound } from '@/context/SoundContext';
 import { useThriftMode } from '@/context/ThriftModeContext';
-import { useAddToCollection, useCollection, useDeleteCollectionItem, useUpdateCollectionItem, useLogWatchEvent, useDecrementWatchEvent } from '@/hooks/useCollection';
+import { useAddToCollection, useCollection, useDeleteCollectionItem, useUpdateCollectionItem, useLogWatchEvent, useDecrementWatchEvent, useUpdateShowFranchise } from '@/hooks/useCollection';
 import { useCreatePost } from '@/hooks/useSocial';
 import { ReviewSection } from '@/components/ReviewSection';
 import { CommentSection } from '@/components/CommentSection';
@@ -60,8 +60,8 @@ export default function ShowDetailScreen() {
     const [localValues, setLocalValues] = useState<Record<string, string>>({});
     const [localForSale, setLocalForSale] = useState<Record<string, boolean>>({});
     const [localForTrade, setLocalForTrade] = useState<Record<string, boolean>>({});
-    const [localFranchises, setLocalFranchises] = useState<Record<string, string>>({});
-    const [localFranchiseOrders, setLocalFranchiseOrders] = useState<Record<string, string>>({});
+    const [localFranchise, setLocalFranchise] = useState<string | undefined>(undefined);
+    const [localFranchiseOrder, setLocalFranchiseOrder] = useState<string | undefined>(undefined);
     const [persistedShow, setPersistedShow] = useState<any>(null);
     const viewShotRef = useRef<ViewShot>(null);
 
@@ -108,6 +108,7 @@ export default function ShowDetailScreen() {
     
     const { data: collection, refetch } = useCollection(targetUserId);
     const updateMutation = useUpdateCollectionItem(userId);
+    const updateShowFranchiseMutation = useUpdateShowFranchise(userId);
     const deleteMutation = useDeleteCollectionItem(userId);
     const addMutation = useAddToCollection(userId);
     const logWatchEventMutation = useLogWatchEvent(userId);
@@ -472,6 +473,9 @@ export default function ShowDetailScreen() {
     }
 
     const displayShow = { ...activeShow, ...tmdbShow };
+
+    const franchiseValue = localFranchise !== undefined ? localFranchise : (displayShow?.franchise || '');
+    const franchiseOrderValue = localFranchiseOrder !== undefined ? localFranchiseOrder : (displayShow?.franchise_order?.toString() || '');
     const backdropUrl = getBackdropUrl(displayShow.backdrop_path);
     const posterUrl = getPosterUrl(displayShow.poster_path);
 
@@ -635,20 +639,14 @@ export default function ShowDetailScreen() {
                                 Season {seasonNumber}
                             </Text>
                             {/* Franchise Tag Badge */}
-                            {(() => {
-                                const franchiseItem = showItems.find((i: any) => i.franchise && i.franchise.trim() !== '');
-                                if (franchiseItem) {
-                                    return (
-                                        <View className="bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-md self-start flex-row items-center mt-1 mb-0.5">
-                                            <Ionicons name="film-outline" size={10} color="#f59e0b" style={{ marginRight: 4 }} />
-                                            <Text className="text-amber-500 font-mono text-[9px] font-bold uppercase">
-                                                {franchiseItem.franchise} {franchiseItem.franchise_order !== null && franchiseItem.franchise_order !== undefined ? `#${franchiseItem.franchise_order}` : ''}
-                                            </Text>
-                                        </View>
-                                    );
-                                }
-                                return null;
-                            })()}
+                            {displayShow?.franchise ? (
+                                <View className="bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-md self-start flex-row items-center mt-1 mb-0.5">
+                                    <Ionicons name="film-outline" size={10} color="#f59e0b" style={{ marginRight: 4 }} />
+                                    <Text className="text-amber-500 font-mono text-[9px] font-bold uppercase">
+                                        {displayShow.franchise} {displayShow.franchise_order !== null && displayShow.franchise_order !== undefined ? `#${displayShow.franchise_order}` : ''}
+                                    </Text>
+                                </View>
+                            ) : null}
                             {displayShow.genres && Array.isArray(displayShow.genres) && displayShow.genres.length > 0 && (
                                 <Text className="text-neutral-500 font-mono text-[10px] mt-1.5 uppercase tracking-wider">
                                     {displayShow.genres.map((g: any) => g?.name).filter(Boolean).join('  •  ')}
@@ -667,57 +665,54 @@ export default function ShowDetailScreen() {
                             )}
                         </View>
                     </View>
-                    <View className="flex-row mt-4 gap-2">
-                        {thriftMode || isGrail ? (
-                            <Pressable
-                                onPress={async () => {
-                                    await Promise.all(showItems.map((item: any) =>
-                                        updateMutation.mutateAsync({ itemId: item.id, updates: { is_grail: !isGrail } })
-                                    ));
-                                    playSound('peel');
-                                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                                }}
-                                className={`flex-1 flex-row items-center justify-center p-3 rounded-lg border ${isGrail ? 'bg-amber-500/10 border-amber-500' : 'bg-neutral-900 border-neutral-800'}`}
-                            >
-                                <Ionicons name={isGrail ? "trophy" : "trophy-outline"} size={16} color={isGrail ? "#f59e0b" : "#404040"} />
-                                <Text className={`ml-2 font-mono text-xs font-bold tracking-widest ${isGrail ? 'text-amber-500' : 'text-neutral-600'}`}>
-                                    {isGrail ? 'GRAIL' : 'MAKE GRAIL'}
-                                </Text>
-                            </Pressable>
-                        ) : (
-                            <Pressable
-                                onPress={async () => {
-                                    const isOnDisplay = showItems.some((i: any) => i.is_on_display);
-                                    await Promise.all(showItems.map((item: any) =>
-                                        updateMutation.mutateAsync({ itemId: item.id, updates: { is_on_display: !isOnDisplay } })
-                                    ));
-                                    playSound('click');
-                                }}
-                                className={`flex-1 flex-row items-center justify-center p-3 rounded-lg border ${showItems.some((i: any) => i.is_on_display) ? 'bg-indigo-500/10 border-indigo-500' : 'bg-neutral-900 border-neutral-800'}`}
-                            >
-                                <Ionicons name={showItems.some((i: any) => i.is_on_display) ? "star" : "star-outline"} size={16} color={showItems.some((i: any) => i.is_on_display) ? "#6366f1" : "#404040"} />
-                                <Text className={`ml-2 font-mono text-xs font-bold tracking-widest ${showItems.some((i: any) => i.is_on_display) ? 'text-indigo-500' : 'text-neutral-600'}`}>
-                                    {showItems.some((i: any) => i.is_on_display) ? 'STAFF PICK' : 'MAKE STAFF PICK'}
-                                </Text>
-                            </Pressable>
-                        )}
-                        {showItems.length > 0 && !isReadOnly && (
-                            <>
-                                <Pressable onPress={deleteShow} className="bg-red-900/10 px-4 rounded-lg border border-red-900/40 items-center justify-center">
-                                    <Ionicons name="trash-outline" size={20} color="#ef4444" />
+                    {!isReadOnly && showItems.length > 0 && (
+                        <View className="flex-row mt-4 gap-2">
+                            {thriftMode || isGrail ? (
+                                <Pressable
+                                    onPress={async () => {
+                                        await Promise.all(showItems.map((item: any) =>
+                                            updateMutation.mutateAsync({ itemId: item.id, updates: { is_grail: !isGrail } })
+                                        ));
+                                        playSound('peel');
+                                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                                    }}
+                                    className={`flex-1 flex-row items-center justify-center p-3 rounded-lg border ${isGrail ? 'bg-amber-500/10 border-amber-500' : 'bg-neutral-900 border-neutral-800'}`}
+                                >
+                                    <Ionicons name={isGrail ? "trophy" : "trophy-outline"} size={16} color={isGrail ? "#f59e0b" : "#404040"} />
+                                    <Text className={`ml-2 font-mono text-xs font-bold tracking-widest ${isGrail ? 'text-amber-500' : 'text-neutral-600'}`}>
+                                        {isGrail ? 'GRAIL' : 'MAKE GRAIL'}
+                                    </Text>
                                 </Pressable>
-                                {/* PIN TO BULLETIN BOARD */}
-                                {!thriftMode && (
-                                    <Pressable 
-                                        onPress={() => setShowPostModal(true)}
-                                        className="bg-amber-600/10 px-4 rounded-lg border border-amber-600/40 items-center justify-center"
-                                    >
-                                        <Ionicons name="pin" size={20} color="#f59e0b" />
-                                    </Pressable>
-                                )}
-                            </>
-                        )}
-                    </View>
+                            ) : (
+                                <Pressable
+                                    onPress={async () => {
+                                        const isOnDisplay = showItems.some((i: any) => i.is_on_display);
+                                        await Promise.all(showItems.map((item: any) =>
+                                            updateMutation.mutateAsync({ itemId: item.id, updates: { is_on_display: !isOnDisplay } })
+                                        ));
+                                        playSound('click');
+                                    }}
+                                    className={`flex-1 flex-row items-center justify-center p-3 rounded-lg border ${showItems.some((i: any) => i.is_on_display) ? 'bg-indigo-500/10 border-indigo-500' : 'bg-neutral-900 border-neutral-800'}`}
+                                >
+                                    <Ionicons name={showItems.some((i: any) => i.is_on_display) ? "star" : "star-outline"} size={16} color={showItems.some((i: any) => i.is_on_display) ? "#6366f1" : "#404040"} />
+                                    <Text className={`ml-2 font-mono text-xs font-bold tracking-widest ${showItems.some((i: any) => i.is_on_display) ? 'text-indigo-500' : 'text-neutral-600'}`}>
+                                        {showItems.some((i: any) => i.is_on_display) ? 'STAFF PICK' : 'MAKE STAFF PICK'}
+                                    </Text>
+                                </Pressable>
+                            )}
+                            <Pressable onPress={deleteShow} className="bg-red-900/10 px-4 rounded-lg border border-red-900/40 items-center justify-center">
+                                <Ionicons name="trash-outline" size={20} color="#ef4444" />
+                            </Pressable>
+                            {!thriftMode && (
+                                <Pressable 
+                                    onPress={() => setShowPostModal(true)}
+                                    className="bg-amber-600/10 px-4 rounded-lg border border-amber-600/40 items-center justify-center"
+                                >
+                                    <Ionicons name="pin" size={20} color="#f59e0b" />
+                                </Pressable>
+                            )}
+                        </View>
+                    )}
 
                     {/* Retro Watch Tracker Section */}
                     {activeItem && activeItem.status === 'owned' && (
@@ -887,8 +882,8 @@ export default function ShowDetailScreen() {
                                                 className="bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm"
                                                 placeholder="Franchise (e.g. Terminator)"
                                                 placeholderTextColor="#525252"
-                                                value={localFranchises[item.id] !== undefined ? localFranchises[item.id] : (item.franchise || '')}
-                                                onChangeText={(text) => setLocalFranchises(prev => ({ ...prev, [item.id]: text }))}
+                                                value={franchiseValue}
+                                                onChangeText={(text) => setLocalFranchise(text)}
                                                 autoCapitalize="words"
                                                 autoCorrect={false}
                                             />
@@ -900,8 +895,8 @@ export default function ShowDetailScreen() {
                                                 placeholder="Order #"
                                                 placeholderTextColor="#525252"
                                                 keyboardType="numeric"
-                                                value={localFranchiseOrders[item.id] !== undefined ? localFranchiseOrders[item.id] : (item.franchise_order?.toString() || '')}
-                                                onChangeText={(text) => setLocalFranchiseOrders(prev => ({ ...prev, [item.id]: text }))}
+                                                value={franchiseOrderValue}
+                                                onChangeText={(text) => setLocalFranchiseOrder(text)}
                                             />
                                         </View>
                                     </View>
@@ -989,37 +984,36 @@ export default function ShowDetailScreen() {
                                     )}
 
                                     <Pressable
+                                        disabled={updateMutation.isPending || updateShowFranchiseMutation.isPending}
                                         onPress={async () => {
                                             const noteToSave = localNotes[item.id] !== undefined ? localNotes[item.id] : (item.notes || '');
                                             const editionToSave = localEditions[item.id] !== undefined ? localEditions[item.id] : (item.edition || '');
                                             const bootToSave = localBootlegs[item.id] !== undefined ? localBootlegs[item.id] : (item.is_bootleg || false);
                                             const valRaw = localValues[item.id] !== undefined ? localValues[item.id] : (item.value_estimate?.toString() || '');
                                             const valToSave = valRaw.trim() === '' ? null : parseFloat(valRaw);
-                                            const franchiseToSave = localFranchises[item.id] !== undefined ? localFranchises[item.id] : (item.franchise || '');
-                                            const franchiseOrderRaw = localFranchiseOrders[item.id] !== undefined ? localFranchiseOrders[item.id] : (item.franchise_order?.toString() || '');
+                                            const franchiseToSave = localFranchise !== undefined ? localFranchise : (displayShow?.franchise || '');
+                                            const franchiseOrderRaw = localFranchiseOrder !== undefined ? localFranchiseOrder : (displayShow?.franchise_order?.toString() || '');
                                             const franchiseOrderToSave = franchiseOrderRaw.trim() === '' ? null : parseFloat(franchiseOrderRaw);
 
-                                            const updatePromises = showItems.map((sItem: any) => {
-                                                return updateMutation.mutateAsync({
-                                                    itemId: sItem.id,
-                                                    updates: {
-                                                        ...(sItem.id === item.id ? {
-                                                            notes: noteToSave,
-                                                            edition: editionToSave || null,
-                                                            is_bootleg: bootToSave,
-                                                            value_estimate: isNaN(valToSave as any) ? null : valToSave
-                                                        } : {}),
-                                                        franchise: franchiseToSave || null,
-                                                        franchise_order: isNaN(franchiseOrderToSave as any) ? null : franchiseOrderToSave
-                                                    }
+                                            // Save copy specific updates
+                                            await updateMutation.mutateAsync({
+                                                itemId: item.id,
+                                                updates: {
+                                                    notes: noteToSave,
+                                                    edition: editionToSave || null,
+                                                    is_bootleg: bootToSave,
+                                                    value_estimate: isNaN(valToSave as any) ? null : valToSave
+                                                }
+                                            });
+
+                                            // Save title franchise updates
+                                            if (displayShow?.id) {
+                                                await updateShowFranchiseMutation.mutateAsync({
+                                                    showId: displayShow.id,
+                                                    franchise: franchiseToSave || null,
+                                                    franchiseOrder: isNaN(franchiseOrderToSave as any) ? null : franchiseOrderToSave
                                                 });
-                                            });
-                                            await Promise.all(updatePromises);
-                                            
-                                            showItems.forEach((sItem: any) => {
-                                                setLocalFranchises(prev => ({ ...prev, [sItem.id]: franchiseToSave }));
-                                                setLocalFranchiseOrders(prev => ({ ...prev, [sItem.id]: franchiseOrderRaw }));
-                                            });
+                                            }
 
                                             playSound('click');
                                             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

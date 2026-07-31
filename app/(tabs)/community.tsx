@@ -3,6 +3,7 @@ import { View, Text, ScrollView, Pressable, Image, ImageBackground, TextInput, A
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
+import { useSound } from '@/context/SoundContext';
 import { 
   useBulletinFeed, 
   useCommunityFeed, 
@@ -22,7 +23,8 @@ import {
   useAllUsers,
   useDeleteConversation,
   useDeleteNotification,
-  useClearReadNotifications
+  useClearReadNotifications,
+  useAppWideStats
 } from '@/hooks/useSocial';
 import { useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -34,6 +36,7 @@ import { ConfirmModal } from '@/components/ConfirmModal';
 import { searchMedia, TmdbMediaResult, getMovieById, getTvShowById } from '@/lib/tmdb';
 import { BulletinPostItem } from '@/components/BulletinPostItem';
 import { MemberCard } from '@/components/MemberCard';
+import { ReorderTopFiveModal } from '@/components/ReorderTopFiveModal';
 
 const CORK_BG = 'https://www.transparenttextures.com/patterns/cork-board.png';
 
@@ -42,6 +45,7 @@ type Tab = 'activity' | 'directory' | 'board' | 'inbox' | 'alerts';
 function PostCommentSection({ postId }: { postId: string }) {
   const router = useRouter();
   const { userId } = useAuth();
+  const { playSound } = useSound();
   const { data: comments, isLoading } = usePostComments(postId);
   const createComment = useCreatePostComment(userId);
   const [text, setText] = useState('');
@@ -217,8 +221,87 @@ function MarketplaceSection() {
   );
 }
 
+function StoreChartsSection({ stats }: { stats: any }) {
+  const router = useRouter();
+  if (!stats) return null;
+
+  const mostOwned = stats.most_owned || [];
+  const mostWanted = stats.most_wanted || [];
+
+  if (mostOwned.length === 0 && mostWanted.length === 0) return null;
+
+  const getPosterUrl = (path: string | null) => {
+    if (!path) return 'https://images.unsplash.com/photo-1594909122845-11baa439b7bf?q=80&w=300&auto=format&fit=crop';
+    if (path.startsWith('http')) return path;
+    return `https://image.tmdb.org/t/p/w300${path}`;
+  };
+
+  const renderShelf = (title: string, subtitle: string, items: any[], countLabel: string, color: string) => {
+    if (items.length === 0) return null;
+    return (
+      <View style={{ marginBottom: 24 }}>
+        <View style={{ paddingHorizontal: 16, marginBottom: 12 }}>
+          <Text style={{ color: '#fff', fontFamily: 'SpaceMono', fontSize: 12, fontWeight: 'bold', letterSpacing: 2, textTransform: 'uppercase' }}>
+            {title}
+          </Text>
+          <Text style={{ color: '#525252', fontFamily: 'SpaceMono', fontSize: 8, textTransform: 'uppercase', marginTop: 2 }}>
+            {subtitle}
+          </Text>
+        </View>
+        
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}>
+          {items.map((item: any, idx: number) => {
+            const mediaTitle = item.movie_title || item.show_name || 'Unknown Title';
+            const mediaPoster = item.movie_poster || item.show_poster;
+            const mediaType = item.movie_id ? 'movie' : 'show';
+            const mediaId = item.movie_id || item.show_id;
+
+            return (
+              <Pressable
+                key={idx}
+                onPress={() => { if (mediaId) router.push(`/(tabs)/${mediaType}/${mediaId}`); }}
+                style={{ width: 100, backgroundColor: '#0a0a0a', padding: 6, borderRadius: 8, borderWidth: 1, borderColor: '#1f1f1f', alignItems: 'center' }}
+              >
+                <View style={{ position: 'absolute', top: -4, left: -4, zIndex: 10, backgroundColor: color, width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#000' }}>
+                  <Text style={{ color: '#000', fontFamily: 'SpaceMono', fontSize: 8, fontWeight: 'bold' }}>#{idx + 1}</Text>
+                </View>
+                <Image 
+                  source={{ uri: getPosterUrl(mediaPoster) || '' }} 
+                  style={{ width: '100%', height: 120, borderRadius: 6, backgroundColor: '#111', marginBottom: 6 }} 
+                />
+                <Text style={{ color: '#fff', fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold', textAlign: 'center', width: '100%' }} numberOfLines={1}>
+                  {mediaTitle.toUpperCase()}
+                </Text>
+                <View style={{ backgroundColor: '#111', marginTop: 4, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: '#1f1f1f' }}>
+                  <Text style={{ color: '#888', fontFamily: 'SpaceMono', fontSize: 7, fontWeight: 'bold' }}>
+                    {item.count} {countLabel}
+                  </Text>
+                </View>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </View>
+    );
+  };
+
+  return (
+    <View style={{ paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#1a1a1a', backgroundColor: '#050505', marginBottom: 24 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginBottom: 16 }}>
+        <Ionicons name="stats-chart" size={16} color="#f59e0b" style={{ marginRight: 8 }} />
+        <Text style={{ color: '#f59e0b', fontFamily: 'SpaceMono', fontSize: 13, fontWeight: 'bold', letterSpacing: 4, textTransform: 'uppercase' }}>
+          ★ Store Charts
+        </Text>
+      </View>
+      {renderShelf('Most Circulated', 'The most owned titles in the community', mostOwned, 'COPIES', '#f59e0b')}
+      {renderShelf('Most Wanted / Grails', 'The most wishlisted titles in the community', mostWanted, 'WANTS', '#ef4444')}
+    </View>
+  );
+}
+
 export default function CommunityScreen() {
   const { userId } = useAuth();
+  const { playSound } = useSound();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
@@ -267,14 +350,16 @@ export default function CommunityScreen() {
   const { data: suggestedMembers } = useSuggestedUsers(userId);
   const { data: allUsers, isLoading: allUsersLoading } = useAllUsers(userId);
   const { data: conversations, isLoading: inboxLoading } = useConversations(userId);
+  const { data: appWideStats } = useAppWideStats();
 
   const [isNetworkExpanded, setIsNetworkExpanded] = useState(false);
+  const [reorderTopFiveVisible, setReorderTopFiveVisible] = useState(false);
 
-  const networkMembers = useMemo(() => {
-    if (!following) return [];
+  const { top5, others, networkMembers } = useMemo(() => {
+    if (!following) return { top5: [], others: [], networkMembers: [] };
     const top5 = following.filter((f: any) => f.is_top_five);
     const others = following.filter((f: any) => !f.is_top_five);
-    return [...top5, ...others];
+    return { top5, others, networkMembers: [...top5, ...others] };
   }, [following]);
 
   const processedCommunityFeed = useMemo(() => {
@@ -529,13 +614,48 @@ export default function CommunityScreen() {
         >
           <MarketplaceSection />
           {/* Member Card Feed */}
-          {networkMembers && networkMembers.length > 0 && (
+          {/* Top 5 Members (Horizontal shelf style) */}
+          {top5 && top5.length > 0 && (
+            <View style={{ marginBottom: 24, paddingBottom: 24, borderBottomWidth: 1, borderBottomColor: '#1a1a1a' }}>
+              <View style={{ paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                <Text style={{ color: '#f59e0b', fontFamily: 'SpaceMono', fontSize: 13, fontWeight: 'bold', letterSpacing: 4, textTransform: 'uppercase' }}>
+                  ★ Top 5 Members
+                </Text>
+                {top5.length > 1 && (
+                  <Pressable 
+                    onPress={() => { setReorderTopFiveVisible(true); playSound('click'); }}
+                    style={{ backgroundColor: '#0a0a0a', borderWidth: 1, borderColor: '#f59e0b22', borderRadius: 4, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 4 }}
+                  >
+                    <Ionicons name="list" size={10} color="#f59e0b" style={{ marginRight: 4 }} />
+                    <Text style={{ color: '#f59e0b', fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold' }}>REORDER</Text>
+                  </Pressable>
+                )}
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 16 }}>
+                {top5.map((f: any) => (
+                  <View key={f.following_id} style={{ width: 280, marginBottom: 8 }}>
+                    <MemberCard 
+                       userId={f.following_id} 
+                       profile={f.profiles} 
+                       isReadOnly={true}
+                       onAvatarPress={() => router.push(`/profile/${f.following_id}?from=community`)}
+                       onDisplayItems={f.profiles?.on_display || []}
+                    />
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
+          {/* More Members (Vertical list) */}
+          {others && others.length > 0 && (
             <View style={{ paddingHorizontal: 16, marginBottom: 24, paddingBottom: 24, borderBottomWidth: 1, borderBottomColor: '#1a1a1a' }}>
-              <Text style={{ color: '#f59e0b', fontFamily: 'SpaceMono', fontSize: 13, fontWeight: 'bold', letterSpacing: 4, marginBottom: 16, textTransform: 'uppercase' }}>The Network</Text>
+              <Text style={{ color: '#888', fontFamily: 'SpaceMono', fontSize: 11, fontWeight: 'bold', letterSpacing: 2, marginBottom: 16, textTransform: 'uppercase' }}>
+                More Members ({others.length})
+              </Text>
               
-              {(isNetworkExpanded ? networkMembers : networkMembers.slice(0, 5)).map((f: any) => (
+              {(isNetworkExpanded ? others : others.slice(0, 3)).map((f: any) => (
                  <View key={f.following_id} style={{ marginBottom: 24 }}>
-                   {f.is_top_five && <View style={{ alignSelf: 'flex-start', backgroundColor: '#f59e0b22', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10, marginBottom: -10, zIndex: 10, marginLeft: 16, borderWidth: 1, borderColor: '#f59e0b' }}><Text style={{ color: '#f59e0b', fontSize: 8, fontFamily: 'SpaceMono', fontWeight: 'bold' }}>★ TOP 5</Text></View>}
                    <MemberCard 
                       userId={f.following_id} 
                       profile={f.profiles} 
@@ -546,13 +666,13 @@ export default function CommunityScreen() {
                  </View>
               ))}
 
-              {networkMembers.length > 5 && (
+              {others.length > 3 && (
                  <Pressable 
                     onPress={() => setIsNetworkExpanded(!isNetworkExpanded)}
                     style={{ backgroundColor: '#111', paddingVertical: 12, borderRadius: 8, alignItems: 'center', borderWidth: 1, borderColor: '#f59e0b33' }}
                  >
                     <Text style={{ color: '#f59e0b', fontFamily: 'SpaceMono', fontSize: 11, fontWeight: 'bold' }}>
-                       {isNetworkExpanded ? 'COLLAPSE NETWORK' : `SEE FULL NETWORK (${networkMembers.length})`}
+                       {isNetworkExpanded ? 'COLLAPSE LIST' : `SEE ALL MEMBERS (${others.length})`}
                     </Text>
                  </Pressable>
               )}
@@ -566,6 +686,9 @@ export default function CommunityScreen() {
                 <Text style={{ color: '#525252', fontFamily: 'SpaceMono', fontSize: 11, textAlign: 'center' }}>Search for members or browse below to start tracking movie lovers.</Text>
              </View>
           )}
+
+          {/* Store Charts (App-Wide Leaderboard) */}
+          <StoreChartsSection stats={appWideStats} />
 
           {/* Pulse feed */}
           {/* Pulse feed */}
@@ -677,6 +800,58 @@ export default function CommunityScreen() {
                      </View>
                    );
                 }
+
+                if (item.activity_type === 'watch') {
+                    const profile = item.profiles;
+                    const mediaTitle = item.movies?.title || item.shows?.name || 'a title';
+                    const mediaType = item.movies ? 'movie' : 'show';
+                    const mediaId = item.movies?.id || item.shows?.id;
+                    const format = item.format;
+                    const watchCount = item.watch_count;
+                    const actionText = format === 'VHS' 
+                        ? 'popped in a VHS tape' 
+                        : format === 'Digital' 
+                            ? 'streamed a title' 
+                            : `spun a ${format} disc`;
+
+                    return (
+                      <View key={item.id + '-' + idx} style={{ marginBottom: 20 }}>
+                        <Pressable onPress={() => router.push(`/profile/${item.user_id}?from=community`)} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                          <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#1a1a1a', overflow: 'hidden', marginRight: 8, borderWidth: 1, borderColor: '#222' }}>
+                            {profile?.avatar_url ? <Image source={{ uri: profile.avatar_url }} style={{ width: '100%', height: '100%' }} /> : <Ionicons name="person" size={12} color="#444" />}
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ color: '#ddd', fontFamily: 'SpaceMono', fontSize: 11, fontWeight: 'bold' }}>@{profile?.username || 'member'}</Text>
+                            <Text style={{ color: '#525252', fontFamily: 'SpaceMono', fontSize: 8, textTransform: 'uppercase' }}>
+                              {actionText} · {new Date(item.created_at).toLocaleDateString()}
+                            </Text>
+                          </View>
+                        </Pressable>
+                        
+                        <Pressable 
+                          onPress={() => { if (mediaId) router.push(`/(tabs)/${mediaType}/${mediaId}?ownerId=${item.user_id}`); }}
+                          style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#111', padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#1a1a1a', borderLeftWidth: 3, borderLeftColor: '#f59e0b' }}
+                        >
+                          <Image 
+                            source={{ uri: getPosterUrl(item.movies?.poster_path || item.shows?.poster_path) || '' }} 
+                            style={{ width: 40, height: 60, borderRadius: 6, marginRight: 12, backgroundColor: '#1a1a1a' }} 
+                          />
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ color: '#fff', fontFamily: 'SpaceMono', fontSize: 12, fontWeight: 'bold' }} numberOfLines={1}>{mediaTitle}</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                              <View style={{ backgroundColor: '#f59e0b22', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: '#f59e0b44', marginRight: 8 }}>
+                                <Text style={{ color: '#f59e0b', fontSize: 8, fontFamily: 'SpaceMono', fontWeight: 'bold' }}>{format}</Text>
+                              </View>
+                              <Text style={{ color: '#737373', fontFamily: 'SpaceMono', fontSize: 10 }}>
+                                WATCH COUNT: {watchCount}
+                              </Text>
+                            </View>
+                          </View>
+                          <Ionicons name="chevron-forward" size={16} color="#444" />
+                        </Pressable>
+                      </View>
+                    );
+                 }
 
                 const profile = item.profiles;
                 return (
@@ -1014,6 +1189,12 @@ export default function CommunityScreen() {
           )}
         </ScrollView>
       )}
+      <ReorderTopFiveModal
+        visible={reorderTopFiveVisible}
+        onClose={() => setReorderTopFiveVisible(false)}
+        items={top5}
+        userId={userId || ''}
+      />
     </View>
   );
 }

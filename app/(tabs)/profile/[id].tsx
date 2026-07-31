@@ -2,7 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { View, Text, ScrollView, ActivityIndicator, Pressable, TextInput, Modal, Alert, Share, Linking } from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
-import { useProfile, useFollowers, useFollowing, useToggleFollow, useToggleTopFive } from '@/hooks/useSocial';
+import { useProfile, useFollowers, useFollowing, useToggleFollow, useToggleTopFive, useProfileComments, useAddProfileComment, useUpdateProfileComment, useDeleteProfileComment, useUserPosts } from '@/hooks/useSocial';
+import { useSound } from '@/context/SoundContext';
 import { useCollection } from '@/hooks/useCollection';
 import { useAuth } from '@/context/AuthContext';
 import { MemberCard } from '@/components/MemberCard';
@@ -15,7 +16,7 @@ import { OnDisplayCard } from '@/components/OnDisplayCard';
 import { ReorderShelfModal } from '@/components/ReorderShelfModal';
 import { getGenres, getStacks } from '@/lib/collection-utils';
 
-type TabType = 'on-display' | 'grails' | 'collection' | 'wishlist' | 'bin' | 'analytics' | 'in-common';
+type TabType = 'on-display' | 'grails' | 'collection' | 'wishlist' | 'bin' | 'analytics' | 'in-common' | 'guestbook';
 export type SortOption = 'recent' | 'title' | 'release' | 'rating' | 'format';
 
 export default function UserProfileScreen() {
@@ -28,6 +29,12 @@ export default function UserProfileScreen() {
   const { data: following } = useFollowing(id);
   const { data: collection, isLoading: collectionLoading } = useCollection(id);
   const { data: myCollection } = useCollection(currentUserId);
+
+  const { data: userPosts } = useUserPosts(id);
+  const { data: guestbookComments } = useProfileComments(id);
+  const addProfileCommentMutation = useAddProfileComment(currentUserId);
+  const updateProfileCommentMutation = useUpdateProfileComment(currentUserId);
+  const deleteProfileCommentMutation = useDeleteProfileComment(currentUserId);
   
   const [activeTab, setActiveTab] = useState<TabType>('on-display');
   const [sortBy, setSortBy] = useState<SortOption>('recent');
@@ -42,8 +49,28 @@ export default function UserProfileScreen() {
   const [displayLimit, setDisplayLimit] = useState(50);
   const [reorderType, setReorderType] = useState<'display' | 'grail'>('display');
 
+  const [guestbookInput, setGuestbookInput] = useState('');
+  const [replyInputMap, setReplyInputMap] = useState<Record<string, string>>({});
+  const [replyActiveId, setReplyActiveId] = useState<string | null>(null);
+  const [editActiveId, setEditActiveId] = useState<string | null>(null);
+  const [editInputText, setEditInputText] = useState('');
+
   const genres = useMemo(() => getGenres(collection), [collection]);
   const FORMAT_ORDER: Record<string, number> = { '4K': 5, 'Blu-ray': 4, 'BluRay': 4, 'DVD': 3, 'VHS': 2, 'Digital': 1 };
+
+  const timelineFeed = useMemo(() => {
+    const postItems = (userPosts || []).map((p: any) => ({
+       ...p,
+       timeline_type: 'post',
+       timestamp: new Date(p.created_at).getTime()
+    }));
+    const commentItems = (guestbookComments || []).filter((c: any) => !c.parent_id).map((c: any) => ({
+       ...c,
+       timeline_type: 'comment',
+       timestamp: new Date(c.created_at).getTime()
+    }));
+    return [...postItems, ...commentItems].sort((a, b) => b.timestamp - a.timestamp);
+  }, [userPosts, guestbookComments]);
 
   const filterAndSortItems = (items: any[]) => {
     let result = [...(items || [])];
@@ -65,7 +92,7 @@ export default function UserProfileScreen() {
           const year = (m.release_date || m.first_air_date || '').slice(0, 4);
           const format = (item.format || '').toLowerCase();
           const edition = (item.edition || '').toLowerCase();
-          const franchise = (item.franchise || '').toLowerCase();
+          const franchise = (m.franchise || '').toLowerCase();
           
           const searchableTexts: string[] = [title, year, format, edition, franchise];
           
@@ -116,13 +143,13 @@ export default function UserProfileScreen() {
           const rawTitleB = mediaB?.title || mediaB?.name || '';
 
           if (useFranchiseSort) {
-            const franchiseA = a.franchise?.trim();
-            const franchiseB = b.franchise?.trim();
+            const franchiseA = mediaA?.franchise?.trim();
+            const franchiseB = mediaB?.franchise?.trim();
 
             if (franchiseA && franchiseB) {
               if (franchiseA.toLowerCase() === franchiseB.toLowerCase()) {
-                const orderA = a.franchise_order !== null && a.franchise_order !== undefined ? Number(a.franchise_order) : Infinity;
-                const orderB = b.franchise_order !== null && b.franchise_order !== undefined ? Number(b.franchise_order) : Infinity;
+                const orderA = mediaA?.franchise_order !== null && mediaA?.franchise_order !== undefined ? Number(mediaA.franchise_order) : Infinity;
+                const orderB = mediaB?.franchise_order !== null && mediaB?.franchise_order !== undefined ? Number(mediaB.franchise_order) : Infinity;
                 if (orderA !== orderB) {
                   comparison = orderA - orderB;
                 } else {
@@ -168,7 +195,7 @@ export default function UserProfileScreen() {
     return getStacks(items, isWishlist, sortBy as any, sortOrder, '', useFranchiseSort);
   };
 
-  const onDisplayItems = filterAndSortItems(collection?.filter((item: any) => item.is_on_display) || [])
+  const onDisplayItems = filterAndSortItems(collection?.filter((item: any) => item.is_on_display && item.status === 'owned') || [])
     .sort((a: any, b: any) => {
       if (sortBy !== 'recent') return 0;
       if (a.display_order && b.display_order) return a.display_order - b.display_order;
@@ -176,7 +203,7 @@ export default function UserProfileScreen() {
       if (b.display_order) return 1;
       return 0;
     });
-  const grails = filterAndSortItems(collection?.filter((item: any) => item.is_grail) || [])
+  const grails = filterAndSortItems(collection?.filter((item: any) => item.is_grail && item.status === 'wishlist') || [])
     .sort((a: any, b: any) => {
       if (sortBy !== 'recent') return 0;
       if (a.grail_order && b.grail_order) return a.grail_order - b.grail_order;
@@ -249,7 +276,7 @@ export default function UserProfileScreen() {
   }
 
   const totalItems = collection?.length || 0;
-  const totalGrails = collection?.filter((i: any) => i.is_grail).length || 0;
+  const totalGrails = collection?.filter((i: any) => i.is_grail && i.status === 'wishlist').length || 0;
   const uniqueFormats = new Set(collection?.map((i: any) => i.format)).size || 0;
 
   return (
@@ -402,14 +429,17 @@ export default function UserProfileScreen() {
             <Pressable onPress={() => setActiveTab('on-display')} className={`px-4 py-3 items-center justify-center border-b-2 ${activeTab === 'on-display' ? 'border-amber-500' : 'border-transparent'}`}>
               <Text adjustsFontSizeToFit numberOfLines={1} className={`font-mono text-[10px] text-center font-bold ${activeTab === 'on-display' ? 'text-amber-500' : 'text-neutral-500'}`}>ON DISPLAY</Text>
             </Pressable>
-            <Pressable onPress={() => setActiveTab('grails')} className={`px-4 py-3 items-center justify-center border-b-2 ${activeTab === 'grails' ? 'border-white' : 'border-transparent'}`}>
-              <Text adjustsFontSizeToFit numberOfLines={1} className={`font-mono text-[10px] text-center font-bold ${activeTab === 'grails' ? 'text-white' : 'text-neutral-500'}`}>GRAILS</Text>
-            </Pressable>
             <Pressable onPress={() => setActiveTab('collection')} className={`px-4 py-3 items-center justify-center border-b-2 ${activeTab === 'collection' ? 'border-neutral-400' : 'border-transparent'}`}>
               <Text adjustsFontSizeToFit numberOfLines={1} className={`font-mono text-[10px] text-center font-bold ${activeTab === 'collection' ? 'text-neutral-200' : 'text-neutral-500'}`}>COLLECTION</Text>
             </Pressable>
             <Pressable onPress={() => setActiveTab('wishlist')} className={`px-4 py-3 items-center justify-center border-b-2 ${activeTab === 'wishlist' ? 'border-pink-500' : 'border-transparent'}`}>
               <Text adjustsFontSizeToFit numberOfLines={1} className={`font-mono text-[10px] text-center font-bold ${activeTab === 'wishlist' ? 'text-pink-500' : 'text-neutral-500'}`}>WANTED</Text>
+            </Pressable>
+            <Pressable onPress={() => setActiveTab('grails')} className={`px-4 py-3 items-center justify-center border-b-2 ${activeTab === 'grails' ? 'border-white' : 'border-transparent'}`}>
+              <Text adjustsFontSizeToFit numberOfLines={1} className={`font-mono text-[10px] text-center font-bold ${activeTab === 'grails' ? 'text-white' : 'text-neutral-500'}`}>GRAILS</Text>
+            </Pressable>
+            <Pressable onPress={() => setActiveTab('guestbook')} className={`px-4 py-3 items-center justify-center border-b-2 ${activeTab === 'guestbook' ? 'border-amber-600' : 'border-transparent'}`}>
+              <Text adjustsFontSizeToFit numberOfLines={1} className={`font-mono text-[10px] text-center font-bold ${activeTab === 'guestbook' ? 'text-amber-600' : 'text-neutral-500'}`}>GUESTBOOK</Text>
             </Pressable>
             <Pressable onPress={() => setActiveTab('bin')} className={`px-4 py-3 items-center justify-center border-b-2 ${activeTab === 'bin' ? 'border-emerald-500' : 'border-transparent'}`}>
               <Text adjustsFontSizeToFit numberOfLines={1} className={`font-mono text-[10px] text-center font-bold ${activeTab === 'bin' ? 'text-emerald-500' : 'text-neutral-500'}`}>THE BIN</Text>
@@ -422,7 +452,7 @@ export default function UserProfileScreen() {
           </ScrollView>
         </View>
 
-        {activeTab !== 'analytics' && (
+        {activeTab !== 'analytics' && activeTab !== 'guestbook' && (
           <View className="px-4">
             <View className="mb-4">
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
@@ -810,6 +840,330 @@ export default function UserProfileScreen() {
                     </View>
                   </View>
                   <StatsSection collection={collection} />
+                </View>
+              )}
+
+              {activeTab === 'guestbook' && (
+                <View>
+                  {/* Write comment input */}
+                  <View className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 mb-6">
+                    <Text className="text-neutral-500 font-mono text-[9px] uppercase font-bold tracking-widest mb-2">Leave a Message</Text>
+                    <TextInput
+                      className="bg-neutral-950 border border-neutral-800 text-white rounded-lg p-3 font-mono text-xs min-h-[60px] mb-2"
+                      placeholder="Write in guestbook..."
+                      placeholderTextColor="#525252"
+                      multiline
+                      value={guestbookInput}
+                      onChangeText={setGuestbookInput}
+                    />
+                    <Pressable
+                      disabled={addProfileCommentMutation.isPending || !guestbookInput.trim()}
+                      onPress={async () => {
+                        try {
+                          await addProfileCommentMutation.mutateAsync({
+                            profileId: id!,
+                            content: guestbookInput
+                          });
+                          setGuestbookInput('');
+                        } catch (e) {
+                          Alert.alert('Error', 'Could not post comment');
+                        }
+                      }}
+                      className={`px-4 py-2 rounded-lg items-center justify-center self-end border ${guestbookInput.trim() ? 'bg-amber-600/10 border-amber-600/50' : 'bg-neutral-950 border-neutral-900'}`}
+                    >
+                      <Text className={`font-mono text-xs font-bold ${guestbookInput.trim() ? 'text-amber-500' : 'text-neutral-600'}`}>POST TO BULLETIN</Text>
+                    </Pressable>
+                  </View>
+
+                  {/* Combined Timeline Feed */}
+                  {timelineFeed.length === 0 ? (
+                    <View className="bg-neutral-900 border border-neutral-800 rounded-lg p-8 items-center border-dashed">
+                      <Ionicons name="journal-outline" size={32} color="#262626" />
+                      <Text className="text-neutral-500 font-mono text-center mt-2">The guestbook is empty.</Text>
+                      <Text className="text-neutral-700 font-mono text-[9px] text-center mt-1">Leave a message for @{profile?.username || 'member'} above!</Text>
+                    </View>
+                  ) : (
+                    timelineFeed.map((item: any, idx: number) => {
+                      if (item.timeline_type === 'post') {
+                        const hasMedia = item.movies || item.shows;
+                        const mediaType = item.movies ? 'movie' : 'show';
+                        const mediaId = item.movies?.id || item.shows?.id;
+                        const mediaTitle = item.movies?.title || item.shows?.name;
+                        const mediaYear = (item.movies?.release_date || item.shows?.first_air_date || '').slice(0, 4);
+
+                        return (
+                          <View key={`post-${item.id}-${idx}`} className="bg-neutral-900/40 border border-neutral-800/80 rounded-xl p-4 mb-4">
+                            <View className="flex-row items-center justify-between mb-2">
+                              <View className="flex-row items-center">
+                                <Ionicons name="pin" size={12} color="#f59e0b" style={{ marginRight: 6 }} />
+                                <Text className="text-amber-500 font-mono text-[9px] font-bold uppercase tracking-wider">BULLETIN NOTE</Text>
+                              </View>
+                              <Text className="text-neutral-600 font-mono text-[8px]">{new Date(item.created_at).toLocaleDateString()}</Text>
+                            </View>
+                            <Text className="text-white font-mono text-xs leading-5 mb-3">{item.content}</Text>
+                            {hasMedia && (
+                              <Pressable 
+                                onPress={() => { if (mediaId) router.push(`/(tabs)/${mediaType}/${mediaId}`); }}
+                                className="bg-neutral-950 border border-neutral-800/60 rounded-lg p-2 flex-row items-center"
+                              >
+                                <Image source={{ uri: getPosterUrl(item.movies?.poster_path || item.shows?.poster_path) || '' }} style={{ width: 24, height: 36, borderRadius: 4, marginRight: 8, backgroundColor: '#111' }} />
+                                <View className="flex-1">
+                                  <Text className="text-white font-mono text-[10px] font-bold" numberOfLines={1}>{mediaTitle?.toUpperCase()}</Text>
+                                  <Text className="text-neutral-500 font-mono text-[8px] mt-0.5">{mediaYear} · {mediaType.toUpperCase()}</Text>
+                                </View>
+                                <Ionicons name="chevron-forward" size={12} color="#444" />
+                              </Pressable>
+                            )}
+                          </View>
+                        );
+                      }
+
+                      // Comment Item
+                      const commentAuthor = item.author || {};
+                      const isCommentAuthor = currentUserId === item.author_id;
+                      const isProfileOwner = currentUserId === id;
+                      const canDelete = isCommentAuthor || isProfileOwner;
+                      const isEditing = editActiveId === item.id;
+                      const replies = (guestbookComments || []).filter((r: any) => r.parent_id === item.id);
+
+                      return (
+                        <View key={`comment-${item.id}-${idx}`} className="bg-neutral-900/20 border border-neutral-800/40 rounded-xl p-4 mb-4">
+                          <View className="flex-row">
+                            <View className="w-8 h-8 rounded-full overflow-hidden bg-neutral-800 mr-3 border border-neutral-700 items-center justify-center">
+                              {commentAuthor.avatar_url ? (
+                                <Image source={{ uri: commentAuthor.avatar_url }} style={{ width: '100%', height: '100%' }} />
+                              ) : (
+                                <Ionicons name="person" size={14} color="#525252" />
+                              )}
+                            </View>
+
+                            <View className="flex-1">
+                              <View className="flex-row items-center justify-between mb-1">
+                                <Text className="text-white font-mono text-xs font-bold">@{commentAuthor.username || 'member'}</Text>
+                                <Text className="text-neutral-600 font-mono text-[8px]">{new Date(item.created_at).toLocaleDateString()}</Text>
+                              </View>
+
+                              {isEditing ? (
+                                <View className="mt-1">
+                                  <TextInput
+                                    className="bg-neutral-950 border border-neutral-800 text-white rounded-lg p-2 font-mono text-xs min-h-[40px] mb-2"
+                                    value={editInputText}
+                                    onChangeText={setEditInputText}
+                                    multiline
+                                  />
+                                  <View className="flex-row gap-2 justify-end">
+                                    <Pressable 
+                                      onPress={() => { setEditActiveId(null); setEditInputText(''); }}
+                                      className="px-2 py-1 bg-neutral-950 border border-neutral-800 rounded"
+                                    >
+                                      <Text className="text-neutral-500 font-mono text-[9px] font-bold">CANCEL</Text>
+                                    </Pressable>
+                                    <Pressable 
+                                      onPress={async () => {
+                                        if (!editInputText.trim()) return;
+                                        try {
+                                          await updateProfileCommentMutation.mutateAsync({
+                                            commentId: item.id,
+                                            content: editInputText
+                                          });
+                                          setEditActiveId(null);
+                                          setEditInputText('');
+                                        } catch (e) {
+                                          Alert.alert('Error', 'Failed to update comment');
+                                        }
+                                      }}
+                                      className="px-2 py-1 bg-amber-600/10 border border-amber-600/50 rounded"
+                                    >
+                                      <Text className="text-amber-500 font-mono text-[9px] font-bold">SAVE</Text>
+                                    </Pressable>
+                                  </View>
+                                </View>
+                              ) : (
+                                <Text className="text-neutral-300 font-mono text-xs leading-5">{item.content}</Text>
+                              )}
+
+                              {!isEditing && (
+                                <View className="flex-row items-center gap-4 mt-2">
+                                  <Pressable onPress={() => { setReplyActiveId(replyActiveId === item.id ? null : item.id); }} className="flex-row items-center">
+                                    <Ionicons name="arrow-undo-outline" size={10} color="#737373" style={{ marginRight: 3 }} />
+                                    <Text className="text-neutral-500 font-mono text-[9px] font-bold">REPLY</Text>
+                                  </Pressable>
+
+                                  {isCommentAuthor && (
+                                    <Pressable onPress={() => { setEditActiveId(item.id); setEditInputText(item.content); }} className="flex-row items-center">
+                                      <Ionicons name="create-outline" size={10} color="#737373" style={{ marginRight: 3 }} />
+                                      <Text className="text-neutral-500 font-mono text-[9px] font-bold">EDIT</Text>
+                                    </Pressable>
+                                  )}
+
+                                  {canDelete && (
+                                    <Pressable 
+                                      onPress={() => {
+                                        Alert.alert('Delete Comment', 'Are you sure you want to delete this comment?', [
+                                          { text: 'Cancel', style: 'cancel' },
+                                          { 
+                                            text: 'Delete', 
+                                            style: 'destructive',
+                                            onPress: async () => {
+                                              try {
+                                                await deleteProfileCommentMutation.mutateAsync({ commentId: item.id, profileId: id! });
+                                              } catch (e) {
+                                                Alert.alert('Error', 'Failed to delete comment');
+                                              }
+                                            }
+                                          }
+                                        ]);
+                                      }} 
+                                      className="flex-row items-center"
+                                    >
+                                      <Ionicons name="trash-outline" size={10} color="#ef4444" style={{ marginRight: 3 }} />
+                                      <Text className="text-red-500/80 font-mono text-[9px] font-bold">DELETE</Text>
+                                    </Pressable>
+                                  )}
+                                </View>
+                              )}
+
+                              {/* Inline Reply input */}
+                              {replyActiveId === item.id && (
+                                <View className="mt-3 bg-neutral-950/60 p-2 rounded-lg border border-neutral-800">
+                                  <TextInput
+                                    className="bg-neutral-950 border border-neutral-900 text-white rounded p-2 font-mono text-[10px] min-h-[30px] mb-2"
+                                    placeholder="Write a reply..."
+                                    placeholderTextColor="#444"
+                                    value={replyInputMap[item.id] || ''}
+                                    onChangeText={text => setReplyInputMap(prev => ({ ...prev, [item.id]: text }))}
+                                  />
+                                  <View className="flex-row justify-end gap-2">
+                                    <Pressable onPress={() => setReplyActiveId(null)} className="px-2 py-1 bg-neutral-950 border border-neutral-900 rounded">
+                                      <Text className="text-neutral-600 font-mono text-[8px] font-bold">CANCEL</Text>
+                                    </Pressable>
+                                    <Pressable 
+                                      disabled={!replyInputMap[item.id]?.trim()}
+                                      onPress={async () => {
+                                        const rep = replyInputMap[item.id] || '';
+                                        if (!rep.trim()) return;
+                                        try {
+                                          await addProfileCommentMutation.mutateAsync({
+                                            profileId: id!,
+                                            content: rep,
+                                            parentId: item.id
+                                          });
+                                          setReplyActiveId(null);
+                                          setReplyInputMap(prev => ({ ...prev, [item.id]: '' }));
+                                        } catch (e) {
+                                          Alert.alert('Error', 'Failed to send reply');
+                                        }
+                                      }}
+                                      className="px-2 py-1 bg-amber-600/10 border border-amber-600/50 rounded"
+                                    >
+                                      <Text className="text-amber-500 font-mono text-[8px] font-bold">REPLY</Text>
+                                    </Pressable>
+                                  </View>
+                                </View>
+                              )}
+
+                              {/* Nesting replies list */}
+                              {replies.length > 0 && (
+                                <View className="mt-3 pl-3 border-l border-neutral-800/80 gap-3">
+                                  {replies.map((reply: any, rIdx: number) => {
+                                    const rAuthor = reply.author || {};
+                                    const isReplyEditing = editActiveId === reply.id;
+                                    const canDeleteReply = currentUserId === reply.author_id || isProfileOwner;
+
+                                    return (
+                                      <View key={`reply-${reply.id}-${rIdx}`} className="flex-row">
+                                        <View className="w-5 h-5 rounded-full overflow-hidden bg-neutral-800 mr-2 border border-neutral-700 items-center justify-center">
+                                          {rAuthor.avatar_url ? (
+                                            <Image source={{ uri: rAuthor.avatar_url }} style={{ width: '100%', height: '100%' }} />
+                                          ) : (
+                                            <Ionicons name="person" size={10} color="#525252" />
+                                          )}
+                                        </View>
+                                        <View className="flex-1">
+                                          <View className="flex-row items-center justify-between">
+                                            <Text className="text-white font-mono text-[10px] font-bold">@{rAuthor.username || 'member'}</Text>
+                                            <Text className="text-neutral-600 font-mono text-[7px]">{new Date(reply.created_at).toLocaleDateString()}</Text>
+                                          </View>
+
+                                          {isReplyEditing ? (
+                                            <View className="mt-1">
+                                              <TextInput
+                                                className="bg-neutral-950 border border-neutral-800 text-white rounded p-1.5 font-mono text-[10px] min-h-[30px] mb-2"
+                                                value={editInputText}
+                                                onChangeText={setEditInputText}
+                                              />
+                                              <View className="flex-row gap-2 justify-end">
+                                                <Pressable onPress={() => { setEditActiveId(null); setEditInputText(''); }} className="px-2 py-0.5 bg-neutral-950 border border-neutral-800 rounded">
+                                                  <Text className="text-neutral-500 font-mono text-[7px] font-bold">CANCEL</Text>
+                                                </Pressable>
+                                                <Pressable 
+                                                  onPress={async () => {
+                                                    if (!editInputText.trim()) return;
+                                                    try {
+                                                      await updateProfileCommentMutation.mutateAsync({
+                                                        commentId: reply.id,
+                                                        content: editInputText
+                                                      });
+                                                      setEditActiveId(null);
+                                                      setEditInputText('');
+                                                    } catch (e) {
+                                                      Alert.alert('Error', 'Failed to update reply');
+                                                    }
+                                                  }}
+                                                  className="px-2 py-0.5 bg-amber-600/10 border border-amber-600/50 rounded"
+                                                >
+                                                  <Text className="text-amber-500 font-mono text-[7px] font-bold">SAVE</Text>
+                                                </Pressable>
+                                              </View>
+                                            </View>
+                                          ) : (
+                                            <Text className="text-neutral-400 font-mono text-[11px] leading-4 mt-0.5">{reply.content}</Text>
+                                          )}
+
+                                          {!isReplyEditing && (
+                                            <View className="flex-row items-center gap-3 mt-1">
+                                              {currentUserId === reply.author_id && (
+                                                <Pressable onPress={() => { setEditActiveId(reply.id); setEditInputText(reply.content); }}>
+                                                  <Text className="text-neutral-500 font-mono text-[8px] font-bold">EDIT</Text>
+                                                </Pressable>
+                                              )}
+
+                                              {canDeleteReply && (
+                                                <Pressable 
+                                                  onPress={() => {
+                                                    Alert.alert('Delete Reply', 'Are you sure you want to delete this reply?', [
+                                                      { text: 'Cancel', style: 'cancel' },
+                                                      { 
+                                                        text: 'Delete', 
+                                                        style: 'destructive',
+                                                        onPress: async () => {
+                                                          try {
+                                                            await deleteProfileCommentMutation.mutateAsync({ commentId: reply.id, profileId: id! });
+                                                          } catch (e) {
+                                                            Alert.alert('Error', 'Failed to delete reply');
+                                                          }
+                                                        }
+                                                      }
+                                                    ]);
+                                                  }}
+                                                >
+                                                  <Text className="text-red-500/80 font-mono text-[8px] font-bold">DELETE</Text>
+                                                </Pressable>
+                                              )}
+                                            </View>
+                                          )}
+                                        </View>
+                                      </View>
+                                    );
+                                  })}
+                                </View>
+                              )}
+                            </View>
+                          </View>
+                        </View>
+                      );
+                    })
+                  )}
                 </View>
               )}
             </View>

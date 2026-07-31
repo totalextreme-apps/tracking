@@ -147,16 +147,16 @@ export function getStacks(
         const rawTitleB = itemB.movies?.title ?? itemB.shows?.name ?? '';
 
         if (useFranchiseSort) {
-          const franchiseItemA = a.find(item => item.franchise && item.franchise.trim() !== '');
-          const franchiseItemB = b.find(item => item.franchise && item.franchise.trim() !== '');
+          const mediaA = itemA.movies || itemA.shows;
+          const mediaB = itemB.movies || itemB.shows;
 
-          const franchiseA = franchiseItemA?.franchise?.trim();
-          const franchiseB = franchiseItemB?.franchise?.trim();
+          const franchiseA = mediaA?.franchise?.trim();
+          const franchiseB = mediaB?.franchise?.trim();
 
           if (franchiseA && franchiseB) {
             if (franchiseA.toLowerCase() === franchiseB.toLowerCase()) {
-              const orderA = franchiseItemA?.franchise_order !== null && franchiseItemA?.franchise_order !== undefined ? Number(franchiseItemA.franchise_order) : Infinity;
-              const orderB = franchiseItemB?.franchise_order !== null && franchiseItemB?.franchise_order !== undefined ? Number(franchiseItemB.franchise_order) : Infinity;
+              const orderA = mediaA?.franchise_order !== null && mediaA?.franchise_order !== undefined ? Number(mediaA.franchise_order) : Infinity;
+              const orderB = mediaB?.franchise_order !== null && mediaB?.franchise_order !== undefined ? Number(mediaB.franchise_order) : Infinity;
               if (orderA !== orderB) {
                 comparison = orderA - orderB;
               } else {

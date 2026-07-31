@@ -15,6 +15,8 @@ export interface Movie {
   primary_color: string | null;
   genres: { id: number; name: string }[] | null;
   cast: CastMember[] | null;
+  franchise?: string | null;
+  franchise_order?: number | null;
 }
 
 export interface Show {
@@ -28,6 +30,8 @@ export interface Show {
   genres: { id: number; name: string }[] | null;
   show_cast: CastMember[] | null;
   number_of_seasons: number | null;
+  franchise?: string | null;
+  franchise_order?: number | null;
 }
 
 export interface CastMember {
@@ -63,8 +67,6 @@ export interface CollectionItem {
   notes?: string | null;
   display_order?: number;
   grail_order?: number;
-  franchise?: string | null;
-  franchise_order?: number | null;
   last_watched_at?: string | null;
   watch_count?: number;
   created_at: string;

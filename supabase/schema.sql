@@ -17,7 +17,9 @@ create table public.movies (
   release_date date,
   primary_color text,
   genres jsonb,
-  movie_cast jsonb
+  movie_cast jsonb,
+  franchise text,
+  franchise_order numeric
 );
 
 -- Collection Items (The User's Library)
@@ -37,10 +39,6 @@ create table public.collection_items (
   condition text,
   notes text,
   custom_poster_url text,
-
-  -- Franchise Sorting
-  franchise text,
-  franchise_order numeric,
 
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   unique(user_id, movie_id, format)

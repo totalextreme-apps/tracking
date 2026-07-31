@@ -837,3 +837,39 @@ export function useDecrementWatchEvent(userId: string | undefined) {
     },
   });
 }
+
+export function useUpdateMovieFranchise(userId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ movieId, franchise, franchiseOrder }: { movieId: number, franchise: string | null, franchiseOrder: number | null }) => {
+      if (!userId) throw new Error('Not authenticated');
+      const { error } = await supabase
+        .from('movies')
+        .update({ franchise, franchise_order: franchiseOrder })
+        .eq('id', movieId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['collection', userId] });
+      queryClient.invalidateQueries({ queryKey: ['collection'] });
+    }
+  });
+}
+
+export function useUpdateShowFranchise(userId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ showId, franchise, franchiseOrder }: { showId: number, franchise: string | null, franchiseOrder: number | null }) => {
+      if (!userId) throw new Error('Not authenticated');
+      const { error } = await supabase
+        .from('shows')
+        .update({ franchise, franchise_order: franchiseOrder })
+        .eq('id', showId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['collection', userId] });
+      queryClient.invalidateQueries({ queryKey: ['collection'] });
+    }
+  });
+}

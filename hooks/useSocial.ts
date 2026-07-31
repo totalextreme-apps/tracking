@@ -64,7 +64,15 @@ export const useFollowing = (userId?: string) => {
       result.sort((a: any, b: any) => {
           const aTop = a.is_top_five ? 1 : 0;
           const bTop = b.is_top_five ? 1 : 0;
-          return bTop - aTop;
+          if (aTop !== bTop) {
+              return bTop - aTop;
+          }
+          if (a.is_top_five && b.is_top_five) {
+              const aOrder = a.top_five_order !== null && a.top_five_order !== undefined ? a.top_five_order : 0;
+              const bOrder = b.top_five_order !== null && b.top_five_order !== undefined ? b.top_five_order : 0;
+              return aOrder - bOrder;
+          }
+          return 0;
       });
 
       return result;
@@ -628,6 +636,21 @@ export const useCommunityFeed = (userId?: string) => {
 
       if (updateErr) throw updateErr;
 
+      // Fetch watch events from interestingIds
+      const { data: watches, error: watchErr } = await supabase
+        .from('collection_items')
+        .select(`
+          *,
+          movies (*),
+          shows (*)
+        `)
+        .in('user_id', interestingIds)
+        .not('last_watched_at', 'is', null)
+        .order('last_watched_at', { ascending: false })
+        .limit(25);
+
+      if (watchErr) throw watchErr;
+
       // Fetch comments from interestingIds
       const { data: comments, error: commentErr } = await supabase
         .from('item_comments')
@@ -649,6 +672,7 @@ export const useCommunityFeed = (userId?: string) => {
       // Fetch profiles in memory for owners of updates/collection items to avoid missing relation errors
       const profileIdsToFetch = new Set<string>();
       updates?.forEach((u: any) => { if (u.user_id) profileIdsToFetch.add(u.user_id); });
+      watches?.forEach((w: any) => { if (w.user_id) profileIdsToFetch.add(w.user_id); });
       comments?.forEach((c: any) => {
         if (c.collection_items?.user_id) profileIdsToFetch.add(c.collection_items.user_id);
       });
@@ -669,6 +693,13 @@ export const useCommunityFeed = (userId?: string) => {
         ...u,
         profiles: profilesMap[u.user_id] || null,
         activity_type: 'update'
+      }));
+
+      const processedWatches = (watches || []).map((w: any) => ({
+        ...w,
+        profiles: profilesMap[w.user_id] || null,
+        activity_type: 'watch',
+        created_at: w.last_watched_at
       }));
 
       const processedComments = (comments || []).map((c: any) => {
@@ -692,7 +723,8 @@ export const useCommunityFeed = (userId?: string) => {
       const activity = [
         ...processedPosts,
         ...processedUpdates,
-        ...processedComments
+        ...processedComments,
+        ...processedWatches
       ];
       
       return activity.sort((a, b) => 
@@ -885,3 +917,148 @@ export const useClearReadNotifications = (userId?: string) => {
     }
   });
 };
+
+// 19. Reorder Top 5 Tracked Members
+export function useReorderTopFive(userId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (followingIds: string[]) => {
+      if (!userId) throw new Error('Not logged in');
+      const promises = followingIds.map((followingId, index) => {
+        return supabase
+          .from('follows')
+          .update({ top_five_order: index } as any)
+          .eq('follower_id', userId)
+          .eq('following_id', followingId);
+      });
+      const results = await Promise.all(promises);
+      const error = results.find(r => r.error)?.error;
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['following', userId] });
+    }
+  });
+}
+
+// 20. Fetch Specific User's Posts and Reviews
+export function useUserPosts(profileId: string | undefined) {
+  return useQuery({
+    queryKey: ['user_posts', profileId],
+    queryFn: async () => {
+      if (!profileId) return [];
+      const { data, error } = await supabase
+        .from('bulletin_posts')
+        .select(`
+          *,
+          profiles(*),
+          movies(*),
+          shows(*),
+          collection_items(*)
+        `)
+        .eq('user_id', profileId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data as BulletinPostWithMedia[];
+    },
+    enabled: !!profileId
+  });
+}
+
+// 21. Fetch Guestbook Comments on Profile
+export function useProfileComments(profileId: string | undefined) {
+  return useQuery({
+    queryKey: ['profile_comments', profileId],
+    queryFn: async () => {
+      if (!profileId) return [];
+      const { data, error } = await supabase
+        .from('profile_comments')
+        .select(`
+          *,
+          author:profiles!profile_comments_author_id_fkey(*)
+        `)
+        .eq('profile_id', profileId)
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!profileId
+  });
+}
+
+// 22. Add Profile Comment
+export function useAddProfileComment(userId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ profileId, content, parentId = null }: { profileId: string, content: string, parentId?: string | null }) => {
+      if (!userId) throw new Error('Not logged in');
+      const { data, error } = await supabase
+        .from('profile_comments')
+        .insert({
+          profile_id: profileId,
+          author_id: userId,
+          content,
+          parent_id: parentId
+        } as any)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['profile_comments', data.profile_id] });
+    }
+  });
+}
+
+// 23. Update Profile Comment
+export function useUpdateProfileComment(userId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ commentId, content }: { commentId: string, content: string }) => {
+      if (!userId) throw new Error('Not logged in');
+      const { data, error } = await supabase
+        .from('profile_comments')
+        .update({ content, updated_at: new Date().toISOString() } as any)
+        .eq('id', commentId)
+        .eq('author_id', userId)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['profile_comments', data.profile_id] });
+    }
+  });
+}
+
+// 24. Delete Profile Comment
+export function useDeleteProfileComment(userId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ commentId, profileId }: { commentId: string, profileId: string }) => {
+      if (!userId) throw new Error('Not logged in');
+      const { error } = await supabase
+        .from('profile_comments')
+        .delete()
+        .eq('id', commentId);
+      if (error) throw error;
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['profile_comments', variables.profileId] });
+    }
+  });
+}
+
+// 25. Fetch App-wide Leaderboard / Store Charts Stats
+export function useAppWideStats() {
+  return useQuery({
+    queryKey: ['app_wide_stats'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_app_wide_stats');
+      if (error) throw error;
+      return data;
+    }
+  });
+}
