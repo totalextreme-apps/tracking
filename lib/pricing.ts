@@ -109,20 +109,56 @@ export async function fetchEbaySoldValue(title: string, format: string, edition?
             }
         });
 
-        if (!response.ok) {
-            console.warn(`Direct eBay fetch returned status: ${response.status}`);
-            return { value: null };
+        let prices: number[] = [];
+        let directSuccess = false;
+
+        if (response.ok) {
+            const html = await response.text();
+            prices = parseEbayPrices(html);
+            if (prices.length > 0) {
+                directSuccess = true;
+                const median = calculateMedianPrice(prices);
+                return {
+                    value: median,
+                    source: 'ebay-direct',
+                    pricesCount: prices.length
+                };
+            }
         }
 
-        const html = await response.text();
-        const prices = parseEbayPrices(html);
-        const median = calculateMedianPrice(prices);
+        if (!directSuccess && firecrawlApiKey) {
+            console.log('Direct scrape failed or yielded 0 prices on native, falling back to Firecrawl...');
+            const firecrawlRes = await fetch('https://api.firecrawl.dev/v2/scrape', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${firecrawlApiKey}`
+                },
+                body: JSON.stringify({
+                    url: url,
+                    formats: ['html'],
+                    blockAds: true,
+                    removeBase64Images: true
+                }),
+                ...fetchOptions
+            });
 
-        return {
-            value: median,
-            source: 'ebay-direct',
-            pricesCount: prices.length
-        };
+            if (firecrawlRes.ok) {
+                const firecrawlData = await firecrawlRes.json();
+                if (firecrawlData.success && firecrawlData.data?.html) {
+                    const html = firecrawlData.data.html;
+                    prices = parseEbayPrices(html);
+                    const median = calculateMedianPrice(prices);
+                    return {
+                        value: median,
+                        source: 'firecrawl',
+                        pricesCount: prices.length
+                    };
+                }
+            }
+        }
+        
+        return { value: null };
     } catch (e) {
         console.error('Error fetching eBay sold value directly:', e);
         return { value: null };
