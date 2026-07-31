@@ -152,6 +152,17 @@ export function getStacks(
       if (scoreA !== scoreB) {
         return scoreB - scoreA;
       }
+
+      // 3. If scores are tied and Franchise Sort is enabled, group items by franchise
+      if (useFranchiseSort) {
+        const franchiseA = mediaA?.franchise?.trim() || '';
+        const franchiseB = mediaB?.franchise?.trim() || '';
+        if (franchiseA !== franchiseB) {
+          if (franchiseA && !franchiseB) return -1;
+          if (!franchiseA && franchiseB) return 1;
+          return franchiseA.localeCompare(franchiseB);
+        }
+      }
     }
 
     let comparison = 0;
