@@ -506,7 +506,7 @@ export default function MovieDetailScreen() {
     const backdropUrl = getBackdropUrl(displayMovie.backdrop_path);
     const posterUrl = getPosterUrl(displayMovie.poster_path);
 
-    const ownedFormats: string[] = movieItems.map((i: any) => i.format);
+    const ownedFormats: string[] = movieItems.filter((i: any) => i.status === 'owned').map((i: any) => i.format);
     const isGrail = activeItem?.is_grail || false;
     const isWishlist = movieItems.every((i: any) => i.status === 'wishlist');
 
@@ -1088,7 +1088,7 @@ export default function MovieDetailScreen() {
                         ownedFormats.length > 0 && (
                             <View className="mt-6">
                                 <Text className="text-white font-bold mb-2">Format Notes</Text>
-                                {movieItems.map((item: any) => (
+                                {movieItems.filter((i: any) => i.status === 'owned').map((item: any) => (
                                     <View key={item.id} className="mb-4">
                                         <View className="flex-row items-center flex-wrap mb-2">
                                             <View className={`px-2 py-1 rounded shrink-0 ${FORMAT_COLORS[item.format] || 'bg-neutral-800'}`}>
