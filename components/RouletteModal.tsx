@@ -41,7 +41,7 @@ export const RouletteModal: React.FC<RouletteModalProps> = ({
   }, [visible]);
 
   const handleRoll = () => {
-    playSound('rewind');
+    playSound('diceroll');
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setStep('rolling');
 

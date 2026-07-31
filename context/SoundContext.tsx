@@ -2,7 +2,7 @@ import { createAudioPlayer } from 'expo-audio';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useSettings } from './SettingsContext';
 
-type SoundType = 'click' | 'insert' | 'static' | 'whir' | 'tv_off' | 'rewind' | 'eject' | 'peel';
+type SoundType = 'click' | 'insert' | 'static' | 'whir' | 'tv_off' | 'rewind' | 'eject' | 'peel' | 'diceroll';
 
 type SoundContextType = {
     playSound: (type: SoundType) => Promise<void>;
@@ -31,6 +31,7 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
         rewind: null,
         eject: null,
         peel: null,
+        diceroll: null,
     });
     // Track active web audio objects to allow stopping them
     const activeWebSounds = React.useRef<Record<string, HTMLAudioElement>>({});
@@ -64,6 +65,7 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
             const rewindPlayer = load(require('@/assets/sounds/rewind.mp3'));
             const ejectPlayer = load(require('@/assets/sounds/vcr_eject.mp3'));
             const peelPlayer = load(require('@/assets/sounds/sticker_peel.mp3'));
+            const dicerollPlayer = load(require('@/assets/sounds/diceroll.wav'));
 
             setPlayers({
                 click: clickPlayer,
@@ -74,6 +76,7 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
                 rewind: rewindPlayer,
                 eject: ejectPlayer,
                 peel: peelPlayer,
+                diceroll: dicerollPlayer,
             });
 
         } catch (e) {
@@ -104,6 +107,7 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
                     rewind: require('@/assets/sounds/rewind.mp3'),
                     eject: require('@/assets/sounds/vcr_eject.mp3'),
                     peel: require('@/assets/sounds/sticker_peel.mp3'),
+                    diceroll: require('@/assets/sounds/diceroll.wav'),
                 };
 
                 const source = paths[type];

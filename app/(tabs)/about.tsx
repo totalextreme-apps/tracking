@@ -122,6 +122,11 @@ export default function AboutScreen() {
                                     author="AHPreston"
                                     license="Attribution 4.0"
                                 />
+                                <AttributionItem
+                                    title="rolling dice 1.wav"
+                                    author="nettimato"
+                                    license="CC0"
+                                />
                             </View>
                         </View>
                     </View>
