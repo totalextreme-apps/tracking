@@ -33,30 +33,35 @@ export function MemberCard({ userId, profile, onEditPress, onAvatarPress, isRead
                 {/* Actual Plastic Card */}
                 <View className="flex-1 rounded-lg bg-[#140e0b] overflow-hidden relative border border-[#2d2016]">
                     
-                    {/* Top Amber Banner (Vintage Store Branding) */}
-                    <View className="h-[45%] bg-[#f59e0b] border-b-4 border-[#d97706] flex-row items-center px-4 justify-between relative overflow-hidden">
+                    {/* Retro Texture Background */}
+                    <Image 
+                        source={require('@/assets/images/card-bg-1.png')}
+                        contentFit="cover"
+                        style={{ position: 'absolute', width: '100%', height: '100%', opacity: 0.9 }}
+                    />
+
+                    {/* Top Branding */}
+                    <View className="h-[45%] flex-row items-center px-4 justify-between relative overflow-hidden">
                         <View className="flex-col relative z-10">
-                            <Text className="text-black font-black text-3xl italic tracking-tighter" style={{ textShadowColor: 'rgba(255,255,255,0.4)', textShadowOffset: {width: 1, height: 1}, textShadowRadius: 0 }}>TRACKING</Text>
-                            <Text className="text-black/80 font-bold text-[8px] uppercase tracking-widest -mt-1 ml-1">HOME VIDEO EXCELLENCE</Text>
+                            <Text className="text-[#f59e0b] font-black text-3xl italic tracking-tighter" style={{ textShadowColor: 'rgba(0,0,0,0.8)', textShadowOffset: {width: 2, height: 2}, textShadowRadius: 3 }}>TRACKING</Text>
+                            <Text className="text-[#f59e0b]/80 font-bold text-[8px] uppercase tracking-widest -mt-1 ml-1" style={{ textShadowColor: 'rgba(0,0,0,0.8)', textShadowOffset: {width: 1, height: 1}, textShadowRadius: 1 }}>HOME VIDEO EXCELLENCE</Text>
                         </View>
-                        {/* Faint repeating background pattern in the banner */}
-                        <Text className="absolute -right-4 -bottom-4 text-black/10 font-black text-6xl italic tracking-tighter">APP</Text>
                     </View>
 
                     {/* Bottom Card Info */}
                     <View className="flex-1 flex-row px-4 py-2 justify-between">
                         
                         {/* Left Side: Details & Barcode */}
-                        <View className="flex-1 justify-between py-1">
+                        <View className="flex-1 justify-between py-1 bg-black/40 rounded px-2 -ml-2 border border-white/5">
                             <View>
-                                <Text className="text-[#f59e0b] font-black text-[13px] tracking-widest uppercase">MEMBERSHIP CARD</Text>
+                                <Text className="text-[#f59e0b] font-black text-[13px] tracking-widest uppercase" style={{ textShadowColor: 'rgba(0,0,0,0.8)', textShadowOffset: {width: 1, height: 1}, textShadowRadius: 1 }}>MEMBERSHIP CARD</Text>
                                 <View className="flex-row items-center mt-1">
                                     <Text className="text-[#a89880] font-mono text-[9px] mr-2">MEMBER:</Text>
                                     <Text className="text-white font-mono font-bold text-[10px]" numberOfLines={1}>
                                         {profile?.username ? '@' + profile.username.toUpperCase() : 'UNKNOWN'}
                                     </Text>
                                 </View>
-                                <Text className="text-[#666] font-mono text-[7px] mt-0.5">AUTH ID: {displayId}</Text>
+                                <Text className="text-[#888] font-mono text-[7px] mt-0.5">AUTH ID: {displayId}</Text>
                             </View>
 
                             {/* White Barcode Sticker */}
