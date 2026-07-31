@@ -121,6 +121,21 @@ export function getStacks(
     if (searchQuery && sortBy === 'recent') {
       const titleA = ((mediaA as any)?.title || (mediaA as any)?.name || '').toLowerCase();
       const titleB = ((mediaB as any)?.title || (mediaB as any)?.name || '').toLowerCase();
+      
+      // 1. If Franchise Sort is on and they are in the same franchise, franchise order ALWAYS wins
+      if (useFranchiseSort) {
+        const franchiseA = mediaA?.franchise?.trim();
+        const franchiseB = mediaB?.franchise?.trim();
+        if (franchiseA && franchiseB && franchiseA.toLowerCase() === franchiseB.toLowerCase()) {
+          const orderA = mediaA?.franchise_order !== null && mediaA?.franchise_order !== undefined ? Number(mediaA.franchise_order) : Infinity;
+          const orderB = mediaB?.franchise_order !== null && mediaB?.franchise_order !== undefined ? Number(mediaB.franchise_order) : Infinity;
+          if (orderA !== orderB) {
+            return orderA - orderB;
+          }
+        }
+      }
+
+      // 2. Otherwise, use relevance score
       const q = searchQuery.toLowerCase().trim();
 
       const getScore = (title: string) => {
@@ -136,19 +151,6 @@ export function getStacks(
 
       if (scoreA !== scoreB) {
         return scoreB - scoreA;
-      }
-      
-      // If scores are tied, fallback to franchise sort if enabled
-      if (useFranchiseSort) {
-        const franchiseA = mediaA?.franchise?.trim();
-        const franchiseB = mediaB?.franchise?.trim();
-        if (franchiseA && franchiseB && franchiseA.toLowerCase() === franchiseB.toLowerCase()) {
-          const orderA = mediaA?.franchise_order !== null && mediaA?.franchise_order !== undefined ? Number(mediaA.franchise_order) : Infinity;
-          const orderB = mediaB?.franchise_order !== null && mediaB?.franchise_order !== undefined ? Number(mediaB.franchise_order) : Infinity;
-          if (orderA !== orderB) {
-            return orderA - orderB;
-          }
-        }
       }
     }
 
