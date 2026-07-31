@@ -89,6 +89,7 @@ export interface BulletinPost {
   collection_item_id: string | null;
   movie_id: number | null;
   show_id: number | null;
+  custom_list_name: string | null;
   content: string;
   rating: number | null;
   created_at: string;

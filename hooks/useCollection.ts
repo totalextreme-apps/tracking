@@ -873,3 +873,37 @@ export function useUpdateShowFranchise(userId: string | undefined) {
     }
   });
 }
+
+export function useCustomListPreview(userId: string | undefined, listName: string | null | undefined) {
+  return useQuery({
+    queryKey: ['custom_list_preview', userId, listName],
+    queryFn: async () => {
+      if (!userId || !listName) return [];
+      
+      const { data, error } = await supabase
+        .from('collection_items')
+        .select(`
+          id,
+          format,
+          status,
+          movies (
+            id,
+            title,
+            poster_path
+          ),
+          shows (
+            id,
+            name,
+            poster_path
+          )
+        `)
+        .eq('user_id', userId)
+        .contains('custom_lists', [listName])
+        .limit(10);
+        
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!userId && !!listName,
+  });
+}

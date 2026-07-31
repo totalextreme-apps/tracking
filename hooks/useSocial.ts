@@ -182,7 +182,7 @@ export const useSearchUsers = (query: string) => {
       if (error) throw error;
       return data as any[];
     },
-    enabled: query.length > 2,
+    enabled: query.length > 0,
   });
 };
 
@@ -345,6 +345,7 @@ export const useCreatePost = (userId?: string) => {
       collection_item_id?: string;
       movie_id?: number; 
       show_id?: number;
+      custom_list_name?: string | null;
       rating?: number;
     }) => {
       if (!userId) throw new Error('Not logged in');
@@ -359,6 +360,33 @@ export const useCreatePost = (userId?: string) => {
         .single() as any;
         
       if (error) throw error;
+
+      // Process mentions
+      if (postData.content) {
+        const mentionRegex = /@(\w+)/g;
+        const mentions = [...postData.content.matchAll(mentionRegex)].map(m => m[1].toLowerCase());
+        
+        if (mentions.length > 0) {
+          // Fetch profiles matching mentioned usernames
+          const { data: users } = await supabase
+            .from('profiles')
+            .select('id, username'); // We fetch all and filter client side if case-insensitivity in SQL is tricky, or just use .in('username', ...)
+
+          if (users && users.length > 0) {
+             const matchedUsers = users.filter((u: any) => u.username && mentions.includes(u.username.toLowerCase()));
+             if (matchedUsers.length > 0) {
+               const notifications = matchedUsers.map((user: any) => ({
+                 user_id: user.id,
+                 actor_id: userId,
+                 type: 'mention',
+                 reference_id: data.id
+               }));
+               await supabase.from('notifications').insert(notifications);
+             }
+          }
+        }
+      }
+
       return data;
     },
     onSuccess: () => {

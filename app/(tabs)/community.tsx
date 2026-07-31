@@ -4,6 +4,7 @@ import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
 import { useSound } from '@/context/SoundContext';
+import { useCollection, useCustomListPreview } from '@/hooks/useCollection';
 import { 
   useBulletinFeed, 
   useCommunityFeed, 
@@ -316,6 +317,13 @@ export default function CommunityScreen() {
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
 
+  // Mentions & Stacks Logic
+  const [mentionQuery, setMentionQuery] = useState('');
+  const [showMentionsDropdown, setShowMentionsDropdown] = useState(false);
+  const [selectedStack, setSelectedStack] = useState<string | null>(null);
+  const { data: collection } = useCollection(userId);
+  const userStacks = useMemo(() => Array.from(new Set(collection?.flatMap((i: any) => i.custom_lists || []))) as string[], [collection]);
+
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
 
@@ -442,6 +450,7 @@ export default function CommunityScreen() {
         content: postContent,
         movie_id: selectedMedia?.media_type === 'movie' ? selectedMedia.id : undefined,
         show_id: selectedMedia?.media_type === 'tv' ? selectedMedia.id : undefined,
+        custom_list_name: selectedStack || undefined,
         rating
       }, {
         onSuccess: () => {
@@ -456,6 +465,7 @@ export default function CommunityScreen() {
     setEditingPostId(post.id);
     setPostContent(post.content || '');
     setRating(post.rating || undefined);
+    setSelectedStack(post.custom_list_name || null);
     if (post.movies) {
       setSelectedMedia({ ...post.movies, media_type: 'movie' } as TmdbMediaResult);
     } else if (post.shows) {
@@ -469,6 +479,7 @@ export default function CommunityScreen() {
   const resetPost = () => {
     setPostContent('');
     setSelectedMedia(null);
+    setSelectedStack(null);
     setRating(undefined);
     setEditingPostId(null);
     setMediaQuery('');
@@ -494,9 +505,10 @@ export default function CommunityScreen() {
 
   const notifIcon = (type: string) => {
     switch (type) {
-      case 'message': return 'mail-outline';
-      case 'item_comment': return 'chatbubble-outline';
-      case 'post_comment': return 'paper-plane-outline';
+      case 'message': return 'chatbubbles-outline';
+      case 'item_comment': return 'chatbox-ellipses-outline';
+      case 'post_comment': return 'chatbox-outline';
+      case 'profile_comment': return 'book-outline';
       case 'follow': return 'person-add-outline';
       default: return 'notifications-outline';
     }
@@ -508,6 +520,7 @@ export default function CommunityScreen() {
       case 'message': return `@${actorName} sent you a message`;
       case 'item_comment': return `@${actorName} commented on your item`;
       case 'post_comment': return `@${actorName} replied to your post`;
+      case 'profile_comment': return `@${actorName} signed your guestbook`;
       case 'follow': return `@${actorName} started tracking you`;
       default: return 'New activity';
     }
@@ -997,7 +1010,44 @@ export default function CommunityScreen() {
                     </Pressable>
                   )}
                 </View>
-                <TextInput style={{ fontFamily: 'SpaceMono', fontSize: 13, color: '#2d2016', minHeight: 60, textAlignVertical: 'top' }} placeholder="Share a recommendation..." placeholderTextColor="#a89880" multiline value={postContent} onChangeText={setPostContent} />
+                
+                <View style={{ position: 'relative', zIndex: 50 }}>
+                  <TextInput 
+                    style={{ fontFamily: 'SpaceMono', fontSize: 13, color: '#2d2016', minHeight: 60, textAlignVertical: 'top' }} 
+                    placeholder="Share a recommendation..." 
+                    placeholderTextColor="#a89880" 
+                    multiline 
+                    value={postContent} 
+                    onChangeText={(text) => {
+                      setPostContent(text);
+                      const words = text.split(/ |\n/);
+                      const lastWord = words[words.length - 1];
+                      if (lastWord.startsWith('@')) {
+                        setMentionQuery(lastWord.substring(1));
+                        setShowMentionsDropdown(true);
+                      } else {
+                        setShowMentionsDropdown(false);
+                      }
+                    }} 
+                  />
+                  {showMentionsDropdown && searchResults && searchResults.length > 0 && (
+                    <View style={{ position: 'absolute', top: 60, left: 0, right: 0, backgroundColor: '#fff', borderRadius: 4, borderWidth: 1, borderColor: 'rgba(0,0,0,0.1)', zIndex: 100, maxHeight: 150, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 4 }}>
+                      <ScrollView keyboardShouldPersistTaps="handled">
+                        {searchResults.map((user: any) => (
+                          <Pressable key={user.id} onPress={() => {
+                            const words = postContent.split(/ |\n/);
+                            words.pop();
+                            setPostContent(words.join(' ') + (words.length > 0 ? ' ' : '') + '@' + user.username + ' ');
+                            setShowMentionsDropdown(false);
+                          }} style={{ flexDirection: 'row', alignItems: 'center', padding: 8, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.05)' }}>
+                            <Image source={{ uri: user.avatar_url || 'https://via.placeholder.com/20' }} style={{ width: 20, height: 20, borderRadius: 10, marginRight: 8, backgroundColor: '#eee' }} />
+                            <Text style={{ fontFamily: 'SpaceMono', fontSize: 10, color: '#2d2016', fontWeight: 'bold' }}>{user.username}</Text>
+                          </Pressable>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  )}
+                </View>
                 
                 {/* Rating */}
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)', paddingTop: 8 }}>
@@ -1048,6 +1098,31 @@ export default function CommunityScreen() {
                         </View>
                       )}
                     </View>
+                  )}
+                </View>
+
+                {/* Stack Attachment */}
+                <View style={{ marginTop: 10, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)', paddingTop: 8, zIndex: -1 }}>
+                  <Text style={{ fontSize: 9, fontFamily: 'SpaceMono', color: '#8a7060', marginBottom: 6 }}>ATTACH STACK:</Text>
+                  {selectedStack ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.03)', padding: 6, borderRadius: 4, justifyContent: 'space-between' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                        <Ionicons name="layers-outline" size={12} color="#2d2016" style={{ marginRight: 6 }} />
+                        <Text style={{ fontFamily: 'SpaceMono', fontSize: 10, color: '#2d2016', fontWeight: 'bold' }} numberOfLines={1}>{selectedStack}</Text>
+                      </View>
+                      <Pressable onPress={() => setSelectedStack(null)}>
+                        <Ionicons name="close-circle" size={14} color="#e53e3e" />
+                      </Pressable>
+                    </View>
+                  ) : (
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                      {userStacks.map(stack => (
+                        <Pressable key={stack} onPress={() => setSelectedStack(stack)} style={{ backgroundColor: 'rgba(0,0,0,0.05)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 4, marginRight: 8 }}>
+                          <Text style={{ fontFamily: 'SpaceMono', fontSize: 9, color: '#2d2016', fontWeight: 'bold' }}>{stack}</Text>
+                        </Pressable>
+                      ))}
+                      {userStacks.length === 0 && <Text style={{ fontFamily: 'SpaceMono', fontSize: 9, color: '#a89880' }}>No stacks available</Text>}
+                    </ScrollView>
                   )}
                 </View>
 

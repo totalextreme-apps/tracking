@@ -355,7 +355,7 @@ export default function BulletinBoardScreen() {
               {searchLoading ? (
                 <ActivityIndicator color="#f59e0b" />
               ) : searchResults?.length ? (
-                searchResults.map(user => (
+                searchResults.map((user: any) => (
                   <Pressable 
                     key={user.id} 
                     onPress={() => router.push(`/profile/${user.id}`)}

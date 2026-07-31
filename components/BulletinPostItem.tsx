@@ -7,6 +7,39 @@ import * as Sharing from 'expo-sharing';
 import { supabase } from '@/lib/supabase';
 import { shareImageWebFallback } from '@/lib/share-utils';
 
+import { ScrollView } from 'react-native';
+import { useCustomListPreview } from '@/hooks/useCollection';
+
+function SharedListPreview({ userId, listName, router }: { userId: string, listName: string, router: any }) {
+  const { data: items } = useCustomListPreview(userId, listName);
+  
+  if (!items || items.length === 0) return null;
+  
+  return (
+    <View style={{ marginTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)', paddingTop: 10 }}>
+      <Text style={{ fontFamily: 'SpaceMono', fontSize: 9, color: '#8a7060', marginBottom: 8, fontWeight: 'bold' }}>STACK: {listName}</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row' }} keyboardShouldPersistTaps="handled">
+        {items.map((item: any) => (
+          <Pressable 
+            key={item.id}
+            onPress={() => {
+              const id = item.movies?.id || item.shows?.id;
+              const type = item.movies ? 'movie' : 'show';
+              router.push(`/(tabs)/${type}/${id}?ownerId=${userId}`);
+            }}
+            style={{ marginRight: 8 }}
+          >
+             <Image 
+                source={{ uri: `https://image.tmdb.org/t/p/w200${item.movies?.poster_path || item.shows?.poster_path}` || 'https://via.placeholder.com/45x68' }} 
+                style={{ width: 45, height: 68, borderRadius: 2, backgroundColor: '#ddd' }} 
+             />
+          </Pressable>
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
 export function BulletinPostItem({ post, userId, idx, startEditing, setShowDeleteConfirm, toggleComments, isExpanded, CommentSectionComponent }: any) {
   const router = useRouter();
   const viewRef = useRef(null);
@@ -132,6 +165,10 @@ export function BulletinPostItem({ post, userId, idx, startEditing, setShowDelet
         </View>
       )}
       {renderContentWithMentions(post.content)}
+      
+      {post.custom_list_name && (
+        <SharedListPreview userId={post.user_id} listName={post.custom_list_name} router={router} />
+      )}
       
       {/* Hide the 'reply' label visually when sharing by just not capturing it? The user will share it with the reply button, which is fine, might drive clicks! */}
       <Pressable onPress={() => toggleComments(post.id)} style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10, paddingTop: 8, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)' }}>
