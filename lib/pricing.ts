@@ -137,7 +137,7 @@ export async function fetchEbaySoldValue(title: string, format: string, edition?
                 },
                 body: JSON.stringify({
                     url: url,
-                    formats: ['html'],
+                    formats: ['rawHtml'],
                     blockAds: true,
                     removeBase64Images: true
                 }),
@@ -146,8 +146,8 @@ export async function fetchEbaySoldValue(title: string, format: string, edition?
 
             if (firecrawlRes.ok) {
                 const firecrawlData = await firecrawlRes.json();
-                if (firecrawlData.success && firecrawlData.data?.html) {
-                    const html = firecrawlData.data.html;
+                if (firecrawlData.success && firecrawlData.data?.rawHtml) {
+                    const html = firecrawlData.data.rawHtml;
                     prices = parseEbayPrices(html);
                     const median = calculateMedianPrice(prices);
                     return {

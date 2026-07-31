@@ -58,7 +58,7 @@ export async function GET(request: Request) {
                 headers,
                 body: JSON.stringify({
                     url: ebayUrl,
-                    formats: ['html'],
+                    formats: ['rawHtml'],
                     blockAds: true,
                     removeBase64Images: true
                 })
@@ -66,8 +66,8 @@ export async function GET(request: Request) {
 
             if (firecrawlRes.ok) {
                 const firecrawlData = await firecrawlRes.json();
-                if (firecrawlData.success && firecrawlData.data?.html) {
-                    const html = firecrawlData.data.html;
+                if (firecrawlData.success && firecrawlData.data?.rawHtml) {
+                    const html = firecrawlData.data.rawHtml;
                     prices = parseEbayPrices(html);
                     source = 'firecrawl-success';
                 } else {
