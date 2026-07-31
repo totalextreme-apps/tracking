@@ -1083,6 +1083,60 @@ export default function MovieDetailScreen() {
                         </View>
                     </View>
 
+                    {/* Franchise Details (Global for Movie) */}
+                    {!isReadOnly && ownedFormats.length > 0 && (
+                        <View className="mt-6">
+                            <Text className="text-white font-bold mb-2">Franchise Tag</Text>
+                            <View className="flex-row gap-2 mb-2">
+                                <View className="flex-1">
+                                    <TextInput
+                                        className="bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm"
+                                        placeholder="Franchise (e.g. Terminator)"
+                                        placeholderTextColor="#525252"
+                                        value={franchiseValue}
+                                        onChangeText={(text) => setLocalFranchise(text)}
+                                        autoCapitalize="words"
+                                        autoCorrect={false}
+                                    />
+                                </View>
+                                <View className="w-1/3">
+                                    <TextInput
+                                        className="bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm"
+                                        placeholder="Order #"
+                                        placeholderTextColor="#525252"
+                                        keyboardType="numeric"
+                                        value={franchiseOrderValue}
+                                        onChangeText={(text) => setLocalFranchiseOrder(text)}
+                                    />
+                                </View>
+                            </View>
+                            {(localFranchise !== (displayMovie?.franchise || '') || localFranchiseOrder !== (displayMovie?.franchise_order?.toString() || '')) && (
+                                <Pressable
+                                    disabled={updateMovieFranchiseMutation.isPending}
+                                    onPress={async () => {
+                                        if (displayMovie?.id) {
+                                            const franchiseOrderToSave = franchiseOrderValue.trim() === '' ? null : parseFloat(franchiseOrderValue);
+                                            await updateMovieFranchiseMutation.mutateAsync({
+                                                movieId: displayMovie.id,
+                                                franchise: franchiseValue || null,
+                                                franchiseOrder: isNaN(franchiseOrderToSave as any) ? null : franchiseOrderToSave
+                                            });
+                                            playSound('click');
+                                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                                        }
+                                    }}
+                                    className="bg-amber-600/10 border border-amber-600/50 p-3 rounded-lg items-center mt-1"
+                                >
+                                    {updateMovieFranchiseMutation.isPending ? (
+                                        <ActivityIndicator size="small" color="#f59e0b" />
+                                    ) : (
+                                        <Text className="text-amber-500 font-mono text-xs font-bold">SAVE FRANCHISE</Text>
+                                    )}
+                                </Pressable>
+                            )}
+                        </View>
+                    )}
+
                     {/* Format Notes Section */}
                     {
                         ownedFormats.length > 0 && (
@@ -1131,31 +1185,6 @@ export default function MovieDetailScreen() {
                                              autoCapitalize="words"
                                              autoCorrect={false}
                                          />
-                                          <View className="flex-row gap-2 mb-2">
-                                              <View className="flex-1">
-                                                  <TextInput
-                                                      nativeID={`franchise-input-${item.id}`}
-                                                      className="bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm"
-                                                      placeholder="Franchise (e.g. Terminator)"
-                                                      placeholderTextColor="#525252"
-                                                      value={franchiseValue}
-                                                      onChangeText={(text) => setLocalFranchise(text)}
-                                                      autoCapitalize="words"
-                                                      autoCorrect={false}
-                                                  />
-                                              </View>
-                                              <View className="w-1/3">
-                                                  <TextInput
-                                                      nativeID={`franchise-order-input-${item.id}`}
-                                                      className="bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm"
-                                                      placeholder="Order #"
-                                                      placeholderTextColor="#525252"
-                                                      keyboardType="numeric"
-                                                      value={franchiseOrderValue}
-                                                      onChangeText={(text) => setLocalFranchiseOrder(text)}
-                                                  />
-                                              </View>
-                                          </View>
                                         <TextInput
                                             nativeID={`notes-input-${item.id}`}
                                             {...({ name: `notes-${item.id}` } as any)}
@@ -1250,10 +1279,6 @@ export default function MovieDetailScreen() {
                                                 const bootToSave = localBootlegs[item.id] !== undefined ? localBootlegs[item.id] : (item.is_bootleg || false);
                                                 const valRaw = localValues[item.id] !== undefined ? localValues[item.id] : (item.value_estimate?.toString() || '');
                                                 const valToSave = valRaw.trim() === '' ? null : parseFloat(valRaw);
-                                                const franchiseToSave = localFranchise !== undefined ? localFranchise : (displayMovie?.franchise || '');
-                                                const franchiseOrderRaw = localFranchiseOrder !== undefined ? localFranchiseOrder : (displayMovie?.franchise_order?.toString() || '');
-                                                const franchiseOrderToSave = franchiseOrderRaw.trim() === '' ? null : parseFloat(franchiseOrderRaw);
-
                                                 // Save copy specific updates
                                                 await updateMutation.mutateAsync({
                                                     itemId: item.id,
@@ -1264,15 +1289,6 @@ export default function MovieDetailScreen() {
                                                         value_estimate: isNaN(valToSave as any) ? null : valToSave
                                                     }
                                                 });
-
-                                                // Save title franchise updates
-                                                if (displayMovie?.id) {
-                                                    await updateMovieFranchiseMutation.mutateAsync({
-                                                        movieId: displayMovie.id,
-                                                        franchise: franchiseToSave || null,
-                                                        franchiseOrder: isNaN(franchiseOrderToSave as any) ? null : franchiseOrderToSave
-                                                    });
-                                                }
 
                                                 playSound('click');
                                                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
