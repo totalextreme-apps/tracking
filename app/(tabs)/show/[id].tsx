@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, Text, TextInput, View, Share, Linking } from 'react-native';
 import * as Sharing from 'expo-sharing';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -75,6 +76,7 @@ export default function ShowDetailScreen() {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [pendingFormat, setPendingFormat] = useState<string | null>(null);
     const [editionInput, setEditionInput] = useState('');
+    const [isGeneratingValue, setIsGeneratingValue] = useState<Record<string, boolean>>({});
 
     // Curated Stacks State
     const [showNewStackInput, setShowNewStackInput] = useState(false);
@@ -226,6 +228,11 @@ export default function ShowDetailScreen() {
     const activeShow = show || persistedShow || tmdbShow;
 
     const [isNotFound, setIsNotFound] = useState(false);
+
+    useEffect(() => {
+        setLocalFranchise(undefined);
+        setLocalFranchiseOrder(undefined);
+    }, [id]);
 
     useEffect(() => {
         if (show && !persistedShow) {
@@ -501,6 +508,24 @@ export default function ShowDetailScreen() {
     const isBootleg = (activeItem && localBootlegs[activeItem.id] !== undefined)
         ? localBootlegs[activeItem.id]
         : (activeItem?.is_bootleg || false);
+
+    const handleGenerateValue = async (itemId: string, format: string, edition?: string | null) => {
+        try {
+            setIsGeneratingValue(prev => ({ ...prev, [itemId]: true }));
+            const apiKey = await AsyncStorage.getItem('firecrawl_api_key');
+            const res = await fetchEbaySoldValue(activeShow?.name || '', format, edition, undefined, apiKey || undefined);
+            if (res.value !== null && res.value !== undefined) {
+                setLocalValues(prev => ({ ...prev, [itemId]: res.value!.toFixed(2) }));
+                Alert.alert("Success", `Found an estimated market value of $${res.value!.toFixed(2)} based on recent eBay sales.`);
+            } else {
+                Alert.alert("No Data", "Could not find enough recent sold listings on eBay to determine a value.");
+            }
+        } catch (e: any) {
+            Alert.alert("Error", e.message || "Failed to fetch market value.");
+        } finally {
+            setIsGeneratingValue(prev => ({ ...prev, [itemId]: false }));
+        }
+    };
 
     const handleConfirmAddFormat = async () => {
         if (!pendingFormat || !activeShow) return;
@@ -912,18 +937,34 @@ export default function ShowDetailScreen() {
                                     <View className="mt-2 mb-1">
                                         <View className="flex-row items-center justify-between mb-1">
                                             <Text className="text-neutral-500 font-mono text-[10px] font-bold uppercase">Estimated Market Value ($)</Text>
-                                            {Platform.OS === 'web' && (
+                                            <View className="flex-row items-center gap-2">
                                                 <Pressable
-                                                    onPress={() => {
-                                                        playSound('click');
-                                                        Linking.openURL(getEbaySearchUrl(activeShow?.name || '', item.format));
-                                                    }}
-                                                    className="bg-neutral-800 px-2 py-1 rounded border border-neutral-700 flex-row items-center gap-1 active:opacity-75"
+                                                    onPress={() => handleGenerateValue(item.id, item.format, item.edition)}
+                                                    disabled={isGeneratingValue[item.id]}
+                                                    className={`bg-neutral-800 px-2 py-1 rounded border border-neutral-700 flex-row items-center gap-1 active:opacity-75 ${isGeneratingValue[item.id] ? 'opacity-50' : ''}`}
                                                 >
-                                                    <Ionicons name="search-outline" size={10} color="#f59e0b" style={{ marginTop: -1 }} />
-                                                    <Text className="text-amber-500 font-mono text-[9px] font-bold uppercase">Search eBay</Text>
+                                                    {isGeneratingValue[item.id] ? (
+                                                        <ActivityIndicator size={10} color="#10b981" />
+                                                    ) : (
+                                                        <Ionicons name="sparkles" size={10} color="#10b981" style={{ marginTop: -1 }} />
+                                                    )}
+                                                    <Text className="text-emerald-500 font-mono text-[9px] font-bold uppercase">
+                                                        {isGeneratingValue[item.id] ? 'GENERATING...' : 'AUTO VALUE'}
+                                                    </Text>
                                                 </Pressable>
-                                            )}
+                                                {Platform.OS === 'web' && (
+                                                    <Pressable
+                                                        onPress={() => {
+                                                            playSound('click');
+                                                            Linking.openURL(getEbaySearchUrl(activeShow?.name || '', item.format));
+                                                        }}
+                                                        className="bg-neutral-800 px-2 py-1 rounded border border-neutral-700 flex-row items-center gap-1 active:opacity-75"
+                                                    >
+                                                        <Ionicons name="search-outline" size={10} color="#f59e0b" style={{ marginTop: -1 }} />
+                                                        <Text className="text-amber-500 font-mono text-[9px] font-bold uppercase">Search eBay</Text>
+                                                    </Pressable>
+                                                )}
+                                            </View>
                                         </View>
                                         <TextInput
                                             nativeID={`value-input-${item.id}`}
