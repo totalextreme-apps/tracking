@@ -878,15 +878,20 @@ export default function ShowDetailScreen() {
                                 <Pressable
                                     disabled={updateShowFranchiseMutation.isPending}
                                     onPress={async () => {
-                                        if (displayShow?.id) {
-                                            const franchiseOrderToSave = franchiseOrderValue.trim() === '' ? null : parseFloat(franchiseOrderValue);
-                                            await updateShowFranchiseMutation.mutateAsync({
-                                                tmdbId: displayShow.tmdb_id || displayShow.id,
-                                                franchise: franchiseValue || null,
-                                                franchiseOrder: isNaN(franchiseOrderToSave as any) ? null : franchiseOrderToSave
-                                            });
-                                            playSound('click');
-                                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                                        try {
+                                            if (displayShow?.id) {
+                                                const franchiseOrderToSave = franchiseOrderValue.trim() === '' ? null : parseFloat(franchiseOrderValue);
+                                                await updateShowFranchiseMutation.mutateAsync({
+                                                    tmdbId: displayShow.tmdb_id || displayShow.id,
+                                                    franchise: franchiseValue || null,
+                                                    franchiseOrder: isNaN(franchiseOrderToSave as any) ? null : franchiseOrderToSave
+                                                });
+                                                playSound('click');
+                                                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                                            }
+                                        } catch (e: any) {
+                                            console.error('Franchise save error:', e);
+                                            Alert.alert('Error', 'Failed to save franchise: ' + (e?.message || e));
                                         }
                                     }}
                                     className="bg-amber-600/10 border border-amber-600/50 p-3 rounded-lg items-center mt-1"
