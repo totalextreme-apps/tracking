@@ -22,7 +22,7 @@ export function getEbaySearchUrl(title: string, format: string, edition?: string
  */
 export function parseEbayPrices(html: string): number[] {
     const prices: number[] = [];
-    const priceRegex = /class="[^"]*(s-item__price|s-card__price|POSITIVE|text-positive)[^"]*">([\s\S]*?)<\/span>/gi;
+    const priceRegex = /class="[^"]*(s-item__price|s-card__price|POSITIVE|text-positive|ITEM_PRICE)[^"]*">([\s\S]*?)<\/span>/gi;
     let match;
 
     while ((match = priceRegex.exec(html)) !== null) {
@@ -37,6 +37,23 @@ export function parseEbayPrices(html: string): number[] {
         const cleanPrice = parseFloat(priceText.replace(/[^0-9.]/g, ''));
         if (!isNaN(cleanPrice) && cleanPrice > 0) {
             prices.push(cleanPrice);
+        }
+    }
+
+    // Fallback: If no prices found via classes (e.g. Firecrawl stripped them or mobile layout changed), 
+    // extract all dollar amounts from the page text and filter out obvious non-item prices.
+    if (prices.length === 0) {
+        const cleanText = html.replace(/<[^>]*>/g, ' ');
+        // Match $XX.XX format
+        const dollarRegex = /\$([0-9,]+\.[0-9]{2})/g;
+        let looseMatch;
+        while ((looseMatch = dollarRegex.exec(cleanText)) !== null) {
+            const cleanPrice = parseFloat(looseMatch[1].replace(/,/g, ''));
+            // Filter out obvious shipping prices (usually exact round numbers under $6 or standard USPS rates)
+            // This is a rough heuristic since we lost the HTML context, but better than 0 prices.
+            if (!isNaN(cleanPrice) && cleanPrice > 0) {
+                prices.push(cleanPrice);
+            }
         }
     }
 

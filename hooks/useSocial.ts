@@ -647,7 +647,7 @@ export const useCommunityFeed = (userId?: string) => {
         .order('created_at', { ascending: false })
         .limit(25);
 
-      if (postErr) throw postErr;
+      if (postErr) console.error('Error fetching posts:', postErr);
 
       // Fetch collection additions from interestingIds
       const { data: updates, error: updateErr } = await supabase
@@ -662,7 +662,7 @@ export const useCommunityFeed = (userId?: string) => {
         .order('created_at', { ascending: false })
         .limit(25);
 
-      if (updateErr) throw updateErr;
+      if (updateErr) console.error('Error fetching updates:', updateErr);
 
       // Fetch watch events from interestingIds
       const { data: watches, error: watchErr } = await supabase
@@ -677,7 +677,7 @@ export const useCommunityFeed = (userId?: string) => {
         .order('last_watched_at', { ascending: false })
         .limit(25);
 
-      if (watchErr) throw watchErr;
+      if (watchErr) console.error('Error fetching watches:', watchErr);
 
       // Fetch items marked for sale or trade from interestingIds
       const { data: listings, error: listingErr } = await supabase
@@ -692,7 +692,7 @@ export const useCommunityFeed = (userId?: string) => {
         .order('updated_at', { ascending: false })
         .limit(25);
 
-      if (listingErr) throw listingErr;
+      if (listingErr) console.error('Error fetching listings:', listingErr);
 
       // Fetch comments from interestingIds
       const { data: comments, error: commentErr } = await supabase
@@ -710,7 +710,7 @@ export const useCommunityFeed = (userId?: string) => {
         .order('created_at', { ascending: false })
         .limit(25);
 
-      if (commentErr) throw commentErr;
+      if (commentErr) console.error('Error fetching comments:', commentErr);
 
       // Fetch profiles in memory for owners of updates/collection items to avoid missing relation errors
       const profileIdsToFetch = new Set<string>();
