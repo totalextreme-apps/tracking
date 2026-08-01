@@ -847,6 +847,60 @@ export default function ShowDetailScreen() {
                         <Text className="text-neutral-400 leading-6">{displayShow.overview || "No overview available."}</Text>
                     </View>
 
+                    {/* Franchise Details (Global for Show) */}
+                    {!isReadOnly && ownedFormats.length > 0 && (
+                        <View className="mt-6">
+                            <Text className="text-white font-bold mb-2">Franchise Tag</Text>
+                            <View className="flex-row gap-2 mb-2">
+                                <View className="flex-1">
+                                    <TextInput
+                                        className="bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm"
+                                        placeholder="Franchise (e.g. Terminator)"
+                                        placeholderTextColor="#525252"
+                                        value={franchiseValue}
+                                        onChangeText={(text) => setLocalFranchise(text)}
+                                        autoCapitalize="words"
+                                        autoCorrect={false}
+                                    />
+                                </View>
+                                <View className="w-1/3">
+                                    <TextInput
+                                        className="bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm"
+                                        placeholder="Order #"
+                                        placeholderTextColor="#525252"
+                                        keyboardType="numeric"
+                                        value={franchiseOrderValue}
+                                        onChangeText={(text) => setLocalFranchiseOrder(text)}
+                                    />
+                                </View>
+                            </View>
+                            {(localFranchise !== (displayShow?.franchise || '') || localFranchiseOrder !== (displayShow?.franchise_order?.toString() || '')) && (
+                                <Pressable
+                                    disabled={updateShowFranchiseMutation.isPending}
+                                    onPress={async () => {
+                                        if (displayShow?.id) {
+                                            const franchiseOrderToSave = franchiseOrderValue.trim() === '' ? null : parseFloat(franchiseOrderValue);
+                                            await updateShowFranchiseMutation.mutateAsync({
+                                                tmdbId: displayShow.tmdb_id || displayShow.id,
+                                                franchise: franchiseValue || null,
+                                                franchiseOrder: isNaN(franchiseOrderToSave as any) ? null : franchiseOrderToSave
+                                            });
+                                            playSound('click');
+                                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                                        }
+                                    }}
+                                    className="bg-amber-600/10 border border-amber-600/50 p-3 rounded-lg items-center mt-1"
+                                >
+                                    {updateShowFranchiseMutation.isPending ? (
+                                        <ActivityIndicator size="small" color="#f59e0b" />
+                                    ) : (
+                                        <Text className="text-amber-500 font-mono text-xs font-bold">SAVE FRANCHISE</Text>
+                                    )}
+                                </Pressable>
+                            )}
+                        </View>
+                    )}
+
                     {ownedFormats.length > 0 && !isReadOnly && (
                         <View className="mt-6">
                             <Text className="text-white font-bold mb-3">
@@ -900,31 +954,7 @@ export default function ShowDetailScreen() {
                                         value={localEditions[item.id] !== undefined ? localEditions[item.id] : (item.edition || '')}
                                         onChangeText={(text) => setLocalEditions(prev => ({ ...prev, [item.id]: text }))}
                                     />
-                                    <View className="flex-row gap-2 mb-2">
-                                        <View className="flex-1">
-                                            <TextInput
-                                                nativeID={`franchise-input-${item.id}`}
-                                                className="bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm"
-                                                placeholder="Franchise (e.g. Terminator)"
-                                                placeholderTextColor="#525252"
-                                                value={franchiseValue}
-                                                onChangeText={(text) => setLocalFranchise(text)}
-                                                autoCapitalize="words"
-                                                autoCorrect={false}
-                                            />
-                                        </View>
-                                        <View className="w-1/3">
-                                            <TextInput
-                                                nativeID={`franchise-order-input-${item.id}`}
-                                                className="bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm"
-                                                placeholder="Order #"
-                                                placeholderTextColor="#525252"
-                                                keyboardType="numeric"
-                                                value={franchiseOrderValue}
-                                                onChangeText={(text) => setLocalFranchiseOrder(text)}
-                                            />
-                                        </View>
-                                    </View>
+
                                     <TextInput
                                         className="bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm min-h-[80px]"
                                         placeholder="Add notes..."
@@ -1025,16 +1055,13 @@ export default function ShowDetailScreen() {
                                     )}
 
                                     <Pressable
-                                        disabled={updateMutation.isPending || updateShowFranchiseMutation.isPending}
+                                        disabled={updateMutation.isPending}
                                         onPress={async () => {
                                             const noteToSave = localNotes[item.id] !== undefined ? localNotes[item.id] : (item.notes || '');
                                             const editionToSave = localEditions[item.id] !== undefined ? localEditions[item.id] : (item.edition || '');
                                             const bootToSave = localBootlegs[item.id] !== undefined ? localBootlegs[item.id] : (item.is_bootleg || false);
                                             const valRaw = localValues[item.id] !== undefined ? localValues[item.id] : (item.value_estimate?.toString() || '');
                                             const valToSave = valRaw.trim() === '' ? null : parseFloat(valRaw);
-                                            const franchiseToSave = localFranchise !== undefined ? localFranchise : (displayShow?.franchise || '');
-                                            const franchiseOrderRaw = localFranchiseOrder !== undefined ? localFranchiseOrder : (displayShow?.franchise_order?.toString() || '');
-                                            const franchiseOrderToSave = franchiseOrderRaw.trim() === '' ? null : parseFloat(franchiseOrderRaw);
 
                                             // Save copy specific updates
                                             await updateMutation.mutateAsync({
@@ -1046,15 +1073,6 @@ export default function ShowDetailScreen() {
                                                     value_estimate: isNaN(valToSave as any) ? null : valToSave
                                                 }
                                             });
-
-                                            // Save title franchise updates
-                                            if (displayShow?.id) {
-                                                await updateShowFranchiseMutation.mutateAsync({
-                                                    tmdbId: displayShow.tmdb_id || displayShow.id,
-                                                    franchise: franchiseToSave || null,
-                                                    franchiseOrder: isNaN(franchiseOrderToSave as any) ? null : franchiseOrderToSave
-                                                });
-                                            }
 
                                             playSound('click');
                                             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
