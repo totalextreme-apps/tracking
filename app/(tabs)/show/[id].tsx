@@ -882,7 +882,7 @@ export default function ShowDetailScreen() {
                                             if (displayShow?.id) {
                                                 const franchiseOrderToSave = franchiseOrderValue.trim() === '' ? null : parseFloat(franchiseOrderValue);
                                                 await updateShowFranchiseMutation.mutateAsync({
-                                                    tmdbId: displayShow.tmdb_id || displayShow.id,
+                                                    showId: activeShow?.id || displayShow.id,
                                                     franchise: franchiseValue || null,
                                                     franchiseOrder: isNaN(franchiseOrderToSave as any) ? null : franchiseOrderToSave
                                                 });

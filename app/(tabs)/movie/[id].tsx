@@ -1156,7 +1156,7 @@ export default function MovieDetailScreen() {
                                             if (displayMovie?.id) {
                                                 const franchiseOrderToSave = franchiseOrderValue.trim() === '' ? null : parseFloat(franchiseOrderValue);
                                                 await updateMovieFranchiseMutation.mutateAsync({
-                                                    tmdbId: displayMovie.tmdb_id || displayMovie.id,
+                                                    movieId: activeMovie?.id || displayMovie.id,
                                                     franchise: franchiseValue || null,
                                                     franchiseOrder: isNaN(franchiseOrderToSave as any) ? null : franchiseOrderToSave
                                                 });

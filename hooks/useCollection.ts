@@ -841,15 +841,15 @@ export function useDecrementWatchEvent(userId: string | undefined) {
 export function useUpdateMovieFranchise(userId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ tmdbId, franchise, franchiseOrder }: { tmdbId: number | string, franchise: string | null, franchiseOrder: number | null }) => {
+    mutationFn: async ({ movieId, franchise, franchiseOrder }: { movieId: number | string, franchise: string | null, franchiseOrder: number | null }) => {
       if (!userId) throw new Error('Not authenticated');
-      const cleanTmdbId = Number(tmdbId);
-      if (isNaN(cleanTmdbId) || cleanTmdbId <= 0) throw new Error('Invalid TMDB ID');
+      const cleanMovieId = Number(movieId);
+      if (isNaN(cleanMovieId) || cleanMovieId <= 0) throw new Error('Invalid Movie ID');
       
       const { error } = await supabase
         .from('movies')
         .update({ franchise, franchise_order: franchiseOrder })
-        .eq('tmdb_id', cleanTmdbId);
+        .eq('id', cleanMovieId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -862,15 +862,15 @@ export function useUpdateMovieFranchise(userId: string | undefined) {
 export function useUpdateShowFranchise(userId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ tmdbId, franchise, franchiseOrder }: { tmdbId: number | string, franchise: string | null, franchiseOrder: number | null }) => {
+    mutationFn: async ({ showId, franchise, franchiseOrder }: { showId: number | string, franchise: string | null, franchiseOrder: number | null }) => {
       if (!userId) throw new Error('Not authenticated');
-      const cleanTmdbId = Number(tmdbId);
-      if (isNaN(cleanTmdbId) || cleanTmdbId <= 0) throw new Error('Invalid TMDB ID');
+      const cleanShowId = Number(showId);
+      if (isNaN(cleanShowId) || cleanShowId <= 0) throw new Error('Invalid Show ID');
       
       const { error } = await supabase
         .from('shows')
         .update({ franchise, franchise_order: franchiseOrder })
-        .eq('tmdb_id', cleanTmdbId);
+        .eq('id', cleanShowId);
       if (error) throw error;
     },
     onSuccess: () => {
