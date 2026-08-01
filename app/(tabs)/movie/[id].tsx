@@ -81,8 +81,8 @@ export default function MovieDetailScreen() {
     const [noteDraft, setNoteDraft] = useState('');
     const [isGeneratingValue, setIsGeneratingValue] = useState<Record<string, boolean>>({});
 
-    // Ref to track scroll position
-    const scrollY = useRef(0);
+    // Ref to reference ScrollView for scroll reset
+    const scrollViewRef = useRef<ScrollView>(null);
 
     // Curated Stacks State
     const [showNewStackInput, setShowNewStackInput] = useState(false);
@@ -252,6 +252,7 @@ export default function MovieDetailScreen() {
     const checkedItemsRef = useRef<Record<string, boolean>>({});
 
     useEffect(() => {
+        scrollViewRef.current?.scrollTo({ y: 0, animated: false });
         setLocalFranchise(undefined);
         setLocalFranchiseOrder(undefined);
     }, [movieId]);
@@ -726,6 +727,7 @@ export default function MovieDetailScreen() {
             {/* Hidden file input replaced by ImagePicker for better mobile compatibility */}
 
             <ScrollView
+                ref={scrollViewRef}
                 className="flex-1"
                 contentContainerStyle={{
                     paddingBottom: insets.bottom + 120,

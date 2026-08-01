@@ -65,6 +65,7 @@ export default function ShowDetailScreen() {
     const [localFranchiseOrder, setLocalFranchiseOrder] = useState<string | undefined>(undefined);
     const [persistedShow, setPersistedShow] = useState<any>(null);
     const viewShotRef = useRef<ViewShot>(null);
+    const scrollViewRef = useRef<ScrollView>(null);
 
     // Custom art state
     const [customArtUri, setCustomArtUri] = useState<string | null>(null);
@@ -230,6 +231,7 @@ export default function ShowDetailScreen() {
     const [isNotFound, setIsNotFound] = useState(false);
 
     useEffect(() => {
+        scrollViewRef.current?.scrollTo({ y: 0, animated: false });
         setLocalFranchise(undefined);
         setLocalFranchiseOrder(undefined);
     }, [id]);
@@ -577,7 +579,7 @@ export default function ShowDetailScreen() {
 
             {/* ImagePicker is now used for both web and native for better mobile browser compatibility */}
 
-            <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: insets.bottom + 120, width: '100%' }}>
+            <ScrollView ref={scrollViewRef} className="flex-1" contentContainerStyle={{ paddingBottom: insets.bottom + 120, width: '100%' }}>
                 <View className="relative h-72 w-full">
                     {(customBackdropUrl || backdropUrl) ? (
                         <Image source={{ uri: customBackdropUrl || backdropUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
