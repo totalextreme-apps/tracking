@@ -175,6 +175,7 @@ export default function HomeScreen() {
   const isDesktop = Platform.OS === 'web' && windowWidth > 1024;
   const [viewMode, setViewMode] = usePersistedState<'list' | 'grid2' | 'grid4' | 'custom'>('stacks_viewMode', isDesktop ? 'grid4' : 'grid2');
   const [numColumns, setNumColumns, columnsHydrated] = usePersistedState<number>('stacks_numColumns', isDesktop ? 4 : 2);
+  const [isSliderLocked, setIsSliderLocked] = usePersistedState<boolean>('slider_locked', false);
 
   const resolvedColumns = viewMode === 'list' ? 1 : viewMode === 'grid2' ? 2 : viewMode === 'grid4' ? 4 : numColumns;
   const [searchQuery, setSearchQuery] = useState('');
@@ -386,7 +387,8 @@ export default function HomeScreen() {
         const noiseWords = new Set(['remake', 'original', 'reboot', 'sequel', 'movie', 'tv', 'show', 'series', 'film', 'version', 'cut', 'edition']);
         const tokens = searchQuery
           .toLowerCase()
-          .split(/[\s,()]+/)
+          .replace(/['’]/g, '')
+          .split(/[\s,()\-:;!?"\[\]\/]+/)
           .map(t => t.trim())
           .filter(t => t.length > 0 && !noiseWords.has(t));
 
@@ -411,7 +413,9 @@ export default function HomeScreen() {
 
             return tokens.every(token => 
               searchableTexts.some(text => {
-                const words = text.split(/[\s,().:;!?"'\-\[\]\/]+/);
+                const words = text
+                  .replace(/['’]/g, '')
+                  .split(/[\s,().:;!?"\[\]\/]+/);
                 return words.some(word => word.startsWith(token));
               })
             );
@@ -787,7 +791,37 @@ export default function HomeScreen() {
                     </Modal>
                   </View>
                 </View>
-                <Slider key={columnsHydrated ? 'h' : 'uh'} style={{ width: '100%', height: 30 }} minimumValue={1} maximumValue={isDesktop ? 8 : 4} step={1} value={resolvedColumns} onValueChange={(val) => { setNumColumns(val); setViewMode('custom'); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }} minimumTrackTintColor="#f59e0b" maximumTrackTintColor="#333" thumbTintColor="#f59e0b" />
+                <View className="flex-row items-center">
+                  <Slider 
+                    key={columnsHydrated ? 'h' : 'uh'} 
+                    style={{ flex: 1, height: 30 }} 
+                    minimumValue={1} 
+                    maximumValue={isDesktop ? 8 : 4} 
+                    step={1} 
+                    value={resolvedColumns} 
+                    onValueChange={(val) => { 
+                      if (!isSliderLocked) {
+                        setNumColumns(val); 
+                        setViewMode('custom'); 
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); 
+                      }
+                    }} 
+                    minimumTrackTintColor={isSliderLocked ? "#666" : "#f59e0b"} 
+                    maximumTrackTintColor="#333" 
+                    thumbTintColor={isSliderLocked ? "#666" : "#f59e0b"} 
+                    disabled={isSliderLocked}
+                  />
+                  <Pressable 
+                    onPress={() => {
+                        setIsSliderLocked(!isSliderLocked);
+                        playSound('click');
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }} 
+                    className={`ml-3 p-1.5 rounded-full ${isSliderLocked ? 'bg-amber-900/30' : 'bg-neutral-800'}`}
+                  >
+                    <Ionicons name={isSliderLocked ? "lock-closed" : "lock-open-outline"} size={16} color={isSliderLocked ? "#f59e0b" : "#666"} />
+                  </Pressable>
+                </View>
             </View>
 
             {isGuest ? (
