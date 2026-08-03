@@ -22,6 +22,7 @@ import { SaleSticker } from './SaleSticker';
 import { TradeSticker } from './TradeSticker';
 import { StickerOverlay } from './StickerOverlay';
 import { VHSCard } from './VHSCard';
+import { GrailSticker } from './GrailSticker';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -286,8 +287,8 @@ export function StackCard({
           borderRadius: 8,
           overflow: 'hidden',
           borderWidth: 1,
-          borderColor: isWishlist ? '#404040' : '#262626',
-          borderStyle: isWishlist ? 'dashed' : 'solid',
+          borderColor: isGrail ? '#ffd700' : isWishlist ? '#404040' : '#262626',
+          borderStyle: isWishlist && !isGrail ? 'dashed' : 'solid',
         }]}
       >
         {/* Thumbnail Section */}
@@ -366,10 +367,15 @@ export function StackCard({
           </View>
         </View>
 
-        {/* Favorite Icon */}
-        {isOnDisplay && (
+        {/* Favorite / Grail Icon */}
+        {isOnDisplay && !isWishlist && (
           <View className="pr-4">
             <FontAwesome name="thumb-tack" size={12} color="#f59e0b" style={{ transform: [{ rotate: '45deg' }] }} />
+          </View>
+        )}
+        {isGrail && isWishlist && (
+          <View className="pr-4">
+            <FontAwesome name="trophy" size={12} color="#f59e0b" />
           </View>
         )}
       </AnimatedPressable>
@@ -401,6 +407,7 @@ export function StackCard({
               {isOnDisplay && !isWishlist && <StickerOverlay visible={isOnDisplay} size={40} />}
               {topItem.for_sale && <SaleSticker visible={true} size={40} />}
               {topItem.for_trade && <TradeSticker visible={true} size={40} />}
+              {isGrail && isWishlist && <GrailSticker visible={true} size={40} />}
 
               {sorted.map((item, idx) => {
                 const transforms = getStackTransforms(idx);
@@ -415,8 +422,8 @@ export function StackCard({
                   width: width,
                   height: width / aspectRatio,
                   zIndex: sorted.length - idx,
-                  borderWidth: 1,
-                  borderColor: 'rgba(255,255,255,0.15)',
+                  borderWidth: (idx === 0 && isGrail && isWishlist) ? 2 : 1,
+                  borderColor: (idx === 0 && isGrail && isWishlist) ? '#ffd700' : 'rgba(255,255,255,0.15)',
                   shadowColor: '#000',
                   shadowOffset: { width: 0, height: 6 },
                   shadowOpacity: 0.8,
@@ -491,6 +498,7 @@ export function StackCard({
             {isOnDisplay && !isWishlist && <StickerOverlay visible={isOnDisplay} size={40} />}
             {topItem.for_sale && <SaleSticker visible={true} size={40} />}
             {topItem.for_trade && <TradeSticker visible={true} size={40} />}
+            {isGrail && isWishlist && <GrailSticker visible={true} size={40} />}
             {/* THE CARD ASSET */}
             {topItem.format === 'VHS' ? (
               <VHSCard 
@@ -531,7 +539,7 @@ export function StackCard({
               />
             )}
             
-            {isWishlist && (
+            {isWishlist && !isGrail && (
               <View className="absolute inset-0 bg-black/5 border-2 border-dashed border-neutral-600 rounded-sm" style={{ zIndex: 60 }} />
             )}
           </View>
@@ -576,9 +584,9 @@ export function StackCard({
           style={{
             width: width,
             aspectRatio: 2 / 3,
-            borderWidth: isWishlist ? 2 : 2, // Thicker border
-            borderStyle: isWishlist ? 'dashed' : 'solid',
-            borderColor: isWishlist ? '#6b7280' : '#00ff88', // Green Neon Border
+            borderWidth: 2, // Thicker border
+            borderStyle: isWishlist && !isGrail ? 'dashed' : 'solid',
+            borderColor: isGrail ? '#ffd700' : isWishlist ? '#6b7280' : '#00ff88', // Green Neon Border
             // Neon glow effect - only around poster image
             ...(!isWishlist && {
               shadowColor: '#00ff88',
@@ -594,7 +602,7 @@ export function StackCard({
             <NowStreamingSticker visible={true} size={40} />
           )}
 
-          {isWishlist && (
+          {isWishlist && !isGrail && (
             <View
               className="absolute inset-0 rounded-xl z-10"
               style={{ backgroundColor: 'rgba(100,100,100,0.05)' }}
@@ -625,6 +633,8 @@ export function StackCard({
           {/* Bootleg Sticker for Digital Grid */}
           {topItem.is_bootleg && <BootlegSticker size={30} />}
         </View>
+        {/* Grail sticker for wishlist items */}
+        {isGrail && isWishlist && <GrailSticker visible={true} size={40} />}
         <View className="flex-row w-[100%] justify-end items-center mt-2 px-1">
           <View className="flex-row flex-wrap justify-end gap-1 shrink">
           {sorted.map((item) => (

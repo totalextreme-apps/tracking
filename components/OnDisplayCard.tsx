@@ -19,6 +19,7 @@ import { NowStreamingSticker } from './NowStreamingSticker';
 import { SaleSticker } from './SaleSticker';
 import { StickerOverlay } from './StickerOverlay';
 import { VHSCard } from './VHSCard';
+import { GrailSticker } from './GrailSticker';
 
 
 type OnDisplayCardProps = {
@@ -206,7 +207,7 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
 
           {/* Grail sticker for wishlist items */}
           {item.is_grail && isWishlist && (
-            <SaleSticker visible={true} size={40} />
+            <GrailSticker visible={true} size={40} />
           )}
 
           {/* Bootleg Sticker - Digital ONLY */}
