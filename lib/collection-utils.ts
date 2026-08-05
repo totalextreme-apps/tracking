@@ -67,7 +67,7 @@ export function getWishlistItems(collection: CollectionItemWithMedia[] | undefin
   return collection.filter((item) => item.status === 'wishlist');
 }
 
-export type SortOption = 'recent' | 'title' | 'release' | 'rating' | 'bootleg' | 'genre';
+export type SortOption = 'recent' | 'title' | 'release' | 'rating' | 'bootleg' | 'genre' | 'value';
 export type SortOrder = 'asc' | 'desc';
 
 export function getStacks(
@@ -268,6 +268,16 @@ export function getStacks(
         const genreA = (itemA.movies?.genres?.[0]?.name ?? itemA.shows?.genres?.[0]?.name ?? 'ZZZ');
         const genreB = (itemB.movies?.genres?.[0]?.name ?? itemB.shows?.genres?.[0]?.name ?? 'ZZZ');
         comparison = genreA.localeCompare(genreB);
+        if (comparison === 0) {
+          const titleAStr = itemA.movies?.title ?? itemA.shows?.name ?? '';
+          const titleBStr = itemB.movies?.title ?? itemB.shows?.name ?? '';
+          comparison = titleAStr.localeCompare(titleBStr);
+        }
+        break;
+      case 'value':
+        const valA = itemA.value_estimate ?? -1;
+        const valB = itemB.value_estimate ?? -1;
+        comparison = valA - valB;
         if (comparison === 0) {
           const titleAStr = itemA.movies?.title ?? itemA.shows?.name ?? '';
           const titleBStr = itemB.movies?.title ?? itemB.shows?.name ?? '';
