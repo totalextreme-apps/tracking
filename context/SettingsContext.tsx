@@ -6,6 +6,8 @@ type SettingsContextType = {
     setSoundEnabled: (enabled: boolean) => void;
     staticEnabled: boolean;
     setStaticEnabled: (enabled: boolean) => void;
+    genreStickersEnabled: boolean;
+    setGenreStickersEnabled: (enabled: boolean) => void;
     onboardingKey: number;
     resetOnboarding: () => Promise<void>;
 };
@@ -22,11 +24,13 @@ export function useSettings() {
 
 const SOUND_KEY = 'settings_sound_enabled';
 const STATIC_KEY = 'settings_static_enabled';
+const GENRE_STICKERS_KEY = 'settings_genre_stickers_enabled';
 const ONBOARDING_KEY = 'has_seen_onboarding_v1';
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
     const [soundEnabled, setSoundEnabledState] = useState(true);
     const [staticEnabled, setStaticEnabledState] = useState(true);
+    const [genreStickersEnabled, setGenreStickersEnabledState] = useState(true);
     const [onboardingKey, setOnboardingKey] = useState(0);
 
     useEffect(() => {
@@ -37,9 +41,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         try {
             const sound = await AsyncStorage.getItem(SOUND_KEY);
             const staticEffect = await AsyncStorage.getItem(STATIC_KEY);
+            const genreStickers = await AsyncStorage.getItem(GENRE_STICKERS_KEY);
 
             if (sound !== null) setSoundEnabledState(sound === 'true');
             if (staticEffect !== null) setStaticEnabledState(staticEffect === 'true');
+            if (genreStickers !== null) setGenreStickersEnabledState(genreStickers === 'true');
         } catch (e) {
             console.error('Failed to load settings', e);
         }
@@ -55,6 +61,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         await AsyncStorage.setItem(STATIC_KEY, String(enabled));
     };
 
+    const setGenreStickersEnabled = async (enabled: boolean) => {
+        setGenreStickersEnabledState(enabled);
+        await AsyncStorage.setItem(GENRE_STICKERS_KEY, String(enabled));
+    };
+
     const resetOnboarding = async () => {
         await AsyncStorage.removeItem('has_seen_tour_v2');
         await AsyncStorage.removeItem('has_seen_onboarding_v1'); // clear legacy too
@@ -68,6 +79,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             setSoundEnabled,
             staticEnabled,
             setStaticEnabled,
+            genreStickersEnabled,
+            setGenreStickersEnabled,
             onboardingKey,
             resetOnboarding
         }}>

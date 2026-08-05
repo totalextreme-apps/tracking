@@ -1,4 +1,5 @@
 import { useSound } from '@/context/SoundContext';
+import { useSettings } from '@/context/SettingsContext';
 import { getPosterUrl } from '@/lib/dummy-data';
 import type { CollectionItemWithMedia } from '@/types/database';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -118,6 +119,7 @@ export function StackCard({
   const [activeId, setActiveId] = useState<string | null>(null);
   const lastTapRef = useRef<number>(0);
   const { playSound } = useSound();
+  const { genreStickersEnabled } = useSettings();
   const [customArtUri, setCustomArtUri] = useState<string | null>(null);
 
   const sorted = useMemo(() => {
@@ -406,7 +408,7 @@ export function StackCard({
           <View className="items-center" style={{ paddingTop: 10 }}>
             <View className="relative" style={{ width: width, height: containerHeight }}>
               {/* Sticker Overlays */}
-              {primaryGenre && <GenreSticker genre={primaryGenre} />}
+              {primaryGenre && genreStickersEnabled && <GenreSticker genre={primaryGenre} />}
               {isOnDisplay && !isWishlist && <StickerOverlay visible={isOnDisplay} size={40} />}
               {topItem.for_sale && <SaleSticker visible={true} size={40} />}
               {topItem.for_trade && <TradeSticker visible={true} size={40} />}
@@ -498,7 +500,7 @@ export function StackCard({
       >
         <View style={{ width: width }}>
           <View className="relative">
-            {primaryGenre && <GenreSticker genre={primaryGenre} />}
+            {primaryGenre && genreStickersEnabled && <GenreSticker genre={primaryGenre} />}
             {isOnDisplay && !isWishlist && <StickerOverlay visible={isOnDisplay} size={40} />}
             {topItem.for_sale && <SaleSticker visible={true} size={40} />}
             {topItem.for_trade && <TradeSticker visible={true} size={40} />}
@@ -582,7 +584,7 @@ export function StackCard({
     >
       <View className="items-center" style={{ position: 'relative' }}>
         {/* Halo Effect REMOVED/HIDDEN per user request */}
-        {primaryGenre && <GenreSticker genre={primaryGenre} />}
+        {primaryGenre && genreStickersEnabled && <GenreSticker genre={primaryGenre} />}
 
         <View
           className="rounded-xl overflow-hidden relative"

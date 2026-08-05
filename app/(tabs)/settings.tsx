@@ -168,7 +168,7 @@ export default function SettingsScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLinking, setIsLinking] = useState(false);
-  const { soundEnabled, setSoundEnabled, staticEnabled, setStaticEnabled, resetOnboarding } = useSettings();
+  const { soundEnabled, setSoundEnabled, staticEnabled, setStaticEnabled, genreStickersEnabled, setGenreStickersEnabled, resetOnboarding } = useSettings();
   const [showQuiz, setShowQuiz] = useState(false);
   const [showTagManager, setShowTagManager] = useState(false);
 
@@ -750,7 +750,9 @@ export default function SettingsScreen() {
                 thumbColor={soundEnabled ? '#ffffff' : '#f4f3f4'}
               />
             </View>
-            <View className="p-4 flex-row items-center justify-between">
+            <View
+              className="p-4 flex-row items-center justify-between border-b-2 border-white/20"
+            >
               <View className="flex-row items-center">
                 <View className="w-8 items-center"><FontAwesome name="tv" size={14} color="#FFE92F" /></View>
                 <Text className="font-mono text-sm font-bold" style={{ color: '#FFE92F' }}>Static Transitions</Text>
@@ -760,6 +762,18 @@ export default function SettingsScreen() {
                 onValueChange={setStaticEnabled}
                 trackColor={{ false: '#1a3366', true: '#FFE92F' }}
                 thumbColor={staticEnabled ? '#ffffff' : '#f4f3f4'}
+              />
+            </View>
+            <View className="p-4 flex-row items-center justify-between">
+              <View className="flex-row items-center">
+                <View className="w-8 items-center"><FontAwesome name="tag" size={14} color="#FFE92F" /></View>
+                <Text className="font-mono text-sm font-bold" style={{ color: '#FFE92F' }}>Genre Stickers</Text>
+              </View>
+              <Switch
+                value={genreStickersEnabled}
+                onValueChange={setGenreStickersEnabled}
+                trackColor={{ false: '#1a3366', true: '#FFE92F' }}
+                thumbColor={genreStickersEnabled ? '#ffffff' : '#f4f3f4'}
               />
             </View>
           </View>

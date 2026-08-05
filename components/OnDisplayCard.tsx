@@ -1,4 +1,5 @@
 import { useSound } from '@/context/SoundContext';
+import { useSettings } from '@/context/SettingsContext';
 import { getPosterUrl } from '@/lib/dummy-data';
 import type { CollectionItemWithMedia } from '@/types/database';
 import * as Haptics from 'expo-haptics';
@@ -35,6 +36,7 @@ type OnDisplayCardProps = {
 
 export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPressAction, onToggleFavorite, onRatePress, isReadOnly = false }: OnDisplayCardProps) {
   const { playSound } = useSound();
+  const { genreStickersEnabled } = useSettings();
   const media = item.movies || item.shows;
   if (!media) return null;
 
@@ -137,7 +139,7 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
   const CardContent = () => {
     return (
       <View className="items-center" style={{ overflow: 'visible', width: 100 }}>
-        {primaryGenre && <GenreSticker genre={primaryGenre} />}
+        {primaryGenre && genreStickersEnabled && <GenreSticker genre={primaryGenre} />}
         {isPhysical ? (
           item.format === 'VHS' ? (
             <VHSCard
