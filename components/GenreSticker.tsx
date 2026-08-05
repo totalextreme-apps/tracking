@@ -63,21 +63,22 @@ export function GenreSticker({ genre, size = 32 }: GenreStickerProps) {
         shadowOpacity: 0.4,
         shadowRadius: 2,
         elevation: 5,
-        padding: 2,
+        paddingHorizontal: 3,
       }}
       pointerEvents="none"
     >
       <Text
         style={{
           color: colors.text,
-          fontSize: displayName.length > 8 ? 5.5 : displayName.length > 5 ? 6.5 : 8,
+          fontSize: displayName.length > 8 ? 6.5 : displayName.length > 6 ? 7.5 : 8.5,
           fontWeight: '900',
           textAlign: 'center',
           fontFamily: Platform.OS === 'ios' ? 'Arial Rounded MT Bold' : 'sans-serif-condensed',
-          letterSpacing: -0.2,
-          lineHeight: displayName.length > 8 ? 6.5 : displayName.length > 5 ? 7.5 : 9,
+          letterSpacing: -0.3,
         }}
-        numberOfLines={2}
+        numberOfLines={1}
+        adjustsFontSizeToFit={true}
+        minimumFontScale={0.5}
       >
         {displayName}
       </Text>
