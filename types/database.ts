@@ -18,6 +18,7 @@ export interface Movie {
   franchise?: string | null;
   franchise_order?: number | null;
   sorting_tags?: string | null;
+  custom_genre?: string | null;
 }
 
 export interface Show {
@@ -34,6 +35,7 @@ export interface Show {
   franchise?: string | null;
   franchise_order?: number | null;
   sorting_tags?: string | null;
+  custom_genre?: string | null;
 }
 
 export interface CastMember {

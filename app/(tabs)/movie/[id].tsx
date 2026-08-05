@@ -64,6 +64,7 @@ export default function MovieDetailScreen() {
     const [localFranchise, setLocalFranchise] = useState<string | undefined>(undefined);
     const [localFranchiseOrder, setLocalFranchiseOrder] = useState<string | undefined>(undefined);
     const [localSortingTags, setLocalSortingTags] = useState<string | undefined>(undefined);
+    const [localCustomGenre, setLocalCustomGenre] = useState<string | undefined>(undefined);
     const [persistedMovie, setPersistedMovie] = useState<any>(null);
     const viewShotRef = useRef<ViewShot>(null);
 
@@ -257,6 +258,7 @@ export default function MovieDetailScreen() {
         setLocalFranchise(undefined);
         setLocalFranchiseOrder(undefined);
         setLocalSortingTags(undefined);
+        setLocalCustomGenre(undefined);
     }, [movieId]);
 
     useEffect(() => {
@@ -532,6 +534,7 @@ export default function MovieDetailScreen() {
     const franchiseValue = localFranchise !== undefined ? localFranchise : (displayMovie?.franchise || '');
     const franchiseOrderValue = localFranchiseOrder !== undefined ? localFranchiseOrder : (displayMovie?.franchise_order?.toString() || '');
     const sortingTagsValue = localSortingTags !== undefined ? localSortingTags : (displayMovie?.sorting_tags || '');
+    const customGenreValue = localCustomGenre !== undefined ? localCustomGenre : (displayMovie?.custom_genre || '');
 
     // Resolve movie cast & director
     const resolvedCast = displayMovie?.movie_cast || (tmdbMovie?.credits?.cast ? [
@@ -1170,9 +1173,21 @@ export default function MovieDetailScreen() {
                                     autoCorrect={false}
                                 />
                             </View>
+                            <View className="mb-2">
+                                <TextInput
+                                    className="bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm"
+                                    placeholder="Custom Primary Genre (e.g. Documentary)"
+                                    placeholderTextColor="#525252"
+                                    value={customGenreValue}
+                                    onChangeText={(text) => setLocalCustomGenre(text)}
+                                    autoCapitalize="words"
+                                    autoCorrect={false}
+                                />
+                            </View>
                             {(localFranchise !== (displayMovie?.franchise || '') || 
                               localFranchiseOrder !== (displayMovie?.franchise_order?.toString() || '') ||
-                              localSortingTags !== (displayMovie?.sorting_tags || '')) && (
+                              localSortingTags !== (displayMovie?.sorting_tags || '') ||
+                              localCustomGenre !== (displayMovie?.custom_genre || '')) && (
                                 <Pressable
                                     disabled={updateMovieFranchiseMutation.isPending}
                                     onPress={async () => {
@@ -1183,7 +1198,8 @@ export default function MovieDetailScreen() {
                                                     movieId: activeMovie?.id || displayMovie.id,
                                                     franchise: franchiseValue || null,
                                                     franchiseOrder: isNaN(franchiseOrderToSave as any) ? null : franchiseOrderToSave,
-                                                    sortingTags: sortingTagsValue || null
+                                                    sortingTags: sortingTagsValue || null,
+                                                    customGenre: customGenreValue || null
                                                 });
                                                 playSound('click');
                                                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

@@ -45,7 +45,7 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
   const isGrail = item.is_grail;
   const tmdbPosterUrl = getPosterUrl(media?.poster_path);
   const posterUrl = item.custom_poster_url || tmdbPosterUrl;
-  const primaryGenre = media?.genres?.[0]?.name;
+  const primaryGenre = media?.custom_genre || media?.genres?.[0]?.name;
 
   const tiltX = useSharedValue(0);
   const tiltY = useSharedValue(0);

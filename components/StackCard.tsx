@@ -177,7 +177,7 @@ export function StackCard({
 
   const topItem = sorted[0];
   const media = topItem.movies || topItem.shows;
-  const primaryGenre = media?.genres?.[0]?.name;
+  const primaryGenre = media?.custom_genre || media?.genres?.[0]?.name;
   
   const isPhysical = topItem.format !== 'Digital';
   const isWishlist = topItem.status === 'wishlist';

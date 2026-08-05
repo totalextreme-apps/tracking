@@ -64,6 +64,7 @@ export default function ShowDetailScreen() {
     const [localFranchise, setLocalFranchise] = useState<string | undefined>(undefined);
     const [localFranchiseOrder, setLocalFranchiseOrder] = useState<string | undefined>(undefined);
     const [localSortingTags, setLocalSortingTags] = useState<string | undefined>(undefined);
+    const [localCustomGenre, setLocalCustomGenre] = useState<string | undefined>(undefined);
     const [persistedShow, setPersistedShow] = useState<any>(null);
     const viewShotRef = useRef<ViewShot>(null);
     const scrollViewRef = useRef<ScrollView>(null);
@@ -236,6 +237,7 @@ export default function ShowDetailScreen() {
         setLocalFranchise(undefined);
         setLocalFranchiseOrder(undefined);
         setLocalSortingTags(undefined);
+        setLocalCustomGenre(undefined);
     }, [id]);
 
     useEffect(() => {
@@ -488,6 +490,7 @@ export default function ShowDetailScreen() {
     const franchiseValue = localFranchise !== undefined ? localFranchise : (displayShow?.franchise || '');
     const franchiseOrderValue = localFranchiseOrder !== undefined ? localFranchiseOrder : (displayShow?.franchise_order?.toString() || '');
     const sortingTagsValue = localSortingTags !== undefined ? localSortingTags : (displayShow?.sorting_tags || '');
+    const customGenreValue = localCustomGenre !== undefined ? localCustomGenre : (displayShow?.custom_genre || '');
     const backdropUrl = getBackdropUrl(displayShow.backdrop_path);
     const posterUrl = getPosterUrl(displayShow.poster_path);
 
@@ -896,9 +899,21 @@ export default function ShowDetailScreen() {
                                     autoCorrect={false}
                                 />
                             </View>
+                            <View className="mb-2">
+                                <TextInput
+                                    className="bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm"
+                                    placeholder="Custom Primary Genre (e.g. Documentary)"
+                                    placeholderTextColor="#525252"
+                                    value={customGenreValue}
+                                    onChangeText={(text) => setLocalCustomGenre(text)}
+                                    autoCapitalize="words"
+                                    autoCorrect={false}
+                                />
+                            </View>
                             {(localFranchise !== (displayShow?.franchise || '') || 
                               localFranchiseOrder !== (displayShow?.franchise_order?.toString() || '') ||
-                              localSortingTags !== (displayShow?.sorting_tags || '')) && (
+                              localSortingTags !== (displayShow?.sorting_tags || '') ||
+                              localCustomGenre !== (displayShow?.custom_genre || '')) && (
                                 <Pressable
                                     disabled={updateShowFranchiseMutation.isPending}
                                     onPress={async () => {
@@ -909,7 +924,8 @@ export default function ShowDetailScreen() {
                                                     showId: activeShow?.id || displayShow.id,
                                                     franchise: franchiseValue || null,
                                                     franchiseOrder: isNaN(franchiseOrderToSave as any) ? null : franchiseOrderToSave,
-                                                    sortingTags: sortingTagsValue || null
+                                                    sortingTags: sortingTagsValue || null,
+                                                    customGenre: customGenreValue || null
                                                 });
                                                 playSound('click');
                                                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

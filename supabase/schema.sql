@@ -21,7 +21,8 @@ create table public.movies (
   movie_cast jsonb,
   franchise text,
   franchise_order numeric,
-  sorting_tags text
+  sorting_tags text,
+  custom_genre text
 );
 
 -- Collection Items (The User's Library)
