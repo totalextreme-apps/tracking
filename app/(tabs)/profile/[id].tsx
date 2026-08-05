@@ -93,8 +93,9 @@ export default function UserProfileScreen() {
           const format = (item.format || '').toLowerCase();
           const edition = (item.edition || '').toLowerCase();
           const franchise = (m.franchise || '').toLowerCase();
+          const tags = (m.sorting_tags || '').toLowerCase();
           
-          const searchableTexts: string[] = [title, year, format, edition, franchise];
+          const searchableTexts: string[] = [title, year, format, edition, franchise, tags];
           
           if (m.genres && Array.isArray(m.genres)) {
             m.genres.forEach((g: any) => {

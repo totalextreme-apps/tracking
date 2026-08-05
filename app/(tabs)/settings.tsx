@@ -1,5 +1,6 @@
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { fetchEbaySoldValue } from '@/lib/pricing';
+import { TagManagerModal } from '@/components/TagManagerModal';
 import { GlobalStatsSection } from '@/components/GlobalStatsSection';
 import { MemberCard } from '@/components/MemberCard';
 import { StatsSection } from '@/components/StatsSection';
@@ -169,6 +170,7 @@ export default function SettingsScreen() {
   const [isLinking, setIsLinking] = useState(false);
   const { soundEnabled, setSoundEnabled, staticEnabled, setStaticEnabled, resetOnboarding } = useSettings();
   const [showQuiz, setShowQuiz] = useState(false);
+  const [showTagManager, setShowTagManager] = useState(false);
 
   const router = useRouter();
 
@@ -356,6 +358,12 @@ export default function SettingsScreen() {
         onSave={handleSavePreferences}
         initialMoviePrefs={profile?.movie_preferences || []}
         initialFormatPrefs={profile?.format_preferences || []}
+      />
+      <TagManagerModal
+        visible={showTagManager}
+        onClose={() => setShowTagManager(false)}
+        collection={collection}
+        userId={userId}
       />
       <ScrollView
         className="flex-1 bg-neutral-950"
@@ -818,6 +826,20 @@ export default function SettingsScreen() {
               <View className="flex-row items-center flex-1 mr-2">
                 <View className="w-8 items-center"><FontAwesome name="print" size={14} color="#FFE92F" /></View>
                 <Text className="font-mono text-sm font-bold flex-1" style={{ color: '#FFE92F' }}>Print Inventory Receipt (PDF)</Text>
+              </View>
+              <FontAwesome name="chevron-right" size={10} color="white" />
+            </Pressable>
+
+            <Pressable
+              onPress={() => {
+                playSound('click');
+                setShowTagManager(true);
+              }}
+              className="p-4 flex-row items-center justify-between border-b-2 border-white/20 active:bg-[#1a3366]"
+            >
+              <View className="flex-row items-center">
+                <View className="w-8 items-center"><FontAwesome name="tags" size={14} color="#FFE92F" /></View>
+                <Text className="font-mono text-sm font-bold" style={{ color: '#FFE92F' }}>Manage Sorting Tags</Text>
               </View>
               <FontAwesome name="chevron-right" size={10} color="white" />
             </Pressable>

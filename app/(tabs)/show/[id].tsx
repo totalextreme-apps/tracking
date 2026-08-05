@@ -63,6 +63,7 @@ export default function ShowDetailScreen() {
     const [localForTrade, setLocalForTrade] = useState<Record<string, boolean>>({});
     const [localFranchise, setLocalFranchise] = useState<string | undefined>(undefined);
     const [localFranchiseOrder, setLocalFranchiseOrder] = useState<string | undefined>(undefined);
+    const [localSortingTags, setLocalSortingTags] = useState<string | undefined>(undefined);
     const [persistedShow, setPersistedShow] = useState<any>(null);
     const viewShotRef = useRef<ViewShot>(null);
     const scrollViewRef = useRef<ScrollView>(null);
@@ -234,6 +235,7 @@ export default function ShowDetailScreen() {
         scrollViewRef.current?.scrollTo({ y: 0, animated: false });
         setLocalFranchise(undefined);
         setLocalFranchiseOrder(undefined);
+        setLocalSortingTags(undefined);
     }, [id]);
 
     useEffect(() => {
@@ -485,6 +487,7 @@ export default function ShowDetailScreen() {
 
     const franchiseValue = localFranchise !== undefined ? localFranchise : (displayShow?.franchise || '');
     const franchiseOrderValue = localFranchiseOrder !== undefined ? localFranchiseOrder : (displayShow?.franchise_order?.toString() || '');
+    const sortingTagsValue = localSortingTags !== undefined ? localSortingTags : (displayShow?.sorting_tags || '');
     const backdropUrl = getBackdropUrl(displayShow.backdrop_path);
     const posterUrl = getPosterUrl(displayShow.poster_path);
 
@@ -855,10 +858,10 @@ export default function ShowDetailScreen() {
                         <Text className="text-neutral-400 leading-6">{displayShow.overview || "No overview available."}</Text>
                     </View>
 
-                    {/* Franchise Details (Global for Show) */}
+                    {/* Franchise & Sorting Details (Global for Show) */}
                     {!isReadOnly && ownedFormats.length > 0 && (
                         <View className="mt-6">
-                            <Text className="text-white font-bold mb-2">Franchise Tag</Text>
+                            <Text className="text-white font-bold mb-2">Franchise & Sorting Tags</Text>
                             <View className="flex-row gap-2 mb-2">
                                 <View className="flex-1">
                                     <TextInput
@@ -882,7 +885,20 @@ export default function ShowDetailScreen() {
                                     />
                                 </View>
                             </View>
-                            {(localFranchise !== (displayShow?.franchise || '') || localFranchiseOrder !== (displayShow?.franchise_order?.toString() || '')) && (
+                            <View className="mb-2">
+                                <TextInput
+                                    className="bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm"
+                                    placeholder="Sorting Tags (comma separated)"
+                                    placeholderTextColor="#525252"
+                                    value={sortingTagsValue}
+                                    onChangeText={(text) => setLocalSortingTags(text)}
+                                    autoCapitalize="none"
+                                    autoCorrect={false}
+                                />
+                            </View>
+                            {(localFranchise !== (displayShow?.franchise || '') || 
+                              localFranchiseOrder !== (displayShow?.franchise_order?.toString() || '') ||
+                              localSortingTags !== (displayShow?.sorting_tags || '')) && (
                                 <Pressable
                                     disabled={updateShowFranchiseMutation.isPending}
                                     onPress={async () => {
@@ -892,14 +908,15 @@ export default function ShowDetailScreen() {
                                                 await updateShowFranchiseMutation.mutateAsync({
                                                     showId: activeShow?.id || displayShow.id,
                                                     franchise: franchiseValue || null,
-                                                    franchiseOrder: isNaN(franchiseOrderToSave as any) ? null : franchiseOrderToSave
+                                                    franchiseOrder: isNaN(franchiseOrderToSave as any) ? null : franchiseOrderToSave,
+                                                    sortingTags: sortingTagsValue || null
                                                 });
                                                 playSound('click');
                                                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                                             }
                                         } catch (e: any) {
                                             console.error('Franchise save error:', e);
-                                            Alert.alert('Error', 'Failed to save franchise: ' + (e?.message || e));
+                                            Alert.alert('Error', 'Failed to save settings: ' + (e?.message || e));
                                         }
                                     }}
                                     className="bg-amber-600/10 border border-amber-600/50 p-3 rounded-lg items-center mt-1"
@@ -907,7 +924,7 @@ export default function ShowDetailScreen() {
                                     {updateShowFranchiseMutation.isPending ? (
                                         <ActivityIndicator size="small" color="#f59e0b" />
                                     ) : (
-                                        <Text className="text-amber-500 font-mono text-xs font-bold">SAVE FRANCHISE</Text>
+                                        <Text className="text-amber-500 font-mono text-xs font-bold">SAVE TITLE SETTINGS</Text>
                                     )}
                                 </Pressable>
                             )}

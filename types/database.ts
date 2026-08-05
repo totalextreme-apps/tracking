@@ -17,6 +17,7 @@ export interface Movie {
   cast: CastMember[] | null;
   franchise?: string | null;
   franchise_order?: number | null;
+  sorting_tags?: string | null;
 }
 
 export interface Show {
@@ -32,6 +33,7 @@ export interface Show {
   number_of_seasons: number | null;
   franchise?: string | null;
   franchise_order?: number | null;
+  sorting_tags?: string | null;
 }
 
 export interface CastMember {

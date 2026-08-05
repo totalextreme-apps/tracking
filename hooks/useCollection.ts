@@ -841,14 +841,14 @@ export function useDecrementWatchEvent(userId: string | undefined) {
 export function useUpdateMovieFranchise(userId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ movieId, franchise, franchiseOrder }: { movieId: number | string, franchise: string | null, franchiseOrder: number | null }) => {
+    mutationFn: async ({ movieId, franchise, franchiseOrder, sortingTags }: { movieId: number | string, franchise: string | null, franchiseOrder: number | null, sortingTags?: string | null }) => {
       if (!userId) throw new Error('Not authenticated');
       const cleanMovieId = Number(movieId);
       if (isNaN(cleanMovieId) || cleanMovieId <= 0) throw new Error('Invalid Movie ID');
       
       const { error } = await supabase
         .from('movies')
-        .update({ franchise, franchise_order: franchiseOrder })
+        .update({ franchise, franchise_order: franchiseOrder, sorting_tags: sortingTags })
         .eq('id', cleanMovieId);
       if (error) throw error;
     },
@@ -862,14 +862,14 @@ export function useUpdateMovieFranchise(userId: string | undefined) {
 export function useUpdateShowFranchise(userId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ showId, franchise, franchiseOrder }: { showId: number | string, franchise: string | null, franchiseOrder: number | null }) => {
+    mutationFn: async ({ showId, franchise, franchiseOrder, sortingTags }: { showId: number | string, franchise: string | null, franchiseOrder: number | null, sortingTags?: string | null }) => {
       if (!userId) throw new Error('Not authenticated');
       const cleanShowId = Number(showId);
       if (isNaN(cleanShowId) || cleanShowId <= 0) throw new Error('Invalid Show ID');
       
       const { error } = await supabase
         .from('shows')
-        .update({ franchise, franchise_order: franchiseOrder })
+        .update({ franchise, franchise_order: franchiseOrder, sorting_tags: sortingTags })
         .eq('id', cleanShowId);
       if (error) throw error;
     },

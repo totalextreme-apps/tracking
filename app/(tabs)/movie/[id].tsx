@@ -63,6 +63,7 @@ export default function MovieDetailScreen() {
     const [localForTrade, setLocalForTrade] = useState<Record<string, boolean>>({});
     const [localFranchise, setLocalFranchise] = useState<string | undefined>(undefined);
     const [localFranchiseOrder, setLocalFranchiseOrder] = useState<string | undefined>(undefined);
+    const [localSortingTags, setLocalSortingTags] = useState<string | undefined>(undefined);
     const [persistedMovie, setPersistedMovie] = useState<any>(null);
     const viewShotRef = useRef<ViewShot>(null);
 
@@ -255,6 +256,7 @@ export default function MovieDetailScreen() {
         scrollViewRef.current?.scrollTo({ y: 0, animated: false });
         setLocalFranchise(undefined);
         setLocalFranchiseOrder(undefined);
+        setLocalSortingTags(undefined);
     }, [movieId]);
 
     useEffect(() => {
@@ -529,6 +531,7 @@ export default function MovieDetailScreen() {
 
     const franchiseValue = localFranchise !== undefined ? localFranchise : (displayMovie?.franchise || '');
     const franchiseOrderValue = localFranchiseOrder !== undefined ? localFranchiseOrder : (displayMovie?.franchise_order?.toString() || '');
+    const sortingTagsValue = localSortingTags !== undefined ? localSortingTags : (displayMovie?.sorting_tags || '');
 
     // Resolve movie cast & director
     const resolvedCast = displayMovie?.movie_cast || (tmdbMovie?.credits?.cast ? [
@@ -1129,10 +1132,10 @@ export default function MovieDetailScreen() {
                         </View>
                     </View>
 
-                    {/* Franchise Details (Global for Movie) */}
+                    {/* Franchise & Sorting Details (Global for Movie) */}
                     {!isReadOnly && ownedFormats.length > 0 && (
                         <View className="mt-6">
-                            <Text className="text-white font-bold mb-2">Franchise Tag</Text>
+                            <Text className="text-white font-bold mb-2">Franchise & Sorting Tags</Text>
                             <View className="flex-row gap-2 mb-2">
                                 <View className="flex-1">
                                     <TextInput
@@ -1156,7 +1159,20 @@ export default function MovieDetailScreen() {
                                     />
                                 </View>
                             </View>
-                            {(localFranchise !== (displayMovie?.franchise || '') || localFranchiseOrder !== (displayMovie?.franchise_order?.toString() || '')) && (
+                            <View className="mb-2">
+                                <TextInput
+                                    className="bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm"
+                                    placeholder="Sorting Tags (comma separated)"
+                                    placeholderTextColor="#525252"
+                                    value={sortingTagsValue}
+                                    onChangeText={(text) => setLocalSortingTags(text)}
+                                    autoCapitalize="none"
+                                    autoCorrect={false}
+                                />
+                            </View>
+                            {(localFranchise !== (displayMovie?.franchise || '') || 
+                              localFranchiseOrder !== (displayMovie?.franchise_order?.toString() || '') ||
+                              localSortingTags !== (displayMovie?.sorting_tags || '')) && (
                                 <Pressable
                                     disabled={updateMovieFranchiseMutation.isPending}
                                     onPress={async () => {
@@ -1166,14 +1182,15 @@ export default function MovieDetailScreen() {
                                                 await updateMovieFranchiseMutation.mutateAsync({
                                                     movieId: activeMovie?.id || displayMovie.id,
                                                     franchise: franchiseValue || null,
-                                                    franchiseOrder: isNaN(franchiseOrderToSave as any) ? null : franchiseOrderToSave
+                                                    franchiseOrder: isNaN(franchiseOrderToSave as any) ? null : franchiseOrderToSave,
+                                                    sortingTags: sortingTagsValue || null
                                                 });
                                                 playSound('click');
                                                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                                             }
                                         } catch (e: any) {
                                             console.error('Franchise save error:', e);
-                                            Alert.alert('Error', 'Failed to save franchise: ' + (e?.message || e));
+                                            Alert.alert('Error', 'Failed to save settings: ' + (e?.message || e));
                                         }
                                     }}
                                     className="bg-amber-600/10 border border-amber-600/50 p-3 rounded-lg items-center mt-1"
@@ -1181,7 +1198,7 @@ export default function MovieDetailScreen() {
                                     {updateMovieFranchiseMutation.isPending ? (
                                         <ActivityIndicator size="small" color="#f59e0b" />
                                     ) : (
-                                        <Text className="text-amber-500 font-mono text-xs font-bold">SAVE FRANCHISE</Text>
+                                        <Text className="text-amber-500 font-mono text-xs font-bold">SAVE TITLE SETTINGS</Text>
                                     )}
                                 </Pressable>
                             )}

@@ -20,7 +20,8 @@ create table public.movies (
   genres jsonb,
   movie_cast jsonb,
   franchise text,
-  franchise_order numeric
+  franchise_order numeric,
+  sorting_tags text
 );
 
 -- Collection Items (The User's Library)
