@@ -247,4 +247,5 @@ export interface Profile {
   format_preferences?: string[] | null;
   letterboxd_username?: string | null;
   updated_at: string | null;
+  created_at?: string | null;
 }

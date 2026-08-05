@@ -4,7 +4,8 @@ create table public.profiles (
   username text unique,
   avatar_url text,
   bio text,
-  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
 -- Movies (Cached Metadata)

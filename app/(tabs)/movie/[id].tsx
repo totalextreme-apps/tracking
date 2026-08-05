@@ -1224,6 +1224,11 @@ export default function MovieDetailScreen() {
                                             {item.edition && (
                                                 <Text className="text-neutral-500 font-mono text-xs ml-2 flex-1" style={{ minWidth: 100 }}>({item.edition})</Text>
                                             )}
+                                            {item.created_at && (
+                                                <Text className="text-neutral-500 font-mono text-[9px] ml-auto">
+                                                    ADDED: {new Date(item.created_at).toLocaleDateString()} {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </Text>
+                                            )}
                                         </View>
                                         <TextInput
                                              nativeID={`edition-input-${item.id}`}

@@ -341,6 +341,15 @@ export default function UserProfileScreen() {
             </Text>
           )}
 
+          {profile.created_at && (
+            <View className="mt-3 bg-neutral-900 border border-neutral-800 px-3 py-1 rounded-full flex-row items-center gap-1.5">
+              <Ionicons name="calendar-outline" size={10} color="#666" />
+              <Text className="text-neutral-500 font-mono text-[9px] font-bold uppercase tracking-wider">
+                MEMBER SINCE {new Date(profile.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }).toUpperCase()}
+              </Text>
+            </View>
+          )}
+
           {profile.letterboxd_username && (
             <Pressable
               onPress={() => Linking.openURL(`https://letterboxd.com/${profile.letterboxd_username}`)}

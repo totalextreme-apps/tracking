@@ -61,7 +61,10 @@ export function MemberCard({ userId, profile, onEditPress, onAvatarPress, isRead
                                         {profile?.username ? '@' + profile.username.toUpperCase() : 'UNKNOWN'}
                                     </Text>
                                 </View>
-                                <Text className="text-[#888] font-mono text-[7px] mt-0.5">AUTH ID: {displayId}</Text>
+                                <Text className="text-[#888] font-mono text-[7px] mt-0.5">
+                                    AUTH ID: {displayId}
+                                    {profile?.created_at && ` • SINCE: ${new Date(profile.created_at).toLocaleDateString()}`}
+                                </Text>
                             </View>
 
                             {/* White Barcode Sticker */}

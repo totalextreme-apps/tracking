@@ -20,6 +20,7 @@ import { SaleSticker } from './SaleSticker';
 import { StickerOverlay } from './StickerOverlay';
 import { VHSCard } from './VHSCard';
 import { GrailSticker } from './GrailSticker';
+import { GenreSticker } from './GenreSticker';
 
 
 type OnDisplayCardProps = {
@@ -42,6 +43,7 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
   const isGrail = item.is_grail;
   const tmdbPosterUrl = getPosterUrl(media?.poster_path);
   const posterUrl = item.custom_poster_url || tmdbPosterUrl;
+  const primaryGenre = media?.genres?.[0]?.name;
 
   const tiltX = useSharedValue(0);
   const tiltY = useSharedValue(0);
@@ -135,6 +137,7 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
   const CardContent = () => {
     return (
       <View className="items-center" style={{ overflow: 'visible', width: 100 }}>
+        {primaryGenre && <GenreSticker genre={primaryGenre} />}
         {isPhysical ? (
           item.format === 'VHS' ? (
             <VHSCard

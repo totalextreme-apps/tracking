@@ -23,6 +23,7 @@ import { TradeSticker } from './TradeSticker';
 import { StickerOverlay } from './StickerOverlay';
 import { VHSCard } from './VHSCard';
 import { GrailSticker } from './GrailSticker';
+import { GenreSticker } from './GenreSticker';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -174,6 +175,7 @@ export function StackCard({
 
   const topItem = sorted[0];
   const media = topItem.movies || topItem.shows;
+  const primaryGenre = media?.genres?.[0]?.name;
   
   const isPhysical = topItem.format !== 'Digital';
   const isWishlist = topItem.status === 'wishlist';
@@ -404,6 +406,7 @@ export function StackCard({
           <View className="items-center" style={{ paddingTop: 10 }}>
             <View className="relative" style={{ width: width, height: containerHeight }}>
               {/* Sticker Overlays */}
+              {primaryGenre && <GenreSticker genre={primaryGenre} />}
               {isOnDisplay && !isWishlist && <StickerOverlay visible={isOnDisplay} size={40} />}
               {topItem.for_sale && <SaleSticker visible={true} size={40} />}
               {topItem.for_trade && <TradeSticker visible={true} size={40} />}
@@ -495,6 +498,7 @@ export function StackCard({
       >
         <View style={{ width: width }}>
           <View className="relative">
+            {primaryGenre && <GenreSticker genre={primaryGenre} />}
             {isOnDisplay && !isWishlist && <StickerOverlay visible={isOnDisplay} size={40} />}
             {topItem.for_sale && <SaleSticker visible={true} size={40} />}
             {topItem.for_trade && <TradeSticker visible={true} size={40} />}
@@ -578,6 +582,7 @@ export function StackCard({
     >
       <View className="items-center" style={{ position: 'relative' }}>
         {/* Halo Effect REMOVED/HIDDEN per user request */}
+        {primaryGenre && <GenreSticker genre={primaryGenre} />}
 
         <View
           className="rounded-xl overflow-hidden relative"
