@@ -517,8 +517,14 @@ export default function ShowDetailScreen() {
             const apiKey = await AsyncStorage.getItem('firecrawl_api_key');
             const res = await fetchEbaySoldValue(activeShow?.name || '', format, edition, undefined, apiKey || undefined);
             if (res.value !== null && res.value !== undefined) {
-                setLocalValues(prev => ({ ...prev, [itemId]: res.value!.toFixed(2) }));
-                Alert.alert("Success", `Found an estimated market value of $${res.value!.toFixed(2)} based on recent eBay sales.`);
+                const valStr = res.value.toFixed(2);
+                setLocalValues(prev => ({ ...prev, [itemId]: valStr }));
+                await updateMutation.mutateAsync({
+                    itemId,
+                    updates: { value_estimate: res.value }
+                });
+                refetch();
+                Alert.alert("Success", `Found and saved an estimated market value of $${valStr} based on recent eBay sales.`);
             } else {
                 Alert.alert("No Data", "Could not find enough recent sold listings on eBay to determine a value.");
             }
