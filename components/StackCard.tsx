@@ -196,6 +196,62 @@ export function StackCard({
     ? (topItem.format === 'VHS' ? 0.57 : isBluRay ? 0.78 : 0.71)
     : (topItem.format === 'Digital' ? 2 / 3 : 2 / 3); // Digital is already 2/3
 
+  const maxShiftY = 36;
+  const paddingBuffer = 15;
+  const posterContainerHeight = (width / 0.57) + maxShiftY + paddingBuffer;
+
+  const renderInfoBox = () => {
+    return (
+      <View 
+        className="bg-neutral-900/60 border border-neutral-800/60 rounded-xl p-2.5 mt-3 w-full"
+        style={{ minHeight: 68, justifyContent: 'space-between', alignItems: 'center' }}
+      >
+        {/* Title */}
+        <Text 
+          className="text-white font-mono text-[9px] font-bold text-center" 
+          numberOfLines={2} 
+          style={{ minHeight: 24, width: '100%', lineHeight: 12 }}
+        >
+          {media ? ((media as any).title || (media as any).name) : `ID: ${topItem.movie_id || topItem.show_id}`}
+        </Text>
+
+        {/* Format & Rating row */}
+        <View className="flex-row w-full justify-center items-center mt-1.5 gap-1.5 flex-wrap">
+          {sorted.map((item) => (
+            <Pressable
+              key={item.id}
+              onPress={(e) => {
+                e.stopPropagation();
+                if (!isReadOnly) playSound('click');
+                setActiveId(item.id);
+              }}
+              className={`px-1.5 py-0.5 rounded flex-row items-center gap-1 ${FORMAT_COLORS[item.format] || 'bg-neutral-700'}`}
+              style={{
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.3,
+                shadowRadius: 1,
+              }}
+            >
+              <Text className="text-white font-mono text-[8px] font-bold">
+                {item.format === 'BluRay' ? 'Blu-ray' : item.format}
+              </Text>
+              {item.is_bootleg && (
+                <Image source={require('@/assets/images/overlays/boot_sticker.png')} style={{ width: 10, height: 10 }} contentFit="contain" />
+              )}
+            </Pressable>
+          ))}
+          {topItem.rating && (
+            <View className="flex-row items-center bg-black/60 px-1 py-0.5 rounded-sm border border-neutral-800">
+               <FontAwesome name="star" size={8} color="#f59e0b" />
+               <Text className="text-amber-500 font-mono text-[8px] font-bold ml-0.5">{topItem.rating}</Text>
+            </View>
+          )}
+        </View>
+      </View>
+    );
+  };
+
   const tiltX = useSharedValue(0);
   const tiltY = useSharedValue(0);
   const grailPulse = useSharedValue(1);
@@ -406,83 +462,60 @@ export function StackCard({
           ]}
         >
           <View className="items-center" style={{ paddingTop: 10 }}>
-            <View className="relative" style={{ width: width, height: containerHeight }}>
-              {/* Sticker Overlays */}
-              {primaryGenre && genreStickersEnabled && <GenreSticker genre={primaryGenre} />}
-              {isOnDisplay && !isWishlist && <StickerOverlay visible={isOnDisplay} size={40} />}
-              {topItem.for_sale && <SaleSticker visible={true} size={40} />}
-              {topItem.for_trade && <TradeSticker visible={true} size={40} />}
-              {isGrail && isWishlist && <GrailSticker visible={true} size={40} />}
+            <View style={{ width: width, height: posterContainerHeight, justifyContent: 'flex-end', alignItems: 'center' }}>
+              <View className="relative" style={{ width: width, height: containerHeight }}>
+                {/* Sticker Overlays */}
+                {primaryGenre && genreStickersEnabled && <GenreSticker genre={primaryGenre} />}
+                {isOnDisplay && !isWishlist && <StickerOverlay visible={isOnDisplay} size={40} />}
+                {topItem.for_sale && <SaleSticker visible={true} size={40} />}
+                {topItem.for_trade && <TradeSticker visible={true} size={40} />}
+                {isGrail && isWishlist && <GrailSticker visible={true} size={40} />}
 
-              {sorted.map((item, idx) => {
-                const transforms = getStackTransforms(idx);
-                const itemMedia = item.movies || item.shows;
-                const url = item.custom_poster_url || (itemMedia ? getPosterUrl(itemMedia.poster_path) : null);
-                
-                const itemStyle = {
-                  position: 'absolute' as const,
-                  left: transforms.left,
-                  top: transforms.top,
-                  transform: [{ rotate: transforms.rotate }],
-                  width: width,
-                  height: width / aspectRatio,
-                  zIndex: sorted.length - idx,
-                  borderWidth: (idx === 0 && isGrail && isWishlist) ? 2 : 1,
-                  borderColor: (idx === 0 && isGrail && isWishlist) ? '#ffd700' : 'rgba(255,255,255,0.15)',
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 6 },
-                  shadowOpacity: 0.8,
-                  shadowRadius: 8,
-                  elevation: 10,
-                };
+                {sorted.map((item, idx) => {
+                  const transforms = getStackTransforms(idx);
+                  const itemMedia = item.movies || item.shows;
+                  const url = item.custom_poster_url || (itemMedia ? getPosterUrl(itemMedia.poster_path) : null);
+                  
+                  const itemStyle = {
+                    position: 'absolute' as const,
+                    left: transforms.left,
+                    top: transforms.top,
+                    transform: [{ rotate: transforms.rotate }],
+                    width: width,
+                    height: width / aspectRatio,
+                    zIndex: sorted.length - idx,
+                    borderWidth: (idx === 0 && isGrail && isWishlist) ? 2 : 1,
+                    borderColor: (idx === 0 && isGrail && isWishlist) ? '#ffd700' : 'rgba(255,255,255,0.15)',
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 6 },
+                    shadowOpacity: 0.8,
+                    shadowRadius: 8,
+                    elevation: 10,
+                  };
 
-                if (item.format === 'VHS') {
-                  return <VHSCard key={item.id} posterUrl={url} isCustom={!!item.custom_poster_url} isBootleg={item.is_bootleg} style={itemStyle} />;
-                }
-                if (['DVD', 'BluRay', '4K'].includes(item.format)) {
-                  return <GlossyCard key={item.id} posterUrl={url} format={item.format as any} isCustom={!!item.custom_poster_url} isBootleg={item.is_bootleg} style={itemStyle} />;
-                }
+                  if (item.format === 'VHS') {
+                    return <VHSCard key={item.id} posterUrl={url} isCustom={!!item.custom_poster_url} isBootleg={item.is_bootleg} style={itemStyle} />;
+                  }
+                  if (['DVD', 'BluRay', '4K'].includes(item.format)) {
+                    return <GlossyCard key={item.id} posterUrl={url} format={item.format as any} isCustom={!!item.custom_poster_url} isBootleg={item.is_bootleg} style={itemStyle} />;
+                  }
 
-                return (
-                  <View key={item.id} className="absolute bg-neutral-900 rounded overflow-hidden" style={itemStyle}>
-                    {url ? (
-                      <Image source={{ uri: url }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
-                    ) : (
-                      <View className="flex-1 items-center justify-center">
-                        <FontAwesome name="film" size={width * 0.25} color="#222" />
-                      </View>
-                    )}
-                    {item.is_bootleg && <BootlegSticker size={30} />}
-                  </View>
-                );
-              })}
-            </View>
-            <View className="flex-row w-[100%] justify-end items-center mt-2 px-1">
-              <View className="flex-row flex-wrap justify-end gap-1 shrink">
-                {sorted.map((item) => (
-                  <Pressable
-                    key={item.id}
-                    onPress={(e) => {
-                      e.stopPropagation();
-                      if (!isReadOnly) playSound('click');
-                      setActiveId(item.id);
-                    }}
-                    className={`px-2 py-0.5 rounded flex-row items-center gap-1 ${FORMAT_COLORS[item.format] || 'bg-neutral-700'}`}
-                  >
-                    <Text className="text-white font-mono text-[10px] font-bold">
-                      {item.format === 'BluRay' ? 'Blu-ray' : item.format}
-                    </Text>
-                    {item.is_bootleg && <Image source={require('@/assets/images/overlays/boot_sticker.png')} style={{ width: 12, height: 12 }} contentFit="contain" />}
-                  </Pressable>
-                ))}
+                  return (
+                    <View key={item.id} className="absolute bg-neutral-900 rounded overflow-hidden" style={itemStyle}>
+                      {url ? (
+                        <Image source={{ uri: url }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                      ) : (
+                        <View className="flex-1 items-center justify-center">
+                          <FontAwesome name="film" size={width * 0.25} color="#222" />
+                        </View>
+                      )}
+                      {item.is_bootleg && <BootlegSticker size={30} />}
+                    </View>
+                  );
+                })}
               </View>
-              {topItem.rating && (
-                <View className="flex-row items-center ml-2 bg-black/60 px-1.5 py-0.5 rounded-sm">
-                   <FontAwesome name="star" size={8} color="#f59e0b" />
-                   <Text className="text-amber-500 font-mono text-[9px] font-bold ml-1">{topItem.rating}</Text>
-                </View>
-              )}
             </View>
+            {renderInfoBox()}
           </View>
         </AnimatedPressable>
       );
@@ -498,71 +531,60 @@ export function StackCard({
         onPressOut={isWishlist ? undefined : onPressOut}
         style={[animatedStyle, { width: width, margin: 6 }]}
       >
-        <View style={{ width: width }}>
-          <View className="relative">
-            {primaryGenre && genreStickersEnabled && <GenreSticker genre={primaryGenre} />}
-            {isOnDisplay && !isWishlist && <StickerOverlay visible={isOnDisplay} size={40} />}
-            {topItem.for_sale && <SaleSticker visible={true} size={40} />}
-            {topItem.for_trade && <TradeSticker visible={true} size={40} />}
-            {isGrail && isWishlist && <GrailSticker visible={true} size={40} />}
-            {/* THE CARD ASSET */}
-            {topItem.format === 'VHS' ? (
-              <VHSCard 
-                posterUrl={posterUrl} 
-                isCustom={!!topItem.custom_poster_url} 
-                isBootleg={topItem.is_bootleg} 
-                style={{ width: width, height: width / aspectRatio }} 
-              />
-            ) : ['DVD', 'BluRay', '4K'].includes(topItem.format) ? (
-              <GlossyCard 
-                posterUrl={posterUrl} 
-                format={topItem.format as any} 
-                isCustom={!!topItem.custom_poster_url} 
-                isBootleg={topItem.is_bootleg} 
-                style={{ width: width, height: width / aspectRatio }} 
-              />
-            ) : (
-              <View className="bg-neutral-900 rounded-lg overflow-hidden border border-neutral-800" style={{ width: width, height: width / aspectRatio }}>
-                {posterUrl ? (
-                  <Image source={{ uri: posterUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
-                ) : (
-                  <View className="flex-1 items-center justify-center p-2">
-                    <FontAwesome name="film" size={width * 0.4} color="#333" />
-                    <Text className="text-[10px] font-mono text-neutral-500 text-center mt-2 uppercase px-4 truncate">
-                      {media ? ((media as any).title || (media as any).name) : `ID: ${topItem.movie_id || topItem.show_id}`}
-                    </Text>
-                  </View>
-                )}
-                {topItem.is_bootleg && <BootlegSticker size={30} />}
-              </View>
-            )}
+        <View style={{ width: width, alignItems: 'center' }}>
+          <View style={{ width: width, height: posterContainerHeight, justifyContent: 'flex-end', alignItems: 'center' }}>
+            <View className="relative" style={{ width: width, height: width / aspectRatio }}>
+              {primaryGenre && genreStickersEnabled && <GenreSticker genre={primaryGenre} />}
+              {isOnDisplay && !isWishlist && <StickerOverlay visible={isOnDisplay} size={40} />}
+              {topItem.for_sale && <SaleSticker visible={true} size={40} />}
+              {topItem.for_trade && <TradeSticker visible={true} size={40} />}
+              {isGrail && isWishlist && <GrailSticker visible={true} size={40} />}
+              {/* THE CARD ASSET */}
+              {topItem.format === 'VHS' ? (
+                <VHSCard 
+                  posterUrl={posterUrl} 
+                  isCustom={!!topItem.custom_poster_url} 
+                  isBootleg={topItem.is_bootleg} 
+                  style={{ width: width, height: width / aspectRatio }} 
+                />
+              ) : ['DVD', 'BluRay', '4K'].includes(topItem.format) ? (
+                <GlossyCard 
+                  posterUrl={posterUrl} 
+                  format={topItem.format as any} 
+                  isCustom={!!topItem.custom_poster_url} 
+                  isBootleg={topItem.is_bootleg} 
+                  style={{ width: width, height: width / aspectRatio }} 
+                />
+              ) : (
+                <View className="bg-neutral-900 rounded-lg overflow-hidden border border-neutral-800" style={{ width: width, height: width / aspectRatio }}>
+                  {posterUrl ? (
+                    <Image source={{ uri: posterUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                  ) : (
+                    <View className="flex-1 items-center justify-center p-2">
+                      <FontAwesome name="film" size={width * 0.4} color="#333" />
+                      <Text className="text-[10px] font-mono text-neutral-500 text-center mt-2 uppercase px-4 truncate">
+                        {media ? ((media as any).title || (media as any).name) : `ID: ${topItem.movie_id || topItem.show_id}`}
+                      </Text>
+                    </View>
+                  )}
+                  {topItem.is_bootleg && <BootlegSticker size={30} />}
+                </View>
+              )}
 
-            {isGrail && (
-              <View 
-                className="absolute inset-0 border-[3px] border-yellow-400 rounded-sm"
-                pointerEvents="none"
-                style={{ zIndex: 50 }}
-              />
-            )}
-            
-            {isWishlist && !isGrail && (
-              <View className="absolute inset-0 bg-black/5 border-2 border-dashed border-neutral-600 rounded-sm" style={{ zIndex: 60 }} />
-            )}
-          </View>
-
-          <View className="flex-row w-[100%] justify-end items-center mt-2 px-1">
-            <View className={`px-2 py-0.5 rounded flex-row items-center gap-1 ${FORMAT_COLORS[topItem.format] || 'bg-neutral-700'}`}>
-              <Text className="text-white font-mono text-[10px] font-bold">
-                {topItem.format === 'BluRay' ? 'Blu-ray' : topItem.format}
-              </Text>
+              {isGrail && (
+                <View 
+                  className="absolute inset-0 border-[3px] border-yellow-400 rounded-sm"
+                  pointerEvents="none"
+                  style={{ zIndex: 50 }}
+                />
+              )}
+              
+              {isWishlist && !isGrail && (
+                <View className="absolute inset-0 bg-black/5 border-2 border-dashed border-neutral-600 rounded-sm" style={{ zIndex: 60 }} />
+              )}
             </View>
-            {topItem.rating && (
-              <View className="flex-row items-center ml-2 bg-black/60 px-1.5 py-0.5 rounded-sm">
-                 <FontAwesome name="star" size={8} color="#f59e0b" />
-                 <Text className="text-amber-500 font-mono text-[9px] font-bold ml-1">{topItem.rating}</Text>
-              </View>
-            )}
           </View>
+          {renderInfoBox()}
         </View>
       </AnimatedPressable>
     );
@@ -583,105 +605,76 @@ export function StackCard({
       ]}
     >
       <View className="items-center" style={{ position: 'relative' }}>
-        {/* Halo Effect REMOVED/HIDDEN per user request */}
-        {primaryGenre && genreStickersEnabled && <GenreSticker genre={primaryGenre} />}
+        <View style={{ width: width, height: posterContainerHeight, justifyContent: 'flex-end', alignItems: 'center' }}>
+          <View style={{ position: 'relative' }}>
+            {primaryGenre && genreStickersEnabled && <GenreSticker genre={primaryGenre} />}
 
-        <View
-          className="rounded-xl overflow-hidden relative"
-          style={{
-            width: width,
-            aspectRatio: 2 / 3,
-            borderWidth: 2, // Thicker border
-            borderStyle: isWishlist && !isGrail ? 'dashed' : 'solid',
-            borderColor: isGrail ? '#ffd700' : isWishlist ? '#6b7280' : '#00ff88', // Green Neon Border
-            // Neon glow effect - only around poster image
-            ...(!isWishlist && {
-              shadowColor: '#00ff88',
-              shadowOffset: { width: 0, height: 0 },
-              shadowOpacity: 0.8,
-              shadowRadius: 10,
-              elevation: 8,
-            })
-          }}
-        >
-          {/* Sticker for Digital Grid */}
-          {isOnDisplay && !isWishlist && (
-            <NowStreamingSticker visible={true} size={40} />
-          )}
-
-          {isWishlist && !isGrail && (
             <View
-              className="absolute inset-0 rounded-xl z-10"
-              style={{ backgroundColor: 'rgba(100,100,100,0.05)' }}
-            />
-          )}
-          {posterUrl ? (
-            <Image
-              source={{ uri: posterUrl }}
-              style={{ width: '100%', height: '100%' }}
-              contentFit="cover"
-            />
-          ) : (
-            <View className="flex-1 items-center justify-center bg-neutral-800 p-2">
-              <FontAwesome name="film" size={width * 0.4} color="#222" />
-              <Text className="text-neutral-500 font-mono text-[10px] text-center mt-2 uppercase">
-                {media ? ((media as any).title || (media as any).name) : `REPAIR PENDING: ${topItem.movie_id || topItem.show_id}`}
-              </Text>
-            </View>
-          )}
-
-          {/* Format Logo for Digital */}
-          <Image
-            source={require('@/assets/images/overlays/formats/Digital.png')}
-            style={{ position: 'absolute', bottom: 6, right: 6, width: 40, height: 25, opacity: 0.9 }}
-            contentFit="contain"
-          />
-
-          {/* Bootleg Sticker for Digital Grid */}
-          {topItem.is_bootleg && <BootlegSticker size={30} />}
-        </View>
-        {/* Grail sticker for wishlist items */}
-        {isGrail && isWishlist && <GrailSticker visible={true} size={40} />}
-        <View className="flex-row w-[100%] justify-end items-center mt-2 px-1">
-          <View className="flex-row flex-wrap justify-end gap-1 shrink">
-          {sorted.map((item) => (
-            <Pressable
-              key={item.id}
-              onPress={(e) => {
-                e.stopPropagation();
-                if (!isReadOnly) playSound('click');
-                setActiveId(item.id);
+              className="rounded-xl overflow-hidden relative"
+              style={{
+                width: width,
+                aspectRatio: 2 / 3,
+                borderWidth: 2, // Thicker border
+                borderStyle: isWishlist && !isGrail ? 'dashed' : 'solid',
+                borderColor: isGrail ? '#ffd700' : isWishlist ? '#6b7280' : '#00ff88', // Green Neon Border
+                // Neon glow effect - only around poster image
+                ...(!isWishlist && {
+                  shadowColor: '#00ff88',
+                  shadowOffset: { width: 0, height: 0 },
+                  shadowOpacity: 0.8,
+                  shadowRadius: 10,
+                  elevation: 8,
+                })
               }}
-              className={`px-2 py-0.5 rounded flex-row items-center gap-1 ${FORMAT_COLORS[item.format] || 'bg-neutral-700'}`}
             >
-              <Text className="text-white font-mono text-[10px] font-bold">
-                {item.format === 'BluRay' ? 'Blu-ray' : item.format}
-              </Text>
-              {item.is_bootleg && (
-                <Image source={require('@/assets/images/overlays/boot_sticker.png')} style={{ width: 12, height: 12, marginLeft: 2 }} contentFit="contain" />
+              {/* Sticker for Digital Grid */}
+              {isOnDisplay && !isWishlist && (
+                <NowStreamingSticker visible={true} size={40} />
               )}
-              {item.edition && (
-                <Text className="text-white/60 font-mono text-[9px]">
-                  •
-                </Text>
+
+              {isWishlist && !isGrail && (
+                <View
+                  className="absolute inset-0 rounded-xl z-10"
+                  style={{ backgroundColor: 'rgba(100,100,100,0.05)' }}
+                />
               )}
-            </Pressable>
-          ))}
+              {posterUrl ? (
+                <Image
+                  source={{ uri: posterUrl }}
+                  style={{ width: '100%', height: '100%' }}
+                  contentFit="cover"
+                />
+              ) : (
+                <View className="flex-1 items-center justify-center bg-neutral-800 p-2">
+                  <FontAwesome name="film" size={width * 0.4} color="#222" />
+                  <Text className="text-neutral-500 font-mono text-[10px] text-center mt-2 uppercase">
+                    {media ? ((media as any).title || (media as any).name) : `REPAIR PENDING: ${topItem.movie_id || topItem.show_id}`}
+                  </Text>
+                </View>
+              )}
+
+              {/* Format Logo for Digital */}
+              <Image
+                source={require('@/assets/images/overlays/formats/Digital.png')}
+                style={{ position: 'absolute', bottom: 6, right: 6, width: 40, height: 25, opacity: 0.9 }}
+                contentFit="contain"
+              />
+
+              {/* Bootleg Sticker for Digital Grid */}
+              {topItem.is_bootleg && <BootlegSticker size={30} />}
+            </View>
+            {/* Grail sticker for wishlist items */}
+            {isGrail && isWishlist && <GrailSticker visible={true} size={40} />}
           </View>
         </View>
-
+        {renderInfoBox()}
+        
         {/* Digital Provider Badge - ONLY show if exists and is not just "Digital" */}
         {topItem.digital_provider && topItem.digital_provider !== 'Digital' && (
-          <View className="mt-1 px-2 py-0.5 bg-emerald-900/80 rounded">
+          <View className="mt-1.5 px-2 py-0.5 bg-emerald-900/80 rounded">
             <Text className="text-emerald-200 font-mono text-[10px]">
               {topItem.digital_provider}
             </Text>
-          </View>
-        )}
-        {topItem.rating && (
-          <View className="flex-row items-center ml-2 bg-black/60 px-1.5 py-0.5 rounded-sm border border-emerald-500/30">
-             <FontAwesome name="star" size={8} color="#f59e0b" />
-             <Text className="text-amber-500 font-mono text-[9px] font-bold ml-1">{topItem.rating}</Text>
           </View>
         )}
       </View>
