@@ -196,9 +196,9 @@ export function StackCard({
     ? (topItem.format === 'VHS' ? 0.57 : isBluRay ? 0.78 : 0.71)
     : (topItem.format === 'Digital' ? 2 / 3 : 2 / 3); // Digital is already 2/3
 
-  const maxShiftY = 36;
-  const paddingBuffer = 15;
-  const posterContainerHeight = (width / 0.57) + maxShiftY + paddingBuffer;
+  const maxShiftY = sorted.length > 1 ? getStackTransforms(sorted.length - 1).top : 0;
+  const paddingBuffer = sorted.length > 1 ? 15 : 0;
+  const posterContainerHeight = (width / aspectRatio) + maxShiftY + paddingBuffer;
 
   const renderInfoBox = () => {
     return (

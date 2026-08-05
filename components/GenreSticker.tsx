@@ -35,7 +35,7 @@ type GenreStickerProps = {
   size?: number;
 };
 
-export function GenreSticker({ genre, size = 34 }: GenreStickerProps) {
+export function GenreSticker({ genre, size = 36 }: GenreStickerProps) {
   const rotation = useMemo(() => Math.random() * 20 - 10, []);
 
   if (!genre) return null;
@@ -43,6 +43,15 @@ export function GenreSticker({ genre, size = 34 }: GenreStickerProps) {
   const normalizedGenre = genre.trim();
   const colors = genreColors[normalizedGenre] || { bg: '#737373', text: '#ffffff' };
   const displayName = (displayNameMap[normalizedGenre] || normalizedGenre).toUpperCase();
+
+  // Fine-tuned font sizes to ensure all text fits on single line inside size 36 circle
+  const getFontSize = (text: string) => {
+    const len = text.length;
+    if (len <= 4) return 8.2;
+    if (len <= 6) return 6.8;
+    if (len <= 8) return 5.6;
+    return 4.6;
+  };
 
   return (
     <View
@@ -70,16 +79,15 @@ export function GenreSticker({ genre, size = 34 }: GenreStickerProps) {
       <Text
         style={{
           color: colors.text,
-          fontSize: displayName.length > 8 ? 5.5 : displayName.length > 6 ? 6.5 : displayName.length > 4 ? 7.5 : 8.5,
+          fontSize: getFontSize(displayName),
           fontWeight: '900',
           textAlign: 'center',
           fontFamily: Platform.OS === 'ios' ? 'Arial Rounded MT Bold' : 'sans-serif-condensed',
-          letterSpacing: -0.4,
+          letterSpacing: -0.45,
           width: '100%',
         }}
         numberOfLines={1}
-        adjustsFontSizeToFit={true}
-        minimumFontScale={0.3}
+        ellipsizeMode="clip"
       >
         {displayName}
       </Text>
