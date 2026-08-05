@@ -35,7 +35,7 @@ type GenreStickerProps = {
   size?: number;
 };
 
-export function GenreSticker({ genre, size = 32 }: GenreStickerProps) {
+export function GenreSticker({ genre, size = 34 }: GenreStickerProps) {
   const rotation = useMemo(() => Math.random() * 20 - 10, []);
 
   if (!genre) return null;
@@ -63,22 +63,23 @@ export function GenreSticker({ genre, size = 32 }: GenreStickerProps) {
         shadowOpacity: 0.4,
         shadowRadius: 2,
         elevation: 5,
-        paddingHorizontal: 3,
+        paddingHorizontal: 2,
       }}
       pointerEvents="none"
     >
       <Text
         style={{
           color: colors.text,
-          fontSize: displayName.length > 8 ? 6.5 : displayName.length > 6 ? 7.5 : 8.5,
+          fontSize: displayName.length > 8 ? 5.5 : displayName.length > 6 ? 6.5 : displayName.length > 4 ? 7.5 : 8.5,
           fontWeight: '900',
           textAlign: 'center',
           fontFamily: Platform.OS === 'ios' ? 'Arial Rounded MT Bold' : 'sans-serif-condensed',
-          letterSpacing: -0.3,
+          letterSpacing: -0.4,
+          width: '100%',
         }}
         numberOfLines={1}
         adjustsFontSizeToFit={true}
-        minimumFontScale={0.5}
+        minimumFontScale={0.3}
       >
         {displayName}
       </Text>
