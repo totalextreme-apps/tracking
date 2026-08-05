@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, Text, TextInput, View, Share, Linking } from 'react-native';
 import * as Sharing from 'expo-sharing';
@@ -491,6 +491,22 @@ export default function ShowDetailScreen() {
     const franchiseOrderValue = localFranchiseOrder !== undefined ? localFranchiseOrder : (displayShow?.franchise_order?.toString() || '');
     const sortingTagsValue = localSortingTags !== undefined ? localSortingTags : (displayShow?.sorting_tags || '');
     const customGenreValue = localCustomGenre !== undefined ? localCustomGenre : (displayShow?.custom_genre || '');
+
+    const genresInUse = useMemo(() => {
+        const set = new Set<string>();
+        collection?.forEach((item: any) => {
+            const media = item.movies || item.shows;
+            media?.genres?.forEach((g: any) => {
+                if (g?.name) set.add(g.name);
+            });
+            if (media?.custom_genre) {
+                set.add(media.custom_genre);
+            }
+        });
+        const fallbackGenres = ['Action', 'Adventure', 'Animation', 'Comedy', 'Crime', 'Documentary', 'Drama', 'Family', 'Fantasy', 'History', 'Horror', 'Music', 'Mystery', 'Romance', 'Science Fiction', 'Thriller', 'War', 'Western'];
+        fallbackGenres.forEach(g => set.add(g));
+        return Array.from(set).sort();
+    }, [collection]);
     const backdropUrl = getBackdropUrl(displayShow.backdrop_path);
     const posterUrl = getPosterUrl(displayShow.poster_path);
 
@@ -909,6 +925,26 @@ export default function ShowDetailScreen() {
                                     autoCapitalize="words"
                                     autoCorrect={false}
                                 />
+                                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row mt-2" contentContainerStyle={{ paddingVertical: 4 }}>
+                                    {genresInUse.map(g => (
+                                        <Pressable
+                                            key={g}
+                                            onPress={() => {
+                                                playSound('click');
+                                                if (customGenreValue.toLowerCase() === g.toLowerCase()) {
+                                                    setLocalCustomGenre('');
+                                                } else {
+                                                    setLocalCustomGenre(g);
+                                                }
+                                            }}
+                                            className={`mr-2 px-3 py-1.5 rounded-full border ${customGenreValue.toLowerCase() === g.toLowerCase() ? 'bg-amber-600 border-amber-500' : 'bg-neutral-900 border-neutral-800'}`}
+                                        >
+                                            <Text className={`font-mono text-xs ${customGenreValue.toLowerCase() === g.toLowerCase() ? 'text-white font-bold' : 'text-neutral-400'}`}>
+                                                {g}
+                                            </Text>
+                                        </Pressable>
+                                    ))}
+                                </ScrollView>
                             </View>
                             {(localFranchise !== (displayShow?.franchise || '') || 
                               localFranchiseOrder !== (displayShow?.franchise_order?.toString() || '') ||
