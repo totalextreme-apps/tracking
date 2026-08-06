@@ -586,7 +586,7 @@ export default function UserProfileScreen() {
                             item={item} 
                             scale={0.9} 
                             isReadOnly={id !== currentUserId}
-                            onSingleTapAction={() => router.push({ pathname: item.movies ? `/movie/${item.movie_id}` as any : `/show/${item.show_id}` as any, params: { ownerId: id } })}
+                            onSingleTapAction={() => router.push({ pathname: item.movies ? `/movie/${item.movie_id}` as any : `/show/${item.show_id}` as any, params: { ownerId: id, from: from || undefined } })}
                           />
                         </View>
                       ))}
@@ -627,7 +627,7 @@ export default function UserProfileScreen() {
                             item={item} 
                             scale={0.9} 
                             isReadOnly={id !== currentUserId}
-                            onSingleTapAction={() => router.push({ pathname: item.movies ? `/movie/${item.movie_id}` as any : `/show/${item.show_id}` as any, params: { ownerId: id } })}
+                            onSingleTapAction={() => router.push({ pathname: item.movies ? `/movie/${item.movie_id}` as any : `/show/${item.show_id}` as any, params: { ownerId: id, from: from || undefined } })}
                           />
                         </View>
                       ))}
@@ -666,7 +666,7 @@ export default function UserProfileScreen() {
                               const isMovie = !!item.movies;
                               router.push({ 
                                 pathname: isMovie ? `/movie/${item.movie_id}` as any : `/show/${item.show_id}` as any, 
-                                params: { ownerId: id } 
+                                params: { ownerId: id, from: from || undefined } 
                               });
                             }}
                           />
@@ -716,7 +716,7 @@ export default function UserProfileScreen() {
                               const isMovie = !!item.movies;
                               router.push({ 
                                 pathname: isMovie ? `/movie/${item.movie_id}` as any : `/show/${item.show_id}` as any, 
-                                params: { ownerId: id } 
+                                params: { ownerId: id, from: from || undefined } 
                               });
                             }}
                           />
@@ -760,7 +760,7 @@ export default function UserProfileScreen() {
                               const isMovie = !!item.movies;
                               router.push({ 
                                 pathname: isMovie ? `/movie/${item.movie_id}` as any : `/show/${item.show_id}` as any, 
-                                params: { ownerId: id } 
+                                params: { ownerId: id, from: from || undefined } 
                               });
                             }}
                           />
@@ -802,7 +802,7 @@ export default function UserProfileScreen() {
                         return (
                           <Pressable 
                             key={item.id} 
-                            onPress={() => router.push({ pathname: item.movies ? `/movie/${item.movie_id}` as any : `/show/${item.show_id}` as any, params: { ownerId: id } })}
+                            onPress={() => router.push({ pathname: item.movies ? `/movie/${item.movie_id}` as any : `/show/${item.show_id}` as any, params: { ownerId: id, from: from || undefined } })}
                             className="w-[48%] mb-4 bg-neutral-900 rounded-xl overflow-hidden border border-neutral-800"
                           >
                             <View className="relative">
@@ -923,7 +923,7 @@ export default function UserProfileScreen() {
                             <Text className="text-white font-mono text-xs leading-5 mb-3">{item.content}</Text>
                             {hasMedia && (
                               <Pressable 
-                                onPress={() => { if (mediaId) router.push(`/(tabs)/${mediaType}/${mediaId}`); }}
+                                onPress={() => { if (mediaId) router.push(`/(tabs)/${mediaType}/${mediaId}?ownerId=${id}&from=${from || ''}`); }}
                                 className="bg-neutral-950 border border-neutral-800/60 rounded-lg p-2 flex-row items-center"
                               >
                                 <Image source={{ uri: getPosterUrl(item.movies?.poster_path || item.shows?.poster_path) || '' }} style={{ width: 24, height: 36, borderRadius: 4, marginRight: 8, backgroundColor: '#111' }} />

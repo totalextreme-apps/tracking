@@ -28,7 +28,7 @@ function SharedListPreview({ userId, listName, router }: { userId: string, listN
             onPress={() => {
               const id = item.movies?.id || item.shows?.id;
               const type = item.movies ? 'movie' : 'show';
-              router.push(`/(tabs)/${type}/${id}?ownerId=${userId}`);
+              router.push(`/(tabs)/${type}/${id}?ownerId=${userId}&from=community`);
             }}
             style={{ marginRight: 8 }}
           >
@@ -194,7 +194,7 @@ export function BulletinPostItem({ post, userId, idx, startEditing, setShowDelet
           onPress={() => {
             const id = post.movies?.id || post.shows?.id;
             const t = post.movies ? 'movie' : 'show';
-            router.push(`/(tabs)/${t}/${id}`);
+            router.push(`/(tabs)/${t}/${id}?from=community`);
           }}
           style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.05)', padding: 8, borderRadius: 4, marginBottom: 10 }}
         >

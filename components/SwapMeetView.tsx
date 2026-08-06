@@ -88,7 +88,13 @@ const FORMAT_COLORS: Record<string, string> = {
   'Digital': '#10b981',  // Green
 };
 
-export function SwapMeetView() {
+export function SwapMeetView({ 
+  selectedSwapTitleKey, 
+  setSelectedSwapTitleKey 
+}: { 
+  selectedSwapTitleKey?: string | null; 
+  setSelectedSwapTitleKey?: (key: string | null) => void;
+}) {
   const router = useRouter();
   const { userId: currentUserId } = useAuth();
   const { playSound } = useSound();
@@ -100,6 +106,17 @@ export function SwapMeetView() {
   const [selectedTitle, setSelectedTitle] = useState<GroupedSwapTitle | null>(null);
   const [synopsis, setSynopsis] = useState('');
   const [synopsisLoading, setSynopsisLoading] = useState(false);
+
+  // Pre-select title from parent preview selection
+  useEffect(() => {
+    if (selectedSwapTitleKey && groupedTitles.length > 0) {
+      const match = groupedTitles.find(g => g.id === selectedSwapTitleKey);
+      if (match) {
+        setSelectedTitle(match);
+        setSelectedSwapTitleKey?.(null); // Clear
+      }
+    }
+  }, [selectedSwapTitleKey, groupedTitles]);
 
   // Load TMDB Synopsis when a title is clicked
   useEffect(() => {

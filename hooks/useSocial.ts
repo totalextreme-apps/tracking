@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import type { Profile, Follow, BulletinPostWithMedia, ItemCommentWithProfile } from '@/types/database';
+import { getMovieById, getTvShowById } from '@/lib/tmdb';
 
 // 1. Fetch Profile
 export const useProfile = (userId?: string) => {
@@ -350,11 +351,83 @@ export const useCreatePost = (userId?: string) => {
     }) => {
       if (!userId) throw new Error('Not logged in');
       
+      let dbMovieId: number | undefined = undefined;
+      let dbShowId: number | undefined = undefined;
+
+      if (postData.movie_id) {
+        // Fetch or cache movie row by its TMDB ID
+        const { data: existingMovie } = await supabase
+          .from('movies')
+          .select('id')
+          .eq('tmdb_id', postData.movie_id)
+          .maybeSingle();
+
+        if (existingMovie) {
+          dbMovieId = existingMovie.id;
+        } else {
+          try {
+            const details = await getMovieById(postData.movie_id);
+            const { data: newMovie } = await supabase
+              .from('movies')
+              .upsert({
+                tmdb_id: details.id,
+                title: details.title,
+                poster_path: details.poster_path,
+                backdrop_path: details.backdrop_path,
+                release_date: details.release_date,
+                genres: details.genres ?? null,
+              }, { onConflict: 'tmdb_id' })
+              .select('id')
+              .single();
+            if (newMovie) dbMovieId = (newMovie as any).id;
+          } catch (err) {
+            console.error('Failed to cache movie during posting:', err);
+          }
+        }
+      }
+
+      if (postData.show_id) {
+        // Fetch or cache show row by its TMDB ID
+        const { data: existingShow } = await supabase
+          .from('shows')
+          .select('id')
+          .eq('tmdb_id', postData.show_id)
+          .maybeSingle();
+
+        if (existingShow) {
+          dbShowId = existingShow.id;
+        } else {
+          try {
+            const details = await getTvShowById(postData.show_id);
+            const { data: newShow } = await supabase
+              .from('shows')
+              .upsert({
+                tmdb_id: details.id,
+                name: details.name,
+                poster_path: details.poster_path,
+                backdrop_path: details.backdrop_path,
+                first_air_date: details.first_air_date,
+                genres: details.genres ?? null,
+              }, { onConflict: 'tmdb_id' })
+              .select('id')
+              .single();
+            if (newShow) dbShowId = (newShow as any).id;
+          } catch (err) {
+            console.error('Failed to cache show during posting:', err);
+          }
+        }
+      }
+
       const { error, data } = await supabase
         .from('bulletin_posts')
         .insert({
           user_id: userId,
-          ...postData
+          content: postData.content,
+          collection_item_id: postData.collection_item_id,
+          movie_id: dbMovieId,
+          show_id: dbShowId,
+          custom_list_name: postData.custom_list_name,
+          rating: postData.rating
         } as any)
         .select()
         .single() as any;

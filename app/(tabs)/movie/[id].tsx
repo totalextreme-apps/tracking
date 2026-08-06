@@ -46,7 +46,7 @@ const FORMAT_COLORS: Record<string, string> = {
 };
 
 export default function MovieDetailScreen() {
-    const { id, fromStack, ownerId } = useLocalSearchParams<{ id: string; fromStack?: string; ownerId?: string }>();
+    const { id, fromStack, ownerId, from } = useLocalSearchParams<{ id: string; fromStack?: string; ownerId?: string; from?: string }>();
     const router = useRouter();
     const { userId } = useAuth();
     const { thriftMode } = useThriftMode();
@@ -775,10 +775,11 @@ export default function MovieDetailScreen() {
                         style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 160 }}
                     />
 
-                    {/* Close Button */}
                     <Pressable
                         onPress={() => {
-                            if (fromStack) {
+                            if (from === 'community' || from === 'swap') {
+                                router.back();
+                            } else if (fromStack) {
                                 router.replace(`/stack/${fromStack}` as any);
                             } else if (ownerId) {
                                 router.push({ pathname: `/profile/${ownerId}`, params: { from: 'community' } } as any);

@@ -129,7 +129,7 @@ function PostCommentSection({ postId }: { postId: string }) {
   );
 }
 
-function MarketplaceSection({ setActiveTab }: { setActiveTab: (tab: Tab) => void }) {
+function MarketplaceSection({ setActiveTab, setSelectedSwapTitleKey }: { setActiveTab: (tab: Tab) => void; setSelectedSwapTitleKey: (key: string | null) => void }) {
   const router = useRouter();
   const { playSound } = useSound();
   const { data: marketplace, isLoading } = useMarketplaceFeed();
@@ -220,9 +220,11 @@ function MarketplaceSection({ setActiveTab }: { setActiveTab: (tab: Tab) => void
             <Pressable 
               key={item.id} 
               onPress={() => {
-                const id = item.movies?.id || item.shows?.id;
-                const type = item.movies ? 'movie' : 'show';
-                router.push(`/(tabs)/${type}/${id}?ownerId=${item.user_id}`);
+                const mediaType = item.movies ? 'movie' : 'tv';
+                const dbId = item.movie_id || item.show_id;
+                setSelectedSwapTitleKey(`${mediaType}_${dbId}`);
+                setActiveTab('swap');
+                playSound('click');
               }}
               style={{ width: 100 }}
             >
@@ -343,6 +345,9 @@ export default function CommunityScreen() {
 
   const [activeTab, setActiveTab] = useState<Tab>('activity');
   const [userSearch, setUserSearch] = useState('');
+  
+  // Swap Meet preselected title key
+  const [selectedSwapTitleKey, setSelectedSwapTitleKey] = useState<string | null>(null);
   
   // WYSIWYG Selection States
   const [selection, setSelection] = useState({ start: 0, end: 0 });
@@ -680,7 +685,7 @@ export default function CommunityScreen() {
           contentContainerStyle={{ paddingBottom: 160 }}
           keyboardShouldPersistTaps="handled"
         >
-          <MarketplaceSection setActiveTab={setActiveTab} />
+          <MarketplaceSection setActiveTab={setActiveTab} setSelectedSwapTitleKey={setSelectedSwapTitleKey} />
           {/* Member Card Feed */}
           {/* Top 5 Members (Horizontal shelf style) */}
           {top5 && top5.length > 0 && (
@@ -796,7 +801,7 @@ export default function CommunityScreen() {
                           {item.items.map((sub: any, i: number) => (
                              <Pressable 
                                key={i} 
-                               onPress={() => { const id = sub.movies?.id || sub.shows?.id; const t = sub.movies ? 'movie' : 'show'; router.push(`/(tabs)/${t}/${id}?ownerId=${sub.user_id}`); }} 
+                               onPress={() => { const id = sub.movies?.id || sub.shows?.id; const t = sub.movies ? 'movie' : 'show'; router.push(`/(tabs)/${t}/${id}?ownerId=${sub.user_id}&from=community`); }} 
                                style={{ width: 62, marginRight: 8, backgroundColor: '#0a0a0a', padding: 4, borderRadius: 8, borderWidth: 1, borderColor: '#f59e0b18' }}
                              >
                                <Image source={{ uri: getPosterUrl(sub.movies?.poster_path || sub.shows?.poster_path) || '' }} style={{ width: '100%', height: 76, borderRadius: 4, backgroundColor: '#1a1a1a', marginBottom: 4 }} />
@@ -838,7 +843,7 @@ export default function CommunityScreen() {
                          
                          {collectionItem && (
                            <Pressable 
-                             onPress={() => { if (mediaId) router.push(`/(tabs)/${mediaType}/${mediaId}?ownerId=${ownerId}`); }}
+                             onPress={() => { if (mediaId) router.push(`/(tabs)/${mediaType}/${mediaId}?ownerId=${ownerId}&from=community`); }}
                              style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#0a0a0a', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#222' }}
                            >
                              <Image 
@@ -1390,7 +1395,10 @@ export default function CommunityScreen() {
         </ScrollView>
       )}
       {activeTab === 'swap' && (
-        <SwapMeetView />
+        <SwapMeetView 
+          selectedSwapTitleKey={selectedSwapTitleKey}
+          setSelectedSwapTitleKey={setSelectedSwapTitleKey}
+        />
       )}
       {/* Insert Image Link Modal */}
       <Modal
