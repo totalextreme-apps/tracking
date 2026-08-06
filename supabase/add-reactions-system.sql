@@ -51,6 +51,12 @@ CREATE POLICY "Users can delete own reactions"
   ON public.reactions FOR DELETE
   USING (auth.uid() = user_id OR user_id = '00000000-0000-0000-0000-000000000000');
 
+DROP POLICY IF EXISTS "Users can update own reactions" ON public.reactions;
+CREATE POLICY "Users can update own reactions"
+  ON public.reactions FOR UPDATE
+  USING (auth.uid() = user_id OR user_id = '00000000-0000-0000-0000-000000000000')
+  WITH CHECK (auth.uid() = user_id OR user_id = '00000000-0000-0000-0000-000000000000');
+
 -- 5. Trigger for reaction notifications
 CREATE OR REPLACE FUNCTION notify_on_reaction()
 RETURNS TRIGGER AS $$
@@ -85,3 +91,8 @@ CREATE TRIGGER on_reaction_created
   AFTER INSERT ON public.reactions
   FOR EACH ROW
   EXECUTE FUNCTION notify_on_reaction();
+
+-- 7. Ensure Dev Mock User Profile Exists (to prevent FK constraint violations in local/native dev environments)
+INSERT INTO public.profiles (id, username, updated_at)
+VALUES ('00000000-0000-0000-0000-000000000000', 'dev_mock_user', now())
+ON CONFLICT (id) DO NOTHING;

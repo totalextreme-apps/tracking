@@ -255,7 +255,7 @@ export function StackCard({
             </View>
           )}
         </View>
-        {userId && (
+        {userId && isReadOnly && (
           <ReactionSummary
             reactions={reactions}
             currentUserId={userId}
@@ -440,7 +440,7 @@ export function StackCard({
               </View>
             ))}
           </View>
-          {userId && (
+          {userId && isReadOnly && (
             <ReactionSummary
               reactions={reactions}
               currentUserId={userId}
@@ -461,7 +461,7 @@ export function StackCard({
             <FontAwesome name="trophy" size={12} color="#f59e0b" />
           </View>
         )}
-        {userId && (
+        {userId && isReadOnly && (
           <ReactionPicker
             visible={pickerVisible}
             onClose={() => setPickerVisible(false)}
@@ -548,7 +548,7 @@ export function StackCard({
           </View>
           {renderInfoBox()}
         </View>
-        {userId && (
+        {userId && isReadOnly && (
           <ReactionPicker
             visible={pickerVisible}
             onClose={() => setPickerVisible(false)}
@@ -625,7 +625,7 @@ export function StackCard({
           </View>
           {renderInfoBox()}
         </View>
-        {userId && (
+        {userId && isReadOnly && (
           <ReactionPicker
             visible={pickerVisible}
             onClose={() => setPickerVisible(false)}
@@ -724,7 +724,7 @@ export function StackCard({
             </Text>
           </View>
         )}
-        {userId && (
+        {userId && isReadOnly && (
           <ReactionPicker
             visible={pickerVisible}
             onClose={() => setPickerVisible(false)}
