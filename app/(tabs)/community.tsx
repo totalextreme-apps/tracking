@@ -73,12 +73,19 @@ function PostCommentSection({ postId }: { postId: string }) {
     }
   };
 
-  const renderContentWithMentions = (content: string) => {
+  const renderContentRich = (content: string) => {
     if (!content) return null;
-    const parts = content.split(/(@\w+)/g);
+    const tokenRegex = /(\*\*.*?\*\*|\*.*?\*|@\w+)/g;
+    const parts = content.split(tokenRegex);
     return (
-      <Text style={{ fontFamily: 'SpaceMono', fontSize: 10, color: '#2d2016' }}>
+      <Text style={{ fontFamily: 'SpaceMono', fontSize: 10, color: '#2d2016', lineHeight: 14 }}>
         {parts.map((part, i) => {
+          if (part.startsWith('**') && part.endsWith('**')) {
+            return <Text key={i} style={{ fontWeight: 'bold' }}>{part.slice(2, -2)}</Text>;
+          }
+          if (part.startsWith('*') && part.endsWith('*')) {
+            return <Text key={i} style={{ fontStyle: 'italic' }}>{part.slice(1, -1)}</Text>;
+          }
           if (part.startsWith('@') && part.length > 1) {
             const username = part.substring(1);
             return (
@@ -104,7 +111,7 @@ function PostCommentSection({ postId }: { postId: string }) {
       {(comments || []).map((c: any) => (
         <View key={c.id} style={{ marginBottom: 6, borderLeftWidth: 1, borderLeftColor: 'rgba(0,0,0,0.1)', paddingLeft: 8 }}>
           <Text style={{ fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold', color: '#4a3728' }}>@{c.profiles?.username}</Text>
-          {renderContentWithMentions(c.content)}
+          {renderContentRich(c.content)}
         </View>
       ))}
       <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
@@ -122,8 +129,9 @@ function PostCommentSection({ postId }: { postId: string }) {
   );
 }
 
-function MarketplaceSection() {
+function MarketplaceSection({ setActiveTab }: { setActiveTab: (tab: Tab) => void }) {
   const router = useRouter();
+  const { playSound } = useSound();
   const { data: marketplace, isLoading } = useMarketplaceFeed();
   const [formatFilter, setFormatFilter] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState<'movie' | 'tv' | null>(null);
@@ -143,12 +151,36 @@ function MarketplaceSection() {
   const getPosterUrl = (path: string | null) => path ? `https://image.tmdb.org/t/p/w200${path}` : null;
 
   return (
-    <View style={{ marginBottom: 24 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 12 }}>
-        <View>
-          <Text style={{ color: '#2a2a2a', fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold', letterSpacing: 2, textTransform: 'uppercase' }}>Community Bin</Text>
-          <Text style={{ color: '#525252', fontFamily: 'SpaceMono', fontSize: 7, textTransform: 'uppercase' }}>{filteredMarketplace.length} Items</Text>
+    <View style={{
+      marginHorizontal: 16,
+      marginBottom: 24,
+      backgroundColor: '#0a0a0a',
+      borderRadius: 12,
+      borderWidth: 2,
+      borderColor: '#f59e0b', // Highlighted with amber border!
+      paddingVertical: 12,
+      shadowColor: '#f59e0b',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.2,
+      shadowRadius: 10,
+      elevation: 6,
+    }}>
+      <Pressable 
+        onPress={() => { setActiveTab('swap'); playSound('click'); }}
+        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, marginBottom: 12 }}
+      >
+        <View style={{ flex: 1, marginRight: 8 }}>
+          <Text style={{ color: '#f59e0b', fontFamily: 'SpaceMono', fontSize: 11, fontWeight: 'bold', letterSpacing: 2, textTransform: 'uppercase' }}>★ COMMUNITY SWAP MEET ★</Text>
+          <Text style={{ color: '#525252', fontFamily: 'SpaceMono', fontSize: 7, textTransform: 'uppercase', marginTop: 2 }}>{filteredMarketplace.length} Items Available • Tap to browse hub</Text>
         </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(245,158,11,0.15)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, borderWidth: 1, borderColor: '#f59e0b44' }}>
+          <Text style={{ color: '#f59e0b', fontFamily: 'SpaceMono', fontSize: 8, fontWeight: 'bold' }}>GO TO HUB</Text>
+          <Ionicons name="arrow-forward" size={8} color="#f59e0b" />
+        </View>
+      </Pressable>
+
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, marginBottom: 10 }}>
+        <Text style={{ color: '#737373', fontFamily: 'SpaceMono', fontSize: 8 }}>PREVIEW & FILTER</Text>
         <View style={{ flexDirection: 'row', gap: 6 }}>
           <Pressable onPress={() => setTypeFilter(typeFilter === 'movie' ? null : 'movie')} style={{ backgroundColor: typeFilter === 'movie' ? '#f59e0b22' : '#111', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, borderWidth: 1, borderColor: typeFilter === 'movie' ? '#f59e0b' : '#1a1a1a' }}>
             <Text style={{ color: typeFilter === 'movie' ? '#f59e0b' : '#444', fontFamily: 'SpaceMono', fontSize: 8, fontWeight: 'bold' }}>FILM</Text>
@@ -180,7 +212,7 @@ function MarketplaceSection() {
 
       {filteredMarketplace.length === 0 ? (
         <View style={{ height: 140, justifyContent: 'center', alignItems: 'center', opacity: 0.3 }}>
-           <Text style={{ color: '#fff', fontFamily: 'SpaceMono', fontSize: 10 }}>No matches in the bin.</Text>
+           <Text style={{ color: '#fff', fontFamily: 'SpaceMono', fontSize: 10 }}>No matches in the swap meet.</Text>
         </View>
       ) : (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}>
@@ -311,6 +343,27 @@ export default function CommunityScreen() {
 
   const [activeTab, setActiveTab] = useState<Tab>('activity');
   const [userSearch, setUserSearch] = useState('');
+  
+  // WYSIWYG Selection States
+  const [selection, setSelection] = useState({ start: 0, end: 0 });
+  const [imageModalVisible, setImageModalVisible] = useState(false);
+  const [imageUrlInput, setImageUrlInput] = useState('');
+
+  const handleInsertStyle = (syntax: string) => {
+    const start = selection.start;
+    const end = selection.end;
+    const before = postContent.substring(0, start);
+    const selectedText = postContent.substring(start, end);
+    const after = postContent.substring(end);
+    let newText;
+    if (start === end) {
+      newText = `${before}${syntax}text${syntax}${after}`;
+    } else {
+      newText = `${before}${syntax}${selectedText}${syntax}${after}`;
+    }
+    setPostContent(newText);
+    playSound('click');
+  };
   
   // Bulletin Logic
   const [postContent, setPostContent] = useState('');
@@ -627,7 +680,7 @@ export default function CommunityScreen() {
           contentContainerStyle={{ paddingBottom: 160 }}
           keyboardShouldPersistTaps="handled"
         >
-          <MarketplaceSection />
+          <MarketplaceSection setActiveTab={setActiveTab} />
           {/* Member Card Feed */}
           {/* Top 5 Members (Horizontal shelf style) */}
           {top5 && top5.length > 0 && (
@@ -1067,6 +1120,28 @@ export default function CommunityScreen() {
                   )}
                 </View>
                 
+                {/* WYSIWYG Editor Toolbar */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8, paddingBottom: 6, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.05)' }}>
+                  <Pressable 
+                    onPress={() => handleInsertStyle('**')} 
+                    style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, backgroundColor: 'rgba(0,0,0,0.05)', minWidth: 26, alignItems: 'center' }}
+                  >
+                    <Text style={{ fontFamily: 'SpaceMono', fontSize: 10, fontWeight: 'bold', color: '#2d2016' }}>B</Text>
+                  </Pressable>
+                  <Pressable 
+                    onPress={() => handleInsertStyle('*')} 
+                    style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, backgroundColor: 'rgba(0,0,0,0.05)', minWidth: 26, alignItems: 'center' }}
+                  >
+                    <Text style={{ fontFamily: 'SpaceMono', fontSize: 10, fontStyle: 'italic', color: '#2d2016' }}>I</Text>
+                  </Pressable>
+                  <Pressable 
+                    onPress={() => setImageModalVisible(true)} 
+                    style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, backgroundColor: 'rgba(0,0,0,0.05)', minWidth: 26, alignItems: 'center' }}
+                  >
+                    <Ionicons name="image-outline" size={12} color="#8a7060" />
+                  </Pressable>
+                </View>
+
                 <View style={{ position: 'relative', zIndex: 50 }}>
                   <TextInput 
                     style={{ fontFamily: 'SpaceMono', fontSize: 13, color: '#2d2016', minHeight: 60, textAlignVertical: 'top' }} 
@@ -1074,6 +1149,7 @@ export default function CommunityScreen() {
                     placeholderTextColor="#a89880" 
                     multiline 
                     value={postContent} 
+                    onSelectionChange={(e) => setSelection(e.nativeEvent.selection)}
                     onChangeText={(text) => {
                       setPostContent(text);
                       const words = text.split(/ |\n/);
@@ -1316,6 +1392,60 @@ export default function CommunityScreen() {
       {activeTab === 'swap' && (
         <SwapMeetView />
       )}
+      {/* Insert Image Link Modal */}
+      <Modal
+        visible={imageModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setImageModalVisible(false)}
+      >
+        <Pressable 
+          style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.6)', justifyContent: 'center', alignItems: 'center' }}
+          onPress={() => setImageModalVisible(false)}
+        >
+          <Pressable 
+            style={{ width: '85%', maxWidth: 320, backgroundColor: 'rgba(255,249,220,0.98)', borderRadius: 8, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 6, borderWidth: 1, borderColor: '#8a7060' }}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <Text style={{ fontFamily: 'SpaceMono', fontSize: 12, fontWeight: 'bold', color: '#2d2016', marginBottom: 8, textAlign: 'center' }}>INSERT IMAGE LINK</Text>
+            <TextInput
+              style={{ backgroundColor: '#fff', borderRadius: 4, paddingHorizontal: 10, paddingVertical: 8, fontFamily: 'SpaceMono', fontSize: 11, borderWidth: 1, borderColor: 'rgba(0,0,0,0.1)', color: '#000', marginBottom: 12 }}
+              placeholder="https://example.com/image.jpg"
+              placeholderTextColor="#888"
+              value={imageUrlInput}
+              onChangeText={setImageUrlInput}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 8 }}>
+              <Pressable 
+                onPress={() => setImageModalVisible(false)} 
+                style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 4, backgroundColor: 'rgba(0,0,0,0.05)' }}
+              >
+                <Text style={{ fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold', color: '#666' }}>CANCEL</Text>
+              </Pressable>
+              <Pressable 
+                onPress={() => {
+                  if (imageUrlInput.trim()) {
+                    const start = selection.start;
+                    const before = postContent.substring(0, start);
+                    const after = postContent.substring(start);
+                    const imgMarkdown = `\n![image](${imageUrlInput.trim()})\n`;
+                    setPostContent(`${before}${imgMarkdown}${after}`);
+                    setImageUrlInput('');
+                    setImageModalVisible(false);
+                    playSound('peel');
+                  }
+                }} 
+                style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 4, backgroundColor: '#2d2016' }}
+              >
+                <Text style={{ fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold', color: '#f59e0b' }}>INSERT</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       <ReorderTopFiveModal
         visible={reorderTopFiveVisible}
         onClose={() => setReorderTopFiveVisible(false)}

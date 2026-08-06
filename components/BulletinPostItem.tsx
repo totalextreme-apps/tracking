@@ -94,27 +94,72 @@ export function BulletinPostItem({ post, userId, idx, startEditing, setShowDelet
     }
   };
 
-  const renderContentWithMentions = (content: string) => {
+  const renderContentRich = (content: string) => {
     if (!content) return null;
-    const parts = content.split(/(@\w+)/g);
+
+    // Split by image markdown: ![alt](url)
+    const imgRegex = /!\[(.*?)\]\((.*?)\)/g;
+    const segments: { type: 'text' | 'image'; value: string; alt?: string }[] = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = imgRegex.exec(content)) !== null) {
+      const matchIndex = match.index;
+      if (matchIndex > lastIndex) {
+        segments.push({ type: 'text', value: content.substring(lastIndex, matchIndex) });
+      }
+      segments.push({ type: 'image', value: match[2], alt: match[1] });
+      lastIndex = imgRegex.lastIndex;
+    }
+    if (lastIndex < content.length) {
+      segments.push({ type: 'text', value: content.substring(lastIndex) });
+    }
+
     return (
-      <Text style={{ fontFamily: 'SpaceMono', fontSize: 12, color: '#2d2016' }}>
-        {parts.map((part, i) => {
-          if (part.startsWith('@') && part.length > 1) {
-            const username = part.substring(1);
+      <View style={{ gap: 6 }}>
+        {segments.map((seg, idx) => {
+          if (seg.type === 'image') {
             return (
-              <Text 
-                key={i} 
-                style={{ color: '#f59e0b', fontWeight: 'bold' }} 
-                onPress={() => handleMentionPress(username)}
-              >
-                {part}
-              </Text>
+              <Image 
+                key={idx}
+                source={{ uri: seg.value }}
+                style={{ width: '100%', height: 180, borderRadius: 6, backgroundColor: '#eee', marginTop: 4, marginBottom: 4 }}
+                resizeMode="cover"
+              />
             );
           }
-          return <Text key={i}>{part}</Text>;
+
+          const textVal = seg.value;
+          const tokenRegex = /(\*\*.*?\*\*|\*.*?\*|@\w+)/g;
+          const textParts = textVal.split(tokenRegex);
+
+          return (
+            <Text key={idx} style={{ fontFamily: 'SpaceMono', fontSize: 12, color: '#2d2016', lineHeight: 16 }}>
+              {textParts.map((part, i) => {
+                if (part.startsWith('**') && part.endsWith('**')) {
+                  return <Text key={i} style={{ fontWeight: 'bold' }}>{part.slice(2, -2)}</Text>;
+                }
+                if (part.startsWith('*') && part.endsWith('*')) {
+                  return <Text key={i} style={{ fontStyle: 'italic' }}>{part.slice(1, -1)}</Text>;
+                }
+                if (part.startsWith('@') && part.length > 1) {
+                  const username = part.substring(1);
+                  return (
+                    <Text 
+                      key={i} 
+                      style={{ color: '#f59e0b', fontWeight: 'bold' }} 
+                      onPress={() => handleMentionPress(username)}
+                    >
+                      {part}
+                    </Text>
+                  );
+                }
+                return <Text key={i}>{part}</Text>;
+              })}
+            </Text>
+          );
         })}
-      </Text>
+      </View>
     );
   };
 
@@ -169,7 +214,7 @@ export function BulletinPostItem({ post, userId, idx, startEditing, setShowDelet
           ))}
         </View>
       )}
-      {renderContentWithMentions(post.content)}
+      {renderContentRich(post.content)}
       
       {post.custom_list_name && (
         <SharedListPreview userId={post.user_id} listName={post.custom_list_name} router={router} />

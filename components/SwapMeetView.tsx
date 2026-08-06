@@ -201,6 +201,11 @@ export function SwapMeetView() {
                 </View>
               )}
             </View>
+            {item.notes && (
+              <Text style={styles.cardNotes} numberOfLines={2}>
+                {item.notes}
+              </Text>
+            )}
           </View>
 
           {/* Owner & Message/Edit Action */}
@@ -493,6 +498,18 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: '#737373',
     marginTop: 1,
+  },
+  cardNotes: {
+    fontFamily: 'SpaceMono',
+    fontSize: 8,
+    color: '#a3a3a3',
+    marginTop: 4,
+    backgroundColor: '#171717',
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#262626',
   },
   conditionRow: {
     flexDirection: 'row',
