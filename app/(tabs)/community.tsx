@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo } from 'react';
-import { View, Text, ScrollView, Pressable, Image, ImageBackground, TextInput, ActivityIndicator, Alert, Share } from 'react-native';
+import { View, Text, ScrollView, Pressable, Image, ImageBackground, TextInput, ActivityIndicator, Alert, Share, Modal } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
