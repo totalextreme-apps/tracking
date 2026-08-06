@@ -1,5 +1,9 @@
 import { useSound } from '@/context/SoundContext';
 import { useSettings } from '@/context/SettingsContext';
+import { useAuth } from '@/context/AuthContext';
+import { useReactions } from '@/hooks/useReactions';
+import { ReactionSummary } from './ReactionSummary';
+import { ReactionPicker } from './ReactionPicker';
 import { getPosterUrl } from '@/lib/dummy-data';
 import type { CollectionItemWithMedia } from '@/types/database';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -178,6 +182,9 @@ export function StackCard({
   const topItem = sorted[0];
   const media = topItem.movies || topItem.shows;
   const primaryGenre = media?.custom_genre || media?.genres?.[0]?.name;
+  const { userId } = useAuth();
+  const [pickerVisible, setPickerVisible] = useState(false);
+  const { reactions, toggleReaction } = useReactions('collection_item_id', topItem?.id);
   
   const isPhysical = topItem.format !== 'Digital';
   const isWishlist = topItem.status === 'wishlist';
@@ -248,6 +255,14 @@ export function StackCard({
             </View>
           )}
         </View>
+        {userId && (
+          <ReactionSummary
+            reactions={reactions}
+            currentUserId={userId}
+            onReact={(emoji) => toggleReaction({ userId, emoji })}
+            onShowPicker={() => setPickerVisible(true)}
+          />
+        )}
       </View>
     );
   };
@@ -335,7 +350,7 @@ export function StackCard({
     return (
       <AnimatedPressable
         onPress={handlePress}
-        onLongPress={() => onLongPress?.(topItem)}
+        onLongPress={() => isReadOnly ? setPickerVisible(true) : onLongPress?.(topItem)}
         delayLongPress={500}
         style={[{
           width: width,
@@ -425,6 +440,14 @@ export function StackCard({
               </View>
             ))}
           </View>
+          {userId && (
+            <ReactionSummary
+              reactions={reactions}
+              currentUserId={userId}
+              onReact={(emoji) => toggleReaction({ userId, emoji })}
+              onShowPicker={() => setPickerVisible(true)}
+            />
+          )}
         </View>
 
         {/* Favorite / Grail Icon */}
@@ -437,6 +460,14 @@ export function StackCard({
           <View className="pr-4">
             <FontAwesome name="trophy" size={12} color="#f59e0b" />
           </View>
+        )}
+        {userId && (
+          <ReactionPicker
+            visible={pickerVisible}
+            onClose={() => setPickerVisible(false)}
+            onSelect={(emoji) => toggleReaction({ userId, emoji })}
+            currentReaction={reactions.find(r => r.user_id === userId)?.reaction_type}
+          />
         )}
       </AnimatedPressable>
     );
@@ -452,7 +483,7 @@ export function StackCard({
       return (
         <AnimatedPressable
           onPress={handlePress}
-          onLongPress={() => onLongPress?.(topItem)}
+          onLongPress={() => isReadOnly ? setPickerVisible(true) : onLongPress?.(topItem)}
           delayLongPress={500}
           onPressIn={isWishlist ? undefined : onPressIn}
           onPressOut={isWishlist ? undefined : onPressOut}
@@ -512,20 +543,90 @@ export function StackCard({
                       {item.is_bootleg && <BootlegSticker size={30} />}
                     </View>
                   );
-                })}
-              </View>
+<AnimatedPressable
+        onPress={handlePress}
+        onLongPress={() => isReadOnly ? setPickerVisible(true) : onLongPress?.(topItem)}
+        delayLongPress={500}
+        onPressIn={isWishlist ? undefined : onPressIn}
+        onPressOut={isWishlist ? undefined : onPressOut}
+        style={[
+          animatedStyle,
+          { width: width + 10, margin: 6 },
+        ]}
+      >
+        <View className="items-center" style={{ paddingTop: 10 }}>
+          <View style={{ width: width, height: posterContainerHeight, justifyContent: 'flex-end', alignItems: 'center' }}>
+            <View className="relative" style={{ width: width, height: containerHeight }}>
+              {/* Sticker Overlays */}
+              {primaryGenre && genreStickersEnabled && <GenreSticker genre={primaryGenre} />}
+              {isOnDisplay && !isWishlist && <StickerOverlay visible={isOnDisplay} size={40} />}
+              {topItem.for_sale && <SaleSticker visible={true} size={40} />}
+              {topItem.for_trade && <TradeSticker visible={true} size={40} />}
+              {isGrail && isWishlist && <GrailSticker visible={true} size={40} />}
+
+              {sorted.map((item, idx) => {
+                const transforms = getStackTransforms(idx);
+                const itemMedia = item.movies || item.shows;
+                const url = item.custom_poster_url || (itemMedia ? getPosterUrl(itemMedia.poster_path) : null);
+                
+                const itemStyle = {
+                  position: 'absolute' as const,
+                  left: transforms.left,
+                  top: transforms.top,
+                  transform: [{ rotate: transforms.rotate }],
+                  width: width,
+                  height: width / aspectRatio,
+                  zIndex: sorted.length - idx,
+                  borderWidth: (idx === 0 && isGrail && isWishlist) ? 2 : 1,
+                  borderColor: (idx === 0 && isGrail && isWishlist) ? '#ffd700' : 'rgba(255,255,255,0.15)',
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 6 },
+                  shadowOpacity: 0.8,
+                  shadowRadius: 8,
+                  elevation: 10,
+                };
+
+                if (item.format === 'VHS') {
+                  return <VHSCard key={item.id} posterUrl={url} isCustom={!!item.custom_poster_url} isBootleg={item.is_bootleg} style={itemStyle} />;
+                }
+                if (['DVD', 'BluRay', '4K'].includes(item.format)) {
+                  return <GlossyCard key={item.id} posterUrl={url} format={item.format as any} isCustom={!!item.custom_poster_url} isBootleg={item.is_bootleg} style={itemStyle} />;
+                }
+
+                return (
+                  <View key={item.id} className="absolute bg-neutral-900 rounded overflow-hidden" style={itemStyle}>
+                    {url ? (
+                      <Image source={{ uri: url }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                    ) : (
+                      <View className="flex-1 items-center justify-center">
+                        <FontAwesome name="film" size={width * 0.25} color="#222" />
+                      </View>
+                    )}
+                    {item.is_bootleg && <BootlegSticker size={30} />}
+                  </View>
+                );
+              })}
             </View>
-            {renderInfoBox()}
           </View>
-        </AnimatedPressable>
-      );
+          {renderInfoBox()}
+        </View>
+        {userId && (
+          <ReactionPicker
+            visible={pickerVisible}
+            onClose={() => setPickerVisible(false)}
+            onSelect={(emoji) => toggleReaction({ userId, emoji })}
+            currentReaction={reactions.find(r => r.user_id === userId)?.reaction_type}
+          />
+        )}
+      </AnimatedPressable>
+    );
     }
 
     // SINGLE PHYSICAL ITEM: Clean, no stack layers
     return (
       <AnimatedPressable
         onPress={handlePress}
-        onLongPress={() => onLongPress?.(topItem)}
+        onLongPress={() => isReadOnly ? setPickerVisible(true) : onLongPress?.(topItem)}
         delayLongPress={500}
         onPressIn={isWishlist ? undefined : onPressIn}
         onPressOut={isWishlist ? undefined : onPressOut}
@@ -586,6 +687,14 @@ export function StackCard({
           </View>
           {renderInfoBox()}
         </View>
+        {userId && (
+          <ReactionPicker
+            visible={pickerVisible}
+            onClose={() => setPickerVisible(false)}
+            onSelect={(emoji) => toggleReaction({ userId, emoji })}
+            currentReaction={reactions.find(r => r.user_id === userId)?.reaction_type}
+          />
+        )}
       </AnimatedPressable>
     );
   }
@@ -594,7 +703,7 @@ export function StackCard({
   return (
     <AnimatedPressable
       onPress={handlePress}
-      onLongPress={() => onLongPress?.(topItem)}
+      onLongPress={() => isReadOnly ? setPickerVisible(true) : onLongPress?.(topItem)}
       delayLongPress={500}
       onPressIn={isWishlist ? undefined : onPressIn}
       onPressOut={isWishlist ? undefined : onPressOut}
@@ -676,6 +785,14 @@ export function StackCard({
               {topItem.digital_provider}
             </Text>
           </View>
+        )}
+        {userId && (
+          <ReactionPicker
+            visible={pickerVisible}
+            onClose={() => setPickerVisible(false)}
+            onSelect={(emoji) => toggleReaction({ userId, emoji })}
+            currentReaction={reactions.find(r => r.user_id === userId)?.reaction_type}
+          />
         )}
       </View>
     </AnimatedPressable>

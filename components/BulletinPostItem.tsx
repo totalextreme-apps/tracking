@@ -1,5 +1,8 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { View, Text, Pressable, Image, Share, Platform } from 'react-native';
+import { useReactions } from '@/hooks/useReactions';
+import { ReactionSummary } from './ReactionSummary';
+import { ReactionPicker } from './ReactionPicker';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { captureRef } from 'react-native-view-shot';
@@ -43,6 +46,8 @@ function SharedListPreview({ userId, listName, router }: { userId: string, listN
 export function BulletinPostItem({ post, userId, idx, startEditing, setShowDeleteConfirm, toggleComments, isExpanded, CommentSectionComponent }: any) {
   const router = useRouter();
   const viewRef = useRef(null);
+  const [pickerVisible, setPickerVisible] = useState(false);
+  const { reactions, toggleReaction } = useReactions('post_id', post.id);
 
   const getPosterUrl = (path: string | null) => path ? `https://image.tmdb.org/t/p/w200${path}` : null;
 
@@ -171,11 +176,26 @@ export function BulletinPostItem({ post, userId, idx, startEditing, setShowDelet
       )}
       
       {/* Hide the 'reply' label visually when sharing by just not capturing it? The user will share it with the reply button, which is fine, might drive clicks! */}
-      <Pressable onPress={() => toggleComments(post.id)} style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10, paddingTop: 8, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)' }}>
-        <Ionicons name="chatbubble-outline" size={12} color="#8a7060" />
-        <Text style={{ fontFamily: 'SpaceMono', fontSize: 9, color: '#8a7060', marginLeft: 4 }}>REPLY</Text>
-      </Pressable>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, paddingTop: 8, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)' }}>
+        <Pressable onPress={() => toggleComments(post.id)} style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Ionicons name="chatbubble-outline" size={12} color="#8a7060" />
+          <Text style={{ fontFamily: 'SpaceMono', fontSize: 9, color: '#8a7060', marginLeft: 4 }}>REPLY</Text>
+        </Pressable>
+        <ReactionSummary
+          reactions={reactions}
+          currentUserId={userId}
+          onReact={(emoji) => toggleReaction({ userId, emoji })}
+          onShowPicker={() => setPickerVisible(true)}
+        />
+      </View>
       {isExpanded && <CommentSectionComponent postId={post.id} />}
+      
+      <ReactionPicker
+        visible={pickerVisible}
+        onClose={() => setPickerVisible(false)}
+        onSelect={(emoji) => toggleReaction({ userId, emoji })}
+        currentReaction={reactions.find(r => r.user_id === userId)?.reaction_type}
+      />
     </View>
   );
 }

@@ -7,12 +7,12 @@ import { useChat, useSendMessage, useProfile, useDeleteMessage, useUpdateMessage
 import { StatusBar } from 'expo-status-bar';
 
 export default function ChatScreen() {
-  const { id } = useLocalSearchParams(); // Partner's user ID
+  const { id, prefill } = useLocalSearchParams<{ id: string; prefill?: string }>(); // Partner's user ID
   const { userId } = useAuth();
   const partnerId = Array.isArray(id) ? id[0] : id;
   const router = useRouter();
   
-  const [content, setContent] = useState('');
+  const [content, setContent] = useState(prefill || '');
   const scrollViewRef = useRef<ScrollView>(null);
   
   const { data: partnerProfile } = useProfile(partnerId);

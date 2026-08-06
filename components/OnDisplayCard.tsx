@@ -4,7 +4,11 @@ import { getPosterUrl } from '@/lib/dummy-data';
 import type { CollectionItemWithMedia } from '@/types/database';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
+import { useReactions } from '@/hooks/useReactions';
+import { ReactionSummary } from './ReactionSummary';
+import { ReactionPicker } from './ReactionPicker';
 import { Pressable, Text, View } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import Animated, {
@@ -37,6 +41,9 @@ type OnDisplayCardProps = {
 export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPressAction, onToggleFavorite, onRatePress, isReadOnly = false }: OnDisplayCardProps) {
   const { playSound } = useSound();
   const { genreStickersEnabled } = useSettings();
+  const { userId } = useAuth();
+  const [pickerVisible, setPickerVisible] = useState(false);
+  const { reactions, toggleReaction } = useReactions('collection_item_id', item.id);
   const media = item.movies || item.shows;
   if (!media) return null;
 
@@ -96,7 +103,10 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
   };
 
   const handleLongPress = () => {
-    if (isReadOnly) return;
+    if (isReadOnly) {
+      setPickerVisible(true);
+      return;
+    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     if (onLongPressAction) {
       onLongPressAction();
@@ -253,6 +263,14 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
             )}
           </View>
         </View>
+        {userId && (
+          <ReactionSummary
+            reactions={reactions}
+            currentUserId={userId}
+            onReact={(emoji) => toggleReaction({ userId, emoji })}
+            onShowPicker={() => setPickerVisible(true)}
+          />
+        )}
       </View>
     );
   };
@@ -275,6 +293,14 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
           <CardContent />
         </Animated.View>
       </Pressable>
+      {userId && (
+        <ReactionPicker
+          visible={pickerVisible}
+          onClose={() => setPickerVisible(false)}
+          onSelect={(emoji) => toggleReaction({ userId, emoji })}
+          currentReaction={reactions.find(r => r.user_id === userId)?.reaction_type}
+        />
+      )}
     </View>
   );
 }

@@ -133,6 +133,19 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="swap"
+        options={{
+          headerShown: false,
+          title: 'Swap Meet',
+          tabBarIcon: ({ color }) => <TabBarIcon name="exchange" color={color} />,
+        }}
+        listeners={{
+          tabPress: () => {
+            playSound('click');
+          },
+        }}
+      />
+      <Tabs.Screen
         name="settings"
         options={{
           headerShown: false,
