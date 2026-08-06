@@ -39,10 +39,38 @@ import { BulletinPostItem } from '@/components/BulletinPostItem';
 import { MemberCard } from '@/components/MemberCard';
 import { ReorderTopFiveModal } from '@/components/ReorderTopFiveModal';
 import { SwapMeetView } from '@/components/SwapMeetView';
+import { useReactions } from '@/hooks/useReactions';
+import { ReactionSummary } from '@/components/ReactionSummary';
+import { ReactionPicker } from '@/components/ReactionPicker';
 
 const CORK_BG = 'https://www.transparenttextures.com/patterns/cork-board.png';
 
 type Tab = 'activity' | 'directory' | 'board' | 'inbox' | 'alerts' | 'swap';
+
+function MovieReactionSection({ collectionItemId, userId }: { collectionItemId: string; userId?: string }) {
+  const { playSound } = useSound();
+  const { reactions = [], toggleReaction } = useReactions('collection_item_id', collectionItemId);
+  const [pickerVisible, setPickerVisible] = useState(false);
+
+  if (!userId) return null;
+
+  return (
+    <View style={{ alignSelf: 'flex-end', marginTop: 4 }}>
+      <ReactionSummary
+        reactions={reactions}
+        currentUserId={userId}
+        onReact={(emoji) => toggleReaction({ userId, emoji })}
+        onShowPicker={() => setPickerVisible(true)}
+      />
+      <ReactionPicker
+        visible={pickerVisible}
+        onClose={() => setPickerVisible(false)}
+        onSelect={(emoji) => toggleReaction({ userId, emoji })}
+        currentReaction={reactions.find(r => r.user_id === userId)?.reaction_type}
+      />
+    </View>
+  );
+}
 
 function PostCommentSection({ postId }: { postId: string }) {
   const router = useRouter();
@@ -842,25 +870,37 @@ export default function CommunityScreen() {
                          <Text style={{ color: '#ccc', fontFamily: 'SpaceMono', fontSize: 12, lineHeight: 18, fontStyle: 'italic', marginBottom: 8 }}>"{item.content}"</Text>
                          
                          {collectionItem && (
-                           <Pressable 
-                             onPress={() => { if (mediaId) router.push(`/(tabs)/${mediaType}/${mediaId}?ownerId=${ownerId}&from=community`); }}
-                             style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#0a0a0a', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#222' }}
-                           >
-                             <Image 
-                               source={{ uri: getPosterUrl(collectionItem.movies?.poster_path || collectionItem.shows?.poster_path) || '' }} 
-                               style={{ width: 24, height: 36, borderRadius: 4, marginRight: 8, backgroundColor: '#1a1a1a' }} 
-                             />
-                             <View style={{ flex: 1 }}>
-                               <Text style={{ color: '#fff', fontFamily: 'SpaceMono', fontSize: 10, fontWeight: 'bold' }} numberOfLines={1}>{mediaTitle}</Text>
-                               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
-                                 <View style={{ backgroundColor: '#f59e0b22', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 2, borderWidth: 1, borderColor: '#f59e0b44', marginRight: 4 }}>
-                                   <Text style={{ color: '#f59e0b', fontSize: 6, fontFamily: 'SpaceMono', fontWeight: 'bold' }}>{collectionItem.format}</Text>
+                           <View>
+                             <Pressable 
+                               onPress={() => { if (mediaId) router.push(`/(tabs)/${mediaType}/${mediaId}?ownerId=${ownerId}&from=community`); }}
+                               style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#0a0a0a', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#222' }}
+                             >
+                               <Image 
+                                 source={{ uri: getPosterUrl(collectionItem.movies?.poster_path || collectionItem.shows?.poster_path) || '' }} 
+                                 style={{ width: 24, height: 36, borderRadius: 4, marginRight: 8, backgroundColor: '#1a1a1a' }} 
+                               />
+                               <View style={{ flex: 1 }}>
+                                 <Text style={{ color: '#fff', fontFamily: 'SpaceMono', fontSize: 10, fontWeight: 'bold' }} numberOfLines={1}>{mediaTitle}</Text>
+                                 <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+                                   <View style={{ backgroundColor: '#f59e0b22', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 2, borderWidth: 1, borderColor: '#f59e0b44', marginRight: 4 }}>
+                                     <Text style={{ color: '#f59e0b', fontSize: 6, fontFamily: 'SpaceMono', fontWeight: 'bold' }}>{collectionItem.format}</Text>
+                                   </View>
+                                   <Text style={{ color: '#444', fontFamily: 'SpaceMono', fontSize: 8 }}>@{ownerUsername}'S SHELF</Text>
                                  </View>
-                                 <Text style={{ color: '#444', fontFamily: 'SpaceMono', fontSize: 8 }}>@{ownerUsername}'S SHELF</Text>
                                </View>
+                               <Ionicons name="chevron-forward" size={12} color="#444" />
+                             </Pressable>
+                             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, paddingTop: 6, borderTopWidth: 1, borderTopColor: '#222' }}>
+                                <Pressable 
+                                  onPress={() => { if (mediaId) router.push(`/(tabs)/${mediaType}/${mediaId}?ownerId=${ownerId}&from=community`); }}
+                                  style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                                >
+                                  <Ionicons name="chatbubble-outline" size={10} color="#737373" />
+                                  <Text style={{ fontFamily: 'SpaceMono', fontSize: 8, color: '#737373' }}>COMMENT / REPLY</Text>
+                                </Pressable>
+                                <MovieReactionSection collectionItemId={collectionItem.id} userId={userId || ''} />
                              </View>
-                             <Ionicons name="chevron-forward" size={12} color="#444" />
-                           </Pressable>
+                           </View>
                          )}
                        </View>
                      </View>
@@ -894,27 +934,39 @@ export default function CommunityScreen() {
                           </View>
                         </Pressable>
                         
-                        <Pressable 
-                          onPress={() => { if (mediaId) router.push(`/(tabs)/${mediaType}/${mediaId}?ownerId=${item.user_id}`); }}
-                          style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#111', padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#1a1a1a', borderLeftWidth: 3, borderLeftColor: '#f59e0b' }}
-                        >
-                          <Image 
-                            source={{ uri: getPosterUrl(item.movies?.poster_path || item.shows?.poster_path) || '' }} 
-                            style={{ width: 40, height: 60, borderRadius: 6, marginRight: 12, backgroundColor: '#1a1a1a' }} 
-                          />
-                          <View style={{ flex: 1 }}>
-                            <Text style={{ color: '#fff', fontFamily: 'SpaceMono', fontSize: 12, fontWeight: 'bold' }} numberOfLines={1}>{mediaTitle}</Text>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-                              <View style={{ backgroundColor: '#f59e0b22', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: '#f59e0b44', marginRight: 8 }}>
-                                <Text style={{ color: '#f59e0b', fontSize: 8, fontFamily: 'SpaceMono', fontWeight: 'bold' }}>{format}</Text>
+                        <View style={{ backgroundColor: '#111', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#1a1a1a', borderLeftWidth: 3, borderLeftColor: '#f59e0b' }}>
+                          <Pressable 
+                            onPress={() => { if (mediaId) router.push(`/(tabs)/${mediaType}/${mediaId}?ownerId=${item.user_id}&from=community`); }}
+                            style={{ flexDirection: 'row', alignItems: 'center' }}
+                          >
+                            <Image 
+                              source={{ uri: getPosterUrl(item.movies?.poster_path || item.shows?.poster_path) || '' }} 
+                              style={{ width: 40, height: 60, borderRadius: 6, marginRight: 12, backgroundColor: '#1a1a1a' }} 
+                            />
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ color: '#fff', fontFamily: 'SpaceMono', fontSize: 12, fontWeight: 'bold' }} numberOfLines={1}>{mediaTitle}</Text>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                                <View style={{ backgroundColor: '#f59e0b22', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: '#f59e0b44', marginRight: 8 }}>
+                                  <Text style={{ color: '#f59e0b', fontSize: 8, fontFamily: 'SpaceMono', fontWeight: 'bold' }}>{format}</Text>
+                                </View>
+                                <Text style={{ color: '#737373', fontFamily: 'SpaceMono', fontSize: 10 }}>
+                                  WATCH COUNT: {watchCount}
+                                </Text>
                               </View>
-                              <Text style={{ color: '#737373', fontFamily: 'SpaceMono', fontSize: 10 }}>
-                                WATCH COUNT: {watchCount}
-                              </Text>
                             </View>
+                            <Ionicons name="chevron-forward" size={16} color="#444" />
+                          </Pressable>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, paddingTop: 6, borderTopWidth: 1, borderTopColor: '#222' }}>
+                            <Pressable 
+                              onPress={() => { if (mediaId) router.push(`/(tabs)/${mediaType}/${mediaId}?ownerId=${item.user_id}&from=community`); }}
+                              style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                            >
+                              <Ionicons name="chatbubble-outline" size={10} color="#737373" />
+                              <Text style={{ fontFamily: 'SpaceMono', fontSize: 8, color: '#737373' }}>COMMENT / REPLY</Text>
+                            </Pressable>
+                            <MovieReactionSection collectionItemId={item.id} userId={userId || ''} />
                           </View>
-                          <Ionicons name="chevron-forward" size={16} color="#444" />
-                        </Pressable>
+                        </View>
                       </View>
                     );
                  }
@@ -941,37 +993,61 @@ export default function CommunityScreen() {
                           </View>
                         </Pressable>
                         
-                        <Pressable 
-                          onPress={() => { if (mediaId) router.push(`/(tabs)/${mediaType}/${mediaId}?ownerId=${item.user_id}`); }}
-                          style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#111', padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#1a1a1a', borderLeftWidth: 3, borderLeftColor: '#10b981' }}
-                        >
-                          <Image 
-                            source={{ uri: getPosterUrl(item.movies?.poster_path || item.shows?.poster_path) || '' }} 
-                            style={{ width: 40, height: 60, borderRadius: 6, marginRight: 12, backgroundColor: '#1a1a1a' }} 
-                          />
-                          <View style={{ flex: 1 }}>
-                            <Text style={{ color: '#fff', fontFamily: 'SpaceMono', fontSize: 12, fontWeight: 'bold' }} numberOfLines={1}>{mediaTitle}</Text>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-                              <View style={{ backgroundColor: '#f59e0b22', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: '#f59e0b44', marginRight: 8 }}>
-                                <Text style={{ color: '#f59e0b', fontSize: 8, fontFamily: 'SpaceMono', fontWeight: 'bold' }}>{format}</Text>
+                        <View style={{ backgroundColor: '#111', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#1a1a1a', borderLeftWidth: 3, borderLeftColor: '#10b981' }}>
+                          <Pressable 
+                            onPress={() => { if (mediaId) router.push(`/(tabs)/${mediaType}/${mediaId}?ownerId=${item.user_id}&from=community`); }}
+                            style={{ flexDirection: 'row', alignItems: 'center' }}
+                          >
+                            <Image 
+                              source={{ uri: getPosterUrl(item.movies?.poster_path || item.shows?.poster_path) || '' }} 
+                              style={{ width: 40, height: 60, borderRadius: 6, marginRight: 12, backgroundColor: '#1a1a1a' }} 
+                            />
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ color: '#fff', fontFamily: 'SpaceMono', fontSize: 12, fontWeight: 'bold' }} numberOfLines={1}>{mediaTitle}</Text>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                                <View style={{ backgroundColor: '#f59e0b22', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: '#f59e0b44', marginRight: 8 }}>
+                                  <Text style={{ color: '#f59e0b', fontSize: 8, fontFamily: 'SpaceMono', fontWeight: 'bold' }}>{format}</Text>
+                                </View>
+                                {item.for_sale && (
+                                  <View style={{ backgroundColor: '#10b98122', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: '#10b98144', marginRight: 4 }}>
+                                    <Text style={{ color: '#10b981', fontSize: 8, fontFamily: 'SpaceMono', fontWeight: 'bold' }}>FOR SALE</Text>
+                                  </View>
+                                )}
+                                {item.for_trade && (
+                                  <View style={{ backgroundColor: '#3b82f622', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: '#3b82f644' }}>
+                                    <Text style={{ color: '#3b82f6', fontSize: 8, fontFamily: 'SpaceMono', fontWeight: 'bold' }}>FOR TRADE</Text>
+                                  </View>
+                                )}
                               </View>
-                              {item.for_sale && (
-                                <View style={{ backgroundColor: '#10b98122', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: '#10b98144', marginRight: 4 }}>
-                                  <Text style={{ color: '#10b981', fontSize: 8, fontFamily: 'SpaceMono', fontWeight: 'bold' }}>FOR SALE</Text>
-                                </View>
-                              )}
-                              {item.for_trade && (
-                                <View style={{ backgroundColor: '#3b82f622', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: '#3b82f644' }}>
-                                  <Text style={{ color: '#3b82f6', fontSize: 8, fontFamily: 'SpaceMono', fontWeight: 'bold' }}>FOR TRADE</Text>
-                                </View>
-                              )}
                             </View>
+                            <Ionicons name="chevron-forward" size={16} color="#444" />
+                          </Pressable>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, paddingTop: 6, borderTopWidth: 1, borderTopColor: '#222' }}>
+                            <Pressable 
+                              onPress={() => { if (mediaId) router.push(`/(tabs)/${mediaType}/${mediaId}?ownerId=${item.user_id}&from=community`); }}
+                              style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                            >
+                              <Ionicons name="chatbubble-outline" size={10} color="#737373" />
+                              <Text style={{ fontFamily: 'SpaceMono', fontSize: 8, color: '#737373' }}>COMMENT / REPLY</Text>
+                            </Pressable>
+                            <MovieReactionSection collectionItemId={item.id} userId={userId || ''} />
                           </View>
-                          <Ionicons name="chevron-forward" size={16} color="#444" />
-                        </Pressable>
+                        </View>
                       </View>
                     );
                  }
+
+                if (item.activity_type === 'post') {
+                  return (
+                    <View key={item.id + '-' + idx} style={{ marginBottom: 12 }}>
+                      <BulletinPostItem 
+                        post={item} 
+                        userId={userId || ''} 
+                        playSound={playSound} 
+                      />
+                    </View>
+                  );
+                }
 
                 const profile = item.profiles;
                 return (

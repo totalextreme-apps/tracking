@@ -26,6 +26,9 @@ import { deleteFromCloudinary, uploadToCloudinary } from '@/lib/cloudinary';
 import { getCustomLists } from '@/lib/collection-utils';
 import { supabase } from '@/lib/supabase';
 import { fetchEbaySoldValue, getEbaySearchUrl } from '@/lib/pricing';
+import { useReactions } from '@/hooks/useReactions';
+import { ReactionSummary } from '@/components/ReactionSummary';
+import { ReactionPicker } from '@/components/ReactionPicker';
 
 import { getBackdropUrl, getPosterUrl } from '@/lib/dummy-data';
 import { getTvShowById } from '@/lib/tmdb';
@@ -44,6 +47,31 @@ const FORMAT_COLORS: Record<string, string> = {
     VHS: 'bg-red-500',
     Digital: 'bg-green-500',
 };
+
+function ShowDetailReactionSection({ collectionItemId, userId }: { collectionItemId: string; userId?: string }) {
+  const { playSound } = useSound();
+  const { reactions = [], toggleReaction } = useReactions('collection_item_id', collectionItemId);
+  const [pickerVisible, setPickerVisible] = useState(false);
+
+  if (!userId) return null;
+
+  return (
+    <View style={{ marginBottom: 16 }}>
+      <ReactionSummary
+        reactions={reactions}
+        currentUserId={userId}
+        onReact={(emoji) => toggleReaction({ userId, emoji })}
+        onShowPicker={() => setPickerVisible(true)}
+      />
+      <ReactionPicker
+        visible={pickerVisible}
+        onClose={() => setPickerVisible(false)}
+        onSelect={(emoji) => toggleReaction({ userId, emoji })}
+        currentReaction={reactions.find(r => r.user_id === userId)?.reaction_type}
+      />
+    </View>
+  );
+}
 
 export default function ShowDetailScreen() {
     const { id, fromStack, ownerId, from } = useLocalSearchParams<{ id: string; fromStack?: string; ownerId?: string; from?: string }>();
@@ -1235,6 +1263,8 @@ export default function ShowDetailScreen() {
                             initialReview={commentActiveItem.review}
                         />
                     )}
+                            <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold', fontFamily: 'SpaceMono', marginBottom: 4, letterSpacing: 2 }}>REACTIONS</Text>
+                            <ShowDetailReactionSection collectionItemId={commentActiveItem.id} userId={userId} />
                             <CommentSection collectionItemId={commentActiveItem.id} />
                         </View>
                     )}
