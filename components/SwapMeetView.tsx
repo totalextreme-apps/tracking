@@ -107,17 +107,6 @@ export function SwapMeetView({
   const [synopsis, setSynopsis] = useState('');
   const [synopsisLoading, setSynopsisLoading] = useState(false);
 
-  // Pre-select title from parent preview selection
-  useEffect(() => {
-    if (selectedSwapTitleKey && groupedTitles.length > 0) {
-      const match = groupedTitles.find(g => g.id === selectedSwapTitleKey);
-      if (match) {
-        setSelectedTitle(match);
-        setSelectedSwapTitleKey?.(null); // Clear
-      }
-    }
-  }, [selectedSwapTitleKey, groupedTitles]);
-
   // Load TMDB Synopsis when a title is clicked
   useEffect(() => {
     if (!selectedTitle) {
@@ -235,6 +224,17 @@ export function SwapMeetView({
 
     return Object.values(map);
   }, [swapItems]);
+
+  // Pre-select title from parent preview selection
+  useEffect(() => {
+    if (selectedSwapTitleKey && groupedTitles.length > 0) {
+      const match = groupedTitles.find(g => g.id === selectedSwapTitleKey);
+      if (match) {
+        setSelectedTitle(match);
+        setSelectedSwapTitleKey?.(null); // Clear
+      }
+    }
+  }, [selectedSwapTitleKey, groupedTitles]);
 
   // Filter Grouped Titles
   const filteredGroupedTitles = useMemo(() => {
