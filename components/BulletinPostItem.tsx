@@ -123,8 +123,8 @@ export function BulletinPostItem({ post, userId, idx, startEditing, setShowDelet
               <Image 
                 key={idx}
                 source={{ uri: seg.value }}
-                style={{ width: '100%', height: 180, borderRadius: 6, backgroundColor: '#eee', marginTop: 4, marginBottom: 4 }}
-                resizeMode="cover"
+                style={{ width: '100%', aspectRatio: 16 / 9, maxHeight: 220, borderRadius: 4, backgroundColor: 'rgba(0,0,0,0.05)', marginTop: 8, marginBottom: 8 }}
+                resizeMode="contain"
               />
             );
           }
