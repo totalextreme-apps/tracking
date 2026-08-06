@@ -543,69 +543,7 @@ export function StackCard({
                       {item.is_bootleg && <BootlegSticker size={30} />}
                     </View>
                   );
-<AnimatedPressable
-        onPress={handlePress}
-        onLongPress={() => isReadOnly ? setPickerVisible(true) : onLongPress?.(topItem)}
-        delayLongPress={500}
-        onPressIn={isWishlist ? undefined : onPressIn}
-        onPressOut={isWishlist ? undefined : onPressOut}
-        style={[
-          animatedStyle,
-          { width: width + 10, margin: 6 },
-        ]}
-      >
-        <View className="items-center" style={{ paddingTop: 10 }}>
-          <View style={{ width: width, height: posterContainerHeight, justifyContent: 'flex-end', alignItems: 'center' }}>
-            <View className="relative" style={{ width: width, height: containerHeight }}>
-              {/* Sticker Overlays */}
-              {primaryGenre && genreStickersEnabled && <GenreSticker genre={primaryGenre} />}
-              {isOnDisplay && !isWishlist && <StickerOverlay visible={isOnDisplay} size={40} />}
-              {topItem.for_sale && <SaleSticker visible={true} size={40} />}
-              {topItem.for_trade && <TradeSticker visible={true} size={40} />}
-              {isGrail && isWishlist && <GrailSticker visible={true} size={40} />}
-
-              {sorted.map((item, idx) => {
-                const transforms = getStackTransforms(idx);
-                const itemMedia = item.movies || item.shows;
-                const url = item.custom_poster_url || (itemMedia ? getPosterUrl(itemMedia.poster_path) : null);
-                
-                const itemStyle = {
-                  position: 'absolute' as const,
-                  left: transforms.left,
-                  top: transforms.top,
-                  transform: [{ rotate: transforms.rotate }],
-                  width: width,
-                  height: width / aspectRatio,
-                  zIndex: sorted.length - idx,
-                  borderWidth: (idx === 0 && isGrail && isWishlist) ? 2 : 1,
-                  borderColor: (idx === 0 && isGrail && isWishlist) ? '#ffd700' : 'rgba(255,255,255,0.15)',
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 6 },
-                  shadowOpacity: 0.8,
-                  shadowRadius: 8,
-                  elevation: 10,
-                };
-
-                if (item.format === 'VHS') {
-                  return <VHSCard key={item.id} posterUrl={url} isCustom={!!item.custom_poster_url} isBootleg={item.is_bootleg} style={itemStyle} />;
-                }
-                if (['DVD', 'BluRay', '4K'].includes(item.format)) {
-                  return <GlossyCard key={item.id} posterUrl={url} format={item.format as any} isCustom={!!item.custom_poster_url} isBootleg={item.is_bootleg} style={itemStyle} />;
-                }
-
-                return (
-                  <View key={item.id} className="absolute bg-neutral-900 rounded overflow-hidden" style={itemStyle}>
-                    {url ? (
-                      <Image source={{ uri: url }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
-                    ) : (
-                      <View className="flex-1 items-center justify-center">
-                        <FontAwesome name="film" size={width * 0.25} color="#222" />
-                      </View>
-                    )}
-                    {item.is_bootleg && <BootlegSticker size={30} />}
-                  </View>
-                );
-              })}
+                })}
             </View>
           </View>
           {renderInfoBox()}
