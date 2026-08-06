@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -8,7 +8,10 @@ import {
   TextInput, 
   ActivityIndicator, 
   StyleSheet, 
-  RefreshControl 
+  RefreshControl,
+  Modal,
+  ScrollView,
+  ImageBackground
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,6 +19,9 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { useSound } from '@/context/SoundContext';
+import { getMovieById, getTvShowById } from '@/lib/tmdb';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 
 interface SwapItem {
   id: string;
@@ -31,17 +37,24 @@ interface SwapItem {
   for_sale: boolean;
   for_trade: boolean;
   price: number | null;
+  notes: string | null;
   created_at: string;
   movies?: {
     id: number;
+    tmdb_id: number;
     title: string;
     poster_path: string | null;
+    backdrop_path: string | null;
+    release_date: string | null;
     genres: { id: number; name: string }[] | null;
   } | null;
   shows?: {
     id: number;
+    tmdb_id: number;
     name: string;
     poster_path: string | null;
+    backdrop_path: string | null;
+    first_air_date: string | null;
     genres: { id: number; name: string }[] | null;
   } | null;
   profiles?: {
@@ -49,6 +62,22 @@ interface SwapItem {
     username: string | null;
     avatar_url: string | null;
   } | null;
+}
+
+interface GroupedSwapTitle {
+  id: string; // `movie_${id}` or `show_${id}`
+  mediaType: 'movie' | 'tv';
+  tmdbId: number;
+  title: string;
+  posterPath: string | null;
+  backdropPath: string | null;
+  releaseYear: string;
+  genres: string[];
+  minPrice: number | null;
+  maxPrice: number | null;
+  hasTrade: boolean;
+  formats: string[];
+  listings: SwapItem[];
 }
 
 const FORMAT_COLORS: Record<string, string> = {
@@ -67,18 +96,49 @@ export function SwapMeetView() {
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | 'sale' | 'trade'>('all');
   const [formatFilter, setFormatFilter] = useState<string>('ALL');
+  
+  const [selectedTitle, setSelectedTitle] = useState<GroupedSwapTitle | null>(null);
+  const [synopsis, setSynopsis] = useState('');
+  const [synopsisLoading, setSynopsisLoading] = useState(false);
 
-  // Query: Fetch all swap meet items
+  // Load TMDB Synopsis when a title is clicked
+  useEffect(() => {
+    if (!selectedTitle) {
+      setSynopsis('');
+      return;
+    }
+
+    async function fetchSynopsis() {
+      setSynopsisLoading(true);
+      try {
+        if (selectedTitle.mediaType === 'movie') {
+          const details = await getMovieById(selectedTitle.tmdbId);
+          setSynopsis(details?.overview || 'No synopsis available.');
+        } else {
+          const details = await getTvShowById(selectedTitle.tmdbId);
+          setSynopsis(details?.overview || 'No synopsis available.');
+        }
+      } catch (err) {
+        console.error('Error fetching synopsis:', err);
+        setSynopsis('Synopsis unavailable.');
+      } finally {
+        setSynopsisLoading(false);
+      }
+    }
+
+    fetchSynopsis();
+  }, [selectedTitle]);
+
+  // Query: Fetch all listing items
   const { data: swapItems = [], isLoading, isRefetching, refetch } = useQuery<SwapItem[]>({
     queryKey: ['swap-meet-items'],
     queryFn: async () => {
-      // 1. Fetch items marked for sale or trade
       const { data: items, error: itemsError } = await supabase
         .from('collection_items')
         .select(`
           *,
-          movies (id, tmdb_id, title, poster_path, genres),
-          shows (id, tmdb_id, name, poster_path, genres)
+          movies (id, tmdb_id, title, poster_path, backdrop_path, release_date, genres),
+          shows (id, tmdb_id, name, poster_path, backdrop_path, first_air_date, genres)
         `)
         .or('for_sale.eq.true,for_trade.eq.true')
         .order('created_at', { ascending: false });
@@ -86,10 +146,7 @@ export function SwapMeetView() {
       if (itemsError) throw itemsError;
       if (!items || items.length === 0) return [];
 
-      // 2. Extract unique owner IDs
       const ownerIds = Array.from(new Set(items.map(i => i.user_id)));
-
-      // 3. Fetch profiles for owners
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('id, username, avatar_url')
@@ -97,7 +154,6 @@ export function SwapMeetView() {
 
       if (profilesError) throw profilesError;
 
-      // 4. Map profiles to items
       return items.map(item => ({
         ...item,
         profiles: profiles?.find(p => p.id === item.user_id) || null
@@ -105,151 +161,165 @@ export function SwapMeetView() {
     }
   });
 
-  // Filtered swap items
-  const filteredItems = useMemo(() => {
-    return swapItems.filter(item => {
-      const media = item.movies || item.shows;
-      if (!media) return false;
+  // Aggregation/Grouping Logic (In-Memory)
+  const groupedTitles = useMemo(() => {
+    const map: Record<string, GroupedSwapTitle> = {};
 
-      const title = (item.movies?.title || item.shows?.name || '').toLowerCase();
-      const edition = (item.edition || '').toLowerCase();
-      const matchesSearch = title.includes(searchQuery.toLowerCase()) || edition.includes(searchQuery.toLowerCase());
+    swapItems.forEach(item => {
+      const media = item.movies || item.shows;
+      if (!media) return;
+
+      const mediaType = item.movies ? 'movie' : 'tv';
+      const dbId = item.movie_id || item.show_id;
+      const key = `${mediaType}_${dbId}`;
+
+      const title = item.movies?.title || item.shows?.name || '';
+      const tmdbId = media.tmdb_id;
+      const posterPath = media.poster_path;
+      const backdropPath = media.backdrop_path;
+      
+      const rawDate = item.movies?.release_date || item.shows?.first_air_date || '';
+      const releaseYear = rawDate ? rawDate.substring(0, 4) : '';
+      const genres = (media.genres as any[])?.map(g => g.name) || [];
+
+      if (!map[key]) {
+        map[key] = {
+          id: key,
+          mediaType,
+          tmdbId,
+          title,
+          posterPath,
+          backdropPath,
+          releaseYear,
+          genres,
+          minPrice: null,
+          maxPrice: null,
+          hasTrade: false,
+          formats: [],
+          listings: [],
+        };
+      }
+
+      const g = map[key];
+      g.listings.push(item);
+
+      if (item.for_sale && item.price !== null) {
+        if (g.minPrice === null || item.price < g.minPrice) g.minPrice = item.price;
+        if (g.maxPrice === null || item.price > g.maxPrice) g.maxPrice = item.price;
+      }
+      if (item.for_trade) {
+        g.hasTrade = true;
+      }
+
+      if (!g.formats.includes(item.format)) {
+        g.formats.push(item.format);
+      }
+    });
+
+    return Object.values(map);
+  }, [swapItems]);
+
+  // Filter Grouped Titles
+  const filteredGroupedTitles = useMemo(() => {
+    return groupedTitles.filter(group => {
+      const matchesSearch = group.title.toLowerCase().includes(searchQuery.toLowerCase());
 
       const matchesType = 
         typeFilter === 'all' || 
-        (typeFilter === 'sale' && item.for_sale) || 
-        (typeFilter === 'trade' && item.for_trade);
+        (typeFilter === 'sale' && group.listings.some(l => l.for_sale)) || 
+        (typeFilter === 'trade' && group.listings.some(l => l.for_trade));
 
       const matchesFormat = 
         formatFilter === 'ALL' || 
-        item.format.toLowerCase() === formatFilter.toLowerCase();
+        group.formats.some(f => f.toLowerCase() === formatFilter.toLowerCase());
 
       return matchesSearch && matchesType && matchesFormat;
     });
-  }, [swapItems, searchQuery, typeFilter, formatFilter]);
+  }, [groupedTitles, searchQuery, typeFilter, formatFilter]);
 
-  const handleMessageUser = (item: SwapItem) => {
+  const handleContactSeller = (item: SwapItem) => {
     playSound('click');
     const title = item.movies?.title || item.shows?.name || 'this item';
     const prefillMessage = `Hey @${item.profiles?.username || 'member'}, I saw your copy of "${title}" (${item.format}) listed in The Swap Meet for ${item.for_sale ? `$${item.price?.toFixed(2)}` : 'trade'}. Is it still available?`;
     
+    setSelectedTitle(null); // Close modal
     router.push({
       pathname: `/(tabs)/profile/chat/${item.user_id}` as any,
       params: { prefill: prefillMessage }
     });
   };
 
-  const renderSwapCard = ({ item }: { item: SwapItem }) => {
-    const media = item.movies || item.shows;
-    const title = media ? (item.movies?.title || item.shows?.name) : 'Unknown Title';
-    const isOwner = item.user_id === currentUserId;
+  const renderTitleCard = ({ item }: { item: GroupedSwapTitle }) => {
+    const posterUrl = item.posterPath ? `https://image.tmdb.org/t/p/w300${item.posterPath}` : null;
     
-    const posterUrl = item.custom_poster_url || (media?.poster_path ? `https://image.tmdb.org/t/p/w300${media.poster_path}` : null);
+    // Compute display pricing
+    let priceLabel = '';
+    if (item.minPrice !== null) {
+      if (item.minPrice === item.maxPrice) {
+        priceLabel = `$${item.minPrice.toFixed(2)}`;
+      } else {
+        priceLabel = `$${item.minPrice.toFixed(2)} - $${item.maxPrice?.toFixed(2)}`;
+      }
+    }
     
-    const formatColor = FORMAT_COLORS[item.format] || '#737373';
-
     return (
-      <View style={styles.cardContainer}>
-        {/* Poster Wrapper */}
-        <Pressable 
-          onPress={() => {
-            playSound('click');
-            const targetType = item.movies ? 'movie' : 'show';
-            const targetId = item.movie_id || item.show_id;
-            router.push(`/(tabs)/${targetType}/${targetId}?ownerId=${item.user_id}`);
-          }}
-          style={styles.posterContainer}
-        >
+      <Pressable 
+        onPress={() => {
+          playSound('click');
+          setSelectedTitle(item);
+        }}
+        style={styles.cardContainer}
+      >
+        {/* Poster */}
+        <View style={styles.posterContainer}>
           {posterUrl ? (
             <Image source={{ uri: posterUrl }} style={styles.poster} />
           ) : (
             <View style={styles.placeholderPoster}>
-              <Ionicons name="film-outline" size={20} color="#525252" />
+              <Ionicons name="film-outline" size={24} color="#525252" />
             </View>
           )}
+        </View>
 
-          {/* Format Badge */}
-          <View style={[styles.formatBadge, { backgroundColor: formatColor }]}>
-            <Text style={styles.formatText}>{item.format.toUpperCase()}</Text>
-          </View>
-        </Pressable>
-
-        {/* Details Wrapper */}
+        {/* Details */}
         <View style={styles.detailsContainer}>
           <View>
-            <Text style={styles.cardTitle} numberOfLines={1}>{title}</Text>
-            {item.edition && <Text style={styles.cardSubtitle} numberOfLines={1}>{item.edition}</Text>}
-            {item.condition && (
-              <View style={styles.conditionRow}>
-                <Text style={styles.conditionLabel}>Condition: </Text>
-                <Text style={styles.conditionVal}>{item.condition}</Text>
-              </View>
-            )}
-            
-            {/* Listing Badges */}
-            <View style={styles.badgeRow}>
-              {item.for_sale && (
-                <View style={styles.saleBadge}>
-                  <Text style={styles.saleBadgeText}>
-                    FOR SALE {item.price !== null ? `$${item.price.toFixed(2)}` : ''}
-                  </Text>
+            <View style={styles.titleRow}>
+              <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
+              <Text style={styles.yearText}>({item.releaseYear})</Text>
+            </View>
+            <Text style={styles.genreList} numberOfLines={1}>{item.genres.join(' • ')}</Text>
+
+            {/* Copies Count & Available Formats */}
+            <View style={styles.formatRow}>
+              {item.formats.map(fmt => (
+                <View key={fmt} style={[styles.formatChip, { backgroundColor: FORMAT_COLORS[fmt] || '#737373' }]}>
+                  <Text style={styles.formatChipText}>{fmt.toUpperCase()}</Text>
                 </View>
+              ))}
+            </View>
+          </View>
+
+          {/* Footer stats */}
+          <View style={styles.cardFooter}>
+            <View style={styles.listingsCountRow}>
+              <Ionicons name="copy-outline" size={10} color="#737373" />
+              <Text style={styles.listingsCountText}>{item.listings.length} copies</Text>
+            </View>
+
+            <View style={styles.priceContainer}>
+              {priceLabel !== '' && (
+                <Text style={styles.minPriceText}>{priceLabel}</Text>
               )}
-              {item.for_trade && (
-                <View style={styles.tradeBadge}>
-                  <Text style={styles.tradeBadgeText}>TRADE</Text>
+              {item.hasTrade && (
+                <View style={styles.tradeBadgeSmall}>
+                  <Text style={styles.tradeBadgeTextSmall}>TRADE</Text>
                 </View>
               )}
             </View>
-            {item.notes && (
-              <Text style={styles.cardNotes} numberOfLines={2}>
-                {item.notes}
-              </Text>
-            )}
-          </View>
-
-          {/* Owner & Message/Edit Action */}
-          <View style={styles.footerRow}>
-            <Pressable 
-              onPress={() => router.push(`/profile/${item.user_id}`)}
-              style={styles.ownerInfo}
-            >
-              <View style={styles.avatar}>
-                {item.profiles?.avatar_url ? (
-                  <Image source={{ uri: item.profiles.avatar_url }} style={styles.avatarImg} />
-                ) : (
-                  <Ionicons name="person-circle" size={14} color="#737373" />
-                )}
-              </View>
-              <Text style={styles.ownerName} numberOfLines={1}>
-                @{item.profiles?.username || 'member'}
-              </Text>
-            </Pressable>
-
-            {isOwner ? (
-              <Pressable
-                onPress={() => {
-                  playSound('click');
-                  const targetType = item.movies ? 'movie' : 'show';
-                  const targetId = item.movie_id || item.show_id;
-                  router.push(`/(tabs)/${targetType}/${targetId}`);
-                }}
-                style={styles.editButton}
-              >
-                <Text style={styles.editButtonText}>EDIT</Text>
-              </Pressable>
-            ) : (
-              <Pressable
-                onPress={() => handleMessageUser(item)}
-                style={styles.messageButton}
-              >
-                <Ionicons name="chatbubble-ellipses" size={10} color="#000" />
-                <Text style={styles.messageButtonText}>CONTACT</Text>
-              </Pressable>
-            )}
           </View>
         </View>
-      </View>
+      </Pressable>
     );
   };
 
@@ -260,7 +330,7 @@ export function SwapMeetView() {
         <View style={styles.searchBar}>
           <Ionicons name="search" size={14} color="#737373" style={{ marginRight: 6 }} />
           <TextInput
-            placeholder="Search titles, editions..."
+            placeholder="Search Swap Meet titles..."
             placeholderTextColor="#525252"
             style={styles.searchInput}
             value={searchQuery}
@@ -274,7 +344,6 @@ export function SwapMeetView() {
         </View>
 
         <View style={styles.quickFilterRow}>
-          {/* Listing Types */}
           <View style={styles.btnGroup}>
             {(['all', 'sale', 'trade'] as const).map(t => (
               <Pressable
@@ -295,7 +364,6 @@ export function SwapMeetView() {
             ))}
           </View>
 
-          {/* Formats Selector */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.formatScroll}>
             {['ALL', '4K', 'BluRay', 'DVD', 'VHS', 'Digital'].map(fmt => (
               <Pressable
@@ -324,7 +392,7 @@ export function SwapMeetView() {
           <ActivityIndicator size="large" color="#f59e0b" />
           <Text style={styles.loadingText}>Opening swap bins...</Text>
         </View>
-      ) : filteredItems.length === 0 ? (
+      ) : filteredGroupedTitles.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Ionicons name="gift-outline" size={48} color="#262626" />
           <Text style={styles.emptyText}>Nothing listed in this section yet.</Text>
@@ -332,9 +400,9 @@ export function SwapMeetView() {
         </View>
       ) : (
         <FlatList
-          data={filteredItems}
+          data={filteredGroupedTitles}
           keyExtractor={item => item.id}
-          renderItem={renderSwapCard}
+          renderItem={renderTitleCard}
           contentContainerStyle={styles.listContent}
           refreshControl={
             <RefreshControl
@@ -345,6 +413,157 @@ export function SwapMeetView() {
           }
         />
       )}
+
+      {/* ─── DEDICATED TITLE LANDING MODAL ─── */}
+      <Modal
+        visible={!!selectedTitle}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setSelectedTitle(null)}
+      >
+        {selectedTitle && (
+          <View style={styles.modalRoot}>
+            {/* Glassmorphic overlay background */}
+            <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFillObject} />
+            
+            <View style={styles.modalContent}>
+              {/* Backdrop Header */}
+              <ImageBackground 
+                source={{ uri: selectedTitle.backdropPath ? `https://image.tmdb.org/t/p/w780${selectedTitle.backdropPath}` : 'https://images.unsplash.com/photo-1594909122845-11baa439b7bf?q=80&w=600' }}
+                style={styles.modalBackdrop}
+              >
+                <LinearGradient 
+                  colors={['rgba(0,0,0,0.1)', 'rgba(10,10,10,1)']}
+                  style={StyleSheet.absoluteFillObject}
+                />
+                <View style={styles.backdropHeader}>
+                  <Pressable 
+                    onPress={() => { playSound('click'); setSelectedTitle(null); }}
+                    style={styles.closeModalBtn}
+                  >
+                    <Ionicons name="close" size={20} color="#fff" />
+                  </Pressable>
+                </View>
+
+                {/* Title Info Header */}
+                <View style={styles.backdropFooter}>
+                  <Text style={styles.backdropTitle}>{selectedTitle.title}</Text>
+                  <Text style={styles.backdropYear}>{selectedTitle.releaseYear} • {selectedTitle.genres.join(' / ')}</Text>
+                </View>
+              </ImageBackground>
+
+              {/* Scrollable details */}
+              <ScrollView contentContainerStyle={styles.modalScroll}>
+                {/* Synopsis */}
+                <View style={styles.synopsisSection}>
+                  <Text style={styles.sectionHeader}>SYNOPSIS</Text>
+                  {synopsisLoading ? (
+                    <ActivityIndicator size="small" color="#f59e0b" style={{ padding: 12 }} />
+                  ) : (
+                    <Text style={styles.synopsisText}>{synopsis}</Text>
+                  )}
+                </View>
+
+                {/* Copies list */}
+                <View style={styles.copiesSection}>
+                  <Text style={styles.sectionHeader}>COMMUNITY COPIES AVAILABLE ({selectedTitle.listings.length})</Text>
+                  
+                  {selectedTitle.listings.map((item) => {
+                    const isOwner = item.user_id === currentUserId;
+                    const formatBg = FORMAT_COLORS[item.format] || '#737373';
+                    
+                    return (
+                      <View key={item.id} style={styles.copyRow}>
+                        <View style={styles.copyHeader}>
+                          {/* Format & Edition info */}
+                          <View style={styles.copyMeta}>
+                            <View style={[styles.formatLabelBadge, { backgroundColor: formatBg }]}>
+                              <Text style={styles.formatLabelText}>{item.format.toUpperCase()}</Text>
+                            </View>
+                            <Text style={styles.editionText} numberOfLines={1}>
+                              {item.edition || 'Standard Edition'}
+                            </Text>
+                          </View>
+
+                          {/* Price / Trade Label */}
+                          <View style={styles.copyPriceRow}>
+                            {item.for_sale && item.price !== null && (
+                              <Text style={styles.copyPriceVal}>${item.price.toFixed(2)}</Text>
+                            )}
+                            {item.for_trade && (
+                              <View style={styles.tradeBadgeMini}>
+                                <Text style={styles.tradeBadgeMiniText}>TRADE</Text>
+                              </View>
+                            )}
+                          </View>
+                        </View>
+
+                        {/* Copy specific details / Condition */}
+                        {item.condition && (
+                          <View style={styles.copyDetailsRow}>
+                            <Text style={styles.copyDetailsLabel}>Condition: </Text>
+                            <Text style={styles.copyDetailsVal}>{item.condition}</Text>
+                          </View>
+                        )}
+
+                        {/* User custom description/notes */}
+                        {item.notes && (
+                          <View style={styles.copyDescBox}>
+                            <Text style={styles.copyDescText}>{item.notes}</Text>
+                          </View>
+                        )}
+
+                        {/* Seller profile & message action */}
+                        <View style={styles.copyFooter}>
+                          <Pressable 
+                            onPress={() => {
+                              setSelectedTitle(null);
+                              router.push(`/profile/${item.user_id}`);
+                            }}
+                            style={styles.sellerRow}
+                          >
+                            <View style={styles.sellerAvatar}>
+                              {item.profiles?.avatar_url ? (
+                                <Image source={{ uri: item.profiles.avatar_url }} style={styles.sellerAvatarImg} />
+                              ) : (
+                                <Ionicons name="person-circle" size={14} color="#737373" />
+                              )}
+                            </View>
+                            <Text style={styles.sellerNameText}>@{item.profiles?.username || 'member'}</Text>
+                          </Pressable>
+
+                          {isOwner ? (
+                            <Pressable
+                              onPress={() => {
+                                playSound('click');
+                                setSelectedTitle(null);
+                                const targetType = item.movies ? 'movie' : 'show';
+                                const targetId = item.movie_id || item.show_id;
+                                router.push(`/(tabs)/${targetType}/${targetId}`);
+                              }}
+                              style={styles.copyEditBtn}
+                            >
+                              <Text style={styles.copyEditBtnText}>EDIT LISTING</Text>
+                            </Pressable>
+                          ) : (
+                            <Pressable
+                              onPress={() => handleContactSeller(item)}
+                              style={styles.copyMessageBtn}
+                            >
+                              <Ionicons name="chatbubble-ellipses" size={10} color="#000" />
+                              <Text style={styles.copyMessageBtnText}>CONTACT SELLER</Text>
+                            </Pressable>
+                          )}
+                        </View>
+                      </View>
+                    );
+                  })}
+                </View>
+              </ScrollView>
+            </View>
+          </View>
+        )}
+      </Modal>
     </View>
   );
 }
@@ -439,12 +658,12 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: 12,
-    paddingBottom: 160, // Make sure there is enough scrolling room
+    paddingBottom: 160,
   },
   cardContainer: {
     flexDirection: 'row',
     backgroundColor: '#0a0a0a',
-    borderRadius: 6,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#171717',
     padding: 10,
@@ -456,7 +675,6 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     overflow: 'hidden',
     backgroundColor: '#171717',
-    position: 'relative',
   },
   poster: {
     width: '100%',
@@ -468,161 +686,95 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  formatBadge: {
-    position: 'absolute',
-    top: 4,
-    left: 4,
-    paddingHorizontal: 4,
-    paddingVertical: 1,
-    borderRadius: 2,
-  },
-  formatText: {
-    color: '#000000',
-    fontFamily: 'SpaceMono',
-    fontSize: 6,
-    fontWeight: 'bold',
-  },
   detailsContainer: {
     flex: 1,
     marginLeft: 12,
     justifyContent: 'space-between',
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    flexWrap: 'wrap',
   },
   cardTitle: {
     fontFamily: 'SpaceMono',
     fontSize: 12,
     fontWeight: 'bold',
     color: '#ffffff',
+    flexShrink: 1,
   },
-  cardSubtitle: {
+  yearText: {
     fontFamily: 'SpaceMono',
-    fontSize: 9,
+    fontSize: 10,
+    color: '#525252',
+  },
+  genreList: {
+    fontFamily: 'SpaceMono',
+    fontSize: 8,
     color: '#737373',
     marginTop: 1,
   },
-  cardNotes: {
-    fontFamily: 'SpaceMono',
-    fontSize: 8,
-    color: '#a3a3a3',
-    marginTop: 4,
-    backgroundColor: '#171717',
-    paddingHorizontal: 6,
-    paddingVertical: 4,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: '#262626',
-  },
-  conditionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 3,
-  },
-  conditionLabel: {
-    fontFamily: 'SpaceMono',
-    fontSize: 8,
-    color: '#525252',
-  },
-  conditionVal: {
-    fontFamily: 'SpaceMono',
-    fontSize: 8,
-    color: '#f59e0b',
-  },
-  badgeRow: {
+  formatRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 4,
     marginTop: 6,
   },
-  saleBadge: {
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    borderColor: 'rgba(239, 68, 68, 0.3)',
-    borderWidth: 1,
-    borderRadius: 4,
+  formatChip: {
     paddingHorizontal: 5,
-    paddingVertical: 2,
+    paddingVertical: 1,
+    borderRadius: 2,
   },
-  saleBadgeText: {
-    color: '#ef4444',
+  formatChipText: {
+    color: '#000000',
     fontFamily: 'SpaceMono',
-    fontSize: 7,
+    fontSize: 6,
     fontWeight: 'bold',
   },
-  tradeBadge: {
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-    borderColor: 'rgba(16, 185, 129, 0.3)',
-    borderWidth: 1,
-    borderRadius: 4,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-  },
-  tradeBadgeText: {
-    color: '#10b981',
-    fontFamily: 'SpaceMono',
-    fontSize: 7,
-    fontWeight: 'bold',
-  },
-  footerRow: {
+  cardFooter: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 8,
     borderTopWidth: 1,
     borderColor: '#171717',
     paddingTop: 6,
+    marginTop: 8,
   },
-  ownerInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    marginRight: 8,
-  },
-  avatar: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: '#262626',
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 4,
-  },
-  avatarImg: {
-    width: '100%',
-    height: '100%',
-  },
-  ownerName: {
-    fontFamily: 'SpaceMono',
-    fontSize: 9,
-    color: '#737373',
-    fontWeight: 'bold',
-  },
-  messageButton: {
+  listingsCountRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#f59e0b',
-    borderRadius: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
   },
-  messageButtonText: {
+  listingsCountText: {
     fontFamily: 'SpaceMono',
     fontSize: 8,
-    fontWeight: 'bold',
-    color: '#000000',
+    color: '#737373',
   },
-  editButton: {
-    backgroundColor: '#262626',
-    borderRadius: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+  priceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  minPriceText: {
+    color: '#ef4444',
+    fontFamily: 'SpaceMono',
+    fontSize: 9,
+    fontWeight: 'bold',
+  },
+  tradeBadgeSmall: {
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    borderColor: 'rgba(16, 185, 129, 0.3)',
     borderWidth: 1,
-    borderColor: '#404040',
+    borderRadius: 3,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
   },
-  editButtonText: {
+  tradeBadgeTextSmall: {
+    color: '#10b981',
     fontFamily: 'SpaceMono',
-    fontSize: 8,
+    fontSize: 6,
     fontWeight: 'bold',
-    color: '#a3a3a3',
   },
   loadingContainer: {
     flex: 1,
@@ -655,5 +807,229 @@ const styles = StyleSheet.create({
     color: '#525252',
     textAlign: 'center',
     lineHeight: 14,
+  },
+  modalRoot: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#0a0a0a',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    height: '90%',
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#262626',
+  },
+  modalBackdrop: {
+    width: '100%',
+    height: 160,
+    justifyContent: 'space-between',
+    padding: 16,
+  },
+  backdropHeader: {
+    alignItems: 'flex-end',
+  },
+  closeModalBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backdropFooter: {
+    marginTop: 'auto',
+  },
+  backdropTitle: {
+    fontFamily: 'SpaceMono',
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  backdropYear: {
+    fontFamily: 'SpaceMono',
+    fontSize: 9,
+    color: '#a3a3a3',
+    marginTop: 2,
+  },
+  modalScroll: {
+    padding: 16,
+    paddingBottom: 80,
+  },
+  synopsisSection: {
+    marginBottom: 20,
+  },
+  sectionHeader: {
+    fontFamily: 'SpaceMono',
+    fontSize: 9,
+    fontWeight: 'bold',
+    color: '#f59e0b',
+    letterSpacing: 1.5,
+    marginBottom: 6,
+  },
+  synopsisText: {
+    fontFamily: 'SpaceMono',
+    fontSize: 10,
+    color: '#a3a3a3',
+    lineHeight: 14,
+  },
+  copiesSection: {
+    marginBottom: 20,
+  },
+  copyRow: {
+    backgroundColor: '#111',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#222',
+    padding: 12,
+    marginBottom: 12,
+  },
+  copyHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  copyMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  formatLabelBadge: {
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 2,
+  },
+  formatLabelText: {
+    color: '#000000',
+    fontFamily: 'SpaceMono',
+    fontSize: 7,
+    fontWeight: 'bold',
+  },
+  editionText: {
+    fontFamily: 'SpaceMono',
+    fontSize: 10,
+    color: '#fff',
+    fontWeight: 'bold',
+    flexShrink: 1,
+  },
+  copyPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  copyPriceVal: {
+    color: '#ef4444',
+    fontFamily: 'SpaceMono',
+    fontSize: 11,
+    fontWeight: 'bold',
+  },
+  tradeBadgeMini: {
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    borderColor: 'rgba(16, 185, 129, 0.3)',
+    borderWidth: 1,
+    borderRadius: 3,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+  },
+  tradeBadgeMiniText: {
+    color: '#10b981',
+    fontFamily: 'SpaceMono',
+    fontSize: 7,
+    fontWeight: 'bold',
+  },
+  copyDetailsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+  },
+  copyDetailsLabel: {
+    fontFamily: 'SpaceMono',
+    fontSize: 8,
+    color: '#525252',
+  },
+  copyDetailsVal: {
+    fontFamily: 'SpaceMono',
+    fontSize: 8,
+    color: '#f59e0b',
+  },
+  copyDescBox: {
+    backgroundColor: '#0a0a0a',
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#1f1f1f',
+    padding: 8,
+    marginTop: 8,
+  },
+  copyDescText: {
+    fontFamily: 'SpaceMono',
+    fontSize: 9,
+    color: '#737373',
+    lineHeight: 12,
+  },
+  copyFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 10,
+    borderTopWidth: 1,
+    borderColor: '#1a1a1a',
+    paddingTop: 8,
+  },
+  sellerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
+  },
+  sellerAvatar: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#262626',
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 4,
+  },
+  sellerAvatarImg: {
+    width: '100%',
+    height: '100%',
+  },
+  sellerNameText: {
+    fontFamily: 'SpaceMono',
+    fontSize: 8,
+    color: '#a3a3a3',
+    fontWeight: 'bold',
+  },
+  copyMessageBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#f59e0b',
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  copyMessageBtnText: {
+    fontFamily: 'SpaceMono',
+    fontSize: 8,
+    fontWeight: 'bold',
+    color: '#000000',
+  },
+  copyEditBtn: {
+    backgroundColor: '#262626',
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: '#404040',
+  },
+  copyEditBtnText: {
+    fontFamily: 'SpaceMono',
+    fontSize: 8,
+    color: '#a3a3a3',
+    fontWeight: 'bold',
   },
 });
