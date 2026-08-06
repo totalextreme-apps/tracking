@@ -1253,7 +1253,7 @@ export default function ShowDetailScreen() {
                     )}
                     
                     {commentActiveItem?.id && (
-                        <View className="px-4 md:px-8 mb-12">
+                        <View key={`copy-social-${commentActiveItem.id}`} className="px-4 md:px-8 mb-12">
                     {/* Rating and Review Section (Bulletin Board Sync) */}
                     {commentActiveItem && (
                         <ReviewSection 

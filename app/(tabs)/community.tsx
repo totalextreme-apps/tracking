@@ -708,6 +708,7 @@ export default function CommunityScreen() {
       {/* ══════════════════════════ ACTIVITY TAB ══════════════════════════ */}
       {activeTab === 'activity' && (
         <ScrollView
+          key="tab-activity"
           ref={scrollRef}
           style={{ flex: 1 }}
           contentContainerStyle={{ paddingBottom: 160 }}
@@ -1103,6 +1104,7 @@ export default function CommunityScreen() {
       {/* ══════════════════════════ DIRECTORY TAB ══════════════════════════ */}
       {activeTab === 'directory' && (
         <ScrollView
+          key="tab-directory"
           style={{ flex: 1 }}
           contentContainerStyle={{ paddingBottom: 160, paddingTop: 16 }}
           keyboardShouldPersistTaps="handled"
@@ -1188,7 +1190,7 @@ export default function CommunityScreen() {
 
       {/* ══════════════════════════ BOARD TAB ══════════════════════════ */}
       {activeTab === 'board' && (
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 160 }}>
+        <ScrollView key="tab-board" style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 160 }}>
           <ImageBackground source={{ uri: CORK_BG }} style={{ marginHorizontal: 16, borderRadius: 12, overflow: 'hidden', marginTop: 16, marginBottom: 16 }} imageStyle={{ opacity: 0.35, borderRadius: 12 }}>
             <View style={{ backgroundColor: 'rgba(100, 60, 20, 0.4)', padding: 14 }}>
               <View style={{ backgroundColor: 'rgba(255,249,220,0.92)', borderRadius: 4, padding: 12, marginBottom: 16, shadowColor: '#000', shadowOffset: { width: 2, height: 4 }, shadowOpacity: 0.4, shadowRadius: 6 }}>
@@ -1401,7 +1403,7 @@ export default function CommunityScreen() {
 
       {/* ══════════════════════════ INBOX TAB ══════════════════════════ */}
       {activeTab === 'inbox' && (
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 160 }}>
+        <ScrollView key="tab-inbox" style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 160 }}>
           <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: '#111', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <Text style={{ color: '#2a2a2a', fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold', letterSpacing: 2, textTransform: 'uppercase' }}>Direct Messages</Text>
             <Pressable onPress={() => { /* Wait, to create message we just switch to directory to click member */ setActiveTab('directory'); }} style={{ backgroundColor: '#111', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: '#f59e0b44' }}>
@@ -1434,7 +1436,7 @@ export default function CommunityScreen() {
 
       {/* ══════════════════════════ ALERTS TAB ══════════════════════════ */}
       {activeTab === 'alerts' && (
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 160 }}>
+        <ScrollView key="tab-alerts" style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 160 }}>
           <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: '#111', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <Text style={{ color: '#2a2a2a', fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold', letterSpacing: 2, textTransform: 'uppercase' }}>Alerts</Text>
             {notifications && notifications.some((n: any) => n.is_read) && (
@@ -1472,6 +1474,7 @@ export default function CommunityScreen() {
       )}
       {activeTab === 'swap' && (
         <SwapMeetView 
+          key="tab-swap"
           selectedSwapTitleKey={selectedSwapTitleKey}
           setSelectedSwapTitleKey={setSelectedSwapTitleKey}
         />

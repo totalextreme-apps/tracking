@@ -1650,7 +1650,7 @@ export default function MovieDetailScreen() {
                 )}
 
                 {commentActiveItem?.id && (
-                    <View className="px-4 md:px-8 mb-6">
+                    <View key={`copy-social-${commentActiveItem.id}`} className="px-4 md:px-8 mb-6">
                         <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold', fontFamily: 'SpaceMono', marginBottom: 4, letterSpacing: 2 }}>REACTIONS</Text>
                         <MovieDetailReactionSection collectionItemId={commentActiveItem.id} userId={userId} />
                         <CommentSection collectionItemId={commentActiveItem.id} />
