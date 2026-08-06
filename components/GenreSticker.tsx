@@ -41,8 +41,11 @@ export function GenreSticker({ genre, size = 36 }: GenreStickerProps) {
   if (!genre) return null;
 
   const normalizedGenre = genre.trim();
-  const colors = genreColors[normalizedGenre] || { bg: '#737373', text: '#ffffff' };
-  const displayName = (displayNameMap[normalizedGenre] || normalizedGenre).toUpperCase();
+  const matchedColorKey = Object.keys(genreColors).find(k => k.toLowerCase() === normalizedGenre.toLowerCase());
+  const colors = (matchedColorKey ? genreColors[matchedColorKey] : null) || { bg: '#737373', text: '#ffffff' };
+  
+  const matchedDisplayKey = Object.keys(displayNameMap).find(k => k.toLowerCase() === normalizedGenre.toLowerCase());
+  const displayName = (matchedDisplayKey ? displayNameMap[matchedDisplayKey] : normalizedGenre).toUpperCase();
 
   // Fine-tuned font sizes to ensure all text fits on single line inside size 36 circle
   const getFontSize = (text: string) => {

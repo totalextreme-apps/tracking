@@ -14,7 +14,7 @@ export function useCollection(userId: string | undefined) {
         const to = from + 999;
         const { data, error } = await supabase
           .from('collection_items')
-          .select(`*, movies (id, tmdb_id, title, poster_path, backdrop_path, release_date, primary_color, genres, franchise, franchise_order), shows (id, tmdb_id, name, poster_path, backdrop_path, first_air_date, primary_color, genres, franchise, franchise_order)`)
+          .select(`*, movies (id, tmdb_id, title, poster_path, backdrop_path, release_date, primary_color, genres, franchise, franchise_order, custom_genre, sorting_tags), shows (id, tmdb_id, name, poster_path, backdrop_path, first_air_date, primary_color, genres, franchise, franchise_order, custom_genre, sorting_tags)`)
           .eq('user_id', userId)
           .order('display_order', { ascending: true })
           .order('grail_order', { ascending: true })
@@ -852,9 +852,10 @@ export function useUpdateMovieFranchise(userId: string | undefined) {
         .eq('id', cleanMovieId);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['collection', userId] });
       queryClient.invalidateQueries({ queryKey: ['collection'] });
+      queryClient.invalidateQueries({ queryKey: ['movies-db-detail', Number(variables.movieId)] });
     }
   });
 }
@@ -873,9 +874,10 @@ export function useUpdateShowFranchise(userId: string | undefined) {
         .eq('id', cleanShowId);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['collection', userId] });
       queryClient.invalidateQueries({ queryKey: ['collection'] });
+      queryClient.invalidateQueries({ queryKey: ['shows-db-detail', Number(variables.showId)] });
     }
   });
 }
