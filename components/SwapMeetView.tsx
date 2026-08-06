@@ -59,7 +59,7 @@ const FORMAT_COLORS: Record<string, string> = {
   'Digital': '#10b981',  // Green
 };
 
-export default function SwapMeetScreen() {
+export function SwapMeetView() {
   const router = useRouter();
   const { userId: currentUserId } = useAuth();
   const { playSound } = useSound();
@@ -164,7 +164,7 @@ export default function SwapMeetScreen() {
             <Image source={{ uri: posterUrl }} style={styles.poster} />
           ) : (
             <View style={styles.placeholderPoster}>
-              <Ionicons name="film-outline" size={24} color="#525252" />
+              <Ionicons name="film-outline" size={20} color="#525252" />
             </View>
           )}
 
@@ -213,7 +213,7 @@ export default function SwapMeetScreen() {
                 {item.profiles?.avatar_url ? (
                   <Image source={{ uri: item.profiles.avatar_url }} style={styles.avatarImg} />
                 ) : (
-                  <Ionicons name="person-circle" size={16} color="#737373" />
+                  <Ionicons name="person-circle" size={14} color="#737373" />
                 )}
               </View>
               <Text style={styles.ownerName} numberOfLines={1}>
@@ -250,12 +250,6 @@ export default function SwapMeetScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>THE SWAP MEET</Text>
-        <Text style={styles.headerSubtitle}>App-wide Listings & Tape Trades</Text>
-      </View>
-
       {/* Search and Filters */}
       <View style={styles.filterSection}>
         <View style={styles.searchBar}>
@@ -354,28 +348,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000000',
-    paddingBottom: 85, // Avoid tab bar overlay
-  },
-  header: {
-    paddingHorizontal: 16,
-    paddingTop: 60,
-    paddingBottom: 12,
-    backgroundColor: '#0a0a0a',
-    borderBottomWidth: 1,
-    borderColor: '#171717',
-  },
-  headerTitle: {
-    fontFamily: 'SpaceMono',
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#f59e0b', // Amber theme
-    letterSpacing: 2,
-  },
-  headerSubtitle: {
-    fontFamily: 'SpaceMono',
-    fontSize: 10,
-    color: '#a3a3a3',
-    marginTop: 2,
   },
   filterSection: {
     padding: 12,
@@ -462,6 +434,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: 12,
+    paddingBottom: 160, // Make sure there is enough scrolling room
   },
   cardContainer: {
     flexDirection: 'row',

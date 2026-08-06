@@ -38,10 +38,11 @@ import { searchMedia, TmdbMediaResult, getMovieById, getTvShowById } from '@/lib
 import { BulletinPostItem } from '@/components/BulletinPostItem';
 import { MemberCard } from '@/components/MemberCard';
 import { ReorderTopFiveModal } from '@/components/ReorderTopFiveModal';
+import { SwapMeetView } from '@/components/SwapMeetView';
 
 const CORK_BG = 'https://www.transparenttextures.com/patterns/cork-board.png';
 
-type Tab = 'activity' | 'directory' | 'board' | 'inbox' | 'alerts';
+type Tab = 'activity' | 'directory' | 'board' | 'inbox' | 'alerts' | 'swap';
 
 function PostCommentSection({ postId }: { postId: string }) {
   const router = useRouter();
@@ -529,6 +530,7 @@ export default function CommunityScreen() {
   const tabs = [
     { key: 'profile', label: 'Profile' },
     { key: 'board', label: 'Board' },
+    { key: 'swap', label: 'Swap Meet' },
     { key: 'activity', label: 'Activity' },
     { key: 'directory', label: 'Directory' },
     { key: 'inbox', label: 'Inbox' },
@@ -1310,6 +1312,9 @@ export default function CommunityScreen() {
             ))
           )}
         </ScrollView>
+      )}
+      {activeTab === 'swap' && (
+        <SwapMeetView />
       )}
       <ReorderTopFiveModal
         visible={reorderTopFiveVisible}
