@@ -109,19 +109,21 @@ export function SwapMeetView({
 
   // Load TMDB Synopsis when a title is clicked
   useEffect(() => {
-    if (!selectedTitle) {
+    const title = selectedTitle;
+    if (!title) {
       setSynopsis('');
       return;
     }
 
     async function fetchSynopsis() {
+      if (!title) return;
       setSynopsisLoading(true);
       try {
-        if (selectedTitle.mediaType === 'movie') {
-          const details = await getMovieById(selectedTitle.tmdbId);
+        if (title.mediaType === 'movie') {
+          const details = await getMovieById(title.tmdbId);
           setSynopsis(details?.overview || 'No synopsis available.');
         } else {
-          const details = await getTvShowById(selectedTitle.tmdbId);
+          const details = await getTvShowById(title.tmdbId);
           setSynopsis(details?.overview || 'No synopsis available.');
         }
       } catch (err) {
@@ -152,7 +154,7 @@ export function SwapMeetView({
       if (itemsError) throw itemsError;
       if (!items || items.length === 0) return [];
 
-      const ownerIds = Array.from(new Set(items.map(i => i.user_id)));
+      const ownerIds = Array.from(new Set(items.map((i: any) => i.user_id)));
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('id, username, avatar_url')
@@ -160,9 +162,9 @@ export function SwapMeetView({
 
       if (profilesError) throw profilesError;
 
-      return items.map(item => ({
+      return items.map((item: any) => ({
         ...item,
-        profiles: profiles?.find(p => p.id === item.user_id) || null
+        profiles: profiles?.find((p: any) => p.id === item.user_id) || null
       }));
     }
   });

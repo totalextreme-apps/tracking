@@ -255,14 +255,6 @@ export function StackCard({
             </View>
           )}
         </View>
-        {userId && isReadOnly && (
-          <ReactionSummary
-            reactions={reactions}
-            currentUserId={userId}
-            onReact={(emoji) => toggleReaction({ userId, emoji })}
-            onShowPicker={() => setPickerVisible(true)}
-          />
-        )}
       </View>
     );
   };
@@ -547,6 +539,14 @@ export function StackCard({
             </View>
           </View>
           {renderInfoBox()}
+          {userId && isReadOnly && (
+            <ReactionSummary
+              reactions={reactions}
+              currentUserId={userId}
+              onReact={(emoji) => toggleReaction({ userId, emoji })}
+              onShowPicker={() => setPickerVisible(true)}
+            />
+          )}
         </View>
         {userId && isReadOnly && (
           <ReactionPicker
@@ -624,6 +624,14 @@ export function StackCard({
             </View>
           </View>
           {renderInfoBox()}
+          {userId && isReadOnly && (
+            <ReactionSummary
+              reactions={reactions}
+              currentUserId={userId}
+              onReact={(emoji) => toggleReaction({ userId, emoji })}
+              onShowPicker={() => setPickerVisible(true)}
+            />
+          )}
         </View>
         {userId && isReadOnly && (
           <ReactionPicker
@@ -715,6 +723,14 @@ export function StackCard({
           </View>
         </View>
         {renderInfoBox()}
+        {userId && isReadOnly && (
+          <ReactionSummary
+            reactions={reactions}
+            currentUserId={userId}
+            onReact={(emoji) => toggleReaction({ userId, emoji })}
+            onShowPicker={() => setPickerVisible(true)}
+          />
+        )}
         
         {/* Digital Provider Badge - ONLY show if exists and is not just "Digital" */}
         {topItem.digital_provider && topItem.digital_provider !== 'Digital' && (
