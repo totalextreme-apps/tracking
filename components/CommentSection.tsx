@@ -26,6 +26,10 @@ export function CommentSection({ collectionItemId }: CommentSectionProps) {
             onSuccess: () => {
                 setCommentText('');
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            },
+            onError: (err: any) => {
+                console.error('Error posting comment:', err);
+                Alert.alert('Error', err.message || 'Failed to post comment');
             }
         });
     };
@@ -37,6 +41,10 @@ export function CommentSection({ collectionItemId }: CommentSectionProps) {
                 setEditingCommentId(null);
                 setEditText('');
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            },
+            onError: (err: any) => {
+                console.error('Error updating comment:', err);
+                Alert.alert('Error', err.message || 'Failed to update comment');
             }
         });
     };
@@ -50,7 +58,12 @@ export function CommentSection({ collectionItemId }: CommentSectionProps) {
                 { 
                     text: "Delete", 
                     style: "destructive", 
-                    onPress: () => deleteMutation.mutate(id) 
+                    onPress: () => deleteMutation.mutate(id, {
+                        onError: (err: any) => {
+                            console.error('Error deleting comment:', err);
+                            Alert.alert('Error', err.message || 'Failed to delete comment');
+                        }
+                    }) 
                 }
             ]
         );

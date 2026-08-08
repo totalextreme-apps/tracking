@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, ActivityIndicator, Image } from 'react-native';
+import { View, Text, TextInput, Pressable, ActivityIndicator, Image, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
 import { usePostComments, useCreatePostComment } from '@/hooks/useSocial';
@@ -22,6 +22,10 @@ export function PostCommentSection({ postId }: PostCommentSectionProps) {
             onSuccess: () => {
                 setCommentText('');
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            },
+            onError: (err: any) => {
+                console.error('Error posting comment:', err);
+                Alert.alert('Error', err.message || 'Failed to post comment');
             }
         });
     };

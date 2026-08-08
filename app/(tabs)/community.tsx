@@ -88,6 +88,10 @@ function ItemCommentSectionInline({ collectionItemId }: { collectionItemId: stri
         setText('');
         playSound('click');
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      },
+      onError: (err: any) => {
+        console.error('Error posting comment:', err);
+        Alert.alert('Error', err.message || 'Failed to post comment');
       }
     });
   };
@@ -153,6 +157,10 @@ function PostCommentSection({ postId }: { postId: string }) {
       onSuccess: () => {
         setText('');
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      },
+      onError: (err: any) => {
+        console.error('Error posting comment:', err);
+        Alert.alert('Error', err.message || 'Failed to post comment');
       }
     });
   };
