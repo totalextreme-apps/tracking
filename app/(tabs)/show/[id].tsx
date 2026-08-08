@@ -147,6 +147,22 @@ export default function ShowDetailScreen() {
     const logWatchEventMutation = useLogWatchEvent(userId);
     const decrementWatchEventMutation = useDecrementWatchEvent(userId);
 
+    const genresInUse = useMemo(() => {
+        const set = new Set<string>();
+        collection?.forEach((item: any) => {
+            const media = item.movies || item.shows;
+            media?.genres?.forEach((g: any) => {
+                if (g?.name) set.add(g.name);
+            });
+            if (media?.custom_genre) {
+                set.add(media.custom_genre);
+            }
+        });
+        const fallbackGenres = ['Action', 'Adventure', 'Animation', 'Comedy', 'Crime', 'Documentary', 'Drama', 'Family', 'Fantasy', 'History', 'Horror', 'Music', 'Mystery', 'Romance', 'Science Fiction', 'Thriller', 'War', 'Western'];
+        fallbackGenres.forEach(g => set.add(g));
+        return Array.from(set).sort();
+    }, [collection]);
+
     const handleLogWatch = async () => {
         if (!activeItem) return;
         playSound('peel');
@@ -520,21 +536,6 @@ export default function ShowDetailScreen() {
     const sortingTagsValue = localSortingTags !== undefined ? localSortingTags : (displayShow?.sorting_tags || '');
     const customGenreValue = localCustomGenre !== undefined ? localCustomGenre : (displayShow?.custom_genre || '');
 
-    const genresInUse = useMemo(() => {
-        const set = new Set<string>();
-        collection?.forEach((item: any) => {
-            const media = item.movies || item.shows;
-            media?.genres?.forEach((g: any) => {
-                if (g?.name) set.add(g.name);
-            });
-            if (media?.custom_genre) {
-                set.add(media.custom_genre);
-            }
-        });
-        const fallbackGenres = ['Action', 'Adventure', 'Animation', 'Comedy', 'Crime', 'Documentary', 'Drama', 'Family', 'Fantasy', 'History', 'Horror', 'Music', 'Mystery', 'Romance', 'Science Fiction', 'Thriller', 'War', 'Western'];
-        fallbackGenres.forEach(g => set.add(g));
-        return Array.from(set).sort();
-    }, [collection]);
     const backdropUrl = getBackdropUrl(displayShow.backdrop_path);
     const posterUrl = getPosterUrl(displayShow.poster_path);
 
@@ -1257,7 +1258,7 @@ export default function ShowDetailScreen() {
                     {/* Rating and Review Section (Bulletin Board Sync) */}
                     {commentActiveItem && (
                         <ReviewSection 
-                            showId={activeItem.id}
+                            showId={activeItem?.show_id}
                             collectionItemId={commentActiveItem.id}
                             initialRating={commentActiveItem.rating}
                             initialReview={commentActiveItem.review}

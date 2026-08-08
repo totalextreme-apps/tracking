@@ -161,6 +161,22 @@ export default function MovieDetailScreen() {
     const logWatchEventMutation = useLogWatchEvent(userId);
     const decrementWatchEventMutation = useDecrementWatchEvent(userId);
 
+    const genresInUse = useMemo(() => {
+        const set = new Set<string>();
+        collection?.forEach((item: any) => {
+            const media = item.movies || item.shows;
+            media?.genres?.forEach((g: any) => {
+                if (g?.name) set.add(g.name);
+            });
+            if (media?.custom_genre) {
+                set.add(media.custom_genre);
+            }
+        });
+        const fallbackGenres = ['Action', 'Adventure', 'Animation', 'Comedy', 'Crime', 'Documentary', 'Drama', 'Family', 'Fantasy', 'History', 'Horror', 'Music', 'Mystery', 'Romance', 'Science Fiction', 'Thriller', 'War', 'Western'];
+        fallbackGenres.forEach(g => set.add(g));
+        return Array.from(set).sort();
+    }, [collection]);
+
     const handleLogWatch = async () => {
         if (!activeItem) return;
         playSound('peel');
@@ -564,21 +580,6 @@ export default function MovieDetailScreen() {
     const sortingTagsValue = localSortingTags !== undefined ? localSortingTags : (displayMovie?.sorting_tags || '');
     const customGenreValue = localCustomGenre !== undefined ? localCustomGenre : (displayMovie?.custom_genre || '');
 
-    const genresInUse = useMemo(() => {
-        const set = new Set<string>();
-        collection?.forEach((item: any) => {
-            const media = item.movies || item.shows;
-            media?.genres?.forEach((g: any) => {
-                if (g?.name) set.add(g.name);
-            });
-            if (media?.custom_genre) {
-                set.add(media.custom_genre);
-            }
-        });
-        const fallbackGenres = ['Action', 'Adventure', 'Animation', 'Comedy', 'Crime', 'Documentary', 'Drama', 'Family', 'Fantasy', 'History', 'Horror', 'Music', 'Mystery', 'Romance', 'Science Fiction', 'Thriller', 'War', 'Western'];
-        fallbackGenres.forEach(g => set.add(g));
-        return Array.from(set).sort();
-    }, [collection]);
 
     // Resolve movie cast & director
     const resolvedCast = displayMovie?.movie_cast || (tmdbMovie?.credits?.cast ? [
