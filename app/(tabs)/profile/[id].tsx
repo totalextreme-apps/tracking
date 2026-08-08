@@ -20,7 +20,7 @@ type TabType = 'on-display' | 'grails' | 'collection' | 'wishlist' | 'bin' | 'an
 export type SortOption = 'recent' | 'title' | 'release' | 'rating' | 'format' | 'value';
 
 export default function UserProfileScreen() {
-  const { id, from } = useLocalSearchParams<{ id: string; from?: string }>();
+  const { id, from, tab } = useLocalSearchParams<{ id: string; from?: string; tab?: TabType }>();
   const { userId: currentUserId } = useAuth();
   const router = useRouter();
 
@@ -36,7 +36,13 @@ export default function UserProfileScreen() {
   const updateProfileCommentMutation = useUpdateProfileComment(currentUserId);
   const deleteProfileCommentMutation = useDeleteProfileComment(currentUserId);
   
-  const [activeTab, setActiveTab] = useState<TabType>('on-display');
+  const [activeTab, setActiveTab] = useState<TabType>(tab || 'on-display');
+
+  React.useEffect(() => {
+    if (tab) {
+      setActiveTab(tab);
+    }
+  }, [tab]);
   const [sortBy, setSortBy] = useState<SortOption>('recent');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [searchQuery, setSearchQuery] = useState('');
@@ -316,7 +322,7 @@ export default function UserProfileScreen() {
         <Pressable 
             onPress={() => {
                 Share.share({
-                    message: `Check out ${profile?.username || 'this member'}'s collection on Tracking!\n\nhttps://mediatracking.app/profile/${id}`,
+                    message: `Check out ${profile?.username || 'this member'}'s collection on Tracking!\n\nhttps://mediatracking.app/profile/${id}?tab=${activeTab}`,
                 });
             }} 
             className="p-2"
@@ -572,7 +578,28 @@ export default function UserProfileScreen() {
                       </Pressable>
                     )}
                     <Pressable 
-                      onPress={() => Share.share({ message: `Check out ${profile.username}'s On Display items:\n\n` + onDisplayItems.map((i: any, idx: number) => `${idx + 1}. ${i.movies?.title || i.shows?.name}`).join('\n') + `\n\nView full collection: https://mediatracking.app/profile/${id}` })}
+                      onPress={() => {
+                        const itemsText = onDisplayItems.map((i: any, idx: number) => `${idx + 1}. ${i.movies?.title || i.shows?.name}`).join('\n');
+                        const shareUrl = `https://mediatracking.app/profile/${id}?tab=on-display`;
+                        Alert.alert(
+                          "Share On Display",
+                          "Choose how you want to share:",
+                          [
+                            {
+                              text: "Share Link (App Layout)",
+                              onPress: () => Share.share({ message: `Check out ${profile.username}'s On Display items on Tracking!\n\n${shareUrl}` })
+                            },
+                            {
+                              text: "Share Plain Text List",
+                              onPress: () => Share.share({ message: `Check out ${profile.username}'s On Display items:\n\n${itemsText}\n\nView full collection: ${shareUrl}` })
+                            },
+                            {
+                              text: "Cancel",
+                              style: "cancel"
+                            }
+                          ]
+                        );
+                      }}
                       className="absolute right-0 p-2"
                     >
                       <Ionicons name="share-outline" size={16} color="#f59e0b" />
@@ -613,7 +640,28 @@ export default function UserProfileScreen() {
                       </Pressable>
                     )}
                     <Pressable 
-                      onPress={() => Share.share({ message: `Check out ${profile.username}'s Grails:\n\n` + grails.map((i: any, idx: number) => `${idx + 1}. ${i.movies?.title || i.shows?.name}`).join('\n') + `\n\nView full collection: https://mediatracking.app/profile/${id}` })}
+                      onPress={() => {
+                        const itemsText = grails.map((i: any, idx: number) => `${idx + 1}. ${i.movies?.title || i.shows?.name}`).join('\n');
+                        const shareUrl = `https://mediatracking.app/profile/${id}?tab=grails`;
+                        Alert.alert(
+                          "Share Grails",
+                          "Choose how you want to share:",
+                          [
+                            {
+                              text: "Share Link (App Layout)",
+                              onPress: () => Share.share({ message: `Check out ${profile.username}'s Grails on Tracking!\n\n${shareUrl}` })
+                            },
+                            {
+                              text: "Share Plain Text List",
+                              onPress: () => Share.share({ message: `Check out ${profile.username}'s Grails:\n\n${itemsText}\n\nView full collection: ${shareUrl}` })
+                            },
+                            {
+                              text: "Cancel",
+                              style: "cancel"
+                            }
+                          ]
+                        );
+                      }}
                       className="absolute right-0 p-2"
                     >
                       <Ionicons name="share-outline" size={16} color="#f59e0b" />
@@ -645,7 +693,28 @@ export default function UserProfileScreen() {
                   <View className="flex-row items-center justify-center mb-4 relative">
                     <Text className="text-white font-mono text-xs uppercase tracking-widest">COLLECTION / {stackedCollection.length}</Text>
                     <Pressable 
-                      onPress={() => Share.share({ message: `Check out ${profile.username}'s Collection:\n\n` + stackedCollection.map((s: any, idx: number) => `${idx + 1}. ${s[0].movies?.title || s[0].shows?.name}`).join('\n') + `\n\nView full collection: https://mediatracking.app/profile/${id}` })}
+                      onPress={() => {
+                        const itemsText = stackedCollection.map((s: any, idx: number) => `${idx + 1}. ${s[0].movies?.title || s[0].shows?.name}`).join('\n');
+                        const shareUrl = `https://mediatracking.app/profile/${id}?tab=collection`;
+                        Alert.alert(
+                          "Share Collection",
+                          "Choose how you want to share:",
+                          [
+                            {
+                              text: "Share Link (App Layout)",
+                              onPress: () => Share.share({ message: `Check out ${profile.username}'s Collection on Tracking!\n\n${shareUrl}` })
+                            },
+                            {
+                              text: "Share Plain Text List",
+                              onPress: () => Share.share({ message: `Check out ${profile.username}'s Collection:\n\n${itemsText}\n\nView full collection: ${shareUrl}` })
+                            },
+                            {
+                              text: "Cancel",
+                              style: "cancel"
+                            }
+                          ]
+                        );
+                      }}
                       className="absolute right-0 p-2"
                     >
                       <Ionicons name="share-outline" size={16} color="#f59e0b" />
@@ -695,7 +764,28 @@ export default function UserProfileScreen() {
                   <View className="flex-row items-center justify-center mb-4 relative">
                     <Text className="text-white font-mono text-xs uppercase tracking-widest">WANTED / {stackedWishlist.length}</Text>
                     <Pressable 
-                      onPress={() => Share.share({ message: `Check out ${profile.username}'s Wishlist:\n\n` + stackedWishlist.map((s: any, idx: number) => `${idx + 1}. ${s[0].movies?.title || s[0].shows?.name}`).join('\n') + `\n\nView full wishlist: https://mediatracking.app/profile/${id}` })}
+                      onPress={() => {
+                        const itemsText = stackedWishlist.map((s: any, idx: number) => `${idx + 1}. ${s[0].movies?.title || s[0].shows?.name}`).join('\n');
+                        const shareUrl = `https://mediatracking.app/profile/${id}?tab=wishlist`;
+                        Alert.alert(
+                          "Share Wishlist",
+                          "Choose how you want to share:",
+                          [
+                            {
+                              text: "Share Link (App Layout)",
+                              onPress: () => Share.share({ message: `Check out ${profile.username}'s Wishlist on Tracking!\n\n${shareUrl}` })
+                            },
+                            {
+                              text: "Share Plain Text List",
+                              onPress: () => Share.share({ message: `Check out ${profile.username}'s Wishlist:\n\n${itemsText}\n\nView full wishlist: ${shareUrl}` })
+                            },
+                            {
+                              text: "Cancel",
+                              style: "cancel"
+                            }
+                          ]
+                        );
+                      }}
                       className="absolute right-0 p-2"
                     >
                       <Ionicons name="share-outline" size={16} color="#f59e0b" />
@@ -789,7 +879,28 @@ export default function UserProfileScreen() {
                   <View className="flex-row items-center justify-center mb-4 relative">
                     <Text className="text-white font-mono text-xs uppercase tracking-widest">THE BIN / {binItems.length}</Text>
                     <Pressable 
-                      onPress={() => Share.share({ message: `Check out what ${profile.username} is selling/trading:\n\n` + binItems.map((i: any, idx: number) => `${idx + 1}. ${i.movies?.title || i.shows?.name}`).join('\n') + `\n\nBrowse shop: https://mediatracking.app/profile/${id}` })}
+                      onPress={() => {
+                        const itemsText = binItems.map((i: any, idx: number) => `${idx + 1}. ${i.movies?.title || i.shows?.name}`).join('\n');
+                        const shareUrl = `https://mediatracking.app/profile/${id}?tab=bin`;
+                        Alert.alert(
+                          "Share Shop/Bin",
+                          "Choose how you want to share:",
+                          [
+                            {
+                              text: "Share Link (App Layout)",
+                              onPress: () => Share.share({ message: `Check out what ${profile.username} is selling/trading on Tracking!\n\n${shareUrl}` })
+                            },
+                            {
+                              text: "Share Plain Text List",
+                              onPress: () => Share.share({ message: `Check out what ${profile.username} is selling/trading:\n\n${itemsText}\n\nBrowse shop: ${shareUrl}` })
+                            },
+                            {
+                              text: "Cancel",
+                              style: "cancel"
+                            }
+                          ]
+                        );
+                      }}
                       className="absolute right-0 p-2"
                     >
                       <Ionicons name="share-outline" size={16} color="#f59e0b" />
