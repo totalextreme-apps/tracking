@@ -20,6 +20,8 @@ import {
   useUpdatePost,
   usePostComments,
   useCreatePostComment,
+  useItemComments,
+  useCreateComment,
   useMarketplaceFeed,
   useAllUsers,
   useDeleteConversation,
@@ -68,6 +70,71 @@ function MovieReactionSection({ collectionItemId, userId }: { collectionItemId: 
         onSelect={(emoji) => toggleReaction({ userId, emoji })}
         currentReaction={reactions.find(r => r.user_id === userId)?.reaction_type}
       />
+    </View>
+  );
+}
+
+function ItemCommentSectionInline({ collectionItemId }: { collectionItemId: string }) {
+  const { userId } = useAuth();
+  const { playSound } = useSound();
+  const { data: comments, isLoading } = useItemComments(collectionItemId);
+  const createComment = useCreateComment(userId);
+  const [text, setText] = useState('');
+
+  const handleSend = () => {
+    if (!text.trim()) return;
+    createComment.mutate({ collectionItemId, content: text.trim() }, {
+      onSuccess: () => {
+        setText('');
+        playSound('click');
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    });
+  };
+
+  if (!userId) return null;
+
+  return (
+    <View style={{ marginTop: 8, backgroundColor: '#0f0f0f', borderRadius: 8, padding: 8, borderWidth: 1, borderColor: '#1f1f1f' }}>
+      {isLoading ? (
+        <ActivityIndicator size="small" color="#f59e0b" style={{ marginVertical: 8 }} />
+      ) : (
+        comments && comments.length > 0 && (
+          <View style={{ marginBottom: 8, gap: 6 }}>
+            {comments.map((c: any) => (
+              <View key={c.id} style={{ borderLeftWidth: 1, borderLeftColor: '#f59e0b44', paddingLeft: 8 }}>
+                <Text style={{ color: '#aaa', fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold' }}>
+                  @{c.profiles?.username || 'member'}:
+                </Text>
+                <Text style={{ color: '#fff', fontFamily: 'SpaceMono', fontSize: 9, marginTop: 1 }}>
+                  {c.content}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )
+      )}
+
+      <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+        <TextInput
+          style={{ flex: 1, backgroundColor: '#1a1a1a', borderRadius: 4, paddingHorizontal: 8, paddingVertical: 4, color: '#fff', fontFamily: 'SpaceMono', fontSize: 9, borderWidth: 1, borderColor: '#2c2c2c' }}
+          placeholder="Add a reply..."
+          placeholderTextColor="#525252"
+          value={text}
+          onChangeText={setText}
+        />
+        <Pressable 
+          onPress={handleSend} 
+          disabled={createComment.isPending || !text.trim()}
+          style={{ backgroundColor: '#f59e0b', borderRadius: 4, paddingHorizontal: 8, paddingVertical: 4, opacity: text.trim() ? 1 : 0.5 }}
+        >
+          {createComment.isPending ? (
+            <ActivityIndicator size="small" color="#000" />
+          ) : (
+            <Text style={{ color: '#000', fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold' }}>SEND</Text>
+          )}
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -376,6 +443,7 @@ export default function CommunityScreen() {
   
   // Swap Meet preselected title key
   const [selectedSwapTitleKey, setSelectedSwapTitleKey] = useState<string | null>(null);
+  const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({});
   
   // WYSIWYG Selection States
   const [selection, setSelection] = useState({ start: 0, end: 0 });
@@ -847,21 +915,30 @@ export default function CommunityScreen() {
                            if (!firstItem) return null;
                            const firstMedia = firstItem.movies || firstItem.shows;
                            const mediaType = firstItem.movies ? 'movie' : 'show';
-                           const mediaId = firstMedia?.id;
-                           const ownerId = firstItem.user_id;
-
                            return (
-                             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, paddingHorizontal: 4 }}>
-                               <Pressable 
-                                 onPress={() => { if (mediaId) router.push(`/(tabs)/${mediaType}/${mediaId}?ownerId=${ownerId}&from=community`); }}
-                                 style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
-                               >
-                                 <Ionicons name="chatbubble-outline" size={10} color="#737373" />
-                                 <Text style={{ fontFamily: 'SpaceMono', fontSize: 8, color: '#737373' }}>COMMENT / REPLY</Text>
-                               </Pressable>
-                               <MovieReactionSection collectionItemId={firstItem.id} userId={userId || ''} />
-                             </View>
-                           );
+                              <View>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, paddingHorizontal: 4 }}>
+                                  <Pressable 
+                                    onPress={() => {
+                                      setExpandedComments(prev => ({
+                                        ...prev,
+                                        [item.id]: !prev[item.id]
+                                      }));
+                                    }}
+                                    style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                                  >
+                                    <Ionicons name="chatbubble-outline" size={10} color={expandedComments[item.id] ? '#f59e0b' : '#737373'} />
+                                    <Text style={{ fontFamily: 'SpaceMono', fontSize: 8, color: expandedComments[item.id] ? '#f59e0b' : '#737373' }}>
+                                      {expandedComments[item.id] ? 'HIDE REPLIES' : 'COMMENT / REPLY'}
+                                    </Text>
+                                  </Pressable>
+                                  <MovieReactionSection collectionItemId={firstItem.id} userId={userId || ''} />
+                                </View>
+                                {expandedComments[item.id] && (
+                                  <ItemCommentSectionInline collectionItemId={firstItem.id} />
+                                )}
+                              </View>
+                            );
                         })()}
                      </View>
                    );
@@ -915,14 +992,14 @@ export default function CommunityScreen() {
                                <Ionicons name="chevron-forward" size={12} color="#444" />
                              </Pressable>
                              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, paddingTop: 6, borderTopWidth: 1, borderTopColor: '#222' }}>
-                                <Pressable 
-                                  onPress={() => { if (mediaId) router.push(`/(tabs)/${mediaType}/${mediaId}?ownerId=${ownerId}&from=community`); }}
-                                  style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
-                                >
-                                  <Ionicons name="chatbubble-outline" size={10} color="#737373" />
-                                  <Text style={{ fontFamily: 'SpaceMono', fontSize: 8, color: '#737373' }}>COMMENT / REPLY</Text>
-                                </Pressable>
-                                <MovieReactionSection collectionItemId={collectionItem.id} userId={userId || ''} />
+                               <Pressable 
+                                 onPress={() => { if (mediaId) router.push(`/(tabs)/${mediaType}/${mediaId}?ownerId=${ownerId}&from=community`); }}
+                                 style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                               >
+                                 <Ionicons name="chatbubble-outline" size={10} color="#737373" />
+                                 <Text style={{ fontFamily: 'SpaceMono', fontSize: 8, color: '#737373' }}>COMMENT / REPLY</Text>
+                               </Pressable>
+                               <MovieReactionSection collectionItemId={collectionItem.id} userId={userId || ''} />
                              </View>
                            </View>
                          )}
