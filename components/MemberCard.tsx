@@ -17,7 +17,7 @@ export function MemberCard({ userId, profile, onEditPress, onAvatarPress, isRead
     const barcodeLines = useMemo(() => {
         let seed = (userId || 'guest').split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
         const rand = () => { seed = (seed * 1664525 + 1013904223) & 0xffffffff; return (seed >>> 0) / 0xffffffff; };
-        return Array.from({ length: 48 }).map(() => ({
+        return Array.from({ length: 38 }).map(() => ({
             width: rand() > 0.5 ? 4 : 2,
             margin: rand() > 0.5 ? 2 : 1,
         }));
@@ -79,13 +79,13 @@ export function MemberCard({ userId, profile, onEditPress, onAvatarPress, isRead
                         </View>
 
                         {/* Right Side: Polaroid-style Photo */}
-                        <View className="w-[28%] aspect-[3/4] bg-[#f5f5f5] p-1 pb-4 rounded-sm shadow-md border border-neutral-300 transform rotate-2 relative mt-[-15px] z-20">
+                        <View className="w-[35%] aspect-[3/4] bg-[#f5f5f5] p-1.5 pb-5 rounded-sm shadow-md border border-neutral-300 transform rotate-2 relative mt-[-20px] z-20">
                             <Pressable onPress={onAvatarPress} disabled={!onAvatarPress} className="flex-1 bg-[#111] overflow-hidden relative border border-[#ddd]">
                                 {profile?.avatar_url ? (
                                     <Image source={{ uri: profile.avatar_url }} style={{ width: '100%', height: '100%', opacity: 0.9 }} contentFit="cover" transition={400} />
                                 ) : (
                                     <View className="flex-1 items-center justify-center">
-                                        <FontAwesome name="user" size={30} color="#8a7060" />
+                                        <FontAwesome name="user" size={40} color="#8a7060" />
                                     </View>
                                 )}
                                 {/* Faded vintage photo filter */}
@@ -96,9 +96,9 @@ export function MemberCard({ userId, profile, onEditPress, onAvatarPress, isRead
                             {!isReadOnly && onEditPress && (
                                 <Pressable
                                     onPress={onEditPress}
-                                    className="absolute -bottom-2 -right-2 bg-[#f59e0b] p-1.5 rounded-full border border-black shadow-md z-30"
+                                    className="absolute -bottom-2 -right-2 bg-[#f59e0b] p-2 rounded-full border border-black shadow-md z-30"
                                 >
-                                    <FontAwesome name="camera" size={10} color="black" />
+                                    <FontAwesome name="camera" size={12} color="black" />
                                 </Pressable>
                             )}
                         </View>
