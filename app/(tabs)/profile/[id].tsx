@@ -14,6 +14,7 @@ import { getPosterUrl } from '@/lib/dummy-data';
 import { StatusBar } from 'expo-status-bar';
 import { OnDisplayCard } from '@/components/OnDisplayCard';
 import { ReorderShelfModal } from '@/components/ReorderShelfModal';
+import { ShareModal } from '@/components/ShareModal';
 import { getGenres, getStacks } from '@/lib/collection-utils';
 
 type TabType = 'on-display' | 'grails' | 'collection' | 'wishlist' | 'bin' | 'analytics' | 'in-common' | 'guestbook';
@@ -54,6 +55,10 @@ export default function UserProfileScreen() {
   const [reorderModalVisible, setReorderModalVisible] = useState(false);
   const [displayLimit, setDisplayLimit] = useState(50);
   const [reorderType, setReorderType] = useState<'display' | 'grail'>('display');
+  const [shareModalVisible, setShareModalVisible] = useState(false);
+  const [shareTitle, setShareTitle] = useState('');
+  const [shareLinkMessage, setShareLinkMessage] = useState('');
+  const [shareTextMessage, setShareTextMessage] = useState('');
 
   const [guestbookInput, setGuestbookInput] = useState('');
   const [replyInputMap, setReplyInputMap] = useState<Record<string, string>>({});
@@ -581,24 +586,10 @@ export default function UserProfileScreen() {
                       onPress={() => {
                         const itemsText = onDisplayItems.map((i: any, idx: number) => `${idx + 1}. ${i.movies?.title || i.shows?.name}`).join('\n');
                         const shareUrl = `https://mediatracking.app/profile/${id}?tab=on-display`;
-                        Alert.alert(
-                          "Share On Display",
-                          "Choose how you want to share:",
-                          [
-                            {
-                              text: "Share Link (App Layout)",
-                              onPress: () => Share.share({ message: `Check out ${profile.username}'s On Display items on Tracking!\n\n${shareUrl}` })
-                            },
-                            {
-                              text: "Share Plain Text List",
-                              onPress: () => Share.share({ message: `Check out ${profile.username}'s On Display items:\n\n${itemsText}\n\nView full collection: ${shareUrl}` })
-                            },
-                            {
-                              text: "Cancel",
-                              style: "cancel"
-                            }
-                          ]
-                        );
+                        setShareTitle("Share On Display");
+                        setShareLinkMessage(`Check out ${profile.username}'s On Display items on Tracking!\n\n${shareUrl}`);
+                        setShareTextMessage(`Check out ${profile.username}'s On Display items:\n\n${itemsText}\n\nView full collection: ${shareUrl}`);
+                        setShareModalVisible(true);
                       }}
                       className="absolute right-0 p-2"
                     >
@@ -643,24 +634,10 @@ export default function UserProfileScreen() {
                       onPress={() => {
                         const itemsText = grails.map((i: any, idx: number) => `${idx + 1}. ${i.movies?.title || i.shows?.name}`).join('\n');
                         const shareUrl = `https://mediatracking.app/profile/${id}?tab=grails`;
-                        Alert.alert(
-                          "Share Grails",
-                          "Choose how you want to share:",
-                          [
-                            {
-                              text: "Share Link (App Layout)",
-                              onPress: () => Share.share({ message: `Check out ${profile.username}'s Grails on Tracking!\n\n${shareUrl}` })
-                            },
-                            {
-                              text: "Share Plain Text List",
-                              onPress: () => Share.share({ message: `Check out ${profile.username}'s Grails:\n\n${itemsText}\n\nView full collection: ${shareUrl}` })
-                            },
-                            {
-                              text: "Cancel",
-                              style: "cancel"
-                            }
-                          ]
-                        );
+                        setShareTitle("Share Grails");
+                        setShareLinkMessage(`Check out ${profile.username}'s Grails on Tracking!\n\n${shareUrl}`);
+                        setShareTextMessage(`Check out ${profile.username}'s Grails:\n\n${itemsText}\n\nView full collection: ${shareUrl}`);
+                        setShareModalVisible(true);
                       }}
                       className="absolute right-0 p-2"
                     >
@@ -696,24 +673,10 @@ export default function UserProfileScreen() {
                       onPress={() => {
                         const itemsText = stackedCollection.map((s: any, idx: number) => `${idx + 1}. ${s[0].movies?.title || s[0].shows?.name}`).join('\n');
                         const shareUrl = `https://mediatracking.app/profile/${id}?tab=collection`;
-                        Alert.alert(
-                          "Share Collection",
-                          "Choose how you want to share:",
-                          [
-                            {
-                              text: "Share Link (App Layout)",
-                              onPress: () => Share.share({ message: `Check out ${profile.username}'s Collection on Tracking!\n\n${shareUrl}` })
-                            },
-                            {
-                              text: "Share Plain Text List",
-                              onPress: () => Share.share({ message: `Check out ${profile.username}'s Collection:\n\n${itemsText}\n\nView full collection: ${shareUrl}` })
-                            },
-                            {
-                              text: "Cancel",
-                              style: "cancel"
-                            }
-                          ]
-                        );
+                        setShareTitle("Share Collection");
+                        setShareLinkMessage(`Check out ${profile.username}'s Collection on Tracking!\n\n${shareUrl}`);
+                        setShareTextMessage(`Check out ${profile.username}'s Collection:\n\n${itemsText}\n\nView full collection: ${shareUrl}`);
+                        setShareModalVisible(true);
                       }}
                       className="absolute right-0 p-2"
                     >
@@ -767,24 +730,10 @@ export default function UserProfileScreen() {
                       onPress={() => {
                         const itemsText = stackedWishlist.map((s: any, idx: number) => `${idx + 1}. ${s[0].movies?.title || s[0].shows?.name}`).join('\n');
                         const shareUrl = `https://mediatracking.app/profile/${id}?tab=wishlist`;
-                        Alert.alert(
-                          "Share Wishlist",
-                          "Choose how you want to share:",
-                          [
-                            {
-                              text: "Share Link (App Layout)",
-                              onPress: () => Share.share({ message: `Check out ${profile.username}'s Wishlist on Tracking!\n\n${shareUrl}` })
-                            },
-                            {
-                              text: "Share Plain Text List",
-                              onPress: () => Share.share({ message: `Check out ${profile.username}'s Wishlist:\n\n${itemsText}\n\nView full wishlist: ${shareUrl}` })
-                            },
-                            {
-                              text: "Cancel",
-                              style: "cancel"
-                            }
-                          ]
-                        );
+                        setShareTitle("Share Wishlist");
+                        setShareLinkMessage(`Check out ${profile.username}'s Wishlist on Tracking!\n\n${shareUrl}`);
+                        setShareTextMessage(`Check out ${profile.username}'s Wishlist:\n\n${itemsText}\n\nView full wishlist: ${shareUrl}`);
+                        setShareModalVisible(true);
                       }}
                       className="absolute right-0 p-2"
                     >
@@ -882,24 +831,10 @@ export default function UserProfileScreen() {
                       onPress={() => {
                         const itemsText = binItems.map((i: any, idx: number) => `${idx + 1}. ${i.movies?.title || i.shows?.name}`).join('\n');
                         const shareUrl = `https://mediatracking.app/profile/${id}?tab=bin`;
-                        Alert.alert(
-                          "Share Shop/Bin",
-                          "Choose how you want to share:",
-                          [
-                            {
-                              text: "Share Link (App Layout)",
-                              onPress: () => Share.share({ message: `Check out what ${profile.username} is selling/trading on Tracking!\n\n${shareUrl}` })
-                            },
-                            {
-                              text: "Share Plain Text List",
-                              onPress: () => Share.share({ message: `Check out what ${profile.username} is selling/trading:\n\n${itemsText}\n\nBrowse shop: ${shareUrl}` })
-                            },
-                            {
-                              text: "Cancel",
-                              style: "cancel"
-                            }
-                          ]
-                        );
+                        setShareTitle("Share Shop/Bin");
+                        setShareLinkMessage(`Check out what ${profile.username} is selling/trading on Tracking!\n\n${shareUrl}`);
+                        setShareTextMessage(`Check out what ${profile.username} is selling/trading:\n\n${itemsText}\n\nBrowse shop: ${shareUrl}`);
+                        setShareModalVisible(true);
                       }}
                       className="absolute right-0 p-2"
                     >
@@ -1308,6 +1243,14 @@ export default function UserProfileScreen() {
         items={reorderType === 'display' ? onDisplayItems : grails}
         userId={id!}
         type={reorderType}
+      />
+
+      <ShareModal
+        visible={shareModalVisible}
+        onClose={() => setShareModalVisible(false)}
+        title={shareTitle}
+        messageLink={shareLinkMessage}
+        messageText={shareTextMessage}
       />
     </View>
   );

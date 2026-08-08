@@ -15,6 +15,7 @@ import { ReorderShelfModal } from '@/components/ReorderShelfModal';
 import { QuickActionModal } from '@/components/QuickActionModal';
 import { StackCard } from '@/components/StackCard';
 import { RouletteModal } from '@/components/RouletteModal';
+import { ShareModal } from '@/components/ShareModal';
 import { useAuth } from '@/context/AuthContext';
 import { useSound } from '@/context/SoundContext';
 import { useThriftMode } from '@/context/ThriftModeContext';
@@ -253,6 +254,10 @@ export default function HomeScreen() {
   const [reorderModalVisible, setReorderModalVisible] = useState(false);
   const [reorderType, setReorderType] = useState<'display' | 'grail'>('display');
   const [showRouletteModal, setShowRouletteModal] = useState(false);
+  const [shareModalVisible, setShareModalVisible] = useState(false);
+  const [shareTitle, setShareTitle] = useState('');
+  const [shareLinkMessage, setShareLinkMessage] = useState('');
+  const [shareTextMessage, setShareTextMessage] = useState('');
 
   useFocusEffect(
     useCallback(() => {
@@ -493,37 +498,24 @@ export default function HomeScreen() {
                   <Text className="text-neutral-500 font-mono text-xs ml-1">/ {onDisplay.length}</Text>
                   <Pressable 
                     onPress={() => {
-                      import('react-native').then(({ Share, Alert }) => {
-                        const itemsText = onDisplay.map((item: any, index: number) => {
-                          const m = item.movies || item.shows;
-                          return `${index + 1}. ${m?.title || m?.name} (${item.format})`;
-                        }).join('\n');
-                        const shareUrl = userId ? `https://mediatracking.app/profile/${userId}?tab=on-display` : '';
-                        
-                        if (!userId || isGuest) {
+                      const itemsText = onDisplay.map((item: any, index: number) => {
+                        const m = item.movies || item.shows;
+                        return `${index + 1}. ${m?.title || m?.name} (${item.format})`;
+                      }).join('\n');
+                      const shareUrl = userId ? `https://mediatracking.app/profile/${userId}?tab=on-display` : '';
+                      
+                      if (!userId || isGuest) {
+                        import('react-native').then(({ Share }) => {
                           Share.share({ message: `Check out what I have On Display:\n\n${itemsText}` });
-                          return;
-                        }
+                        });
+                        return;
+                      }
 
-                        Alert.alert(
-                          "Share On Display",
-                          "Choose how you want to share:",
-                          [
-                            {
-                              text: "Share Link (App Layout)",
-                              onPress: () => Share.share({ message: `Check out what I have On Display on Tracking!\n\n${shareUrl}` })
-                            },
-                            {
-                              text: "Share Plain Text List",
-                              onPress: () => Share.share({ message: `Check out what I have On Display:\n\n${itemsText}\n\nView here: ${shareUrl}` })
-                            },
-                            {
-                              text: "Cancel",
-                              style: "cancel"
-                            }
-                          ]
-                        );
-                      });
+                      setShareTitle("Share On Display");
+                      setShareLinkMessage(`Check out what I have On Display on Tracking!\n\n${shareUrl}`);
+                      setShareTextMessage(`Check out what I have On Display:\n\n${itemsText}\n\nView here: ${shareUrl}`);
+                      setShareModalVisible(true);
+                      playSound('click');
                     }}
                     className="ml-2 flex-row items-center justify-center p-1.5 rounded-full bg-neutral-900 border border-neutral-800"
                   >
@@ -593,37 +585,24 @@ export default function HomeScreen() {
                   <Text className="text-neutral-500 font-mono text-xs ml-1">/ {grailList.length}</Text>
                   <Pressable 
                     onPress={() => {
-                      import('react-native').then(({ Share, Alert }) => {
-                        const itemsText = grailList.map((item: any, index: number) => {
-                          const m = item.movies || item.shows;
-                          return `${index + 1}. ${m?.title || m?.name} (${item.format})`;
-                        }).join('\n');
-                        const shareUrl = userId ? `https://mediatracking.app/profile/${userId}?tab=grails` : '';
+                      const itemsText = grailList.map((item: any, index: number) => {
+                        const m = item.movies || item.shows;
+                        return `${index + 1}. ${m?.title || m?.name} (${item.format})`;
+                      }).join('\n');
+                      const shareUrl = userId ? `https://mediatracking.app/profile/${userId}?tab=grails` : '';
 
-                        if (!userId || isGuest) {
+                      if (!userId || isGuest) {
+                        import('react-native').then(({ Share }) => {
                           Share.share({ message: `Check out my Grails:\n\n${itemsText}` });
-                          return;
-                        }
+                        });
+                        return;
+                      }
 
-                        Alert.alert(
-                          "Share Grails",
-                          "Choose how you want to share:",
-                          [
-                            {
-                              text: "Share Link (App Layout)",
-                              onPress: () => Share.share({ message: `Check out my Grails on Tracking!\n\n${shareUrl}` })
-                            },
-                            {
-                              text: "Share Plain Text List",
-                              onPress: () => Share.share({ message: `Check out my Grails:\n\n${itemsText}\n\nView here: ${shareUrl}` })
-                            },
-                            {
-                              text: "Cancel",
-                              style: "cancel"
-                            }
-                          ]
-                        );
-                      });
+                      setShareTitle("Share Grails");
+                      setShareLinkMessage(`Check out my Grails on Tracking!\n\n${shareUrl}`);
+                      setShareTextMessage(`Check out my Grails:\n\n${itemsText}\n\nView here: ${shareUrl}`);
+                      setShareModalVisible(true);
+                      playSound('click');
                     }}
                     className="ml-2 flex-row items-center justify-center p-1.5 rounded-full bg-neutral-900 border border-neutral-800"
                   >
@@ -670,39 +649,26 @@ export default function HomeScreen() {
                 <View className="flex-row items-center gap-2">
                   <Pressable 
                     onPress={() => {
-                      import('react-native').then(({ Share, Alert }) => {
-                        const itemsText = filteredStacks.map((stack: any, index: number) => {
-                          const item = stack[0];
-                          const m = item.movies || item.shows;
-                          return `${index + 1}. ${m?.title || m?.name} (${item.format})`;
-                        }).join('\n');
-                        const tabName = thriftMode ? 'wishlist' : 'collection';
-                        const shareUrl = userId ? `https://mediatracking.app/profile/${userId}?tab=${tabName}` : '';
+                      const itemsText = filteredStacks.map((stack: any, index: number) => {
+                        const item = stack[0];
+                        const m = item.movies || item.shows;
+                        return `${index + 1}. ${m?.title || m?.name} (${item.format})`;
+                      }).join('\n');
+                      const tabName = thriftMode ? 'wishlist' : 'collection';
+                      const shareUrl = userId ? `https://mediatracking.app/profile/${userId}?tab=${tabName}` : '';
 
-                        if (!userId || isGuest) {
+                      if (!userId || isGuest) {
+                        import('react-native').then(({ Share }) => {
                           Share.share({ message: `Check out my ${thriftMode ? 'Wishlist' : 'Collection'}:\n\n${itemsText}` });
-                          return;
-                        }
+                        });
+                        return;
+                      }
 
-                        Alert.alert(
-                          `Share ${thriftMode ? 'Wishlist' : 'Collection'}`,
-                          "Choose how you want to share:",
-                          [
-                            {
-                              text: "Share Link (App Layout)",
-                              onPress: () => Share.share({ message: `Check out my ${thriftMode ? 'Wishlist' : 'Collection'} on Tracking!\n\n${shareUrl}` })
-                            },
-                            {
-                              text: "Share Plain Text List",
-                              onPress: () => Share.share({ message: `Check out my ${thriftMode ? 'Wishlist' : 'Collection'}:\n\n${itemsText}\n\nView here: ${shareUrl}` })
-                            },
-                            {
-                              text: "Cancel",
-                              style: "cancel"
-                            }
-                          ]
-                        );
-                      });
+                      setShareTitle(`Share ${thriftMode ? 'Wishlist' : 'Collection'}`);
+                      setShareLinkMessage(`Check out my ${thriftMode ? 'Wishlist' : 'Collection'} on Tracking!\n\n${shareUrl}`);
+                      setShareTextMessage(`Check out my ${thriftMode ? 'Wishlist' : 'Collection'}:\n\n${itemsText}\n\nView here: ${shareUrl}`);
+                      setShareModalVisible(true);
+                      playSound('click');
                     }}
                     className="flex-row items-center justify-center p-2 rounded-full bg-neutral-900 border border-neutral-800"
                   >
@@ -953,6 +919,14 @@ export default function HomeScreen() {
         onClose={() => setShowRouletteModal(false)}
         collection={collection || []}
         genres={genres}
+      />
+
+      <ShareModal
+        visible={shareModalVisible}
+        onClose={() => setShareModalVisible(false)}
+        title={shareTitle}
+        messageLink={shareLinkMessage}
+        messageText={shareTextMessage}
       />
 
       {showRewind && (
