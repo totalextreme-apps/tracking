@@ -840,6 +840,29 @@ export default function CommunityScreen() {
                              </Pressable>
                           ))}
                        </ScrollView>
+
+                        {/* Reaction / Comment Footer for Story Group */}
+                        {(() => {
+                           const firstItem = item.items[0];
+                           if (!firstItem) return null;
+                           const firstMedia = firstItem.movies || firstItem.shows;
+                           const mediaType = firstItem.movies ? 'movie' : 'show';
+                           const mediaId = firstMedia?.id;
+                           const ownerId = firstItem.user_id;
+
+                           return (
+                             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, paddingHorizontal: 4 }}>
+                               <Pressable 
+                                 onPress={() => { if (mediaId) router.push(`/(tabs)/${mediaType}/${mediaId}?ownerId=${ownerId}&from=community`); }}
+                                 style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                               >
+                                 <Ionicons name="chatbubble-outline" size={10} color="#737373" />
+                                 <Text style={{ fontFamily: 'SpaceMono', fontSize: 8, color: '#737373' }}>COMMENT / REPLY</Text>
+                               </Pressable>
+                               <MovieReactionSection collectionItemId={firstItem.id} userId={userId || ''} />
+                             </View>
+                           );
+                        })()}
                      </View>
                    );
                 }
