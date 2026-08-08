@@ -647,7 +647,7 @@ export default function ShowDetailScreen() {
                     <Pressable 
                         onPress={() => {
                             if (from === 'community' || from === 'swap') {
-                                router.back();
+                                router.push('/(tabs)/community' as any);
                             } else if (fromStack) {
                                 router.replace(`/stack/${fromStack}` as any);
                             } else if (ownerId) {
