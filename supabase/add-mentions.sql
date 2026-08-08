@@ -39,7 +39,7 @@ BEGIN
   
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 DROP TRIGGER IF EXISTS on_post_mention ON bulletin_posts;
 CREATE TRIGGER on_post_mention

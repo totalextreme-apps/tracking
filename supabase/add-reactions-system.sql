@@ -83,7 +83,7 @@ BEGIN
 
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- 6. Attach Trigger
 DROP TRIGGER IF EXISTS on_reaction_created ON public.reactions;
