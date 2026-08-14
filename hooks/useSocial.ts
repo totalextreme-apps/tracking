@@ -670,7 +670,54 @@ export const useNotifications = (userId?: string) => {
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return data;
+      if (!data || data.length === 0) return [];
+
+      // Group reference IDs by type
+      const postCommentIds = data.filter((n: any) => n.type === 'post_comment' || n.type === 'comment_mention').map((n: any) => n.reference_id);
+      const itemCommentIds = data.filter((n: any) => n.type === 'item_comment').map((n: any) => n.reference_id);
+      const postIds = data.filter((n: any) => n.type === 'post_mention').map((n: any) => n.reference_id);
+      const reactionIds = data.filter((n: any) => n.type === 'reaction').map((n: any) => n.reference_id);
+      const profileCommentIds = data.filter((n: any) => n.type === 'profile_comment').map((n: any) => n.reference_id);
+
+      const [postCommentsRes, itemCommentsRes, postsRes, reactionsRes, profileCommentsRes] = await Promise.all([
+        postCommentIds.length > 0
+          ? supabase.from('post_comments').select('id, content, post_id').in('id', postCommentIds).then((res: any) => res.data || []).catch(() => [])
+          : Promise.resolve([]),
+        itemCommentIds.length > 0
+          ? supabase.from('item_comments').select('id, content, collection_item_id').in('id', itemCommentIds).then((res: any) => res.data || []).catch(() => [])
+          : Promise.resolve([]),
+        postIds.length > 0
+          ? supabase.from('bulletin_posts').select('id, content').in('id', postIds).then((res: any) => res.data || []).catch(() => [])
+          : Promise.resolve([]),
+        reactionIds.length > 0
+          ? supabase.from('reactions').select('id, reaction_type, post_id, collection_item_id, post_comment_id, item_comment_id').in('id', reactionIds).then((res: any) => res.data || []).catch(() => [])
+          : Promise.resolve([]),
+        profileCommentIds.length > 0
+          ? supabase.from('profile_comments').select('id, content').in('id', profileCommentIds).then((res: any) => res.data || []).catch(() => [])
+          : Promise.resolve([])
+      ]);
+
+      const postCommentsMap = new Map(postCommentsRes.map((item: any) => [item.id, item]));
+      const itemCommentsMap = new Map(itemCommentsRes.map((item: any) => [item.id, item]));
+      const postsMap = new Map(postsRes.map((item: any) => [item.id, item]));
+      const reactionsMap = new Map(reactionsRes.map((item: any) => [item.id, item]));
+      const profileCommentsMap = new Map(profileCommentsRes.map((item: any) => [item.id, item]));
+
+      return data.map((n: any) => {
+        let referenceData = null;
+        if (n.type === 'post_comment' || n.type === 'comment_mention') {
+          referenceData = postCommentsMap.get(n.reference_id);
+        } else if (n.type === 'item_comment') {
+          referenceData = itemCommentsMap.get(n.reference_id);
+        } else if (n.type === 'post_mention') {
+          referenceData = postsMap.get(n.reference_id);
+        } else if (n.type === 'reaction') {
+          referenceData = reactionsMap.get(n.reference_id);
+        } else if (n.type === 'profile_comment') {
+          referenceData = profileCommentsMap.get(n.reference_id);
+        }
+        return { ...n, referenceData };
+      });
     },
     enabled: !!userId,
     refetchInterval: 10000, // Poll every 10s

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { View, Text, ScrollView, Pressable, Image, ImageBackground, TextInput, ActivityIndicator, Alert, Share, Modal } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
 import { useSound } from '@/context/SoundContext';
@@ -496,6 +496,16 @@ export default function CommunityScreen() {
     setCanScrollRight(contentOffset.x < contentSize.width - layoutMeasurement.width - 10);
   };
   const [expandedPostIds, setExpandedPostIds] = useState<Set<string>>(new Set());
+  const { tab, postId } = useLocalSearchParams<{ tab?: string; postId?: string }>();
+  
+  React.useEffect(() => {
+    if (tab === 'board') {
+      setActiveTab('board');
+      if (postId) {
+        setExpandedPostIds(prev => new Set(prev).add(postId));
+      }
+    }
+  }, [tab, postId]);
   
   // Media Search State (Bulletin)
   const [mediaQuery, setMediaQuery] = useState('');
@@ -601,6 +611,7 @@ export default function CommunityScreen() {
 
   const isFollowing = (targetId: string) => following?.some((f: any) => f.following_id === targetId);
   const unreadCount = notifications?.filter((n: any) => !n.is_read).length || 0;
+  const unreadInboxCount = conversations?.reduce((sum: number, conv: any) => sum + (conv.unreadCount || 0), 0) || 0;
 
   const getPosterUrl = (path: string | null) => path ? `https://image.tmdb.org/t/p/w200${path}` : null;
 
@@ -673,6 +684,10 @@ export default function CommunityScreen() {
       case 'post_comment': return 'chatbox-outline';
       case 'profile_comment': return 'book-outline';
       case 'follow': return 'person-add-outline';
+      case 'reaction': return 'heart-outline';
+      case 'mention':
+      case 'post_mention':
+      case 'comment_mention': return 'at-outline';
       default: return 'notifications-outline';
     }
   };
@@ -685,18 +700,136 @@ export default function CommunityScreen() {
       case 'post_comment': return `@${actorName} replied to your post`;
       case 'profile_comment': return `@${actorName} signed your guestbook`;
       case 'follow': return `@${actorName} started tracking you`;
+      case 'post_mention': return `@${actorName} mentioned you in a post`;
+      case 'comment_mention': return `@${actorName} mentioned you in a reply`;
+      case 'mention': return `@${actorName} mentioned you`;
+      case 'reaction': {
+        const rxType = n.referenceData?.reaction_type;
+        const emojiMap: Record<string, string> = {
+          like: '👍',
+          love: '❤️',
+          laugh: '😂',
+          dislike: '👎'
+        };
+        const emoji = rxType ? (emojiMap[rxType] || rxType) : 'a reaction';
+        return `@${actorName} reacted ${emoji} to your activity`;
+      }
       default: return 'New activity';
     }
   };
 
-  const tabs = [
+  const handleNotificationPress = async (n: any) => {
+    markRead.mutate(n.id);
+    try {
+      if (n.type === 'message') {
+        router.push(`/(tabs)/profile/chat/${n.actor_id}?from=community`);
+      } else if (n.type === 'follow') {
+        router.push(`/profile/${n.actor_id}?from=community`);
+      } else if (n.type === 'post_comment' || n.type === 'comment_mention') {
+        let postId = n.referenceData?.post_id;
+        if (!postId) {
+          const { data } = await supabase
+            .from('post_comments')
+            .select('post_id')
+            .eq('id', n.reference_id)
+            .single();
+          postId = data?.post_id;
+        }
+        if (postId) {
+          setExpandedPostIds(prev => new Set(prev).add(postId));
+          setActiveTab('board');
+        }
+      } else if (n.type === 'post_mention') {
+        setExpandedPostIds(prev => new Set(prev).add(n.reference_id));
+        setActiveTab('board');
+      } else if (n.type === 'item_comment') {
+        let item = n.referenceData;
+        if (!item || !item.collection_item_id) {
+          const { data } = await supabase
+            .from('item_comments')
+            .select('*, collection_items(*, movies(*), shows(*))')
+            .eq('id', n.reference_id)
+            .single();
+          item = data;
+        }
+        const colItem = item?.collection_items;
+        if (colItem) {
+          const ownerId = colItem.user_id;
+          if (colItem.movies) {
+            router.push(`/(tabs)/movie/${colItem.id}?ownerId=${ownerId}`);
+          } else if (colItem.shows) {
+            router.push(`/(tabs)/show/${colItem.id}?ownerId=${ownerId}&season=${colItem.season_number || 1}`);
+          }
+        }
+      } else if (n.type === 'reaction') {
+        let rx = n.referenceData;
+        if (!rx) {
+          const { data } = await supabase
+            .from('reactions')
+            .select('*')
+            .eq('id', n.reference_id)
+            .single();
+          rx = data;
+        }
+        if (rx) {
+          if (rx.post_id) {
+            setExpandedPostIds(prev => new Set(prev).add(rx.post_id));
+            setActiveTab('board');
+          } else if (rx.post_comment_id) {
+            const { data } = await supabase
+              .from('post_comments')
+              .select('post_id')
+              .eq('id', rx.post_comment_id)
+              .single();
+            if (data?.post_id) {
+              setExpandedPostIds(prev => new Set(prev).add(data.post_id));
+              setActiveTab('board');
+            }
+          } else if (rx.collection_item_id) {
+            const { data: colItem } = await supabase
+              .from('collection_items')
+              .select('*, movies(*), shows(*)')
+              .eq('id', rx.collection_item_id)
+              .single();
+            if (colItem) {
+              const ownerId = colItem.user_id;
+              if (colItem.movies) {
+                router.push(`/(tabs)/movie/${colItem.id}?ownerId=${ownerId}`);
+              } else if (colItem.shows) {
+                router.push(`/(tabs)/show/${colItem.id}?ownerId=${ownerId}&season=${colItem.season_number || 1}`);
+              }
+            }
+          } else if (rx.item_comment_id) {
+            const { data: comment } = await supabase
+              .from('item_comments')
+              .select('*, collection_items(*, movies(*), shows(*))')
+              .eq('id', rx.item_comment_id)
+              .single();
+            const colItem = comment?.collection_items;
+            if (colItem) {
+              const ownerId = colItem.user_id;
+              if (colItem.movies) {
+                router.push(`/(tabs)/movie/${colItem.id}?ownerId=${ownerId}`);
+              } else if (colItem.shows) {
+                router.push(`/(tabs)/show/${colItem.id}?ownerId=${ownerId}&season=${colItem.season_number || 1}`);
+              }
+            }
+          }
+        }
+      } else if (n.type === 'profile_comment') {
+        router.push({ pathname: `/profile/${userId}`, params: { from: 'community' } } as any);
+      }
+    } catch (e) {
+      console.error('Failed to handle notification click navigation:', e);
+    }
+  };
+
+  const mainTabs = [
     { key: 'profile', label: 'Profile' },
-    { key: 'board', label: 'Board' },
-    { key: 'swap', label: 'Swap Meet' },
     { key: 'activity', label: 'Activity' },
     { key: 'directory', label: 'Directory' },
-    { key: 'inbox', label: 'Inbox' },
-    { key: 'alerts', label: unreadCount > 0 ? `Alerts (${unreadCount})` : 'Alerts' },
+    { key: 'board', label: 'Board' },
+    { key: 'swap', label: 'Swap Meet' },
   ];
 
   return (
@@ -715,13 +848,13 @@ export default function CommunityScreen() {
       />
 
       {/* ── HEADER ── */}
-      <View style={{ paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 0, backgroundColor: '#0a0a0a', borderBottomWidth: 1, borderBottomColor: '#1a1a1a' }}>
+      <View style={{ paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 8, backgroundColor: '#0a0a0a', borderBottomWidth: 1, borderBottomColor: '#1a1a1a' }}>
         <Text style={{ color: '#f59e0b', fontFamily: 'SpaceMono', fontSize: 18, fontWeight: 'bold', letterSpacing: 4, textAlign: 'center', marginBottom: 14 }}>
           COMMUNITY
         </Text>
 
-        {/* Segment Toggle */}
-        <View style={{ marginBottom: 12, position: 'relative' }}>
+        {/* Row 1: Main Tabs */}
+        <View style={{ marginBottom: 10, position: 'relative' }}>
           <ScrollView 
             horizontal 
             showsHorizontalScrollIndicator={false} 
@@ -733,7 +866,7 @@ export default function CommunityScreen() {
               if (w <= 300) setCanScrollRight(false); // Approximation or use layout ref
             }}
           >
-            {tabs.map(tab => (
+            {mainTabs.map(tab => (
               <Pressable
                 key={tab.key}
                 onPress={() => { 
@@ -778,6 +911,107 @@ export default function CommunityScreen() {
               style={{ position: 'absolute', right: 0, top: 3, bottom: 3, width: 30, borderRadius: 10, pointerEvents: 'none' }}
             />
           )}
+        </View>
+
+        {/* Row 2: Communication / Notification Tabs (Inbox & Alerts) */}
+        <View style={{ flexDirection: 'row', gap: 10, marginTop: 2 }}>
+          {/* Inbox Button */}
+          <Pressable
+            onPress={() => {
+              setActiveTab('inbox');
+              Haptics.selectionAsync();
+            }}
+            style={{
+              flex: 1,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              paddingVertical: 10,
+              borderRadius: 10,
+              borderWidth: 1,
+              borderColor: activeTab === 'inbox' ? '#f59e0b' : '#1c1c1c',
+              backgroundColor: activeTab === 'inbox' ? '#f59e0b10' : '#111',
+            }}
+          >
+            <Ionicons 
+              name={activeTab === 'inbox' ? "mail" : "mail-outline"} 
+              size={14} 
+              color={activeTab === 'inbox' ? '#f59e0b' : '#525252'} 
+              style={{ marginRight: 6 }}
+            />
+            <Text style={{
+              fontFamily: 'SpaceMono', fontSize: 11, fontWeight: 'bold',
+              color: activeTab === 'inbox' ? '#f59e0b' : '#525252',
+              letterSpacing: 1,
+            }}>
+              INBOX
+            </Text>
+            {unreadInboxCount > 0 && (
+              <View style={{
+                backgroundColor: '#f59e0b',
+                minWidth: 16,
+                height: 16,
+                borderRadius: 8,
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginLeft: 6,
+                paddingHorizontal: 4,
+              }}>
+                <Text style={{ color: '#000', fontFamily: 'SpaceMono', fontSize: 8, fontWeight: 'bold' }}>
+                  {unreadInboxCount}
+                </Text>
+              </View>
+            )}
+          </Pressable>
+
+          {/* Alerts Button */}
+          <Pressable
+            onPress={() => {
+              setActiveTab('alerts');
+              Haptics.selectionAsync();
+            }}
+            style={{
+              flex: 1,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              paddingVertical: 10,
+              borderRadius: 10,
+              borderWidth: 1,
+              borderColor: activeTab === 'alerts' ? '#f59e0b' : '#1c1c1c',
+              backgroundColor: activeTab === 'alerts' ? '#f59e0b10' : '#111',
+            }}
+          >
+            <Ionicons 
+              name={activeTab === 'alerts' ? "notifications" : "notifications-outline"} 
+              size={14} 
+              color={activeTab === 'alerts' ? '#f59e0b' : '#525252'} 
+              style={{ marginRight: 6 }}
+            />
+            <Text style={{
+              fontFamily: 'SpaceMono', fontSize: 11, fontWeight: 'bold',
+              color: activeTab === 'alerts' ? '#f59e0b' : '#525252',
+              letterSpacing: 1,
+            }}>
+              ALERTS
+            </Text>
+            {unreadCount > 0 && (
+              <View style={{
+                backgroundColor: '#ef4444',
+                minWidth: 16,
+                height: 16,
+                borderRadius: 8,
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginLeft: 6,
+                paddingHorizontal: 4,
+              }}>
+                <Text style={{ color: '#fff', fontFamily: 'SpaceMono', fontSize: 8, fontWeight: 'bold' }}>
+                  {unreadCount}
+                </Text>
+              </View>
+            )}
+          </Pressable>
         </View>
       </View>
 
@@ -1560,13 +1794,18 @@ export default function CommunityScreen() {
             </View>
           ) : (
             (notifications || []).map((n: any) => (
-              <Pressable key={n.id} onPress={() => { markRead.mutate(n.id); if (n.type === 'message') router.push(`/(tabs)/profile/chat/${n.actor_id}?from=community`); else if (n.type === 'follow') router.push(`/profile/${n.actor_id}?from=community`); }} style={{ flexDirection: 'row', alignItems: 'center', padding: 14, borderBottomWidth: 1, borderBottomColor: '#0a0a0a', backgroundColor: !n.is_read ? '#f59e0b05' : 'transparent' }}>
+              <Pressable key={n.id} onPress={() => handleNotificationPress(n)} style={{ flexDirection: 'row', alignItems: 'center', padding: 14, borderBottomWidth: 1, borderBottomColor: '#0a0a0a', backgroundColor: !n.is_read ? '#f59e0b05' : 'transparent' }}>
                 <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#111', overflow: 'hidden', marginRight: 12 }}>
                   {n.actor?.avatar_url ? <Image source={{ uri: n.actor.avatar_url }} style={{ width: '100%', height: '100%' }} /> : <Ionicons name={notifIcon(n.type) as any} size={16} color="#f59e0b" />}
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: n.is_read ? '#444' : '#ddd', fontFamily: 'SpaceMono', fontSize: 12 }}>{notifMessage(n)}</Text>
-                  <Text style={{ color: '#222', fontFamily: 'SpaceMono', fontSize: 8 }}>{new Date(n.created_at).toLocaleDateString()}</Text>
+                  {n.referenceData?.content && (
+                    <Text style={{ color: '#525252', fontFamily: 'SpaceMono', fontSize: 10, marginTop: 2 }} numberOfLines={1}>
+                      "{n.referenceData.content}"
+                    </Text>
+                  )}
+                  <Text style={{ color: '#222', fontFamily: 'SpaceMono', fontSize: 8, marginTop: 2 }}>{new Date(n.created_at).toLocaleDateString()}</Text>
                 </View>
                 {!n.is_read ? (
                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#f59e0b' }} />
