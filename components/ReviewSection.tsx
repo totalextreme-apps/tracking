@@ -54,11 +54,16 @@ export function ReviewSection({ movieId, showId, collectionItemId, initialRating
   const handlePost = () => {
     if (!content.trim()) return;
 
+    // The backend expects the TMDB ID rather than the internal DB ID to cache/resolve items.
+    const currentItem = collection?.find((i: any) => i.id === collectionItemId);
+    const tmdbMovieId = currentItem?.movies?.tmdb_id || movieId;
+    const tmdbShowId = currentItem?.shows?.tmdb_id || showId;
+
     createPost.mutate({
       content,
       rating,
-      movie_id: movieId,
-      show_id: showId,
+      movie_id: tmdbMovieId,
+      show_id: tmdbShowId,
       collection_item_id: collectionItemId
     }, {
       onSuccess: () => {

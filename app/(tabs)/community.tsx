@@ -1132,7 +1132,23 @@ export default function CommunityScreen() {
                          <View style={{ flex: 1 }}>
                            <Text style={{ color: '#ddd', fontFamily: 'SpaceMono', fontSize: 11, fontWeight: 'bold' }}>@{profile?.username || 'member'}</Text>
                            <Text style={{ color: '#333', fontFamily: 'SpaceMono', fontSize: 8, textTransform: 'uppercase' }}>
-                             added {item.items.length} titles to collection · {item.date}
+                             {(() => {
+                               const hasUpdates = item.items.some((sub: any) => sub.activity_type === 'update');
+                               const hasWatches = item.items.some((sub: any) => sub.activity_type === 'watch');
+                               const hasListings = item.items.some((sub: any) => sub.activity_type === 'listing');
+                               const count = item.items.length;
+                               let actionText = '';
+                               if (hasUpdates && !hasWatches && !hasListings) {
+                                 actionText = `added ${count} ${count === 1 ? 'title' : 'titles'} to collection`;
+                               } else if (hasWatches && !hasUpdates && !hasListings) {
+                                 actionText = `watched ${count} ${count === 1 ? 'title' : 'titles'}`;
+                               } else if (hasListings && !hasUpdates && !hasWatches) {
+                                 actionText = `listed ${count} ${count === 1 ? 'title' : 'titles'} for sale/trade`;
+                               } else {
+                                 actionText = `updated ${count} ${count === 1 ? 'title' : 'titles'} in library`;
+                               }
+                               return `${actionText} · ${item.date}`;
+                             })()}
                            </Text>
                          </View>
                        </Pressable>
