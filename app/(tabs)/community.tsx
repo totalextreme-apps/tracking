@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { View, Text, ScrollView, Pressable, Image, ImageBackground, TextInput, ActivityIndicator, Alert, Share, Modal } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -445,6 +445,59 @@ export default function CommunityScreen() {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const scrollRef = useRef<ScrollView>(null);
+
+  // Auto-repair any mismatched bulletin posts on mount
+  useEffect(() => {
+    if (!userId) return;
+    
+    const autoRepairPosts = async () => {
+      try {
+        const { data: posts } = await supabase
+          .from('bulletin_posts')
+          .select('id, collection_item_id, movie_id, show_id')
+          .eq('user_id', userId);
+
+        if (posts && posts.length > 0) {
+          let updatedCount = 0;
+          for (const post of posts) {
+            if (post.collection_item_id) {
+              const { data: colItem } = await supabase
+                .from('collection_items')
+                .select('movie_id, show_id')
+                .eq('id', post.collection_item_id)
+                .maybeSingle();
+
+              if (colItem) {
+                // If there's a mismatch between the post's movie/show ID and the collection item's movie/show ID, repair it!
+                const isMovieMismatch = colItem.movie_id && post.movie_id !== colItem.movie_id;
+                const isShowMismatch = colItem.show_id && post.show_id !== colItem.show_id;
+                
+                if (isMovieMismatch || isShowMismatch) {
+                  await supabase
+                    .from('bulletin_posts')
+                    .update({
+                      movie_id: colItem.movie_id,
+                      show_id: colItem.show_id
+                    } as any)
+                    .eq('id', post.id);
+                  updatedCount++;
+                }
+              }
+            }
+          }
+          if (updatedCount > 0) {
+            // Refresh feed cache if any updates occurred
+            queryClient.invalidateQueries({ queryKey: ['bulletin'] });
+            queryClient.invalidateQueries({ queryKey: ['community_feed'] });
+          }
+        }
+      } catch (err) {
+        console.error('Failed to auto-repair bulletin posts:', err);
+      }
+    };
+
+    autoRepairPosts();
+  }, [userId]);
 
   const [activeTab, setActiveTab] = useState<Tab>('activity');
   const [userSearch, setUserSearch] = useState('');
