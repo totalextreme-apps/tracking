@@ -22,6 +22,7 @@ import { useAddToCollection, useCollection, useDeleteCollectionItem, useUpdateCo
 import { useCreatePost } from '@/hooks/useSocial';
 import { ReviewSection } from '@/components/ReviewSection';
 import { CommentSection } from '@/components/CommentSection';
+import { CelebrationOverlay } from '@/components/CelebrationOverlay';
 import { deleteFromCloudinary, uploadToCloudinary } from '@/lib/cloudinary';
 import { getCustomLists } from '@/lib/collection-utils';
 import { supabase } from '@/lib/supabase';
@@ -130,6 +131,8 @@ export default function MovieDetailScreen() {
     const [showWatchDateModal, setShowWatchDateModal] = useState(false);
     const [customWatchDateText, setCustomWatchDateText] = useState('');
     const updateManualMovie = useUpdateManualMovie(userId);
+    const [showCelebration, setShowCelebration] = useState(false);
+    const [celebratedItem, setCelebratedItem] = useState<any | null>(null);
 
     const handleCreatePost = () => {
         if (!postContent.trim()) return;
@@ -705,6 +708,11 @@ export default function MovieDetailScreen() {
                 const title = activeMovie.title;
                 if (Platform.OS === 'web') {
                   if (window.confirm(`${title} (${formatName}) is on your wishlist. Do you want to mark it as acquired?`)) {
+                    const conflictItem = movieItems.find((i: any) => i.id === conflictId);
+                    if (conflictItem) {
+                      setCelebratedItem({ ...conflictItem, movies: activeMovie });
+                      setShowCelebration(true);
+                    }
                     updateMutation.mutate({ itemId: conflictId, updates: { status: 'owned', is_grail: false, created_at: new Date().toISOString() } });
                     setShowEditionModal(false);
                     setPendingFormat(null);
@@ -713,9 +721,14 @@ export default function MovieDetailScreen() {
                   Alert.alert('On Wishlist', `${title} (${formatName}) is on your wishlist. Do you want to mark it as acquired?`, [
                     { text: 'Cancel', style: 'cancel' },
                     { text: 'Mark as Acquired', onPress: () => {
-                        updateMutation.mutate({ itemId: conflictId, updates: { status: 'owned', is_grail: false, created_at: new Date().toISOString() } });
-                        setShowEditionModal(false);
-                        setPendingFormat(null);
+                      const conflictItem = movieItems.find((i: any) => i.id === conflictId);
+                      if (conflictItem) {
+                        setCelebratedItem({ ...conflictItem, movies: activeMovie });
+                        setShowCelebration(true);
+                      }
+                      updateMutation.mutate({ itemId: conflictId, updates: { status: 'owned', is_grail: false, created_at: new Date().toISOString() } });
+                      setShowEditionModal(false);
+                      setPendingFormat(null);
                     }}
                   ]);
                 }
@@ -947,7 +960,42 @@ export default function MovieDetailScreen() {
                     <View className="max-w-7xl mx-auto w-full px-4 md:px-8 flex-row mt-4 gap-2">
                         {!isReadOnly && (
                             <>
-                                {thriftMode || isGrail ? (
+                                {activeItem && activeItem.status === 'wishlist' ? (
+                                    <Pressable
+                                        onPress={async () => {
+                                            playSound('peel');
+                                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                            setTimeout(() => {
+                                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                                            }, 100);
+                                            setTimeout(() => {
+                                                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                                            }, 250);
+
+                                            const itemToCelebrate = {
+                                                ...activeItem,
+                                                movies: activeMovie,
+                                            };
+                                            setCelebratedItem(itemToCelebrate);
+                                            setShowCelebration(true);
+
+                                            await updateMutation.mutateAsync({
+                                                itemId: activeItem.id,
+                                                updates: {
+                                                    status: 'owned',
+                                                    created_at: new Date().toISOString()
+                                                }
+                                            });
+                                            refetch();
+                                        }}
+                                        className="flex-1 flex-row items-center justify-center p-3 rounded-lg border bg-green-600/10 border-green-500 active:bg-green-600/20"
+                                    >
+                                        <Ionicons name="checkmark-circle-outline" size={16} color="#10b981" />
+                                        <Text className="ml-2 font-mono text-xs font-bold tracking-widest text-green-500 uppercase">
+                                            MARK ACQUIRED
+                                        </Text>
+                                    </Pressable>
+                                ) : thriftMode || isGrail ? (
                                     <Pressable
                                         onPress={toggleGrail}
                                         className={`flex-1 flex-row items-center justify-center p-3 rounded-lg border ${isGrail ? 'bg-amber-500/10 border-amber-500' : 'bg-neutral-900 border-neutral-800'}`}
@@ -2068,6 +2116,16 @@ export default function MovieDetailScreen() {
                     />
                 )
             }
+            {showCelebration && celebratedItem && (
+                <CelebrationOverlay
+                    item={celebratedItem}
+                    onClose={() => {
+                        setShowCelebration(false);
+                        setCelebratedItem(null);
+                        refetch();
+                    }}
+                />
+            )}
         </View >
     );
 }

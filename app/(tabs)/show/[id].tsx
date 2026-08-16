@@ -22,6 +22,7 @@ import { useAddToCollection, useCollection, useDeleteCollectionItem, useUpdateCo
 import { useCreatePost } from '@/hooks/useSocial';
 import { ReviewSection } from '@/components/ReviewSection';
 import { CommentSection } from '@/components/CommentSection';
+import { CelebrationOverlay } from '@/components/CelebrationOverlay';
 import { deleteFromCloudinary, uploadToCloudinary } from '@/lib/cloudinary';
 import { getCustomLists } from '@/lib/collection-utils';
 import { supabase } from '@/lib/supabase';
@@ -119,6 +120,8 @@ export default function ShowDetailScreen() {
     const [showWatchDateModal, setShowWatchDateModal] = useState(false);
     const [customWatchDateText, setCustomWatchDateText] = useState('');
     const createPostMutation = useCreatePost(userId);
+    const [showCelebration, setShowCelebration] = useState(false);
+    const [celebratedItem, setCelebratedItem] = useState<any | null>(null);
 
     const handleCreatePost = () => {
         if (!postContent.trim()) return;
@@ -609,6 +612,11 @@ export default function ShowDetailScreen() {
                 const title = activeShow.name;
                 if (Platform.OS === 'web') {
                   if (window.confirm(`${title} (${formatName}) is on your wishlist. Do you want to mark it as acquired?`)) {
+                    const conflictItem = showItems.find((i: any) => i.id === conflictId);
+                    if (conflictItem) {
+                      setCelebratedItem({ ...conflictItem, shows: activeShow });
+                      setShowCelebration(true);
+                    }
                     updateMutation.mutate({ itemId: conflictId, updates: { status: 'owned', is_grail: false, created_at: new Date().toISOString() } });
                     setShowEditionModal(false);
                     setPendingFormat(null);
@@ -617,9 +625,14 @@ export default function ShowDetailScreen() {
                   Alert.alert('On Wishlist', `${title} (${formatName}) is on your wishlist. Do you want to mark it as acquired?`, [
                     { text: 'Cancel', style: 'cancel' },
                     { text: 'Mark as Acquired', onPress: () => {
-                        updateMutation.mutate({ itemId: conflictId, updates: { status: 'owned', is_grail: false, created_at: new Date().toISOString() } });
-                        setShowEditionModal(false);
-                        setPendingFormat(null);
+                      const conflictItem = showItems.find((i: any) => i.id === conflictId);
+                      if (conflictItem) {
+                        setCelebratedItem({ ...conflictItem, shows: activeShow });
+                        setShowCelebration(true);
+                      }
+                      updateMutation.mutate({ itemId: conflictId, updates: { status: 'owned', is_grail: false, created_at: new Date().toISOString() } });
+                      setShowEditionModal(false);
+                      setPendingFormat(null);
                     }}
                   ]);
                 }
@@ -753,7 +766,42 @@ export default function ShowDetailScreen() {
                     </View>
                     {!isReadOnly && showItems.length > 0 && (
                         <View className="flex-row mt-4 gap-2">
-                            {thriftMode || isGrail ? (
+                            {activeItem && activeItem.status === 'wishlist' ? (
+                                <Pressable
+                                    onPress={async () => {
+                                        playSound('peel');
+                                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                        setTimeout(() => {
+                                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                                        }, 100);
+                                        setTimeout(() => {
+                                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                                        }, 250);
+
+                                        const itemToCelebrate = {
+                                            ...activeItem,
+                                            shows: activeShow,
+                                        };
+                                        setCelebratedItem(itemToCelebrate);
+                                        setShowCelebration(true);
+
+                                        await updateMutation.mutateAsync({
+                                            itemId: activeItem.id,
+                                            updates: {
+                                                status: 'owned',
+                                                created_at: new Date().toISOString()
+                                            }
+                                        });
+                                        refetch();
+                                    }}
+                                    className="flex-1 flex-row items-center justify-center p-3 rounded-lg border bg-green-600/10 border-green-500 active:bg-green-600/20"
+                                >
+                                    <Ionicons name="checkmark-circle-outline" size={16} color="#10b981" />
+                                    <Text className="ml-2 font-mono text-xs font-bold tracking-widest text-green-500 uppercase">
+                                        MARK ACQUIRED
+                                    </Text>
+                                </Pressable>
+                            ) : thriftMode || isGrail ? (
                                 <Pressable
                                     onPress={async () => {
                                         await Promise.all(showItems.map((item: any) =>
@@ -1515,6 +1563,16 @@ export default function ShowDetailScreen() {
                     </View>
                 </View>
             </Modal>
+            {showCelebration && celebratedItem && (
+                <CelebrationOverlay
+                    item={celebratedItem}
+                    onClose={() => {
+                        setShowCelebration(false);
+                        setCelebratedItem(null);
+                        refetch();
+                    }}
+                />
+            )}
         </View>
     );
 }
