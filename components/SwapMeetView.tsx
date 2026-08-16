@@ -558,7 +558,7 @@ export function SwapMeetView({
                                 setSelectedTitle(null);
                                 const targetType = item.movies ? 'movie' : 'show';
                                 const targetId = item.movie_id || item.show_id;
-                                router.push(`/(tabs)/${targetType}/${targetId}`);
+                                router.push(`/(tabs)/${targetType}/${targetId}?from=swap`);
                               }}
                               style={styles.copyEditBtn}
                             >

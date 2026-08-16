@@ -1,9 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import ConfettiCannon from 'react-native-confetti-cannon';
+import { CelebrationOverlay } from './CelebrationOverlay';
 
 import { useSound } from '@/context/SoundContext';
 import { useThriftMode } from '@/context/ThriftModeContext';
@@ -29,7 +29,6 @@ export function QuickActionModal({
 }: QuickActionModalProps) {
   const router = useRouter();
   const { playSound } = useSound();
-  const confettiRef = useRef<ConfettiCannon>(null);
   const { thriftMode } = useThriftMode();
 
   const liveItem = item ? (collection.find(i => i.id === item.id) || item) : null;
@@ -38,6 +37,8 @@ export function QuickActionModal({
   const [selectedFormat, setSelectedFormat] = useState<MovieFormat | null>(null);
   const [edition, setEdition] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [celebratedItem, setCelebratedItem] = useState<CollectionItemWithMedia | null>(null);
   const [localRating, setLocalRating] = useState<number | null>(liveItem?.rating || null);
 
   useEffect(() => {
@@ -68,6 +69,8 @@ export function QuickActionModal({
     setViewState('main');
     setSelectedFormat(null);
     setEdition('');
+    setShowCelebration(false);
+    setCelebratedItem(null);
     onClose();
   };
 
@@ -75,8 +78,21 @@ export function QuickActionModal({
     if (isProcessing) return;
     setIsProcessing(true);
     try {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      confettiRef.current?.start();
+      // Play tactile haptics sequence and celebrate audio
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setTimeout(() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      }, 100);
+      setTimeout(() => {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }, 250);
+
+      playSound('peel');
+
+      // Capture the targetItem state for celebration before mutation updates it
+      setCelebratedItem(targetItem);
+      setShowCelebration(true);
+
       await updateMutation.mutateAsync({
         itemId: targetItem.id,
         updates: { 
@@ -85,13 +101,12 @@ export function QuickActionModal({
           created_at: new Date().toISOString()
         }
       });
-      setTimeout(() => {
-        setIsProcessing(false);
-        handleClose();
-      }, 1500); // give time for confetti
+      setIsProcessing(false);
     } catch (e) {
       console.error(e);
       setIsProcessing(false);
+      setShowCelebration(false);
+      setCelebratedItem(null);
       Alert.alert('Error', 'Failed to acquire item');
     }
   };
@@ -427,43 +442,42 @@ export function QuickActionModal({
       onRequestClose={handleClose}
     >
       <Pressable
-        onPress={handleClose}
+        onPress={showCelebration ? undefined : handleClose}
         className="flex-1 bg-black/80 justify-end"
       >
-        <Pressable
-          onPress={(e) => e.stopPropagation()}
-          className="bg-neutral-900 rounded-t-3xl p-6 w-full max-w-lg mx-auto border-t border-neutral-800 relative"
-        >
-          <View className="w-12 h-1 bg-neutral-700 rounded-full mx-auto mb-6" />
-          
-          <Pressable 
-            onPress={handleClose} 
-            className="absolute top-5 right-5 p-2 bg-neutral-800 rounded-full border border-neutral-700 active:bg-neutral-700 z-10"
-            hitSlop={10}
-          >
-            <Ionicons name="close" size={20} color="#a3a3a3" />
-          </Pressable>
-
-          <ConfettiCannon
-            ref={confettiRef}
-            count={80}
-            origin={{ x: -10, y: 0 }}
-            fadeOut
-            autoStart={false}
+        {showCelebration && celebratedItem ? (
+          <CelebrationOverlay
+            item={celebratedItem}
+            onClose={handleClose}
           />
+        ) : (
+          <Pressable
+            onPress={(e) => e.stopPropagation()}
+            className="bg-neutral-900 rounded-t-3xl p-6 w-full max-w-lg mx-auto border-t border-neutral-800 relative"
+          >
+            <View className="w-12 h-1 bg-neutral-700 rounded-full mx-auto mb-6" />
+            
+            <Pressable 
+              onPress={handleClose} 
+              className="absolute top-5 right-5 p-2 bg-neutral-800 rounded-full border border-neutral-700 active:bg-neutral-700 z-10"
+              hitSlop={10}
+            >
+              <Ionicons name="close" size={20} color="#a3a3a3" />
+            </Pressable>
 
-          <Text className="text-white text-xl font-bold mb-1 pr-10" numberOfLines={1}>
-            {(media as any)?.title || (media as any)?.name}
-          </Text>
-          <Text className="text-neutral-500 font-mono text-xs mb-6">
-            {isWishlist ? 'THRIFT MODE' : 'THE STACKS'}
-          </Text>
+            <Text className="text-white text-xl font-bold mb-1 pr-10" numberOfLines={1}>
+              {(media as any)?.title || (media as any)?.name}
+            </Text>
+            <Text className="text-neutral-500 font-mono text-xs mb-6">
+              {isWishlist ? 'THRIFT MODE' : 'THE STACKS'}
+            </Text>
 
-          {viewState === 'main' && renderMainActions()}
-          {viewState === 'add-format' && renderAddFormat()}
-          {viewState === 'remove-format' && renderRemoveFormat()}
+            {viewState === 'main' && renderMainActions()}
+            {viewState === 'add-format' && renderAddFormat()}
+            {viewState === 'remove-format' && renderRemoveFormat()}
 
-        </Pressable>
+          </Pressable>
+        )}
       </Pressable>
     </Modal>
   );

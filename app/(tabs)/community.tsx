@@ -398,7 +398,7 @@ function StoreChartsSection({ stats }: { stats: any }) {
             return (
               <Pressable
                 key={idx}
-                onPress={() => { if (mediaId) router.push(`/(tabs)/${mediaType}/${mediaId}`); }}
+                onPress={() => { if (mediaId) router.push(`/(tabs)/${mediaType}/${mediaId}?from=community`); }}
                 style={{ width: 100, backgroundColor: '#0a0a0a', padding: 6, borderRadius: 8, borderWidth: 1, borderColor: '#1f1f1f', alignItems: 'center' }}
               >
                 <View style={{ position: 'absolute', top: -4, left: -4, zIndex: 10, backgroundColor: color, width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#000' }}>
@@ -756,9 +756,9 @@ export default function CommunityScreen() {
         if (colItem) {
           const ownerId = colItem.user_id;
           if (colItem.movies) {
-            router.push(`/(tabs)/movie/${colItem.id}?ownerId=${ownerId}`);
+            router.push(`/(tabs)/movie/${colItem.id}?ownerId=${ownerId}&from=community`);
           } else if (colItem.shows) {
-            router.push(`/(tabs)/show/${colItem.id}?ownerId=${ownerId}&season=${colItem.season_number || 1}`);
+            router.push(`/(tabs)/show/${colItem.id}?ownerId=${ownerId}&season=${colItem.season_number || 1}&from=community`);
           }
         }
       } else if (n.type === 'reaction') {
@@ -794,9 +794,9 @@ export default function CommunityScreen() {
             if (colItem) {
               const ownerId = colItem.user_id;
               if (colItem.movies) {
-                router.push(`/(tabs)/movie/${colItem.id}?ownerId=${ownerId}`);
+                router.push(`/(tabs)/movie/${colItem.id}?ownerId=${ownerId}&from=community`);
               } else if (colItem.shows) {
-                router.push(`/(tabs)/show/${colItem.id}?ownerId=${ownerId}&season=${colItem.season_number || 1}`);
+                router.push(`/(tabs)/show/${colItem.id}?ownerId=${ownerId}&season=${colItem.season_number || 1}&from=community`);
               }
             }
           } else if (rx.item_comment_id) {
@@ -809,9 +809,9 @@ export default function CommunityScreen() {
             if (colItem) {
               const ownerId = colItem.user_id;
               if (colItem.movies) {
-                router.push(`/(tabs)/movie/${colItem.id}?ownerId=${ownerId}`);
+                router.push(`/(tabs)/movie/${colItem.id}?ownerId=${ownerId}&from=community`);
               } else if (colItem.shows) {
-                router.push(`/(tabs)/show/${colItem.id}?ownerId=${ownerId}&season=${colItem.season_number || 1}`);
+                router.push(`/(tabs)/show/${colItem.id}?ownerId=${ownerId}&season=${colItem.season_number || 1}&from=community`);
               }
             }
           }
@@ -1386,7 +1386,12 @@ export default function CommunityScreen() {
                       <BulletinPostItem 
                         post={item} 
                         userId={userId || ''} 
-                        playSound={playSound} 
+                        idx={idx}
+                        startEditing={startEditing}
+                        setShowDeleteConfirm={setShowDeleteConfirm}
+                        toggleComments={toggleComments}
+                        isExpanded={expandedPostIds.has(item.id)}
+                        CommentSectionComponent={PostCommentSection}
                       />
                     </View>
                   );
