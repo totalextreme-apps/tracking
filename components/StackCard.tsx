@@ -10,7 +10,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View, Platform } from 'react-native';
 import Animated, {
   interpolate,
   useAnimatedStyle,
@@ -85,6 +85,47 @@ const getStackTransforms = (idx: number) => {
   
   return { rotate: r, left: x, top: y };
 };
+
+function SeasonSticker({ season, size = 30 }: { season: number; size?: number }) {
+  const rotation = useMemo(() => Math.random() * 20 - 10, []);
+  
+  return (
+    <View
+      style={{
+        position: 'absolute',
+        top: 6,
+        right: -3,
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        backgroundColor: '#f59e0b', // CRT gold/amber
+        alignItems: 'center',
+        justifyContent: 'center',
+        transform: [{ rotate: `${rotation}deg` }],
+        zIndex: 90,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.4,
+        shadowRadius: 2,
+        elevation: 5,
+      }}
+      pointerEvents="none"
+    >
+      <Text
+        style={{
+          color: '#000000',
+          fontSize: 8.5,
+          fontWeight: '900',
+          textAlign: 'center',
+          fontFamily: Platform.OS === 'ios' ? 'Arial Rounded MT Bold' : 'sans-serif-condensed',
+          letterSpacing: -0.4,
+        }}
+      >
+        S{season}
+      </Text>
+    </View>
+  );
+}
 
 export function StackCard({
   stack,
@@ -219,7 +260,11 @@ export function StackCard({
           numberOfLines={2} 
           style={{ minHeight: 24, width: '100%', lineHeight: 12 }}
         >
-          {media ? ((media as any).title || (media as any).name) : `ID: ${topItem.movie_id || topItem.show_id}`}
+          {media 
+            ? (topItem.media_type === 'tv' && topItem.season_number 
+                ? `${(media as any).name} (Season ${topItem.season_number})`
+                : ((media as any).title || (media as any).name))
+            : `ID: ${topItem.movie_id || topItem.show_id}`}
         </Text>
 
         {/* Format & Rating row */}
@@ -384,7 +429,11 @@ export function StackCard({
         {/* Info Section */}
         <View className="flex-1 px-3 py-1 justify-center">
           <Text className="text-white font-bold text-sm leading-tight" numberOfLines={2}>
-            {media ? ((media as any).title || (media as any).name) : `ID: ${topItem.movie_id || topItem.show_id}`}
+            {media 
+              ? (topItem.media_type === 'tv' && topItem.season_number 
+                  ? `${(media as any).name} (Season ${topItem.season_number})`
+                  : ((media as any).title || (media as any).name))
+              : `ID: ${topItem.movie_id || topItem.show_id}`}
           </Text>
           <View className="flex-row my-1">
               {topItem.rating ? (
@@ -489,6 +538,7 @@ export function StackCard({
               <View className="relative" style={{ width: width, height: containerHeight }}>
                 {/* Sticker Overlays */}
                 {primaryGenre && genreStickersEnabled && <GenreSticker genre={primaryGenre} />}
+                {topItem.media_type === 'tv' && topItem.season_number && <SeasonSticker season={topItem.season_number} />}
                 {isOnDisplay && !isWishlist && <StickerOverlay visible={isOnDisplay} size={40} />}
                 {topItem.for_sale && <SaleSticker visible={true} size={40} />}
                 {topItem.for_trade && <TradeSticker visible={true} size={40} />}
@@ -574,6 +624,7 @@ export function StackCard({
           <View style={{ width: width, height: posterContainerHeight, justifyContent: 'flex-end', alignItems: 'center' }}>
             <View className="relative" style={{ width: width, height: width / aspectRatio }}>
               {primaryGenre && genreStickersEnabled && <GenreSticker genre={primaryGenre} />}
+              {topItem.media_type === 'tv' && topItem.season_number && <SeasonSticker season={topItem.season_number} />}
               {isOnDisplay && !isWishlist && <StickerOverlay visible={isOnDisplay} size={40} />}
               {topItem.for_sale && <SaleSticker visible={true} size={40} />}
               {topItem.for_trade && <TradeSticker visible={true} size={40} />}
@@ -602,7 +653,11 @@ export function StackCard({
                     <View className="flex-1 items-center justify-center p-2">
                       <FontAwesome name="film" size={width * 0.4} color="#333" />
                       <Text className="text-[10px] font-mono text-neutral-500 text-center mt-2 uppercase px-4 truncate">
-                        {media ? ((media as any).title || (media as any).name) : `ID: ${topItem.movie_id || topItem.show_id}`}
+                        {media 
+                          ? (topItem.media_type === 'tv' && topItem.season_number 
+                              ? `${(media as any).name} (Season ${topItem.season_number})`
+                              : ((media as any).title || (media as any).name))
+                          : `ID: ${topItem.movie_id || topItem.show_id}`}
                       </Text>
                     </View>
                   )}
@@ -663,6 +718,7 @@ export function StackCard({
         <View style={{ width: width, height: posterContainerHeight, justifyContent: 'flex-end', alignItems: 'center' }}>
           <View style={{ position: 'relative' }}>
             {primaryGenre && genreStickersEnabled && <GenreSticker genre={primaryGenre} />}
+            {topItem.media_type === 'tv' && topItem.season_number && <SeasonSticker season={topItem.season_number} />}
 
             <View
               className="rounded-xl overflow-hidden relative"
@@ -703,7 +759,11 @@ export function StackCard({
                 <View className="flex-1 items-center justify-center bg-neutral-800 p-2">
                   <FontAwesome name="film" size={width * 0.4} color="#222" />
                   <Text className="text-neutral-500 font-mono text-[10px] text-center mt-2 uppercase">
-                    {media ? ((media as any).title || (media as any).name) : `REPAIR PENDING: ${topItem.movie_id || topItem.show_id}`}
+                    {media 
+                      ? (topItem.media_type === 'tv' && topItem.season_number 
+                          ? `${(media as any).name} (Season ${topItem.season_number})`
+                          : ((media as any).title || (media as any).name))
+                      : `REPAIR PENDING: ${topItem.movie_id || topItem.show_id}`}
                   </Text>
                 </View>
               )}

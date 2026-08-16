@@ -761,7 +761,12 @@ export const useCommunityFeed = (userId?: string) => {
           *,
           profiles(*),
           movies(*),
-          shows(*)
+          shows(*),
+          collection_items(
+            *,
+            movies(*),
+            shows(*)
+          )
         `)
         .in('user_id', interestingIds)
         .order('created_at', { ascending: false })
@@ -879,10 +884,24 @@ export const useCommunityFeed = (userId?: string) => {
         };
       });
 
-      const processedPosts = (posts || []).map((p: any) => ({
-        ...p,
-        activity_type: 'post'
-      }));
+      const processedPosts = (posts || []).map((p: any) => {
+        let finalMovie = p.movies;
+        let finalShow = p.shows;
+        if (p.collection_items) {
+          if (p.collection_items.movies) {
+            finalMovie = p.collection_items.movies;
+          }
+          if (p.collection_items.shows) {
+            finalShow = p.collection_items.shows;
+          }
+        }
+        return {
+          ...p,
+          movies: finalMovie,
+          shows: finalShow,
+          activity_type: 'post'
+        };
+      });
 
       const processedListings = (listings || []).map((l: any) => ({
         ...l,
