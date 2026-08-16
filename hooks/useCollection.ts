@@ -620,11 +620,44 @@ export function useDeepRepair(userId?: string) {
           await new Promise(r => setTimeout(r, 200));
         } catch (e) { console.error('Deep repair failed for item', item.id, e); }
         current++;
-        setProgress({ current, total });
+      }
+
+      // Step 2: Repair incorrect movie_id/show_id in bulletin_posts
+      try {
+        const { data: posts } = await supabase
+          .from('bulletin_posts')
+          .select('id, collection_item_id')
+          .eq('user_id', userId);
+
+        if (posts && posts.length > 0) {
+          for (const post of posts) {
+            if (post.collection_item_id) {
+              const { data: colItem } = await supabase
+                .from('collection_items')
+                .select('movie_id, show_id')
+                .eq('id', post.collection_item_id)
+                .maybeSingle();
+
+              if (colItem) {
+                await supabase
+                  .from('bulletin_posts')
+                  .update({
+                    movie_id: colItem.movie_id,
+                    show_id: colItem.show_id
+                  } as any)
+                  .eq('id', post.id);
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to repair bulletin posts:', err);
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['collection'] });
+      queryClient.invalidateQueries({ queryKey: ['bulletin'] });
+      queryClient.invalidateQueries({ queryKey: ['community_feed'] });
     }
   });
 
