@@ -26,6 +26,7 @@ import { getTvShowById, type TmdbMediaResult } from '@/lib/tmdb';
 import type { MovieFormat } from '@/types/database';
 
 import BarcodeScanner from '@/components/BarcodeScanner';
+import { CelebrationOverlay } from '@/components/CelebrationOverlay';
 import { useCameraPermissions } from 'expo-camera';
 import { lookupUPC } from '@/lib/upc';
 
@@ -44,6 +45,8 @@ export default function AddScreen() {
   const [isBootleg, setIsBootleg] = useState(false);
   const [triedToSubmit, setTriedToSubmit] = useState(false);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [celebratedItem, setCelebratedItem] = useState<any | null>(null);
 
   // Manual Entry State
   const [showManualEntry, setShowManualEntry] = useState(false);
@@ -333,17 +336,37 @@ export default function AddScreen() {
       if (msg.startsWith('WISHLIST_CONFLICT:::')) {
         const [, conflictId, formatName] = msg.split(':::');
         const title = selectedItem.title ?? selectedItem.name;
+
+        const triggerCelebration = () => {
+          const fakeItem = {
+            id: conflictId,
+            format: formatName,
+            status: 'owned',
+            is_grail: false,
+            movies: selectedItem.media_type === 'movie' ? {
+              title: selectedItem.title,
+              poster_path: selectedItem.poster_path
+            } : null,
+            shows: selectedItem.media_type === 'tv' ? {
+              name: selectedItem.name,
+              poster_path: selectedItem.poster_path
+            } : null,
+          };
+          setCelebratedItem(fakeItem);
+          setShowCelebration(true);
+        };
+
         if (Platform.OS === 'web') {
           if (window.confirm(`${title} (${formatName}) is on your wishlist. Do you want to mark it as acquired?`)) {
+            triggerCelebration();
             updateMutation.mutate({ itemId: conflictId, updates: { status: 'owned', is_grail: false, created_at: new Date().toISOString() } });
-            router.back();
           }
         } else {
           Alert.alert('On Wishlist', `${title} (${formatName}) is on your wishlist. Do you want to mark it as acquired?`, [
             { text: 'Cancel', style: 'cancel' },
             { text: 'Mark as Acquired', onPress: () => {
+                triggerCelebration();
                 updateMutation.mutate({ itemId: conflictId, updates: { status: 'owned', is_grail: false, created_at: new Date().toISOString() } });
-                router.back();
             }}
           ]);
         }
@@ -950,6 +973,16 @@ export default function AddScreen() {
           </View>
         )}
       </ScrollView>
+      {showCelebration && celebratedItem && (
+        <CelebrationOverlay
+          item={celebratedItem}
+          onClose={() => {
+            setShowCelebration(false);
+            setCelebratedItem(null);
+            router.back();
+          }}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }

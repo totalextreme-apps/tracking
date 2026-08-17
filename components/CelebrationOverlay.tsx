@@ -195,7 +195,7 @@ export function CelebrationOverlay({ item, onClose }: CelebrationOverlayProps) {
   const posterUrl = item.custom_poster_url || getPosterUrl(media?.poster_path || null);
 
   return (
-    <View style={StyleSheet.absoluteFillObject} className="items-center justify-center relative">
+    <View style={[StyleSheet.absoluteFillObject, { zIndex: 9999 }]} className="items-center justify-center">
       {/* 1. Frosted Glass Backdrop */}
       <BlurView intensity={35} tint="dark" style={StyleSheet.absoluteFillObject} />
       
