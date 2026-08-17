@@ -39,6 +39,22 @@ import * as ImagePicker from 'expo-image-picker';
 import { ShareableCard } from '@/components/ShareableCard';
 import ViewShot from 'react-native-view-shot';
 
+const getTrailerUrl = (showData: any) => {
+    const videos = showData?.videos?.results;
+    if (!videos || !Array.isArray(videos)) return null;
+    
+    const trailer = videos.find(
+        (v: any) => v.site === 'YouTube' && v.type === 'Trailer'
+    ) || videos.find(
+        (v: any) => v.site === 'YouTube' && v.type === 'Teaser'
+    ) || videos[0];
+    
+    if (trailer && trailer.site === 'YouTube' && trailer.key) {
+        return `https://www.youtube.com/watch?v=${trailer.key}`;
+    }
+    return null;
+};
+
 const FORMATS: MovieFormat[] = ['VHS', 'DVD', 'BluRay', '4K', 'Digital'];
 
 const FORMAT_COLORS: Record<string, string> = {
@@ -751,17 +767,34 @@ export default function ShowDetailScreen() {
                                     {displayShow.genres.map((g: any) => g?.name).filter(Boolean).join('  •  ')}
                                 </Text>
                             )}
-                            {displayShow.tmdb_id && (
-                                <Pressable
-                                    onPress={() => Linking.openURL(`https://letterboxd.com/tmdb/${displayShow.tmdb_id}`)}
-                                    className="mt-2.5 flex-row items-center self-start bg-neutral-900/80 border border-neutral-800/80 px-2.5 py-1 rounded-full active:bg-neutral-800"
-                                >
-                                    <Ionicons name="link-outline" size={10} color="#f59e0b" />
-                                    <Text className="text-amber-500 font-mono text-[8px] ml-1.5 uppercase font-bold tracking-wider">
-                                        LETTERBOXD
-                                    </Text>
-                                </Pressable>
-                            )}
+                            <View className="flex-row items-center gap-2 mt-2.5 flex-wrap">
+                                {displayShow.tmdb_id && (
+                                    <Pressable
+                                        onPress={() => Linking.openURL(`https://letterboxd.com/tmdb/${displayShow.tmdb_id}`)}
+                                        className="flex-row items-center bg-neutral-900/80 border border-neutral-800/80 px-2.5 py-1 rounded-full active:bg-neutral-800"
+                                    >
+                                        <Ionicons name="link-outline" size={10} color="#f59e0b" />
+                                        <Text className="text-amber-500 font-mono text-[8px] ml-1.5 uppercase font-bold tracking-wider">
+                                            LETTERBOXD
+                                        </Text>
+                                    </Pressable>
+                                )}
+                                {(() => {
+                                    const trailerUrl = getTrailerUrl(tmdbShow || displayShow);
+                                    if (!trailerUrl) return null;
+                                    return (
+                                        <Pressable
+                                            onPress={() => Linking.openURL(trailerUrl)}
+                                            className="flex-row items-center bg-amber-500/10 border border-amber-500/30 px-2.5 py-1 rounded-full active:bg-amber-500/20"
+                                        >
+                                            <Ionicons name="play-outline" size={10} color="#f59e0b" />
+                                            <Text className="text-amber-500 font-mono text-[8px] ml-1.5 uppercase font-bold tracking-wider">
+                                                PLAY TRAILER
+                                            </Text>
+                                        </Pressable>
+                                    );
+                                })()}
+                            </View>
                         </View>
                     </View>
                     {!isReadOnly && showItems.length > 0 && (

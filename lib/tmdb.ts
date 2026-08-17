@@ -306,12 +306,12 @@ export async function searchMedia(query: string, page = 1): Promise<TmdbSearchRe
   };
 }
 
-export async function getMovieById(tmdbId: number): Promise<TmdbMediaResult & { credits?: { cast: any[]; crew?: any[] } }> {
-  return tmdbFetch<any>(`/movie/${tmdbId}?append_to_response=credits`);
+export async function getMovieById(tmdbId: number): Promise<TmdbMediaResult & { credits?: { cast: any[]; crew?: any[] }; videos?: { results: any[] } }> {
+  return tmdbFetch<any>(`/movie/${tmdbId}?append_to_response=credits,videos`);
 }
 
-export async function getTvShowById(tmdbId: number): Promise<TmdbMediaResult & { credits?: { cast: any[]; crew?: any[] } }> {
-  return tmdbFetch<any>(`/tv/${tmdbId}?append_to_response=credits`);
+export async function getTvShowById(tmdbId: number): Promise<TmdbMediaResult & { credits?: { cast: any[]; crew?: any[] }; videos?: { results: any[] } }> {
+  return tmdbFetch<any>(`/tv/${tmdbId}?append_to_response=credits,videos`);
 }
 
 export async function getPersonMovieCredits(personId: number): Promise<any> {
