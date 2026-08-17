@@ -286,14 +286,37 @@ export const useBulletinFeed = (userId?: string) => {
           profiles(*),
           movies(*),
           shows(*),
-          collection_items(*)
+          collection_items(
+            *,
+            movies(*),
+            shows(*)
+          )
         `)
         .in('user_id', interestingIds)
         .order('created_at', { ascending: false })
         .limit(50);
 
       if (error) throw error;
-      return data as BulletinPostWithMedia[];
+
+      const mapped = (data || []).map((p: any) => {
+        let finalMovie = p.movies;
+        let finalShow = p.shows;
+        if (p.collection_items) {
+          if (p.collection_items.movies) {
+            finalMovie = p.collection_items.movies;
+          }
+          if (p.collection_items.shows) {
+            finalShow = p.collection_items.shows;
+          }
+        }
+        return {
+          ...p,
+          movies: finalMovie,
+          shows: finalShow
+        };
+      });
+
+      return mapped as BulletinPostWithMedia[];
     },
     enabled: !!userId,
   });
@@ -1145,12 +1168,35 @@ export function useUserPosts(profileId: string | undefined) {
           profiles(*),
           movies(*),
           shows(*),
-          collection_items(*)
+          collection_items(
+            *,
+            movies(*),
+            shows(*)
+          )
         `)
         .eq('user_id', profileId)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return data as BulletinPostWithMedia[];
+
+      const mapped = (data || []).map((p: any) => {
+        let finalMovie = p.movies;
+        let finalShow = p.shows;
+        if (p.collection_items) {
+          if (p.collection_items.movies) {
+            finalMovie = p.collection_items.movies;
+          }
+          if (p.collection_items.shows) {
+            finalShow = p.collection_items.shows;
+          }
+        }
+        return {
+          ...p,
+          movies: finalMovie,
+          shows: finalShow
+        };
+      });
+
+      return mapped as BulletinPostWithMedia[];
     },
     enabled: !!profileId
   });
