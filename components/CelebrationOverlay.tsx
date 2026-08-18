@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from 'react';
-import { StyleSheet, View, Text, Pressable, useWindowDimensions } from 'react-native';
+import { StyleSheet, View, Text, Pressable, useWindowDimensions, Modal } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import Animated, {
@@ -195,137 +195,148 @@ export function CelebrationOverlay({ item, onClose }: CelebrationOverlayProps) {
   const posterUrl = item.custom_poster_url || getPosterUrl(media?.poster_path || null);
 
   return (
-    <View style={[StyleSheet.absoluteFillObject, { zIndex: 9999 }]} className="items-center justify-center">
-      {/* 1. Frosted Glass Backdrop */}
-      <BlurView intensity={35} tint="dark" style={StyleSheet.absoluteFillObject} />
-      
-      {/* Dark overlay base to guarantee contrast */}
-      <View style={StyleSheet.absoluteFillObject} className="bg-black/85" />
-
-      {/* 2. Confetti Rain */}
-      <View style={StyleSheet.absoluteFillObject} pointerEvents="none" className="z-10">
-        {particles.map((p) => (
-          <ConfettiParticle key={p.id} config={p} screenHeight={screenHeight} />
-        ))}
-      </View>
-
-      {/* 3. Main Celebration Dialog Container */}
-      <Animated.View 
-        style={[cardStyle]} 
-        className="w-full max-w-sm px-6 items-center justify-center z-20"
-      >
-        {/* Glow Aura behind card */}
-        <Animated.View
-          style={[
-            auraStyle,
-            {
-              shadowColor: glowColor,
-              shadowOffset: { width: 0, height: 0 },
-              shadowOpacity: 0.8,
-              shadowRadius: 35,
-              borderColor: glowColor,
-              borderWidth: 1.5,
-              position: 'absolute',
-              width: 175,
-              height: 255,
-              borderRadius: 16,
-              zIndex: -1,
-              backgroundColor: `${glowColor}10`, // very transparent color
-            }
-          ]}
-        />
-
-        {/* Celebration Title */}
-        <View className="mb-6 items-center">
-          <Text 
-            className="font-mono text-center tracking-[0.2em] font-black text-2xl"
-            style={{ 
-              color: glowColor,
-              textShadowColor: `${glowColor}80`,
-              textShadowOffset: { width: 0, height: 0 },
-              textShadowRadius: 10
-            }}
-          >
-            {isGrail ? '🏆 GRAIL ATTAINED!' : '🎉 WISHLIST ACQUIRED!'}
-          </Text>
-          <Text className="text-neutral-500 font-mono text-[10px] uppercase mt-2 tracking-widest">
-            {isGrail ? 'Ultimate Collection Milestone' : 'Format Added To The Stacks'}
-          </Text>
-        </View>
-
-        {/* Movie/Show Poster Card */}
-        <View 
-          className="bg-neutral-900 rounded-2xl overflow-hidden border-2 mb-6"
-          style={{ 
-            borderColor: glowColor,
-            width: 160,
-            height: 240,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 8 },
-            shadowOpacity: 0.5,
-            shadowRadius: 12,
-            elevation: 10
-          }}
-        >
-          {posterUrl ? (
-            <Image
-              source={{ uri: posterUrl }}
-              style={{ width: '100%', height: '100%' }}
-              contentFit="cover"
-            />
-          ) : (
-            <View className="flex-1 items-center justify-center bg-neutral-850 p-4">
-              <Text className="text-neutral-500 font-mono text-xs text-center">NO IMAGE</Text>
-            </View>
-          )}
-        </View>
-
-        {/* Item Metadata */}
-        <Text className="text-white text-xl font-bold text-center mb-2 px-2" numberOfLines={2}>
-          {(media as any)?.title || (media as any)?.name}
-        </Text>
+    <Modal
+      visible={true}
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      onRequestClose={onClose}
+    >
+      <View style={StyleSheet.absoluteFillObject} className="items-center justify-center">
+        {/* 1. Frosted Glass Backdrop */}
+        <BlurView intensity={35} tint="dark" style={StyleSheet.absoluteFillObject} />
         
-        <View className="flex-row gap-2 items-center justify-center mb-10">
-          <View 
-            className="px-3 py-1 rounded border"
-            style={{ 
-              borderColor: `${glowColor}40`,
-              backgroundColor: `${glowColor}05`
-            }}
-          >
-            <Text className="font-mono text-xs font-bold" style={{ color: glowColor }}>
-              {item.format.toUpperCase()}
+        {/* Dark overlay base to guarantee contrast */}
+        <View style={StyleSheet.absoluteFillObject} className="bg-black/85" />
+
+        {/* 2. Confetti Rain */}
+        <View style={StyleSheet.absoluteFillObject} pointerEvents="none" className="z-10">
+          {particles.map((p) => (
+            <ConfettiParticle key={p.id} config={p} screenHeight={screenHeight} />
+          ))}
+        </View>
+
+        {/* 3. Main Celebration Dialog Container */}
+        <Animated.View 
+          style={[cardStyle]} 
+          className="w-full max-w-sm px-6 items-center justify-center z-20"
+        >
+          {/* Celebration Title */}
+          <View className="mb-6 items-center">
+            <Text 
+              className="font-mono text-center tracking-[0.2em] font-black text-2xl"
+              style={{ 
+                color: glowColor,
+                textShadowColor: `${glowColor}80`,
+                textShadowOffset: { width: 0, height: 0 },
+                textShadowRadius: 10
+              }}
+            >
+              {isGrail ? '🏆 GRAIL ATTAINED!' : '🎉 WISHLIST ACQUIRED!'}
+            </Text>
+            <Text className="text-neutral-500 font-mono text-[10px] uppercase mt-2 tracking-widest text-center">
+              {isGrail ? 'Ultimate Collection Milestone' : 'Format Added To The Stacks'}
             </Text>
           </View>
-          {item.edition && (
-            <Text className="text-neutral-400 font-mono text-xs max-w-[150px]" numberOfLines={1}>
-              • {item.edition}
-            </Text>
-          )}
-        </View>
 
-        {/* Dismiss Button */}
-        <Pressable
-          onPress={onClose}
-          className="w-full py-4 rounded-xl items-center border active:opacity-80"
-          style={{
-            borderColor: glowColor,
-            backgroundColor: `${glowColor}15`,
-            shadowColor: glowColor,
-            shadowOffset: { width: 0, height: 0 },
-            shadowOpacity: 0.3,
-            shadowRadius: 10,
-          }}
-        >
-          <Text 
-            className="font-mono font-bold text-base tracking-wider"
-            style={{ color: glowColor }}
-          >
-            {isGrail ? 'SWEET!' : 'LFG!'}
+          {/* Poster + Glow Wrapper */}
+          <View style={{ width: 160, height: 240, justifyContent: 'center', alignItems: 'center', marginBottom: 24 }}>
+            {/* Glow Aura behind card */}
+            <Animated.View
+              style={[
+                auraStyle,
+                {
+                  shadowColor: glowColor,
+                  shadowOffset: { width: 0, height: 0 },
+                  shadowOpacity: 0.8,
+                  shadowRadius: 35,
+                  borderColor: glowColor,
+                  borderWidth: 1.5,
+                  position: 'absolute',
+                  top: -8,
+                  left: -8,
+                  right: -8,
+                  bottom: -8,
+                  borderRadius: 16,
+                  zIndex: -1,
+                  backgroundColor: `${glowColor}10`, // very transparent color
+                }
+              ]}
+            />
+
+            {/* Movie/Show Poster Card */}
+            <View 
+              className="bg-neutral-900 rounded-2xl overflow-hidden border-2 w-full h-full"
+              style={{ 
+                borderColor: glowColor,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 8 },
+                shadowOpacity: 0.5,
+                shadowRadius: 12,
+                elevation: 10
+              }}
+            >
+              {posterUrl ? (
+                <Image
+                  source={{ uri: posterUrl }}
+                  style={{ width: '100%', height: '100%' }}
+                  contentFit="cover"
+                />
+              ) : (
+                <View className="flex-1 items-center justify-center bg-neutral-850 p-4">
+                  <Text className="text-neutral-500 font-mono text-xs text-center">NO IMAGE</Text>
+                </View>
+              )}
+            </View>
+          </View>
+
+          {/* Item Metadata */}
+          <Text className="text-white text-xl font-bold text-center mb-2 px-2" numberOfLines={2}>
+            {(media as any)?.title || (media as any)?.name}
           </Text>
-        </Pressable>
-      </Animated.View>
-    </View>
+          
+          <View className="flex-row gap-2 items-center justify-center mb-10">
+            <View 
+              className="px-3 py-1 rounded border"
+              style={{ 
+                borderColor: `${glowColor}40`,
+                backgroundColor: `${glowColor}05`
+              }}
+            >
+              <Text className="font-mono text-xs font-bold" style={{ color: glowColor }}>
+                {item.format.toUpperCase()}
+              </Text>
+            </View>
+            {item.edition && (
+              <Text className="text-neutral-400 font-mono text-xs max-w-[150px]" numberOfLines={1}>
+                • {item.edition}
+              </Text>
+            )}
+          </View>
+
+          {/* Dismiss Button */}
+          <Pressable
+            onPress={onClose}
+            className="w-full py-4 rounded-xl items-center border active:opacity-80"
+            style={{
+              borderColor: glowColor,
+              backgroundColor: `${glowColor}15`,
+              shadowColor: glowColor,
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: 0.3,
+              shadowRadius: 10,
+            }}
+          >
+            <Text 
+              className="font-mono font-bold text-base tracking-wider"
+              style={{ color: glowColor }}
+            >
+              {isGrail ? 'SWEET!' : 'LFG!'}
+            </Text>
+          </Pressable>
+        </Animated.View>
+      </View>
+    </Modal>
   );
 }
 
