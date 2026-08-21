@@ -301,7 +301,7 @@ export default function ShowDetailScreen() {
         setLocalFranchiseOrder(undefined);
         setLocalSortingTags(undefined);
         setLocalCustomGenre(undefined);
-    }, [id]);
+    }, [id, seasonQuery]);
 
     useEffect(() => {
         if (show && !persistedShow) {
