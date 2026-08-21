@@ -103,7 +103,7 @@ export default function UserProfileScreen() {
           const year = (m.release_date || m.first_air_date || '').slice(0, 4);
           const format = (item.format || '').toLowerCase();
           const edition = (item.edition || '').toLowerCase();
-          const franchise = (m.franchise || '').toLowerCase();
+          const franchise = (item.franchise || '').toLowerCase();
           const tags = (m.sorting_tags || '').toLowerCase();
           
           const searchableTexts: string[] = [title, year, format, edition, franchise, tags];
@@ -155,13 +155,13 @@ export default function UserProfileScreen() {
           const rawTitleB = mediaB?.title || mediaB?.name || '';
 
           if (useFranchiseSort) {
-            const franchiseA = mediaA?.franchise?.trim();
-            const franchiseB = mediaB?.franchise?.trim();
+            const franchiseA = a.franchise?.trim();
+            const franchiseB = b.franchise?.trim();
 
             if (franchiseA && franchiseB) {
               if (franchiseA.toLowerCase() === franchiseB.toLowerCase()) {
-                const orderA = mediaA?.franchise_order !== null && mediaA?.franchise_order !== undefined ? Number(mediaA.franchise_order) : Infinity;
-                const orderB = mediaB?.franchise_order !== null && mediaB?.franchise_order !== undefined ? Number(mediaB.franchise_order) : Infinity;
+                const orderA = a.franchise_order !== null && a.franchise_order !== undefined ? Number(a.franchise_order) : Infinity;
+                const orderB = b.franchise_order !== null && b.franchise_order !== undefined ? Number(b.franchise_order) : Infinity;
                 if (orderA !== orderB) {
                   comparison = orderA - orderB;
                 } else {

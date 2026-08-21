@@ -550,8 +550,8 @@ export default function ShowDetailScreen() {
 
     const displayShow = { ...activeShow, ...tmdbShow };
 
-    const franchiseValue = localFranchise !== undefined ? localFranchise : (displayShow?.franchise || '');
-    const franchiseOrderValue = localFranchiseOrder !== undefined ? localFranchiseOrder : (displayShow?.franchise_order?.toString() || '');
+    const franchiseValue = localFranchise !== undefined ? localFranchise : (showItems[0]?.franchise || '');
+    const franchiseOrderValue = localFranchiseOrder !== undefined ? localFranchiseOrder : (showItems[0]?.franchise_order?.toString() || '');
     const sortingTagsValue = localSortingTags !== undefined ? localSortingTags : (displayShow?.sorting_tags || '');
     const customGenreValue = localCustomGenre !== undefined ? localCustomGenre : (displayShow?.custom_genre || '');
 
@@ -754,11 +754,11 @@ export default function ShowDetailScreen() {
                                 Season {seasonNumber}
                             </Text>
                             {/* Franchise Tag Badge */}
-                            {displayShow?.franchise ? (
+                            {showItems[0]?.franchise ? (
                                 <View className="bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-md self-start flex-row items-center mt-1 mb-0.5">
                                     <Ionicons name="film-outline" size={10} color="#f59e0b" style={{ marginRight: 4 }} />
                                     <Text className="text-amber-500 font-mono text-[9px] font-bold uppercase">
-                                        {displayShow.franchise} {displayShow.franchise_order !== null && displayShow.franchise_order !== undefined ? `#${displayShow.franchise_order}` : ''}
+                                        {showItems[0].franchise} {showItems[0].franchise_order !== null && showItems[0].franchise_order !== undefined ? `#${showItems[0].franchise_order}` : ''}
                                     </Text>
                                 </View>
                             ) : null}
@@ -1058,8 +1058,8 @@ export default function ShowDetailScreen() {
                                     ))}
                                 </ScrollView>
                             </View>
-                            {(localFranchise !== (displayShow?.franchise || '') || 
-                              localFranchiseOrder !== (displayShow?.franchise_order?.toString() || '') ||
+                            {(localFranchise !== (showItems[0]?.franchise || '') || 
+                              localFranchiseOrder !== (showItems[0]?.franchise_order?.toString() || '') ||
                               localSortingTags !== (displayShow?.sorting_tags || '') ||
                               localCustomGenre !== (displayShow?.custom_genre || '')) && (
                                 <Pressable
@@ -1070,6 +1070,7 @@ export default function ShowDetailScreen() {
                                                 const franchiseOrderToSave = franchiseOrderValue.trim() === '' ? null : parseFloat(franchiseOrderValue);
                                                 await updateShowFranchiseMutation.mutateAsync({
                                                     showId: activeShow?.id || displayShow.id,
+                                                    seasonNumber: seasonNumber,
                                                     franchise: franchiseValue || null,
                                                     franchiseOrder: isNaN(franchiseOrderToSave as any) ? null : franchiseOrderToSave,
                                                     sortingTags: sortingTagsValue || null,

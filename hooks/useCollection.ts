@@ -14,7 +14,7 @@ export function useCollection(userId: string | undefined) {
         const to = from + 999;
         const { data, error } = await supabase
           .from('collection_items')
-          .select(`*, movies (id, tmdb_id, title, poster_path, backdrop_path, release_date, primary_color, genres, franchise, franchise_order, custom_genre, sorting_tags), shows (id, tmdb_id, name, poster_path, backdrop_path, first_air_date, primary_color, genres, franchise, franchise_order, custom_genre, sorting_tags)`)
+          .select(`*, movies (id, tmdb_id, title, poster_path, backdrop_path, release_date, primary_color, genres, custom_genre, sorting_tags), shows (id, tmdb_id, name, poster_path, backdrop_path, first_air_date, primary_color, genres, custom_genre, sorting_tags)`)
           .eq('user_id', userId)
           .order('display_order', { ascending: true })
           .order('grail_order', { ascending: true })
@@ -186,6 +186,48 @@ export function useAddToCollection(userId: string | undefined) {
         internalId = (showRow as any).id;
       }
 
+      // Check if there are other collection items for this movie/show-season to inherit franchise & franchise_order
+      let inheritedFranchise: string | null = null;
+      let inheritedFranchiseOrder: number | null = null;
+
+      try {
+        let existingQuery = supabase
+          .from('collection_items')
+          .select('franchise, franchise_order, season_number')
+          .eq('user_id', userId)
+          .eq('media_type', mediaType);
+
+        if (mediaType === 'movie') {
+          existingQuery = existingQuery.eq('movie_id', internalId);
+        } else {
+          existingQuery = existingQuery.eq('show_id', internalId);
+        }
+
+        const { data: existingItems } = await existingQuery;
+        if (existingItems && existingItems.length > 0) {
+          if (mediaType === 'tv') {
+            const exactMatch = existingItems.find((item: any) => item.season_number === seasonNumber);
+            if (exactMatch && exactMatch.franchise) {
+              inheritedFranchise = exactMatch.franchise;
+              inheritedFranchiseOrder = exactMatch.franchise_order;
+            } else {
+              const anyMatch = existingItems.find((item: any) => item.franchise);
+              if (anyMatch) {
+                inheritedFranchise = anyMatch.franchise;
+              }
+            }
+          } else {
+            const match = existingItems.find((item: any) => item.franchise);
+            if (match) {
+              inheritedFranchise = match.franchise;
+              inheritedFranchiseOrder = match.franchise_order;
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to inherit franchise info:', e);
+      }
+
       const itemsToInsert = formats.map((format) => ({
         user_id: userId,
         media_type: mediaType,
@@ -196,6 +238,8 @@ export function useAddToCollection(userId: string | undefined) {
         status,
         edition: edition || null,
         is_bootleg: !!isBootleg,
+        franchise: inheritedFranchise,
+        franchise_order: inheritedFranchiseOrder,
       }));
 
       const { data: insertedItems, error: itemError } = await supabase
@@ -879,11 +923,18 @@ export function useUpdateMovieFranchise(userId: string | undefined) {
       const cleanMovieId = Number(movieId);
       if (isNaN(cleanMovieId) || cleanMovieId <= 0) throw new Error('Invalid Movie ID');
       
-      const { error } = await supabase
+      const { error: movieError } = await supabase
         .from('movies')
-        .update({ franchise, franchise_order: franchiseOrder, sorting_tags: sortingTags, custom_genre: customGenre })
+        .update({ sorting_tags: sortingTags, custom_genre: customGenre })
         .eq('id', cleanMovieId);
-      if (error) throw error;
+      if (movieError) throw movieError;
+
+      const { error: itemsError } = await supabase
+        .from('collection_items')
+        .update({ franchise, franchise_order: franchiseOrder })
+        .eq('movie_id', cleanMovieId)
+        .eq('user_id', userId);
+      if (itemsError) throw itemsError;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['collection', userId] });
@@ -896,16 +947,24 @@ export function useUpdateMovieFranchise(userId: string | undefined) {
 export function useUpdateShowFranchise(userId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ showId, franchise, franchiseOrder, sortingTags, customGenre }: { showId: number | string, franchise: string | null, franchiseOrder: number | null, sortingTags?: string | null, customGenre?: string | null }) => {
+    mutationFn: async ({ showId, seasonNumber, franchise, franchiseOrder, sortingTags, customGenre }: { showId: number | string, seasonNumber: number, franchise: string | null, franchiseOrder: number | null, sortingTags?: string | null, customGenre?: string | null }) => {
       if (!userId) throw new Error('Not authenticated');
       const cleanShowId = Number(showId);
       if (isNaN(cleanShowId) || cleanShowId <= 0) throw new Error('Invalid Show ID');
       
-      const { error } = await supabase
+      const { error: showError } = await supabase
         .from('shows')
-        .update({ franchise, franchise_order: franchiseOrder, sorting_tags: sortingTags, custom_genre: customGenre })
+        .update({ sorting_tags: sortingTags, custom_genre: customGenre })
         .eq('id', cleanShowId);
-      if (error) throw error;
+      if (showError) throw showError;
+
+      const { error: itemsError } = await supabase
+        .from('collection_items')
+        .update({ franchise, franchise_order: franchiseOrder })
+        .eq('show_id', cleanShowId)
+        .eq('season_number', seasonNumber)
+        .eq('user_id', userId);
+      if (itemsError) throw itemsError;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['collection', userId] });

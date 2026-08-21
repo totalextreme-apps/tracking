@@ -406,7 +406,7 @@ export default function HomeScreen() {
             const year = (m.release_date || m.first_air_date || '').slice(0, 4);
             const format = (item.format || '').toLowerCase();
             const edition = (item.edition || '').toLowerCase();
-            const franchise = (m.franchise || '').toLowerCase();
+            const franchise = (item.franchise || '').toLowerCase();
             const tags = (m.sorting_tags || '').toLowerCase();
             
             const searchableTexts: string[] = [title, year, format, edition, franchise, tags];

@@ -125,7 +125,7 @@ export function getStacks(
     for (const stack of stacks) {
       const item = stack[0];
       const media = item.movies || item.shows;
-      const franchise = media?.franchise?.trim()?.toLowerCase();
+      const franchise = item.franchise?.trim()?.toLowerCase();
       if (franchise) {
         const title = ((media as any)?.title || (media as any)?.name || '').toLowerCase();
         const score = getScore(title);
@@ -151,11 +151,11 @@ export function getStacks(
       
       // 1. If Franchise Sort is on and they are in the same franchise, franchise order ALWAYS wins
       if (useFranchiseSort) {
-        const franchiseA = mediaA?.franchise?.trim();
-        const franchiseB = mediaB?.franchise?.trim();
+        const franchiseA = itemA.franchise?.trim();
+        const franchiseB = itemB.franchise?.trim();
         if (franchiseA && franchiseB && franchiseA.toLowerCase() === franchiseB.toLowerCase()) {
-          const orderA = mediaA?.franchise_order !== null && mediaA?.franchise_order !== undefined ? Number(mediaA.franchise_order) : Infinity;
-          const orderB = mediaB?.franchise_order !== null && mediaB?.franchise_order !== undefined ? Number(mediaB.franchise_order) : Infinity;
+          const orderA = itemA.franchise_order !== null && itemA.franchise_order !== undefined ? Number(itemA.franchise_order) : Infinity;
+          const orderB = itemB.franchise_order !== null && itemB.franchise_order !== undefined ? Number(itemB.franchise_order) : Infinity;
           if (orderA !== orderB) {
             return orderA - orderB;
           }
@@ -178,8 +178,8 @@ export function getStacks(
 
       // If Franchise Sort is on, boost the item's score to its franchise's max score
       if (useFranchiseSort) {
-        const franchiseA = mediaA?.franchise?.trim()?.toLowerCase();
-        const franchiseB = mediaB?.franchise?.trim()?.toLowerCase();
+        const franchiseA = itemA.franchise?.trim()?.toLowerCase();
+        const franchiseB = itemB.franchise?.trim()?.toLowerCase();
         if (franchiseA) scoreA = Math.max(scoreA, franchiseMaxScores.get(franchiseA) || 0);
         if (franchiseB) scoreB = Math.max(scoreB, franchiseMaxScores.get(franchiseB) || 0);
       }
@@ -190,8 +190,8 @@ export function getStacks(
 
       // 3. If scores are tied and Franchise Sort is enabled, group items by franchise
       if (useFranchiseSort) {
-        const franchiseA = mediaA?.franchise?.trim() || '';
-        const franchiseB = mediaB?.franchise?.trim() || '';
+        const franchiseA = itemA.franchise?.trim() || '';
+        const franchiseB = itemB.franchise?.trim() || '';
         if (franchiseA !== franchiseB) {
           if (franchiseA && !franchiseB) return -1;
           if (!franchiseA && franchiseB) return 1;
@@ -210,16 +210,13 @@ export function getStacks(
         const rawTitleB = itemB.movies?.title ?? itemB.shows?.name ?? '';
 
         if (useFranchiseSort) {
-          const mediaA = itemA.movies || itemA.shows;
-          const mediaB = itemB.movies || itemB.shows;
-
-          const franchiseA = mediaA?.franchise?.trim();
-          const franchiseB = mediaB?.franchise?.trim();
+          const franchiseA = itemA.franchise?.trim();
+          const franchiseB = itemB.franchise?.trim();
 
           if (franchiseA && franchiseB) {
             if (franchiseA.toLowerCase() === franchiseB.toLowerCase()) {
-              const orderA = mediaA?.franchise_order !== null && mediaA?.franchise_order !== undefined ? Number(mediaA.franchise_order) : Infinity;
-              const orderB = mediaB?.franchise_order !== null && mediaB?.franchise_order !== undefined ? Number(mediaB.franchise_order) : Infinity;
+              const orderA = itemA.franchise_order !== null && itemA.franchise_order !== undefined ? Number(itemA.franchise_order) : Infinity;
+              const orderB = itemB.franchise_order !== null && itemB.franchise_order !== undefined ? Number(itemB.franchise_order) : Infinity;
               if (orderA !== orderB) {
                 comparison = orderA - orderB;
               } else {

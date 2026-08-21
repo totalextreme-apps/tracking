@@ -594,8 +594,8 @@ export default function MovieDetailScreen() {
 
     const displayMovie = { ...tmdbMovie, ...activeMovie }; // DB data should override TMDB data
 
-    const franchiseValue = localFranchise !== undefined ? localFranchise : (displayMovie?.franchise || '');
-    const franchiseOrderValue = localFranchiseOrder !== undefined ? localFranchiseOrder : (displayMovie?.franchise_order?.toString() || '');
+    const franchiseValue = localFranchise !== undefined ? localFranchise : (movieItems[0]?.franchise || '');
+    const franchiseOrderValue = localFranchiseOrder !== undefined ? localFranchiseOrder : (movieItems[0]?.franchise_order?.toString() || '');
     const sortingTagsValue = localSortingTags !== undefined ? localSortingTags : (displayMovie?.sorting_tags || '');
     const customGenreValue = localCustomGenre !== undefined ? localCustomGenre : (displayMovie?.custom_genre || '');
 
@@ -946,11 +946,11 @@ export default function MovieDetailScreen() {
                                 {displayMovie.title} {displayMovie.release_date ? `(${displayMovie.release_date.slice(0, 4)})` : ''}
                             </Text>
                             {/* Franchise Tag Badge */}
-                            {displayMovie?.franchise ? (
+                            {movieItems[0]?.franchise ? (
                                 <View className="bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-md self-start flex-row items-center mt-1 mb-0.5">
                                     <Ionicons name="film-outline" size={10} color="#f59e0b" style={{ marginRight: 4 }} />
                                     <Text className="text-amber-500 font-mono text-[9px] font-bold uppercase">
-                                        {displayMovie.franchise} {displayMovie.franchise_order !== null && displayMovie.franchise_order !== undefined ? `#${displayMovie.franchise_order}` : ''}
+                                        {movieItems[0].franchise} {movieItems[0].franchise_order !== null && movieItems[0].franchise_order !== undefined ? `#${movieItems[0].franchise_order}` : ''}
                                     </Text>
                                 </View>
                             ) : null}
@@ -1331,8 +1331,8 @@ export default function MovieDetailScreen() {
                                     ))}
                                 </ScrollView>
                             </View>
-                            {(localFranchise !== (displayMovie?.franchise || '') || 
-                              localFranchiseOrder !== (displayMovie?.franchise_order?.toString() || '') ||
+                            {(localFranchise !== (movieItems[0]?.franchise || '') || 
+                              localFranchiseOrder !== (movieItems[0]?.franchise_order?.toString() || '') ||
                               localSortingTags !== (displayMovie?.sorting_tags || '') ||
                               localCustomGenre !== (displayMovie?.custom_genre || '')) && (
                                 <Pressable
