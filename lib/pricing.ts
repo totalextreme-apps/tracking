@@ -18,15 +18,65 @@ export function getEbaySearchUrl(title: string, format: string, edition?: string
 }
 
 /**
+ * Checks if the matched price is likely a shipping cost based on surrounding text segment.
+ */
+function isShippingContext(text: string, index: number, matchedStr: string): boolean {
+    // Find segment start (nearest punctuation/separator before index)
+    const textBefore = text.slice(0, index);
+    const lastSeparatorBefore = Math.max(
+        textBefore.lastIndexOf('.'),
+        textBefore.lastIndexOf(';'),
+        textBefore.lastIndexOf('|'),
+        textBefore.lastIndexOf('\n'),
+        textBefore.lastIndexOf('\r'),
+        textBefore.lastIndexOf('\t'),
+        textBefore.lastIndexOf('  ') // double space as listing separator
+    );
+    const segmentStart = lastSeparatorBefore === -1 ? 0 : lastSeparatorBefore + 1;
+
+    // Find segment end (nearest punctuation/separator after index)
+    const textAfter = text.slice(index + matchedStr.length);
+    const firstSeparatorAfter = textAfter.search(/[\.;|\n\r\t]|\s{2}/);
+    const segmentEnd = firstSeparatorAfter === -1 ? text.length : index + matchedStr.length + firstSeparatorAfter;
+
+    // Extract the segment containing the match
+    const segment = text.slice(segmentStart, segmentEnd).toLowerCase();
+
+    // 1. If preceded by a '+' (indicating a shipping addition, e.g., "+$5.39" or "+ $5.39")
+    // Look at context immediately preceding the match within the segment
+    const contextBeforeMatch = text.slice(segmentStart, index).trim();
+    if (contextBeforeMatch.endsWith('+')) {
+        return true;
+    }
+    
+    // 2. If the segment contains shipping keywords as whole words
+    const shippingRegex = /\b(shipping|postage|delivery)\b/i;
+    if (shippingRegex.test(segment)) {
+        return true;
+    }
+
+    return false;
+}
+
+/**
  * Parses eBay search results HTML and extracts listing prices.
  */
 export function parseEbayPrices(html: string): number[] {
     const prices: number[] = [];
-    const priceRegex = /class="[^"]*(s-item__price|s-card__price|POSITIVE|text-positive|ITEM_PRICE)[^"]*">([\s\S]*?)<\/span>/gi;
+    
+    // Robust class matching regex that handles single/double quotes, spaces, and other attributes
+    const priceRegex = /class\s*=\s*["']([^"']*)(s-item__price|s-card__price|POSITIVE|text-positive|ITEM_PRICE)([^"']*)["'][^>]*>([\s\S]*?)<\/span>/gi;
     let match;
 
     while ((match = priceRegex.exec(html)) !== null) {
-        let priceText = match[2].replace(/<[^>]*>/g, '').trim();
+        const fullClass = (match[1] + match[2] + match[3]).toLowerCase();
+        
+        // Skip if class is shipping/postage/delivery/logistics related
+        if (fullClass.includes('shipping') || fullClass.includes('logistics') || fullClass.includes('postage') || fullClass.includes('delivery')) {
+            continue;
+        }
+
+        let priceText = match[4].replace(/<[^>]*>/g, '').trim();
         
         // Handle price ranges (e.g. "$10.00 to $15.00") by taking the first value
         if (priceText.includes('to')) {
@@ -36,6 +86,11 @@ export function parseEbayPrices(html: string): number[] {
         // Remove currency symbols, commas, etc.
         const cleanPrice = parseFloat(priceText.replace(/[^0-9.]/g, ''));
         if (!isNaN(cleanPrice) && cleanPrice > 0) {
+            // Apply contextual filtering even for class matches to protect against false positives
+            const matchIndex = match.index;
+            if (isShippingContext(html, matchIndex, priceText)) {
+                continue;
+            }
             prices.push(cleanPrice);
         }
     }
@@ -49,9 +104,11 @@ export function parseEbayPrices(html: string): number[] {
         let looseMatch;
         while ((looseMatch = dollarRegex.exec(cleanText)) !== null) {
             const cleanPrice = parseFloat(looseMatch[1].replace(/,/g, ''));
-            // Filter out obvious shipping prices (usually exact round numbers under $6 or standard USPS rates)
-            // This is a rough heuristic since we lost the HTML context, but better than 0 prices.
             if (!isNaN(cleanPrice) && cleanPrice > 0) {
+                const matchIndex = looseMatch.index;
+                if (isShippingContext(cleanText, matchIndex, looseMatch[0])) {
+                    continue;
+                }
                 prices.push(cleanPrice);
             }
         }
