@@ -84,6 +84,76 @@ export function StatsSection({ collection }: StatsSectionProps) {
             legendFontSize: 10,
         })).sort((a, b) => b.population - a.population).slice(0, 8); // Top 8 genres
     }, [collection]);
+ 
+    // --- Decade/Release Date Data ---
+    const decadeData = useMemo(() => {
+        const years: number[] = [];
+        collection.forEach(item => {
+            if (!item) return;
+            const dateStr = item.movies?.release_date || item.shows?.first_air_date;
+            if (dateStr) {
+                const year = parseInt(dateStr.substring(0, 4));
+                if (!isNaN(year)) {
+                    years.push(year);
+                }
+            }
+        });
+
+        if (years.length === 0) return null;
+
+        const minYear = Math.min(...years);
+        const maxYear = Math.max(...years);
+        const minDecade = Math.floor(minYear / 10) * 10;
+        const maxDecade = Math.floor(maxYear / 10) * 10;
+
+        const decadesList: number[] = [];
+        for (let d = minDecade; d <= maxDecade; d += 10) {
+            decadesList.push(d);
+        }
+
+        const MAX_DECADES = 7;
+        let finalDecades = [...decadesList];
+        let preDecadeThreshold: number | null = null;
+
+        if (finalDecades.length > MAX_DECADES) {
+            const keepCount = MAX_DECADES - 1;
+            preDecadeThreshold = finalDecades[finalDecades.length - keepCount];
+            finalDecades = finalDecades.slice(finalDecades.length - keepCount);
+        }
+
+        const binnedCounts: Record<string, number> = {};
+        if (preDecadeThreshold !== null) {
+            const label = `Pre-${String(preDecadeThreshold).substring(2)}s`;
+            binnedCounts[label] = 0;
+        }
+        finalDecades.forEach(d => {
+            const label = `'${String(d).substring(2)}s`;
+            binnedCounts[label] = 0;
+        });
+
+        years.forEach(year => {
+            const itemDecade = Math.floor(year / 10) * 10;
+            if (preDecadeThreshold !== null && itemDecade < preDecadeThreshold) {
+                const label = `Pre-${String(preDecadeThreshold).substring(2)}s`;
+                binnedCounts[label] = (binnedCounts[label] || 0) + 1;
+            } else {
+                const label = `'${String(itemDecade).substring(2)}s`;
+                binnedCounts[label] = (binnedCounts[label] || 0) + 1;
+            }
+        });
+
+        const entries = Object.keys(binnedCounts).map(label => ({
+            label,
+            count: binnedCounts[label]
+        }));
+
+        const maxCount = Math.max(...entries.map(e => e.count), 1);
+
+        return {
+            entries,
+            maxCount
+        };
+    }, [collection]);
 
     return (
         <View className="mb-8">
@@ -109,7 +179,7 @@ export function StatsSection({ collection }: StatsSectionProps) {
             </View>
 
             {/* Genre Distribution Pie Chart */}
-            <View className="bg-neutral-900 rounded-xl p-2 border border-neutral-800 items-center">
+            <View className="bg-neutral-900 rounded-xl p-2 border border-neutral-800 mb-6 items-center">
                 <Text className="text-neutral-500 font-mono text-xs font-bold mb-2 mt-2">BY GENRE</Text>
                 <PieChart
                     data={genreData}
@@ -124,6 +194,44 @@ export function StatsSection({ collection }: StatsSectionProps) {
                     hasLegend={true}
                 />
             </View>
+
+            {/* Release Date Distribution Chart */}
+            {decadeData && (
+                <View className="bg-neutral-900 rounded-xl p-4 border border-neutral-800 items-center w-full">
+                    <Text className="text-neutral-500 font-mono text-xs font-bold mb-4 mt-2">BY RELEASE DATE</Text>
+                    <View className="w-full px-2">
+                        {decadeData.entries.map((entry) => {
+                            const percent = (entry.count / decadeData.maxCount) * 100;
+                            return (
+                                <View key={entry.label} className="flex-row items-center mb-3 w-full">
+                                    {/* Decade Label */}
+                                    <View className="w-16">
+                                        <Text className="text-neutral-400 font-mono text-[10px] font-bold">
+                                            {entry.label}
+                                        </Text>
+                                    </View>
+                                    
+                                    {/* Bar Track */}
+                                    <View className="flex-1 h-3 bg-neutral-950 rounded-full overflow-hidden border border-neutral-800/80 mr-4">
+                                        {/* Filled Bar */}
+                                        <View 
+                                            style={{ width: `${percent}%` }}
+                                            className="h-full bg-amber-500 rounded-full" 
+                                        />
+                                    </View>
+                                    
+                                    {/* Count */}
+                                    <View className="w-6 items-end">
+                                        <Text className="text-white font-mono text-[10px] font-bold">
+                                            {entry.count}
+                                        </Text>
+                                    </View>
+                                </View>
+                            );
+                        })}
+                    </View>
+                </View>
+            )}
         </View>
     );
 }
