@@ -286,12 +286,12 @@ export const useBulletinFeed = (userId?: string, enabledParam = true) => {
         .select(`
           *,
           profiles(*),
-          movies(*),
-          shows(*),
+          movies(id, title, poster_path, tmdb_id),
+          shows(id, name, poster_path, tmdb_id),
           collection_items(
             *,
-            movies(*),
-            shows(*)
+            movies(id, title, poster_path, tmdb_id),
+            shows(id, name, poster_path, tmdb_id)
           )
         `)
         .in('user_id', interestingIds)
@@ -786,12 +786,12 @@ export const useCommunityFeed = (userId?: string) => {
         .select(`
           *,
           profiles(*),
-          movies(*),
-          shows(*),
+          movies(id, title, poster_path, tmdb_id),
+          shows(id, name, poster_path, tmdb_id),
           collection_items(
             *,
-            movies(*),
-            shows(*)
+            movies(id, title, poster_path, tmdb_id),
+            shows(id, name, poster_path, tmdb_id)
           )
         `)
         .in('user_id', interestingIds)
@@ -805,8 +805,8 @@ export const useCommunityFeed = (userId?: string) => {
         .from('collection_items')
         .select(`
           *,
-          movies (*),
-          shows (*)
+          movies(id, title, poster_path, tmdb_id),
+          shows(id, name, poster_path, tmdb_id)
         `)
         .in('user_id', interestingIds)
         .eq('status', 'owned')
@@ -820,8 +820,8 @@ export const useCommunityFeed = (userId?: string) => {
         .from('collection_items')
         .select(`
           *,
-          movies (*),
-          shows (*)
+          movies(id, title, poster_path, tmdb_id),
+          shows(id, name, poster_path, tmdb_id)
         `)
         .in('user_id', interestingIds)
         .not('last_watched_at', 'is', null)
@@ -835,8 +835,8 @@ export const useCommunityFeed = (userId?: string) => {
         .from('collection_items')
         .select(`
           *,
-          movies (*),
-          shows (*)
+          movies(id, title, poster_path, tmdb_id),
+          shows(id, name, poster_path, tmdb_id)
         `)
         .in('user_id', interestingIds)
         .or('for_sale.eq.true,for_trade.eq.true')
@@ -853,8 +853,8 @@ export const useCommunityFeed = (userId?: string) => {
           profiles(*),
           collection_items(
             *,
-            movies(*),
-            shows(*)
+            movies(id, title, poster_path, tmdb_id),
+            shows(id, name, poster_path, tmdb_id)
           )
         `)
         .in('user_id', interestingIds)

@@ -526,11 +526,28 @@ export default function ShowDetailScreen() {
         );
     }
 
-    if ((!activeShow && tmdbLoading) || !showIdNum) {
+    const resolvedShowId = showIdNum || showItems[0]?.show_id || showFromDb?.id;
+    const isCollectionLoading = !collection;
+    const isInitialLoading = !resolvedShowId && isCollectionLoading;
+
+    if (isInitialLoading || (resolvedShowId && tmdbLoading && !activeShow)) {
         return (
             <View className="flex-1 bg-neutral-950 items-center justify-center">
                 <ActivityIndicator size="large" color="#f59e0b" />
                 <Text className="text-amber-500 font-mono text-xs mt-4 uppercase tracking-widest">Fetching Signal...</Text>
+            </View>
+        );
+    }
+
+    if (!resolvedShowId && collection) {
+        return (
+            <View className="flex-1 bg-neutral-950 items-center justify-center p-8">
+                <Ionicons name="alert-circle-outline" size={48} color="#ef4444" />
+                <Text className="text-white font-bold text-lg mt-4 text-center">Show Not Found</Text>
+                <Text className="text-neutral-500 text-center mt-2">Could not find this show in your collection.</Text>
+                <Pressable onPress={() => router.back()} className="mt-8 bg-neutral-800 px-6 py-3 rounded-lg">
+                    <Text className="text-white font-bold">GO BACK</Text>
+                </Pressable>
             </View>
         );
     }

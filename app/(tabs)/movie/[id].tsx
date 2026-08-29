@@ -584,10 +584,25 @@ export default function MovieDetailScreen() {
         return {};
     }, [movieItems]);
 
-    if (!movieId || (tmdbLoading && !activeMovie)) {
+    const resolvedMovieId = movieId || activeItem?.movie_id || movieItems[0]?.movie_id;
+    const isCollectionLoading = !collection;
+    const isInitialLoading = !resolvedMovieId && isCollectionLoading;
+
+    if (isInitialLoading || (resolvedMovieId && tmdbLoading && !activeMovie)) {
         return (
             <View className="flex-1 bg-neutral-950 items-center justify-center">
                 <ActivityIndicator color="#f59e0b" />
+            </View>
+        );
+    }
+
+    if (!resolvedMovieId && collection) {
+        return (
+            <View className="flex-1 bg-neutral-950 items-center justify-center p-6">
+                <Text style={{ color: '#fff', fontFamily: 'SpaceMono', fontSize: 14, textAlign: 'center', marginBottom: 16 }}>Item Not Found</Text>
+                <Pressable onPress={() => router.back()} style={{ backgroundColor: '#f59e0b', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 4 }}>
+                    <Text style={{ color: '#000', fontFamily: 'SpaceMono', fontSize: 12, fontWeight: 'bold' }}>GO BACK</Text>
+                </Pressable>
             </View>
         );
     }
