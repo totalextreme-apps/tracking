@@ -248,8 +248,8 @@ export default function ShowDetailScreen() {
     };
 
     // For TV shows, we group by show_id and season_number.
-    const showIdNum = typeof id === 'string' ? parseInt(id, 10) : undefined;
-    const itemUuid = typeof id === 'string' && isNaN(showIdNum as any) ? id : null;
+    const showIdNum = typeof id === 'string' && /^\d+$/.test(id) ? parseInt(id, 10) : undefined;
+    const itemUuid = typeof id === 'string' && !/^\d+$/.test(id) ? id : null;
     const { season: seasonQuery } = useLocalSearchParams<{ season?: string }>();
     const seasonNumber = seasonQuery && seasonQuery !== 'undefined' && seasonQuery !== 'null' ? parseInt(seasonQuery, 10) : 1;
 

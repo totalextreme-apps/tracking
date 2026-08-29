@@ -261,8 +261,8 @@ export default function MovieDetailScreen() {
         }
     };
 
-    const movieId = typeof id === 'string' ? parseInt(id, 10) : undefined;
-    const itemUuid = typeof id === 'string' && isNaN(movieId as any) ? id : null;
+    const movieId = typeof id === 'string' && /^\d+$/.test(id) ? parseInt(id, 10) : undefined;
+    const itemUuid = typeof id === 'string' && !/^\d+$/.test(id) ? id : null;
 
     const movieItems = collection?.filter((item: any) => 
         item.movie_id === movieId || 
