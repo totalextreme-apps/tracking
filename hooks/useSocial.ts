@@ -219,11 +219,12 @@ export const useSuggestedUsers = (currentUserId?: string) => {
       return data as Profile[];
     },
     enabled: true,
+    staleTime: 1000 * 60 * 5, // Cache suggested users for 5 minutes
   });
 };
 
 // 5c. All Users (Directory)
-export const useAllUsers = (currentUserId?: string) => {
+export const useAllUsers = (currentUserId?: string, enabledParam = true) => {
   return useQuery({
     queryKey: ['users', 'directory'],
     queryFn: async () => {
@@ -256,12 +257,13 @@ export const useAllUsers = (currentUserId?: string) => {
 
       return result as Profile[];
     },
-    enabled: true,
+    enabled: enabledParam && !!currentUserId,
+    staleTime: 1000 * 60 * 5, // Cache directory list for 5 minutes
   });
 };
 
 // 6. Fetch Bulletin Feed (Posts from people you follow + your own)
-export const useBulletinFeed = (userId?: string) => {
+export const useBulletinFeed = (userId?: string, enabledParam = true) => {
   return useQuery({
     queryKey: ['bulletin', userId],
     queryFn: async () => {
@@ -318,7 +320,8 @@ export const useBulletinFeed = (userId?: string) => {
 
       return mapped as BulletinPostWithMedia[];
     },
-    enabled: !!userId,
+    enabled: enabledParam && !!userId,
+    staleTime: 1000 * 30, // Cache board posts for 30 seconds
   });
 };
 
@@ -947,6 +950,7 @@ export const useCommunityFeed = (userId?: string) => {
     },
     enabled: !!userId,
     refetchInterval: 10000, // Poll community feed every 10 seconds to keep it fresh
+    staleTime: 1000 * 10,    // Cache community feed for 10 seconds to avoid unnecessary rapid queries
   });
 };
 
@@ -1297,6 +1301,8 @@ export function useAppWideStats() {
       const { data, error } = await supabase.rpc('get_app_wide_stats');
       if (error) throw error;
       return data;
-    }
+    },
+    staleTime: 1000 * 60 * 10, // Cache app-wide statistics for 10 minutes
+    gcTime: 1000 * 60 * 30,    // Keep stats cache in garbage collection memory for 30 minutes
   });
 }

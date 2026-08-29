@@ -445,6 +445,7 @@ export default function CommunityScreen() {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const scrollRef = useRef<ScrollView>(null);
+  const boardScrollRef = useRef<ScrollView>(null);
 
   // Auto-repair any mismatched bulletin posts on mount
   useEffect(() => {
@@ -594,13 +595,13 @@ export default function CommunityScreen() {
 
   // Data
   const { data: following } = useFollowing(userId);
-  const { data: bulletinFeed, isLoading: bulletinLoading } = useBulletinFeed(userId);
+  const { data: bulletinFeed, isLoading: bulletinLoading } = useBulletinFeed(userId, activeTab === 'board');
   const { data: communityFeed, isLoading: communityLoading } = useCommunityFeed(userId);
   const { data: marketplaceFeed } = useMarketplaceFeed();
   const { data: searchResults, isLoading: searchLoading } = useSearchUsers(userSearch);
   const { data: notifications, isLoading: notifLoading } = useNotifications(userId);
   const { data: suggestedMembers } = useSuggestedUsers(userId);
-  const { data: allUsers, isLoading: allUsersLoading } = useAllUsers(userId);
+  const { data: allUsers, isLoading: allUsersLoading } = useAllUsers(userId, activeTab === 'directory');
   const { data: conversations, isLoading: inboxLoading } = useConversations(userId);
   const { data: appWideStats } = useAppWideStats();
 
@@ -718,7 +719,10 @@ export default function CommunityScreen() {
     } else {
       setSelectedMedia(null);
     }
-    scrollRef.current?.scrollTo({ y: 0, animated: true });
+    setActiveTab('board');
+    setTimeout(() => {
+      boardScrollRef.current?.scrollTo({ y: 0, animated: true });
+    }, 100);
   };
 
   const resetPost = () => {
@@ -1236,15 +1240,15 @@ export default function CommunityScreen() {
                            </Text>
                          </View>
                        </Pressable>
-                       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 4 }}>
+                       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 4, paddingTop: 4 }}>
                           {item.items.map((sub: any, i: number) => (
                              <Pressable 
                                key={i} 
                                onPress={() => { const id = sub.movies?.id || sub.shows?.id; const t = sub.movies ? 'movie' : 'show'; router.push(`/${t}/${id}?ownerId=${sub.user_id}&from=community`); }} 
-                               style={{ width: 62, marginRight: 8, backgroundColor: '#0a0a0a', padding: 4, borderRadius: 8, borderWidth: 1, borderColor: '#f59e0b18' }}
+                               style={{ width: 62, height: 98, marginRight: 8, backgroundColor: '#0a0a0a', padding: 4, borderRadius: 8, borderWidth: 1, borderColor: '#f59e0b18', justifyContent: 'space-between' }}
                              >
-                               <Image source={{ uri: getPosterUrl(sub.movies?.poster_path || sub.shows?.poster_path) || '' }} style={{ width: '100%', height: 76, borderRadius: 4, backgroundColor: '#1a1a1a', marginBottom: 4 }} />
-                               <View style={{ backgroundColor: '#1a1a1a', alignSelf: 'center', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 2 }}>
+                               <Image source={{ uri: getPosterUrl(sub.movies?.poster_path || sub.shows?.poster_path) || '' }} style={{ width: 54, height: 74, borderRadius: 4, backgroundColor: '#1a1a1a' }} />
+                               <View style={{ backgroundColor: '#1a1a1a', alignSelf: 'stretch', paddingVertical: 1, borderRadius: 2, alignItems: 'center' }}>
                                  <Text style={{ color: '#f59e0b', fontFamily: 'SpaceMono', fontSize: 6, fontWeight: 'bold' }}>{sub.format}</Text>
                                </View>
                              </Pressable>
@@ -1637,7 +1641,21 @@ export default function CommunityScreen() {
 
       {/* ══════════════════════════ BOARD TAB ══════════════════════════ */}
       {activeTab === 'board' && (
-        <ScrollView key="tab-board" style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 160 }}>
+        <ScrollView
+          ref={boardScrollRef}
+          key="tab-board"
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingBottom: 160 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor="#f59e0b"
+              colors={['#f59e0b']}
+              progressBackgroundColor="#111"
+            />
+          }
+        >
           <ImageBackground source={{ uri: CORK_BG }} style={{ marginHorizontal: 16, borderRadius: 12, overflow: 'hidden', marginTop: 16, marginBottom: 16 }} imageStyle={{ opacity: 0.35, borderRadius: 12 }}>
             <View style={{ backgroundColor: 'rgba(100, 60, 20, 0.4)', padding: 14 }}>
               <View style={{ backgroundColor: 'rgba(255,249,220,0.92)', borderRadius: 4, padding: 12, marginBottom: 16, shadowColor: '#000', shadowOffset: { width: 2, height: 4 }, shadowOpacity: 0.4, shadowRadius: 6 }}>
