@@ -46,6 +46,7 @@ function SharedListPreview({ userId, listName, router }: { userId: string, listN
 export function BulletinPostItem({ post, userId, idx, startEditing, setShowDeleteConfirm, toggleComments, isExpanded, CommentSectionComponent }: any) {
   const router = useRouter();
   const viewRef = useRef(null);
+  const commentRef = useRef<any>(null);
   const [pickerVisible, setPickerVisible] = useState(false);
   const { reactions, toggleReaction } = useReactions('post_id', post.id);
 
@@ -222,7 +223,7 @@ export function BulletinPostItem({ post, userId, idx, startEditing, setShowDelet
       
       {/* Hide the 'reply' label visually when sharing by just not capturing it? The user will share it with the reply button, which is fine, might drive clicks! */}
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, paddingTop: 8, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)' }}>
-        <Pressable onPress={() => toggleComments(post.id)} style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <Pressable onPress={() => commentRef.current?.focus()} style={{ flexDirection: 'row', alignItems: 'center' }}>
           <Ionicons name="chatbubble-outline" size={12} color="#8a7060" />
           <Text style={{ fontFamily: 'SpaceMono', fontSize: 9, color: '#8a7060', marginLeft: 4 }}>REPLY</Text>
         </Pressable>
@@ -233,7 +234,7 @@ export function BulletinPostItem({ post, userId, idx, startEditing, setShowDelet
           onShowPicker={() => setPickerVisible(true)}
         />
       </View>
-      {isExpanded && <CommentSectionComponent postId={post.id} />}
+      <CommentSectionComponent ref={commentRef} postId={post.id} />
       
       <ReactionPicker
         visible={pickerVisible}

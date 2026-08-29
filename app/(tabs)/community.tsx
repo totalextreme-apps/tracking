@@ -74,12 +74,19 @@ function MovieReactionSection({ collectionItemId, userId }: { collectionItemId: 
   );
 }
 
-function ItemCommentSectionInline({ collectionItemId }: { collectionItemId: string }) {
+function ItemCommentSectionInline({ collectionItemId, isFocused }: { collectionItemId: string, isFocused?: boolean }) {
   const { userId } = useAuth();
   const { playSound } = useSound();
   const { data: comments, isLoading } = useItemComments(collectionItemId);
   const createComment = useCreateComment(userId);
   const [text, setText] = useState('');
+  const inputRef = useRef<TextInput>(null);
+
+  useEffect(() => {
+    if (isFocused) {
+      inputRef.current?.focus();
+    }
+  }, [isFocused]);
 
   const handleSend = () => {
     if (!text.trim()) return;
@@ -121,6 +128,7 @@ function ItemCommentSectionInline({ collectionItemId }: { collectionItemId: stri
 
       <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
         <TextInput
+          ref={inputRef}
           style={{ flex: 1, backgroundColor: '#1a1a1a', borderRadius: 4, paddingHorizontal: 8, paddingVertical: 4, color: '#fff', fontFamily: 'SpaceMono', fontSize: 9, borderWidth: 1, borderColor: '#2c2c2c' }}
           placeholder="Add a reply..."
           placeholderTextColor="#525252"
@@ -135,7 +143,7 @@ function ItemCommentSectionInline({ collectionItemId }: { collectionItemId: stri
           {createComment.isPending ? (
             <ActivityIndicator size="small" color="#000" />
           ) : (
-            <Text style={{ color: '#000', fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold' }}>SEND</Text>
+            <Ionicons name="send" size={10} color="#000" />
           )}
         </Pressable>
       </View>
@@ -143,13 +151,20 @@ function ItemCommentSectionInline({ collectionItemId }: { collectionItemId: stri
   );
 }
 
-function PostCommentSection({ postId }: { postId: string }) {
+function PostCommentSection({ postId, isFocused }: { postId: string, isFocused?: boolean }) {
   const router = useRouter();
   const { userId } = useAuth();
   const { playSound } = useSound();
   const { data: comments, isLoading } = usePostComments(postId);
   const createComment = useCreatePostComment(userId);
   const [text, setText] = useState('');
+  const inputRef = useRef<TextInput>(null);
+
+  useEffect(() => {
+    if (isFocused) {
+      inputRef.current?.focus();
+    }
+  }, [isFocused]);
 
   const handleSend = () => {
     if (!text.trim()) return;
@@ -219,13 +234,19 @@ function PostCommentSection({ postId }: { postId: string }) {
       ))}
       <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
         <TextInput
-          style={{ flex: 1, backgroundColor: '#fff', borderRadius: 4, paddingHorizontal: 8, paddingVertical: 4, fontFamily: 'SpaceMono', fontSize: 10, borderWidth: 1, borderColor: 'rgba(0,0,0,0.1)' }}
+          ref={inputRef}
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: 4, paddingHorizontal: 8, paddingVertical: 4, color: '#2d2016', fontFamily: 'SpaceMono', fontSize: 10, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)' }}
           placeholder="Reply..."
+          placeholderTextColor="#a89880"
           value={text}
           onChangeText={setText}
         />
-        <Pressable onPress={handleSend} disabled={createComment.isPending || !text.trim()} style={{ marginLeft: 6 }}>
-          <Ionicons name="send" size={16} color={text.trim() ? '#8a7060' : '#ccc'} />
+        <Pressable 
+          onPress={handleSend}
+          disabled={createComment.isPending || !text.trim()}
+          style={{ backgroundColor: '#2d2016', borderRadius: 4, paddingHorizontal: 8, paddingVertical: 4, marginLeft: 6, opacity: text.trim() ? 1 : 0.5 }}
+        >
+          <Ionicons name="send" size={10} color="#f59e0b" />
         </Pressable>
       </View>
     </View>
@@ -506,6 +527,8 @@ export default function CommunityScreen() {
   // Swap Meet preselected title key
   const [selectedSwapTitleKey, setSelectedSwapTitleKey] = useState<string | null>(null);
   const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({});
+  const [focusedPostId, setFocusedPostId] = useState<string | null>(null);
+  const [focusedItemId, setFocusedItemId] = useState<string | null>(null);
   
   // WYSIWYG Selection States
   const [selection, setSelection] = useState({ start: 0, end: 0 });
@@ -1256,36 +1279,30 @@ export default function CommunityScreen() {
                        </ScrollView>
 
                         {/* Reaction / Comment Footer for Story Group */}
-                        {(() => {
-                           const firstItem = item.items[0];
-                           if (!firstItem) return null;
-                           const firstMedia = firstItem.movies || firstItem.shows;
-                           const mediaType = firstItem.movies ? 'movie' : 'show';
-                           return (
-                              <View>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, paddingHorizontal: 4 }}>
-                                  <Pressable 
-                                    onPress={() => {
-                                      setExpandedComments(prev => ({
-                                        ...prev,
-                                        [item.id]: !prev[item.id]
-                                      }));
-                                    }}
-                                    style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
-                                  >
-                                    <Ionicons name="chatbubble-outline" size={10} color={expandedComments[item.id] ? '#f59e0b' : '#737373'} />
-                                    <Text style={{ fontFamily: 'SpaceMono', fontSize: 8, color: expandedComments[item.id] ? '#f59e0b' : '#737373' }}>
-                                      {expandedComments[item.id] ? 'HIDE REPLIES' : 'COMMENT / REPLY'}
-                                    </Text>
-                                  </Pressable>
-                                  <MovieReactionSection collectionItemId={firstItem.id} userId={userId || ''} />
-                                </View>
-                                {expandedComments[item.id] && (
-                                  <ItemCommentSectionInline collectionItemId={firstItem.id} />
-                                )}
-                              </View>
+                         {(() => {
+                            const firstItem = item.items[0];
+                            if (!firstItem) return null;
+                            return (
+                               <View>
+                                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, paddingHorizontal: 4 }}>
+                                   <Pressable 
+                                     onPress={() => {
+                                       setFocusedItemId(null);
+                                       setTimeout(() => setFocusedItemId(firstItem.id), 50);
+                                     }}
+                                     style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                                   >
+                                     <Ionicons name="chatbubble-outline" size={10} color="#737373" />
+                                     <Text style={{ fontFamily: 'SpaceMono', fontSize: 8, color: '#737373' }}>
+                                       COMMENT / REPLY
+                                     </Text>
+                                   </Pressable>
+                                   <MovieReactionSection collectionItemId={firstItem.id} userId={userId || ''} />
+                                 </View>
+                                 <ItemCommentSectionInline collectionItemId={firstItem.id} isFocused={focusedItemId === firstItem.id} />
+                               </View>
                             );
-                        })()}
+                         })()}
                      </View>
                    );
                 }
@@ -1493,8 +1510,11 @@ export default function CommunityScreen() {
                         idx={idx}
                         startEditing={startEditing}
                         setShowDeleteConfirm={setShowDeleteConfirm}
-                        toggleComments={toggleComments}
-                        isExpanded={expandedPostIds.has(item.id)}
+                        isFocused={focusedPostId === item.id}
+                        onReplyPress={() => {
+                          setFocusedPostId(null);
+                          setTimeout(() => setFocusedPostId(item.id), 50);
+                        }}
                         CommentSectionComponent={PostCommentSection}
                       />
                     </View>
@@ -1855,8 +1875,11 @@ export default function CommunityScreen() {
                       idx={idx} 
                       startEditing={startEditing} 
                       setShowDeleteConfirm={setShowDeleteConfirm} 
-                      toggleComments={toggleComments} 
-                      isExpanded={expandedPostIds.has(post.id)} 
+                      isFocused={focusedPostId === post.id}
+                      onReplyPress={() => {
+                        setFocusedPostId(null);
+                        setTimeout(() => setFocusedPostId(post.id), 50);
+                      }}
                       CommentSectionComponent={PostCommentSection} 
                     />
                   ))
