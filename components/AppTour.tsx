@@ -32,7 +32,10 @@ export function AppTour() {
 
     const finishTour = async () => {
         try {
-            await AsyncStorage.setItem(TOUR_KEY, 'true');
+            await Promise.all([
+                AsyncStorage.setItem(TOUR_KEY, 'true'),
+                AsyncStorage.setItem('has_seen_franchise_announcement_v1', 'true')
+            ]);
             setVisible(false);
             playSound('insert');
         } catch (e) {
@@ -50,106 +53,67 @@ export function AppTour() {
                     entering={FadeIn.duration(400)}
                     exiting={FadeOut.duration(300)}
                     className="w-full bg-neutral-900 border-2 border-amber-500/50 rounded-2xl shadow-2xl overflow-hidden flex-shrink"
-                    style={{ maxWidth: 600, maxHeight: '90%' }}
+                    style={{ maxWidth: 500, maxHeight: '80%' }}
                 >
                     <ScrollView className="p-6 sm:p-8" bounces={false}>
-                        <View className="items-center mb-8">
+                        <View className="items-center mb-6">
                             <View className="bg-neutral-800 border-2 border-amber-500 rounded-full p-4 mb-4">
                                 <Ionicons name="film-outline" size={32} color="#f59e0b" />
                             </View>
-                            <Text className="text-2xl font-mono font-bold text-white tracking-widest text-center uppercase">
+                            <Text className="text-xl font-mono font-bold text-white tracking-widest text-center uppercase">
                                 Welcome to Tracking
                             </Text>
-                            <View className="h-px w-16 bg-amber-500/50 mt-4" />
+                            <View className="h-px w-16 bg-amber-500/50 mt-3" />
                         </View>
 
-                        <Text className="text-neutral-300 font-mono text-center leading-6 mb-10 text-sm">
-                            Your personal archive for physical and digital media. Here is a quick breakdown to help you get started.
+                        <Text className="text-neutral-300 font-mono text-center leading-6 mb-8 text-xs">
+                            Your tactile film and TV archivist. Keep track of your physical formats, hunt for grails, and curate your personal shelves.
                         </Text>
 
-                        <View className="gap-y-8 mb-8">
-                            {/* Feature 1 */}
-                            <View>
-                                <View className="flex-row items-center mb-2">
-                                    <Ionicons name="star-outline" size={24} color="#f59e0b" />
-                                    <Text className="text-amber-500 font-mono font-bold text-lg ml-3 tracking-widest uppercase">
-                                        On Display
+                        <View className="gap-y-6 mb-6">
+                            {/* Area 1: Catalog & Display */}
+                            <View className="flex-row items-start">
+                                <View className="bg-amber-500/10 p-2 rounded-lg border border-amber-500/30 items-center justify-center mr-3 mt-0.5">
+                                    <Ionicons name="library-outline" size={18} color="#f59e0b" />
+                                </View>
+                                <View className="flex-1">
+                                    <Text className="text-amber-500 font-mono font-bold text-sm tracking-wider uppercase mb-1">
+                                        Catalog & Display
+                                    </Text>
+                                    <Text className="text-neutral-400 font-mono text-xs leading-5">
+                                        Catalog your formats (VHS, DVD, BluRay, 4K). Tap any title in **The Stacks** to manage details, or double-tap to place your favorites **On Display** on the top shelf.
                                     </Text>
                                 </View>
-                                <Text className="text-neutral-400 font-mono text-sm leading-5">
-                                    <Text className="text-neutral-200 font-bold">Where:</Text> The horizontal shelf at the top of your screen.{"\n"}
-                                    <Text className="text-neutral-200 font-bold">How to use:</Text> This shelf is for your absolute favorites. Double-tap any card in your Stacks to put it 'On Display'.
-                                </Text>
                             </View>
 
-                            {/* Feature 2 */}
-                            <View>
-                                <View className="flex-row items-center mb-2">
-                                    <Ionicons name="library-outline" size={24} color="#f59e0b" />
-                                    <Text className="text-amber-500 font-mono font-bold text-lg ml-3 tracking-widest uppercase">
-                                        The Stacks
+                            {/* Area 2: Thrift Mode & Grails */}
+                            <View className="flex-row items-start">
+                                <View className="bg-amber-500/10 p-2 rounded-lg border border-amber-500/30 items-center justify-center mr-3 mt-0.5">
+                                    <Ionicons name="search-outline" size={18} color="#f59e0b" />
+                                </View>
+                                <View className="flex-1">
+                                    <Text className="text-amber-500 font-mono font-bold text-sm tracking-wider uppercase mb-1">
+                                        Thrift Hunting
+                                    </Text>
+                                    <Text className="text-neutral-400 font-mono text-xs leading-5">
+                                        Toggle **Thrift Mode** in the top right when hunting in the wild. Your main library turns into your **Wish List**, and the top shelf showcases your rarest hunted **Grails**.
                                     </Text>
                                 </View>
-                                <Text className="text-neutral-400 font-mono text-sm leading-5">
-                                    <Text className="text-neutral-200 font-bold">Where:</Text> The main grid below the display shelf.{"\n"}
-                                    <Text className="text-neutral-200 font-bold">How to use:</Text> Your entire collection lives here. Tap any item to view its details, or long-press for quick actions.
-                                </Text>
                             </View>
 
-                            {/* Feature 3: Curated Stacks */}
-                            <View>
-                                <View className="flex-row items-center mb-2">
-                                    <Ionicons name="albums-outline" size={24} color="#f59e0b" />
-                                    <Text className="text-amber-500 font-mono font-bold text-lg ml-3 tracking-widest uppercase">
-                                        Curated Stacks
+                            {/* Area 3: Curations & Series */}
+                            <View className="flex-row items-start">
+                                <View className="bg-amber-500/10 p-2 rounded-lg border border-amber-500/30 items-center justify-center mr-3 mt-0.5">
+                                    <Ionicons name="albums-outline" size={18} color="#f59e0b" />
+                                </View>
+                                <View className="flex-1">
+                                    <Text className="text-amber-500 font-mono font-bold text-sm tracking-wider uppercase mb-1">
+                                        Mixtapes & Franchises
+                                    </Text>
+                                    <Text className="text-neutral-400 font-mono text-xs leading-5">
+                                        Build custom **Curated Stacks** (mixtapes of movies/shows), or use **Franchise Grouping** to keep movie sequels and sequel timelines grouped together when sorting.
                                     </Text>
                                 </View>
-                                <Text className="text-neutral-400 font-mono text-sm leading-5">
-                                    <Text className="text-neutral-200 font-bold">Where:</Text> The 'Curated' tab at the bottom of the screen.{"\n"}
-                                    <Text className="text-neutral-200 font-bold">How to use:</Text> Build your own mixtapes of movies and shows. Create custom lists like "Tapes for Trade" or "On Deck this Weekend" and add items to them from their details pages.
-                                </Text>
-                            </View>
-
-                            {/* Feature 4: Thrift Mode & Grails */}
-                            <View>
-                                <View className="flex-row items-center mb-2">
-                                    <Ionicons name="search-outline" size={24} color="#f59e0b" />
-                                    <Text className="text-amber-500 font-mono font-bold text-lg ml-3 tracking-widest uppercase">
-                                        Thrift Mode & Grails
-                                    </Text>
-                                </View>
-                                <Text className="text-neutral-400 font-mono text-sm leading-5">
-                                    <Text className="text-neutral-200 font-bold">Where:</Text> The toggle switch in the top right corner.{"\n"}
-                                    <Text className="text-neutral-200 font-bold">How to use:</Text> Toggle this on when hunting for tapes in the wild. Your main grid turns into your WISH LIST. The top shelf becomes your GRAILS highlighting your rarest or most prized hunted finds.
-                                </Text>
-                            </View>
-
-                            {/* Feature 5 */}
-                            <View>
-                                <View className="flex-row items-center mb-2">
-                                    <Ionicons name="add-circle-outline" size={24} color="#f59e0b" />
-                                    <Text className="text-amber-500 font-mono font-bold text-lg ml-3 tracking-widest uppercase">
-                                        Add to Collection
-                                    </Text>
-                                </View>
-                                <Text className="text-neutral-400 font-mono text-sm leading-5">
-                                    <Text className="text-neutral-200 font-bold">Where:</Text> The big '+' tab at the bottom.{"\n"}
-                                    <Text className="text-neutral-200 font-bold">How to use:</Text> Tap to search our massive database and add new movies and shows directly to your Stacks.
-                                </Text>
-                            </View>
-
-                            {/* Feature 6: Backup & Export */}
-                            <View>
-                                <View className="flex-row items-center mb-2">
-                                    <Ionicons name="download-outline" size={24} color="#f59e0b" />
-                                    <Text className="text-amber-500 font-mono font-bold text-lg ml-3 tracking-widest uppercase">
-                                        Export & Backup
-                                    </Text>
-                                </View>
-                                <Text className="text-neutral-400 font-mono text-sm leading-5">
-                                    <Text className="text-neutral-200 font-bold">Where:</Text> In the 'Settings' tab menu.{"\n"}
-                                    <Text className="text-neutral-200 font-bold">How to use:</Text> You can export your entire collection to a CSV spreadsheet, or print out a physical Inventory Receipt as a PDF right from your device.
-                                </Text>
                             </View>
                         </View>
                     </ScrollView>
@@ -157,9 +121,9 @@ export function AppTour() {
                     <View className="p-6 border-t border-neutral-800 bg-neutral-900 items-center">
                         <Pressable 
                             onPress={finishTour}
-                            className="bg-amber-500 px-12 py-4 rounded-lg border-b-4 border-r-4 border-amber-700 active:border-b-0 active:border-r-0 active:mt-1 active:ml-1 w-full max-w-[300px]"
+                            className="bg-amber-500 px-12 py-3.5 rounded-lg border-b-4 border-r-4 border-amber-700 active:border-b-0 active:border-r-0 active:mt-1 active:ml-1 w-full max-w-[280px]"
                         >
-                            <Text className="text-black font-mono font-bold tracking-widest text-center text-lg uppercase">
+                            <Text className="text-black font-mono font-bold tracking-widest text-center text-md uppercase">
                                 Got It
                             </Text>
                         </Pressable>

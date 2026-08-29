@@ -183,7 +183,6 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
               </View>
               <StaticOverlay visible={showStatic} />
               <AppTour />
-              <FranchiseAnnouncement />
               {Platform.OS === 'web' && (
                 <>
                   <Analytics />
