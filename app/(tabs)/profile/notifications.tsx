@@ -18,7 +18,7 @@ export default function NotificationsScreen() {
     
     try {
       if (notif.type === 'message') {
-        router.push(`/(tabs)/profile/chat/${notif.actor_id}` as any);
+        router.push(`/profile/chat/${notif.actor_id}` as any);
       } else if (notif.type === 'follow') {
         router.push(`/profile/${notif.actor_id}?from=community` as any);
       } else if (notif.type === 'post_comment' || notif.type === 'comment_mention') {
@@ -32,13 +32,13 @@ export default function NotificationsScreen() {
           postId = data?.post_id;
         }
         if (postId) {
-          router.push({ pathname: '/(tabs)/community', params: { tab: 'board', postId } } as any);
+          router.push({ pathname: '/community', params: { tab: 'board', postId } } as any);
         }
       } else if (notif.type === 'post_mention') {
-        router.push({ pathname: '/(tabs)/community', params: { tab: 'board', postId: notif.reference_id } } as any);
+        router.push({ pathname: '/community', params: { tab: 'board', postId: notif.reference_id } } as any);
       } else if (notif.type === 'item_comment') {
         let item = notif.referenceData;
-        if (!item || !item.collection_item_id) {
+        if (!item || !item.collection_items) {
           const { data } = await supabase
             .from('item_comments')
             .select('*, collection_items(*, movies(*), shows(*))')
@@ -50,9 +50,9 @@ export default function NotificationsScreen() {
         if (colItem) {
           const ownerId = colItem.user_id;
           if (colItem.movies) {
-            router.push(`/(tabs)/movie/${colItem.id}?ownerId=${ownerId}` as any);
+            router.push(`/movie/${colItem.id}?ownerId=${ownerId}` as any);
           } else if (colItem.shows) {
-            router.push(`/(tabs)/show/${colItem.id}?ownerId=${ownerId}&season=${colItem.season_number || 1}` as any);
+            router.push(`/show/${colItem.id}?ownerId=${ownerId}&season=${colItem.season_number || 1}` as any);
           }
         }
       } else if (notif.type === 'reaction') {
@@ -67,7 +67,7 @@ export default function NotificationsScreen() {
         }
         if (rx) {
           if (rx.post_id) {
-            router.push({ pathname: '/(tabs)/community', params: { tab: 'board', postId: rx.post_id } } as any);
+            router.push({ pathname: '/community', params: { tab: 'board', postId: rx.post_id } } as any);
           } else if (rx.post_comment_id) {
             const { data } = await supabase
               .from('post_comments')
@@ -75,7 +75,7 @@ export default function NotificationsScreen() {
               .eq('id', rx.post_comment_id)
               .single();
             if (data?.post_id) {
-              router.push({ pathname: '/(tabs)/community', params: { tab: 'board', postId: data.post_id } } as any);
+              router.push({ pathname: '/community', params: { tab: 'board', postId: data.post_id } } as any);
             }
           } else if (rx.collection_item_id) {
             const { data: colItem } = await supabase
@@ -86,9 +86,9 @@ export default function NotificationsScreen() {
             if (colItem) {
               const ownerId = colItem.user_id;
               if (colItem.movies) {
-                router.push(`/(tabs)/movie/${colItem.id}?ownerId=${ownerId}` as any);
+                router.push(`/movie/${colItem.id}?ownerId=${ownerId}` as any);
               } else if (colItem.shows) {
-                router.push(`/(tabs)/show/${colItem.id}?ownerId=${ownerId}&season=${colItem.season_number || 1}` as any);
+                router.push(`/show/${colItem.id}?ownerId=${ownerId}&season=${colItem.season_number || 1}` as any);
               }
             }
           } else if (rx.item_comment_id) {
@@ -101,9 +101,9 @@ export default function NotificationsScreen() {
             if (colItem) {
               const ownerId = colItem.user_id;
               if (colItem.movies) {
-                router.push(`/(tabs)/movie/${colItem.id}?ownerId=${ownerId}` as any);
+                router.push(`/movie/${colItem.id}?ownerId=${ownerId}` as any);
               } else if (colItem.shows) {
-                router.push(`/(tabs)/show/${colItem.id}?ownerId=${ownerId}&season=${colItem.season_number || 1}` as any);
+                router.push(`/show/${colItem.id}?ownerId=${ownerId}&season=${colItem.season_number || 1}` as any);
               }
             }
           }
@@ -135,7 +135,11 @@ export default function NotificationsScreen() {
     const actorName = n.actor?.username || 'Someone';
     switch (n.type) {
       case 'message': return `@${actorName} sent you a message`;
-      case 'item_comment': return `@${actorName} commented on your item`;
+      case 'item_comment': {
+        const colItem = n.referenceData?.collection_items;
+        const title = colItem?.movies?.title || colItem?.shows?.name;
+        return title ? `@${actorName} commented on "${title}"` : `@${actorName} commented on your item`;
+      }
       case 'post_comment': return `@${actorName} replied to your post`;
       case 'profile_comment': return `@${actorName} signed your guestbook`;
       case 'follow': return `@${actorName} started tracking you`;

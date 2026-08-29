@@ -707,13 +707,13 @@ export const useNotifications = (userId?: string) => {
           ? supabase.from('post_comments').select('id, content, post_id').in('id', postCommentIds).then((res: any) => res.data || []).catch(() => [])
           : Promise.resolve([]),
         itemCommentIds.length > 0
-          ? supabase.from('item_comments').select('id, content, collection_item_id').in('id', itemCommentIds).then((res: any) => res.data || []).catch(() => [])
+          ? supabase.from('item_comments').select('id, content, collection_item_id, collection_items(id, user_id, season_number, movies(title), shows(name))').in('id', itemCommentIds).then((res: any) => res.data || []).catch(() => [])
           : Promise.resolve([]),
         postIds.length > 0
           ? supabase.from('bulletin_posts').select('id, content').in('id', postIds).then((res: any) => res.data || []).catch(() => [])
           : Promise.resolve([]),
         reactionIds.length > 0
-          ? supabase.from('reactions').select('id, reaction_type, post_id, collection_item_id, post_comment_id, item_comment_id').in('id', reactionIds).then((res: any) => res.data || []).catch(() => [])
+          ? supabase.from('reactions').select('id, reaction_type, post_id, collection_item_id, post_comment_id, item_comment_id, collection_items(id, user_id, movies(title), shows(name)), item_comments(id, collection_items(id, user_id, movies(title), shows(name)))').in('id', reactionIds).then((res: any) => res.data || []).catch(() => [])
           : Promise.resolve([]),
         profileCommentIds.length > 0
           ? supabase.from('profile_comments').select('id, content').in('id', profileCommentIds).then((res: any) => res.data || []).catch(() => [])
@@ -946,6 +946,7 @@ export const useCommunityFeed = (userId?: string) => {
       );
     },
     enabled: !!userId,
+    refetchInterval: 10000, // Poll community feed every 10 seconds to keep it fresh
   });
 };
 

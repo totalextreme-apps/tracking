@@ -310,9 +310,9 @@ export default function UserProfileScreen() {
         <Pressable 
           onPress={() => {
             if (from === 'community') {
-              router.push('/(tabs)/community' as any);
+              router.push('/community' as any);
             } else if (from === 'stack') {
-              router.push('/(tabs)/' as any);
+              router.push('/' as any);
             } else {
               router.back();
             }
@@ -445,7 +445,7 @@ export default function UserProfileScreen() {
               )}
 
               <Pressable 
-                onPress={() => router.push(`/(tabs)/profile/chat/${id}`)}
+                onPress={() => router.push(`/profile/chat/${id}`)}
                 className="flex-1 flex-row h-12 rounded-xl border border-neutral-800 bg-neutral-900 items-center justify-center"
               >
                 <Ionicons name="chatbubbles-outline" size={16} color="#f59e0b" />
@@ -969,7 +969,7 @@ export default function UserProfileScreen() {
                             <Text className="text-white font-mono text-xs leading-5 mb-3">{item.content}</Text>
                             {hasMedia && (
                               <Pressable 
-                                onPress={() => { if (mediaId) router.push(`/(tabs)/${mediaType}/${mediaId}?ownerId=${id}&from=${from || ''}`); }}
+                                onPress={() => { if (mediaId) router.push(`/${mediaType}/${mediaId}?ownerId=${id}&from=${from || ''}`); }}
                                 className="bg-neutral-950 border border-neutral-800/60 rounded-lg p-2 flex-row items-center"
                               >
                                 <Image source={{ uri: getPosterUrl(item.movies?.poster_path || item.shows?.poster_path) || '' }} style={{ width: 24, height: 36, borderRadius: 4, marginRight: 8, backgroundColor: '#111' }} />

@@ -255,7 +255,7 @@ export default function SocialFeedScreen() {
                           onPress={() => {
                             const mId = item.movies?.id || item.shows?.id;
                             const type = item.movies ? 'movie' : 'show';
-                            router.push(`/(tabs)/${type}/${mId}`);
+                            router.push(`/${type}/${mId}`);
                           }}
                           className="flex-row items-center mt-4 bg-black/40 p-2 rounded border border-neutral-800"
                         >
@@ -280,7 +280,7 @@ export default function SocialFeedScreen() {
                           onPress={() => {
                             const mId = item.collection_items.movies?.id || item.collection_items.shows?.id;
                             const type = item.collection_items.movies ? 'movie' : 'show';
-                            router.push(`/(tabs)/${type}/${mId}?ownerId=${item.collection_items.user_id}`);
+                            router.push(`/${type}/${mId}?ownerId=${item.collection_items.user_id}`);
                           }}
                           className="flex-row items-center mt-4 bg-black/40 p-2 rounded border border-neutral-800"
                         >
@@ -310,7 +310,7 @@ export default function SocialFeedScreen() {
                       onPress={() => {
                         const mId = item.movies?.id || item.shows?.id;
                         const type = item.movies ? 'movie' : 'show';
-                        router.push(`/(tabs)/${type}/${mId}?ownerId=${item.user_id}`);
+                        router.push(`/${type}/${mId}?ownerId=${item.user_id}`);
                       }}
                       className="flex-row items-center bg-amber-500/5 p-3 rounded-lg border border-amber-500/10"
                     >

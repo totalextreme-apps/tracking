@@ -44,7 +44,7 @@ export default function ConversationsScreen() {
           conversations?.map((conv: any) => (
             <Pressable 
               key={conv.partner.id}
-              onPress={() => router.push(`/(tabs)/profile/chat/${conv.partner.id}`)}
+              onPress={() => router.push(`/profile/chat/${conv.partner.id}`)}
               className="flex-row items-center p-4 border-b border-neutral-900 active:bg-neutral-900"
             >
               <View className="w-14 h-14 rounded-full bg-neutral-900 overflow-hidden border border-neutral-800 mr-4">

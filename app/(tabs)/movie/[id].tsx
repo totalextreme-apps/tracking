@@ -792,7 +792,7 @@ export default function MovieDetailScreen() {
             } else if (router.canGoBack()) {
                 router.back();
             } else {
-                router.replace('/(tabs)/home' as any);
+                router.replace('/' as any);
             }
         } catch (e) {
             setEjecting(false);
@@ -836,7 +836,7 @@ export default function MovieDetailScreen() {
                     <Pressable
                         onPress={() => {
                             if (from === 'community' || from === 'swap') {
-                                router.push('/(tabs)/community' as any);
+                                router.push('/community' as any);
                             } else if (fromStack) {
                                 router.replace(`/stack/${fromStack}` as any);
                             } else if (ownerId) {
@@ -1688,7 +1688,7 @@ export default function MovieDetailScreen() {
                                                                 } else if (router.canGoBack()) {
                                                                     router.back();
                                                                 } else {
-                                                                    router.replace('/(tabs)/home' as any);
+                                                                    router.replace('/' as any);
                                                                 }
                                                             }
                                                         }}

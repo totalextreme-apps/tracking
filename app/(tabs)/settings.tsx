@@ -9,6 +9,7 @@ import { useSettings } from '@/context/SettingsContext';
 import { useSound } from '@/context/SoundContext';
 import { useCollection, useRefreshLibrary, useUpdateCollectionItem } from '@/hooks/useCollection';
 import { useProfile } from '@/hooks/useProfile';
+import { useNotifications } from '@/hooks/useSocial';
 import { exportCollection } from '@/lib/export-utils';
 import { printInventoryReceipt } from '@/lib/receipt-utils';
 import { supabase } from '@/lib/supabase';
@@ -36,6 +37,8 @@ export default function SettingsScreen() {
   const refreshLibrary = useRefreshLibrary(userId);
   const { data: profile, isLoading: isProfileLoading, updateProfile, uploadAvatar, isUpdating } = useProfile(userId ?? null);
   const queryClient = useQueryClient();
+  const { data: notifications } = useNotifications(userId ?? undefined);
+  const unreadCount = notifications?.filter((n: any) => !n.is_read).length || 0;
 
   const [isExporting, setIsExporting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -788,6 +791,33 @@ export default function SettingsScreen() {
               borderWidth: 2,
             }}
           >
+            {/* NOTIFICATIONS & ALERTS */}
+            <Pressable
+              onPress={() => {
+                playSound('click');
+                router.push('/profile/notifications');
+              }}
+              className="p-4 flex-row items-center justify-between border-b-2 border-white/20 active:bg-[#1a3366]"
+            >
+              <View className="flex-row items-center flex-1 mr-2">
+                <View className="w-8 items-center"><FontAwesome name="bell" size={14} color="#FFE92F" /></View>
+                <Text className="font-mono text-sm font-bold" style={{ color: '#FFE92F' }}>Notifications & Alerts</Text>
+                {unreadCount > 0 && (
+                  <View style={{
+                    backgroundColor: '#ef4444',
+                    borderRadius: 8,
+                    paddingHorizontal: 6,
+                    paddingVertical: 1,
+                    marginLeft: 8,
+                  }}>
+                    <Text style={{ color: '#fff', fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold' }}>
+                      {unreadCount}
+                    </Text>
+                  </View>
+                )}
+              </View>
+              <FontAwesome name="chevron-right" size={10} color="white" />
+            </Pressable>
 
             <Pressable
               onPress={handleExport}

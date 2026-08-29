@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
-import { View, Text, ScrollView, Pressable, Image, ImageBackground, TextInput, ActivityIndicator, Alert, Share, Modal } from 'react-native';
+import { View, Text, ScrollView, Pressable, Image, ImageBackground, TextInput, ActivityIndicator, Alert, Share, Modal, RefreshControl } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
@@ -398,7 +398,7 @@ function StoreChartsSection({ stats }: { stats: any }) {
             return (
               <Pressable
                 key={idx}
-                onPress={() => { if (mediaId) router.push(`/(tabs)/${mediaType}/${mediaId}?from=community`); }}
+                onPress={() => { if (mediaId) router.push(`/${mediaType}/${mediaId}?from=community`); }}
                 style={{ width: 100, backgroundColor: '#0a0a0a', padding: 6, borderRadius: 8, borderWidth: 1, borderColor: '#1f1f1f', alignItems: 'center' }}
               >
                 <View style={{ position: 'absolute', top: -4, left: -4, zIndex: 10, backgroundColor: color, width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#000' }}>
@@ -510,6 +510,24 @@ export default function CommunityScreen() {
   const [selection, setSelection] = useState({ start: 0, end: 0 });
   const [imageModalVisible, setImageModalVisible] = useState(false);
   const [imageUrlInput, setImageUrlInput] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['community_feed', userId] }),
+        queryClient.invalidateQueries({ queryKey: ['following', userId] }),
+        queryClient.invalidateQueries({ queryKey: ['conversations', userId] }),
+        queryClient.invalidateQueries({ queryKey: ['notifications', userId] }),
+        queryClient.invalidateQueries({ queryKey: ['bulletin', userId] }),
+        queryClient.invalidateQueries({ queryKey: ['bulletin_feed'] })
+      ]);
+    } catch (e) {
+      console.error('Failed to manually refresh community tabs data:', e);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const handleInsertStyle = (syntax: string) => {
     const start = selection.start;
@@ -749,7 +767,11 @@ export default function CommunityScreen() {
     const actorName = n.actor?.username || 'Someone';
     switch (n.type) {
       case 'message': return `@${actorName} sent you a message`;
-      case 'item_comment': return `@${actorName} commented on your item`;
+      case 'item_comment': {
+        const colItem = n.referenceData?.collection_items;
+        const title = colItem?.movies?.title || colItem?.shows?.name;
+        return title ? `@${actorName} commented on "${title}"` : `@${actorName} commented on your item`;
+      }
       case 'post_comment': return `@${actorName} replied to your post`;
       case 'profile_comment': return `@${actorName} signed your guestbook`;
       case 'follow': return `@${actorName} started tracking you`;
@@ -775,7 +797,7 @@ export default function CommunityScreen() {
     markRead.mutate(n.id);
     try {
       if (n.type === 'message') {
-        router.push(`/(tabs)/profile/chat/${n.actor_id}?from=community`);
+        router.push(`/profile/chat/${n.actor_id}?from=community`);
       } else if (n.type === 'follow') {
         router.push(`/profile/${n.actor_id}?from=community`);
       } else if (n.type === 'post_comment' || n.type === 'comment_mention') {
@@ -797,7 +819,7 @@ export default function CommunityScreen() {
         setActiveTab('board');
       } else if (n.type === 'item_comment') {
         let item = n.referenceData;
-        if (!item || !item.collection_item_id) {
+        if (!item || !item.collection_items) {
           const { data } = await supabase
             .from('item_comments')
             .select('*, collection_items(*, movies(*), shows(*))')
@@ -809,9 +831,9 @@ export default function CommunityScreen() {
         if (colItem) {
           const ownerId = colItem.user_id;
           if (colItem.movies) {
-            router.push(`/(tabs)/movie/${colItem.id}?ownerId=${ownerId}&from=community`);
+            router.push(`/movie/${colItem.id}?ownerId=${ownerId}&from=community`);
           } else if (colItem.shows) {
-            router.push(`/(tabs)/show/${colItem.id}?ownerId=${ownerId}&season=${colItem.season_number || 1}&from=community`);
+            router.push(`/show/${colItem.id}?ownerId=${ownerId}&season=${colItem.season_number || 1}&from=community`);
           }
         }
       } else if (n.type === 'reaction') {
@@ -847,9 +869,9 @@ export default function CommunityScreen() {
             if (colItem) {
               const ownerId = colItem.user_id;
               if (colItem.movies) {
-                router.push(`/(tabs)/movie/${colItem.id}?ownerId=${ownerId}&from=community`);
+                router.push(`/movie/${colItem.id}?ownerId=${ownerId}&from=community`);
               } else if (colItem.shows) {
-                router.push(`/(tabs)/show/${colItem.id}?ownerId=${ownerId}&season=${colItem.season_number || 1}&from=community`);
+                router.push(`/show/${colItem.id}?ownerId=${ownerId}&season=${colItem.season_number || 1}&from=community`);
               }
             }
           } else if (rx.item_comment_id) {
@@ -862,9 +884,9 @@ export default function CommunityScreen() {
             if (colItem) {
               const ownerId = colItem.user_id;
               if (colItem.movies) {
-                router.push(`/(tabs)/movie/${colItem.id}?ownerId=${ownerId}&from=community`);
+                router.push(`/movie/${colItem.id}?ownerId=${ownerId}&from=community`);
               } else if (colItem.shows) {
-                router.push(`/(tabs)/show/${colItem.id}?ownerId=${ownerId}&season=${colItem.season_number || 1}&from=community`);
+                router.push(`/show/${colItem.id}?ownerId=${ownerId}&season=${colItem.season_number || 1}&from=community`);
               }
             }
           }
@@ -1076,6 +1098,15 @@ export default function CommunityScreen() {
           style={{ flex: 1 }}
           contentContainerStyle={{ paddingBottom: 160 }}
           keyboardShouldPersistTaps="handled"
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor="#f59e0b"
+              colors={['#f59e0b']}
+              progressBackgroundColor="#111"
+            />
+          }
         >
           <MarketplaceSection setActiveTab={setActiveTab} setSelectedSwapTitleKey={setSelectedSwapTitleKey} />
           {/* Member Card Feed */}
@@ -1209,7 +1240,7 @@ export default function CommunityScreen() {
                           {item.items.map((sub: any, i: number) => (
                              <Pressable 
                                key={i} 
-                               onPress={() => { const id = sub.movies?.id || sub.shows?.id; const t = sub.movies ? 'movie' : 'show'; router.push(`/(tabs)/${t}/${id}?ownerId=${sub.user_id}&from=community`); }} 
+                               onPress={() => { const id = sub.movies?.id || sub.shows?.id; const t = sub.movies ? 'movie' : 'show'; router.push(`/${t}/${id}?ownerId=${sub.user_id}&from=community`); }} 
                                style={{ width: 62, marginRight: 8, backgroundColor: '#0a0a0a', padding: 4, borderRadius: 8, borderWidth: 1, borderColor: '#f59e0b18' }}
                              >
                                <Image source={{ uri: getPosterUrl(sub.movies?.poster_path || sub.shows?.poster_path) || '' }} style={{ width: '100%', height: 76, borderRadius: 4, backgroundColor: '#1a1a1a', marginBottom: 4 }} />
@@ -1284,7 +1315,7 @@ export default function CommunityScreen() {
                          {collectionItem && (
                            <View>
                              <Pressable 
-                               onPress={() => { if (mediaId) router.push(`/(tabs)/${mediaType}/${mediaId}?ownerId=${ownerId}&from=community`); }}
+                               onPress={() => { if (mediaId) router.push(`/${mediaType}/${mediaId}?ownerId=${ownerId}&from=community`); }}
                                style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#0a0a0a', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#222' }}
                              >
                                <Image 
@@ -1304,7 +1335,7 @@ export default function CommunityScreen() {
                              </Pressable>
                              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, paddingTop: 6, borderTopWidth: 1, borderTopColor: '#222' }}>
                                <Pressable 
-                                 onPress={() => { if (mediaId) router.push(`/(tabs)/${mediaType}/${mediaId}?ownerId=${ownerId}&from=community`); }}
+                                 onPress={() => { if (mediaId) router.push(`/${mediaType}/${mediaId}?ownerId=${ownerId}&from=community`); }}
                                  style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
                                >
                                  <Ionicons name="chatbubble-outline" size={10} color="#737373" />
@@ -1348,7 +1379,7 @@ export default function CommunityScreen() {
                         
                         <View style={{ backgroundColor: '#111', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#1a1a1a', borderLeftWidth: 3, borderLeftColor: '#f59e0b' }}>
                           <Pressable 
-                            onPress={() => { if (mediaId) router.push(`/(tabs)/${mediaType}/${mediaId}?ownerId=${item.user_id}&from=community`); }}
+                            onPress={() => { if (mediaId) router.push(`/${mediaType}/${mediaId}?ownerId=${item.user_id}&from=community`); }}
                             style={{ flexDirection: 'row', alignItems: 'center' }}
                           >
                             <Image 
@@ -1370,7 +1401,7 @@ export default function CommunityScreen() {
                           </Pressable>
                           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, paddingTop: 6, borderTopWidth: 1, borderTopColor: '#222' }}>
                             <Pressable 
-                              onPress={() => { if (mediaId) router.push(`/(tabs)/${mediaType}/${mediaId}?ownerId=${item.user_id}&from=community`); }}
+                              onPress={() => { if (mediaId) router.push(`/${mediaType}/${mediaId}?ownerId=${item.user_id}&from=community`); }}
                               style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
                             >
                               <Ionicons name="chatbubble-outline" size={10} color="#737373" />
@@ -1407,7 +1438,7 @@ export default function CommunityScreen() {
                         
                         <View style={{ backgroundColor: '#111', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#1a1a1a', borderLeftWidth: 3, borderLeftColor: '#10b981' }}>
                           <Pressable 
-                            onPress={() => { if (mediaId) router.push(`/(tabs)/${mediaType}/${mediaId}?ownerId=${item.user_id}&from=community`); }}
+                            onPress={() => { if (mediaId) router.push(`/${mediaType}/${mediaId}?ownerId=${item.user_id}&from=community`); }}
                             style={{ flexDirection: 'row', alignItems: 'center' }}
                           >
                             <Image 
@@ -1436,7 +1467,7 @@ export default function CommunityScreen() {
                           </Pressable>
                           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, paddingTop: 6, borderTopWidth: 1, borderTopColor: '#222' }}>
                             <Pressable 
-                              onPress={() => { if (mediaId) router.push(`/(tabs)/${mediaType}/${mediaId}?ownerId=${item.user_id}&from=community`); }}
+                              onPress={() => { if (mediaId) router.push(`/${mediaType}/${mediaId}?ownerId=${item.user_id}&from=community`); }}
                               style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
                             >
                               <Ionicons name="chatbubble-outline" size={10} color="#737373" />
@@ -1819,7 +1850,20 @@ export default function CommunityScreen() {
 
       {/* ══════════════════════════ INBOX TAB ══════════════════════════ */}
       {activeTab === 'inbox' && (
-        <ScrollView key="tab-inbox" style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 160 }}>
+        <ScrollView
+          key="tab-inbox"
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingBottom: 160 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor="#f59e0b"
+              colors={['#f59e0b']}
+              progressBackgroundColor="#111"
+            />
+          }
+        >
           <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: '#111', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <Text style={{ color: '#2a2a2a', fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold', letterSpacing: 2, textTransform: 'uppercase' }}>Direct Messages</Text>
             <Pressable onPress={() => { /* Wait, to create message we just switch to directory to click member */ setActiveTab('directory'); }} style={{ backgroundColor: '#111', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: '#f59e0b44' }}>
@@ -1833,7 +1877,7 @@ export default function CommunityScreen() {
             </View>
           ) : (
             (conversations || []).map((conv: any) => (
-              <Pressable key={conv.partner?.id} onPress={() => router.push(`/(tabs)/profile/chat/${conv.partner?.id}`)} style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#0a0a0a' }}>
+              <Pressable key={conv.partner?.id} onPress={() => router.push(`/profile/chat/${conv.partner?.id}`)} style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#0a0a0a' }}>
                 <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#111', overflow: 'hidden', marginRight: 12 }}>
                   {conv.partner?.avatar_url ? <Image source={{ uri: conv.partner.avatar_url }} style={{ width: '100%', height: '100%' }} /> : <Ionicons name="person" size={20} color="#333" />}
                 </View>
@@ -1852,7 +1896,20 @@ export default function CommunityScreen() {
 
       {/* ══════════════════════════ ALERTS TAB ══════════════════════════ */}
       {activeTab === 'alerts' && (
-        <ScrollView key="tab-alerts" style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 160 }}>
+        <ScrollView
+          key="tab-alerts"
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingBottom: 160 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor="#f59e0b"
+              colors={['#f59e0b']}
+              progressBackgroundColor="#111"
+            />
+          }
+        >
           <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: '#111', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <Text style={{ color: '#2a2a2a', fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold', letterSpacing: 2, textTransform: 'uppercase' }}>Alerts</Text>
             {notifications && notifications.some((n: any) => n.is_read) && (

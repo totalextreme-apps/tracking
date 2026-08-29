@@ -474,7 +474,7 @@ export default function BulletinBoardScreen() {
                       onPress={() => {
                         const mediaId = post.movies?.id || post.shows?.id;
                         const mediaType = post.movies ? 'movie' : 'show';
-                        router.push(`/(tabs)/${mediaType}/${mediaId}`);
+                        router.push(`/${mediaType}/${mediaId}`);
                       }}
                       className="flex-row items-center bg-black/5 p-2 rounded mb-3 border border-black/10"
                     >
