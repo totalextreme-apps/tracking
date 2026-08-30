@@ -1163,7 +1163,7 @@ export default function CommunityScreen() {
                   </Pressable>
                 )}
               </View>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 24 }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ height: 110 }} contentContainerStyle={{ paddingHorizontal: 16, gap: 24 }}>
                 {top5.map((f: any) => {
                   const profile = f.profiles;
                   return (
@@ -1272,7 +1272,7 @@ export default function CommunityScreen() {
                            </Text>
                          </View>
                        </Pressable>
-                       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 4, paddingTop: 4 }}>
+                       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ height: 106 }} contentContainerStyle={{ paddingBottom: 4, paddingTop: 4 }}>
                           {item.items.map((sub: any, i: number) => (
                              <Pressable 
                                key={i} 
