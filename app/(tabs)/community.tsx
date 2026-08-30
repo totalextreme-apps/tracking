@@ -940,7 +940,11 @@ export default function CommunityScreen() {
   ];
 
   if (!isMounted) {
-    return <View style={{ flex: 1, backgroundColor: '#0a0a0a' }} />;
+    return (
+      <View style={{ flex: 1, backgroundColor: '#0a0a0a', justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#f59e0b" />
+      </View>
+    );
   }
 
   return (
