@@ -538,7 +538,7 @@ export default function HomeScreen() {
               </View>
               <View className="relative">
                 <Image source={require('@/assets/images/shelf_background.png')} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.8 }} contentFit="cover" />
-                <ScrollView ref={shelfRef} horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingLeft: 24, paddingRight: 40 }} className="py-12">
+                <ScrollView ref={shelfRef} horizontal showsHorizontalScrollIndicator={false} style={{ height: 366 }} contentContainerStyle={{ paddingLeft: 24, paddingRight: 40 }} className="py-12">
                   {onDisplay.map((item: any) => (
                     <OnDisplayCard key={item.id} item={item} onSingleTapAction={() => navigateToDetail(item)} onLongPressAction={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); setQuickActionItem(item); }} onToggleFavorite={toggleFavorite} onRatePress={(rating) => handleGridRate(item, rating)} />
                   ))}
@@ -561,7 +561,7 @@ export default function HomeScreen() {
                 </View>
               </View>
               <View className="bg-neutral-900/30 border-y border-neutral-900/60 py-4 relative">
-                <ScrollView ref={recentlyWatchedRef} horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingLeft: 24, paddingRight: 40 }} className="py-2">
+                <ScrollView ref={recentlyWatchedRef} horizontal showsHorizontalScrollIndicator={false} style={{ height: 148 }} contentContainerStyle={{ paddingLeft: 24, paddingRight: 40 }} className="py-2">
                   {recentlyWatched.map((item: any) => (
                     <RecentlyWatchedCard
                       key={item.id}
@@ -625,7 +625,7 @@ export default function HomeScreen() {
               </View>
               <View className="relative">
                 <Image source={require('@/assets/images/thrift_background.png')} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.8 }} contentFit="cover" />
-                <ScrollView ref={grailRef} horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingLeft: 24, paddingRight: 40 }} className="py-12">
+                <ScrollView ref={grailRef} horizontal showsHorizontalScrollIndicator={false} style={{ height: 366 }} contentContainerStyle={{ paddingLeft: 24, paddingRight: 40 }} className="py-12">
                   {grailList.map((item: any) => (
                     <OnDisplayCard key={item.id} item={item} onSingleTapAction={() => navigateToDetail(item)} onLongPressAction={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); setQuickActionItem(item); }} onToggleFavorite={toggleFavorite} onRatePress={(rating) => handleGridRate(item, rating)} />
                   ))}
