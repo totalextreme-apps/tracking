@@ -460,6 +460,11 @@ function StoreChartsSection({ stats }: { stats: any }) {
 }
 
 export default function CommunityScreen() {
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   const { userId } = useAuth();
   const { playSound } = useSound();
   const router = useRouter();
@@ -467,6 +472,10 @@ export default function CommunityScreen() {
   const queryClient = useQueryClient();
   const scrollRef = useRef<ScrollView>(null);
   const boardScrollRef = useRef<ScrollView>(null);
+
+  if (!isMounted) {
+    return <View style={{ flex: 1, backgroundColor: '#0a0a0a' }} />;
+  }
 
   // Auto-repair any mismatched bulletin posts on mount
   useEffect(() => {
