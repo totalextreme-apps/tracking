@@ -174,7 +174,7 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
                   onDismiss={() => setAuthError(null)}
                 />
               )}
-              <View style={{ flex: 1, paddingTop: isDesktop ? 80 : 0 }}>
+              <View style={{ flex: 1, paddingTop: Platform.OS === 'web' ? 80 : 0 }}>
                 <Stack>
                   <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                   <Stack.Screen name="auth" options={{ presentation: 'modal', headerShown: false }} />
