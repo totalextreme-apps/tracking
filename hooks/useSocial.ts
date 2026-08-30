@@ -292,6 +292,12 @@ export const useBulletinFeed = (userId?: string, enabledParam = true) => {
             *,
             movies(id, title, poster_path, tmdb_id),
             shows(id, name, poster_path, tmdb_id)
+          ),
+          post_comments(
+            id,
+            content,
+            created_at,
+            profiles(id, username, avatar_url)
           )
         `)
         .in('user_id', interestingIds)
@@ -552,7 +558,7 @@ export const useDeletePost = (userId?: string) => {
 };
 
 // 8. Fetch Item Comments
-export const useItemComments = (collectionItemId?: string) => {
+export const useItemComments = (collectionItemId?: string, initialData?: any[]) => {
   return useQuery({
     queryKey: ['item-comments', collectionItemId],
     queryFn: async () => {
@@ -570,6 +576,7 @@ export const useItemComments = (collectionItemId?: string) => {
       return data as ItemCommentWithProfile[];
     },
     enabled: !!collectionItemId,
+    initialData,
   });
 };
 
@@ -638,7 +645,7 @@ export const useDeleteComment = (userId?: string) => {
 
 // --- POST COMMENTS ---
 
-export const usePostComments = (postId?: string) => {
+export const usePostComments = (postId?: string, initialData?: any[]) => {
   return useQuery({
     queryKey: ['post-comments', postId],
     queryFn: async () => {
@@ -655,6 +662,7 @@ export const usePostComments = (postId?: string) => {
       return data;
     },
     enabled: !!postId,
+    initialData,
   });
 };
 
@@ -792,6 +800,12 @@ export const useCommunityFeed = (userId?: string) => {
             *,
             movies(id, title, poster_path, tmdb_id),
             shows(id, name, poster_path, tmdb_id)
+          ),
+          post_comments(
+            id,
+            content,
+            created_at,
+            profiles(id, username, avatar_url)
           )
         `)
         .in('user_id', interestingIds)
@@ -806,7 +820,13 @@ export const useCommunityFeed = (userId?: string) => {
         .select(`
           *,
           movies(id, title, poster_path, tmdb_id),
-          shows(id, name, poster_path, tmdb_id)
+          shows(id, name, poster_path, tmdb_id),
+          item_comments(
+            id,
+            content,
+            created_at,
+            profiles(id, username, avatar_url)
+          )
         `)
         .in('user_id', interestingIds)
         .eq('status', 'owned')
@@ -821,7 +841,13 @@ export const useCommunityFeed = (userId?: string) => {
         .select(`
           *,
           movies(id, title, poster_path, tmdb_id),
-          shows(id, name, poster_path, tmdb_id)
+          shows(id, name, poster_path, tmdb_id),
+          item_comments(
+            id,
+            content,
+            created_at,
+            profiles(id, username, avatar_url)
+          )
         `)
         .in('user_id', interestingIds)
         .not('last_watched_at', 'is', null)
@@ -836,7 +862,13 @@ export const useCommunityFeed = (userId?: string) => {
         .select(`
           *,
           movies(id, title, poster_path, tmdb_id),
-          shows(id, name, poster_path, tmdb_id)
+          shows(id, name, poster_path, tmdb_id),
+          item_comments(
+            id,
+            content,
+            created_at,
+            profiles(id, username, avatar_url)
+          )
         `)
         .in('user_id', interestingIds)
         .or('for_sale.eq.true,for_trade.eq.true')

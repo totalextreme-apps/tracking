@@ -74,10 +74,10 @@ function MovieReactionSection({ collectionItemId, userId }: { collectionItemId: 
   );
 }
 
-function ItemCommentSectionInline({ collectionItemId, isFocused }: { collectionItemId: string, isFocused?: boolean }) {
+function ItemCommentSectionInline({ collectionItemId, initialComments, isFocused }: { collectionItemId: string, initialComments?: any[], isFocused?: boolean }) {
   const { userId } = useAuth();
   const { playSound } = useSound();
-  const { data: comments, isLoading } = useItemComments(collectionItemId);
+  const { data: comments, isLoading } = useItemComments(collectionItemId, initialComments);
   const createComment = useCreateComment(userId);
   const [text, setText] = useState('');
   const inputRef = useRef<TextInput>(null);
@@ -151,11 +151,11 @@ function ItemCommentSectionInline({ collectionItemId, isFocused }: { collectionI
   );
 }
 
-function PostCommentSection({ postId, isFocused }: { postId: string, isFocused?: boolean }) {
+function PostCommentSection({ postId, initialComments, isFocused }: { postId: string, initialComments?: any[], isFocused?: boolean }) {
   const router = useRouter();
   const { userId } = useAuth();
   const { playSound } = useSound();
-  const { data: comments, isLoading } = usePostComments(postId);
+  const { data: comments, isLoading } = usePostComments(postId, initialComments);
   const createComment = useCreatePostComment(userId);
   const [text, setText] = useState('');
   const inputRef = useRef<TextInput>(null);
@@ -1299,7 +1299,7 @@ export default function CommunityScreen() {
                                    </Pressable>
                                    <MovieReactionSection collectionItemId={firstItem.id} userId={userId || ''} />
                                  </View>
-                                 <ItemCommentSectionInline collectionItemId={firstItem.id} isFocused={focusedItemId === firstItem.id} />
+                                 <ItemCommentSectionInline collectionItemId={firstItem.id} initialComments={firstItem.item_comments} isFocused={focusedItemId === firstItem.id} />
                                </View>
                             );
                          })()}
