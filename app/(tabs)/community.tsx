@@ -473,10 +473,6 @@ export default function CommunityScreen() {
   const scrollRef = useRef<ScrollView>(null);
   const boardScrollRef = useRef<ScrollView>(null);
 
-  if (!isMounted) {
-    return <View style={{ flex: 1, backgroundColor: '#0a0a0a' }} />;
-  }
-
   // Auto-repair any mismatched bulletin posts on mount
   useEffect(() => {
     if (!userId) return;
@@ -942,6 +938,10 @@ export default function CommunityScreen() {
     { key: 'board', label: 'Board' },
     { key: 'swap', label: 'Swap Meet' },
   ];
+
+  if (!isMounted) {
+    return <View style={{ flex: 1, backgroundColor: '#0a0a0a' }} />;
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: '#0a0a0a' }}>
