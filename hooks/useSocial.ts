@@ -472,10 +472,12 @@ export const useCreatePost = (userId?: string) => {
         const mentions = [...postData.content.matchAll(mentionRegex)].map(m => m[1].toLowerCase());
         
         if (mentions.length > 0) {
-          // Fetch profiles matching mentioned usernames
+          // Fetch profiles matching mentioned usernames case-insensitively using OR and ILIKE
+          const orConditions = mentions.map(m => `username.ilike.${m}`).join(',');
           const { data: users } = await supabase
             .from('profiles')
-            .select('id, username'); // We fetch all and filter client side if case-insensitivity in SQL is tricky, or just use .in('username', ...)
+            .select('id, username')
+            .or(orConditions);
 
           if (users && users.length > 0) {
              const matchedUsers = users.filter((u: any) => u.username && mentions.includes(u.username.toLowerCase()));
@@ -788,112 +790,108 @@ export const useCommunityFeed = (userId?: string) => {
       const followingIds = follows?.map((f: any) => f.following_id) || [];
       const interestingIds = [...followingIds, userId];
 
-      // Fetch bulletin posts from interestingIds
-      const { data: posts, error: postErr } = await supabase
-        .from('bulletin_posts')
-        .select(`
-          *,
-          profiles(*),
-          movies(id, title, poster_path, tmdb_id),
-          shows(id, name, poster_path, tmdb_id),
-          collection_items(
+      // Fetch all feed segments in parallel
+      const [postsRes, updatesRes, watchesRes, listingsRes, commentsRes] = await Promise.all([
+        supabase
+          .from('bulletin_posts')
+          .select(`
+            *,
+            profiles(*),
+            movies(id, title, poster_path, tmdb_id),
+            shows(id, name, poster_path, tmdb_id),
+            collection_items(
+              *,
+              movies(id, title, poster_path, tmdb_id),
+              shows(id, name, poster_path, tmdb_id)
+            ),
+            post_comments(
+              id,
+              content,
+              created_at,
+              profiles(id, username, avatar_url)
+            )
+          `)
+          .in('user_id', interestingIds)
+          .order('created_at', { ascending: false })
+          .limit(25),
+        supabase
+          .from('collection_items')
+          .select(`
             *,
             movies(id, title, poster_path, tmdb_id),
-            shows(id, name, poster_path, tmdb_id)
-          ),
-          post_comments(
-            id,
-            content,
-            created_at,
-            profiles(id, username, avatar_url)
-          )
-        `)
-        .in('user_id', interestingIds)
-        .order('created_at', { ascending: false })
-        .limit(25);
-
-      if (postErr) console.error('Error fetching posts:', postErr);
-
-      // Fetch collection additions from interestingIds
-      const { data: updates, error: updateErr } = await supabase
-        .from('collection_items')
-        .select(`
-          *,
-          movies(id, title, poster_path, tmdb_id),
-          shows(id, name, poster_path, tmdb_id),
-          item_comments(
-            id,
-            content,
-            created_at,
-            profiles(id, username, avatar_url)
-          )
-        `)
-        .in('user_id', interestingIds)
-        .eq('status', 'owned')
-        .order('created_at', { ascending: false })
-        .limit(25);
-
-      if (updateErr) console.error('Error fetching updates:', updateErr);
-
-      // Fetch watch events from interestingIds
-      const { data: watches, error: watchErr } = await supabase
-        .from('collection_items')
-        .select(`
-          *,
-          movies(id, title, poster_path, tmdb_id),
-          shows(id, name, poster_path, tmdb_id),
-          item_comments(
-            id,
-            content,
-            created_at,
-            profiles(id, username, avatar_url)
-          )
-        `)
-        .in('user_id', interestingIds)
-        .not('last_watched_at', 'is', null)
-        .order('last_watched_at', { ascending: false })
-        .limit(25);
-
-      if (watchErr) console.error('Error fetching watches:', watchErr);
-
-      // Fetch items marked for sale or trade from interestingIds
-      const { data: listings, error: listingErr } = await supabase
-        .from('collection_items')
-        .select(`
-          *,
-          movies(id, title, poster_path, tmdb_id),
-          shows(id, name, poster_path, tmdb_id),
-          item_comments(
-            id,
-            content,
-            created_at,
-            profiles(id, username, avatar_url)
-          )
-        `)
-        .in('user_id', interestingIds)
-        .or('for_sale.eq.true,for_trade.eq.true')
-        .order('updated_at', { ascending: false })
-        .limit(25);
-
-      if (listingErr) console.error('Error fetching listings:', listingErr);
-
-      // Fetch comments from interestingIds
-      const { data: comments, error: commentErr } = await supabase
-        .from('item_comments')
-        .select(`
-          *,
-          profiles(*),
-          collection_items(
+            shows(id, name, poster_path, tmdb_id),
+            item_comments(
+              id,
+              content,
+              created_at,
+              profiles(id, username, avatar_url)
+            )
+          `)
+          .in('user_id', interestingIds)
+          .eq('status', 'owned')
+          .order('created_at', { ascending: false })
+          .limit(25),
+        supabase
+          .from('collection_items')
+          .select(`
             *,
             movies(id, title, poster_path, tmdb_id),
-            shows(id, name, poster_path, tmdb_id)
-          )
-        `)
-        .in('user_id', interestingIds)
-        .order('created_at', { ascending: false })
-        .limit(25);
+            shows(id, name, poster_path, tmdb_id),
+            item_comments(
+              id,
+              content,
+              created_at,
+              profiles(id, username, avatar_url)
+            )
+          `)
+          .in('user_id', interestingIds)
+          .not('last_watched_at', 'is', null)
+          .order('last_watched_at', { ascending: false })
+          .limit(25),
+        supabase
+          .from('collection_items')
+          .select(`
+            *,
+            movies(id, title, poster_path, tmdb_id),
+            shows(id, name, poster_path, tmdb_id),
+            item_comments(
+              id,
+              content,
+              created_at,
+              profiles(id, username, avatar_url)
+            )
+          `)
+          .in('user_id', interestingIds)
+          .or('for_sale.eq.true,for_trade.eq.true')
+          .order('created_at', { ascending: false })
+          .limit(25),
+        supabase
+          .from('item_comments')
+          .select(`
+            *,
+            profiles(*),
+            collection_items(
+              *,
+              movies(id, title, poster_path, tmdb_id),
+              shows(id, name, poster_path, tmdb_id)
+            )
+          `)
+          .in('user_id', interestingIds)
+          .order('created_at', { ascending: false })
+          .limit(25)
+      ]);
 
-      if (commentErr) console.error('Error fetching comments:', commentErr);
+      const posts = postsRes.data;
+      const updates = updatesRes.data;
+      const watches = watchesRes.data;
+      const listings = listingsRes.data;
+      const comments = commentsRes.data;
+
+      if (postsRes.error) console.error('Error fetching posts:', postsRes.error);
+      if (updatesRes.error) console.error('Error fetching updates:', updatesRes.error);
+      if (watchesRes.error) console.error('Error fetching watches:', watchesRes.error);
+      if (listingsRes.error) console.error('Error fetching listings:', listingsRes.error);
+      if (commentsRes.error) console.error('Error fetching comments:', commentsRes.error);
 
       // Fetch profiles in memory for owners of updates/collection items to avoid missing relation errors
       const profileIdsToFetch = new Set<string>();
@@ -965,7 +963,7 @@ export const useCommunityFeed = (userId?: string) => {
         ...l,
         profiles: profilesMap[l.user_id] || null,
         activity_type: 'listing',
-        created_at: l.updated_at
+        created_at: l.created_at
       }));
 
       const activity = [

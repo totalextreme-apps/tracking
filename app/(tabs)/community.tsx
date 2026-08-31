@@ -1167,14 +1167,14 @@ export default function CommunityScreen() {
                   </Pressable>
                 )}
               </View>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ height: 110 }} contentContainerStyle={{ paddingHorizontal: 16, gap: 24 }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ height: 110 }} contentContainerStyle={{ flexDirection: 'row', paddingHorizontal: 16, gap: 24 }}>
                 {top5.map((f: any) => {
                   const profile = f.profiles;
                   return (
                     <Pressable 
                       key={f.following_id} 
                       onPress={() => router.push(`/profile/${f.following_id}?from=community`)}
-                      style={{ alignItems: 'center', width: 72 }}
+                      style={{ alignItems: 'center', width: 72, flexShrink: 0 }}
                     >
                       <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: '#1a1a1a', borderWidth: 2, borderColor: '#f59e0b', overflow: 'hidden', marginBottom: 8, justifyContent: 'center', alignItems: 'center', shadowColor: '#f59e0b', shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } }}>
                         {profile?.avatar_url ? (
@@ -1237,7 +1237,17 @@ export default function CommunityScreen() {
                 ))}
               </View>
             </View>
-            {communityLoading ? <ActivityIndicator color="#f59e0b" /> : processedCommunityFeed.length === 0 ? (
+            {communityLoading ? (
+              <View style={{ paddingVertical: 40, alignItems: 'center', justifyContent: 'center' }}>
+                <ActivityIndicator size="large" color="#f59e0b" style={{ marginBottom: 16 }} />
+                <Text style={{ color: '#f59e0b', fontFamily: 'SpaceMono', fontSize: 12, fontWeight: 'bold', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 6 }}>
+                  Tuning into the pulse...
+                </Text>
+                <Text style={{ color: '#525252', fontFamily: 'SpaceMono', fontSize: 10, textAlign: 'center', letterSpacing: 1 }}>
+                  Connecting to store network feed
+                </Text>
+              </View>
+            ) : processedCommunityFeed.length === 0 ? (
                <View style={{ padding: 24, alignItems: 'center', backgroundColor: '#111', borderRadius: 10, borderWidth: 1, borderColor: '#1f1f1f', marginBottom: 24 }}>
                   <Ionicons name="pulse" size={32} color="#f59e0b" style={{ marginBottom: 16 }} />
                   <Text style={{ color: '#fff', fontFamily: 'SpaceMono', fontSize: 13, fontWeight: 'bold', textAlign: 'center', marginBottom: 8 }}>The Pulse is Quiet</Text>
@@ -1276,12 +1286,12 @@ export default function CommunityScreen() {
                            </Text>
                          </View>
                        </Pressable>
-                       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ height: 106 }} contentContainerStyle={{ paddingBottom: 4, paddingTop: 4 }}>
+                       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ height: 120 }} contentContainerStyle={{ flexDirection: 'row', paddingVertical: 10 }}>
                           {item.items.map((sub: any, i: number) => (
                              <Pressable 
                                key={i} 
                                onPress={() => { const id = sub.movies?.id || sub.shows?.id; const t = sub.movies ? 'movie' : 'show'; router.push(`/${t}/${id}?ownerId=${sub.user_id}&from=community`); }} 
-                               style={{ width: 62, height: 98, marginRight: 8, backgroundColor: '#0a0a0a', padding: 4, borderRadius: 8, borderWidth: 1, borderColor: '#f59e0b18', justifyContent: 'space-between' }}
+                               style={{ width: 62, height: 98, marginRight: 8, backgroundColor: '#0a0a0a', padding: 4, borderRadius: 8, borderWidth: 1, borderColor: '#f59e0b18', justifyContent: 'space-between', flexShrink: 0 }}
                              >
                                <Image source={{ uri: getPosterUrl(sub.movies?.poster_path || sub.shows?.poster_path) || '' }} style={{ width: 54, height: 74, borderRadius: 4, backgroundColor: '#1a1a1a' }} />
                                <View style={{ backgroundColor: '#1a1a1a', alignSelf: 'stretch', paddingVertical: 1, borderRadius: 2, alignItems: 'center' }}>
@@ -1648,7 +1658,12 @@ export default function CommunityScreen() {
                   
                   {/* Member Listing */}
                   {allUsersLoading ? (
-                     <ActivityIndicator color="#00ff00" style={{ padding: 24 }} />
+                     <View style={{ paddingVertical: 24, alignItems: 'center', justifyContent: 'center' }}>
+                        <ActivityIndicator color="#00ff00" style={{ marginBottom: 12 }} />
+                        <Text style={{ fontFamily: 'SpaceMono', color: '#00ff00', fontSize: 11, textAlign: 'center', letterSpacing: 1 }}>
+                           LOADING USER DATABASE...
+                        </Text>
+                     </View>
                   ) : (
                      <View>
                         {(allUsers || []).map((user: any) => (
@@ -1868,7 +1883,17 @@ export default function CommunityScreen() {
                  </View>
               </View>
 
-              {bulletinLoading ? <ActivityIndicator color="#f59e0b" style={{ marginVertical: 20 }} /> : (
+              {bulletinLoading ? (
+                <View style={{ paddingVertical: 40, alignItems: 'center', justifyContent: 'center' }}>
+                  <ActivityIndicator size="large" color="#f59e0b" style={{ marginBottom: 16 }} />
+                  <Text style={{ color: '#f59e0b', fontFamily: 'SpaceMono', fontSize: 12, fontWeight: 'bold', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 6 }}>
+                    Loading the Board...
+                  </Text>
+                  <Text style={{ color: '#525252', fontFamily: 'SpaceMono', fontSize: 10, textAlign: 'center', letterSpacing: 1 }}>
+                    Fetching bulletin posts and updates
+                  </Text>
+                </View>
+              ) : (
                 (bulletinFeed || [])
                   .filter((post: any) => {
                     if (boardTypeFilter === 'movie' && !post.movies) return false;
@@ -1924,7 +1949,17 @@ export default function CommunityScreen() {
               <Text style={{ color: '#f59e0b', fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold' }}>+ NEW MSG</Text>
             </Pressable>
           </View>
-          {inboxLoading ? <ActivityIndicator color="#f59e0b" style={{ marginTop: 40 }} /> : !conversations?.length ? (
+          {inboxLoading ? (
+            <View style={{ paddingVertical: 40, alignItems: 'center', justifyContent: 'center' }}>
+              <ActivityIndicator size="large" color="#f59e0b" style={{ marginBottom: 16 }} />
+              <Text style={{ color: '#f59e0b', fontFamily: 'SpaceMono', fontSize: 12, fontWeight: 'bold', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 6 }}>
+                Opening Inbox...
+              </Text>
+              <Text style={{ color: '#525252', fontFamily: 'SpaceMono', fontSize: 10, textAlign: 'center', letterSpacing: 1 }}>
+                Synchronizing secure messages
+              </Text>
+            </View>
+          ) : !conversations?.length ? (
             <View style={{ marginTop: 80, alignItems: 'center', paddingHorizontal: 40, opacity: 0.3 }}>
               <Ionicons name="chatbubbles-outline" size={56} color="#333" />
               <Text style={{ color: '#fff', fontFamily: 'SpaceMono', fontSize: 11, textAlign: 'center', marginTop: 16 }}>No messages yet.</Text>
@@ -1972,7 +2007,17 @@ export default function CommunityScreen() {
                </Pressable>
             )}
           </View>
-          {notifLoading ? <ActivityIndicator color="#f59e0b" style={{ marginTop: 40 }} /> : !notifications?.length ? (
+          {notifLoading ? (
+            <View style={{ paddingVertical: 40, alignItems: 'center', justifyContent: 'center' }}>
+              <ActivityIndicator size="large" color="#f59e0b" style={{ marginBottom: 16 }} />
+              <Text style={{ color: '#f59e0b', fontFamily: 'SpaceMono', fontSize: 12, fontWeight: 'bold', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 6 }}>
+                Retrieving Alerts...
+              </Text>
+              <Text style={{ color: '#525252', fontFamily: 'SpaceMono', fontSize: 10, textAlign: 'center', letterSpacing: 1 }}>
+                Checking latest notifications
+              </Text>
+            </View>
+          ) : !notifications?.length ? (
             <View style={{ marginTop: 80, alignItems: 'center', paddingHorizontal: 40, opacity: 0.3 }}>
               <Ionicons name="notifications-off-outline" size={56} color="#333" />
               <Text style={{ color: '#fff', fontFamily: 'SpaceMono', fontSize: 11, textAlign: 'center', marginTop: 16 }}>All quiet.</Text>

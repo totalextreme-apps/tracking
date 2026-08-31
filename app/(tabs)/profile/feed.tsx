@@ -182,7 +182,15 @@ export default function SocialFeedScreen() {
           <Text className="text-amber-500 font-mono text-[10px] uppercase font-bold mb-4 tracking-widest">Community Pulse</Text>
           
           {feedLoading ? (
-            <ActivityIndicator color="#f59e0b" className="mt-10" />
+            <View className="py-10 items-center justify-center">
+              <ActivityIndicator size="large" color="#f59e0b" className="mb-4" />
+              <Text className="text-amber-500 font-mono text-xs font-bold tracking-widest uppercase mb-1">
+                Tuning into the pulse...
+              </Text>
+              <Text className="text-neutral-500 font-mono text-[10px] text-center tracking-wider">
+                Connecting to store network feed
+              </Text>
+            </View>
           ) : feed?.length === 0 ? (
             <View className="mt-10 items-center opacity-40">
               <Ionicons name="radio-outline" size={48} color="#525252" />

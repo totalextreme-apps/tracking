@@ -182,7 +182,15 @@ export default function NotificationsScreen() {
         </View>
 
         {isLoading ? (
-          <ActivityIndicator color="#f59e0b" className="mt-20" />
+          <View className="py-20 items-center justify-center">
+            <ActivityIndicator size="large" color="#f59e0b" className="mb-4" />
+            <Text className="text-amber-500 font-mono text-xs font-bold tracking-widest uppercase mb-1">
+              Scanning Frequency...
+            </Text>
+            <Text className="text-neutral-500 font-mono text-[10px] text-center tracking-wider">
+              Retrieving alert history
+            </Text>
+          </View>
         ) : notifications?.length === 0 ? (
           <View className="mt-20 items-center px-10 opacity-30">
             <Ionicons name="notifications-off-outline" size={64} color="#525252" />
