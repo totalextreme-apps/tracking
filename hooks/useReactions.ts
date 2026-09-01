@@ -42,6 +42,7 @@ export function useReactions(targetType: ReactionTargetType, targetId: string) {
       return data || [];
     },
     enabled: !!targetId,
+    staleTime: 1000 * 60 * 5,
   });
 
   // Mutation: Toggle or update reaction

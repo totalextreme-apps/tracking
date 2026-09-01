@@ -620,11 +620,22 @@ export default function CommunityScreen() {
 
   // Pulse Filter & Pagination
   const [pulseFilter, setPulseFilter] = useState<'all' | 'collection' | 'notes' | 'comments'>('all');
-  const [visiblePulseCount, setVisiblePulseCount] = useState(8);
+  const [visiblePulseCount, setVisiblePulseCount] = useState(5);
+  const [loadingMorePulse, setLoadingMorePulse] = useState(false);
 
   useEffect(() => {
-    setVisiblePulseCount(8);
+    setVisiblePulseCount(5);
+    setLoadingMorePulse(false);
   }, [pulseFilter, activeTab]);
+
+  const handleLoadMorePulse = () => {
+    playSound('click');
+    setLoadingMorePulse(true);
+    setTimeout(() => {
+      setVisiblePulseCount(prev => prev + 5);
+      setLoadingMorePulse(false);
+    }, 80);
+  };
 
   // Data
   const { data: following } = useFollowing(userId);
@@ -1571,29 +1582,36 @@ export default function CommunityScreen() {
               })
             )}
 
-            {visiblePulseCount < processedCommunityFeed.length && (
+            {loadingMorePulse ? (
+              <View style={{ backgroundColor: '#0a0a0a', borderWidth: 1, borderColor: '#f59e0b44', borderRadius: 8, paddingVertical: 14, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center', marginTop: 12, marginBottom: 24 }}>
+                <ActivityIndicator size="small" color="#f59e0b" style={{ marginBottom: 8 }} />
+                <Text style={{ color: '#f59e0b', fontFamily: 'SpaceMono', fontSize: 10, fontWeight: 'bold', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 4 }}>
+                  [▒▒▒▒▒▒▒▒] READING ARCHIVE TAPE...
+                </Text>
+                <Text style={{ color: '#525252', fontFamily: 'SpaceMono', fontSize: 8, letterSpacing: 1 }}>
+                  FETCHING NEXT WAVE FROM STORE NETWORK
+                </Text>
+              </View>
+            ) : visiblePulseCount < processedCommunityFeed.length ? (
               <Pressable 
-                onPress={() => {
-                  setVisiblePulseCount(prev => prev + 10);
-                  playSound('click');
-                }}
+                onPress={handleLoadMorePulse}
                 style={{ 
                   backgroundColor: '#111', 
                   borderWidth: 1, 
-                  borderColor: '#222', 
+                  borderColor: '#f59e0b33', 
                   borderRadius: 8, 
                   paddingVertical: 12, 
                   alignItems: 'center', 
                   justifyContent: 'center', 
-                  marginTop: 8, 
+                  marginTop: 12, 
                   marginBottom: 24 
                 }}
               >
                 <Text style={{ color: '#f59e0b', fontFamily: 'SpaceMono', fontSize: 10, fontWeight: 'bold', letterSpacing: 2 }}>
-                  LOAD MORE ACTIVITY ({processedCommunityFeed.length - visiblePulseCount} REMAINING)
+                  + LOAD MORE ACTIVITY ({processedCommunityFeed.length - visiblePulseCount} REMAINING)
                 </Text>
               </Pressable>
-            )}
+            ) : null}
           </View>
 
           {/* Suggested Members (Shared Tastes) */}

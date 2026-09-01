@@ -579,6 +579,7 @@ export const useItemComments = (collectionItemId?: string, initialData?: any[]) 
     },
     enabled: !!collectionItemId,
     initialData,
+    staleTime: 1000 * 60 * 5,
   });
 };
 
@@ -979,8 +980,7 @@ export const useCommunityFeed = (userId?: string) => {
       );
     },
     enabled: !!userId,
-    refetchInterval: 10000, // Poll community feed every 10 seconds to keep it fresh
-    staleTime: 1000 * 10,    // Cache community feed for 10 seconds to avoid unnecessary rapid queries
+    staleTime: 1000 * 30,
   });
 };
 
