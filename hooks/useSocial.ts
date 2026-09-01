@@ -813,7 +813,7 @@ export const useCommunityFeed = (userId?: string) => {
           `)
           .in('user_id', interestingIds)
           .order('created_at', { ascending: false })
-          .limit(25),
+          .limit(15),
         supabase
           .from('collection_items')
           .select(`
@@ -830,7 +830,7 @@ export const useCommunityFeed = (userId?: string) => {
           .in('user_id', interestingIds)
           .eq('status', 'owned')
           .order('created_at', { ascending: false })
-          .limit(25),
+          .limit(15),
         supabase
           .from('collection_items')
           .select(`
@@ -847,7 +847,7 @@ export const useCommunityFeed = (userId?: string) => {
           .in('user_id', interestingIds)
           .not('last_watched_at', 'is', null)
           .order('last_watched_at', { ascending: false })
-          .limit(25),
+          .limit(15),
         supabase
           .from('collection_items')
           .select(`
@@ -864,7 +864,7 @@ export const useCommunityFeed = (userId?: string) => {
           .in('user_id', interestingIds)
           .or('for_sale.eq.true,for_trade.eq.true')
           .order('created_at', { ascending: false })
-          .limit(25),
+          .limit(15),
         supabase
           .from('item_comments')
           .select(`
@@ -878,7 +878,7 @@ export const useCommunityFeed = (userId?: string) => {
           `)
           .in('user_id', interestingIds)
           .order('created_at', { ascending: false })
-          .limit(25)
+          .limit(15)
       ]);
 
       const posts = postsRes.data;

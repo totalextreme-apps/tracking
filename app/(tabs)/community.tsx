@@ -409,7 +409,7 @@ function StoreChartsSection({ stats }: { stats: any }) {
           </Text>
         </View>
         
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexDirection: 'row', paddingHorizontal: 16, gap: 12 }}>
           {items.map((item: any, idx: number) => {
             const mediaTitle = item.movie_title || item.show_name || 'Unknown Title';
             const mediaPoster = item.movie_poster || item.show_poster;
@@ -420,7 +420,7 @@ function StoreChartsSection({ stats }: { stats: any }) {
               <Pressable
                 key={idx}
                 onPress={() => { if (mediaId) router.push(`/${mediaType}/${mediaId}?from=community`); }}
-                style={{ width: 100, backgroundColor: '#0a0a0a', padding: 6, borderRadius: 8, borderWidth: 1, borderColor: '#1f1f1f', alignItems: 'center' }}
+                style={{ width: 100, flexShrink: 0, backgroundColor: '#0a0a0a', padding: 6, borderRadius: 8, borderWidth: 1, borderColor: '#1f1f1f', alignItems: 'center' }}
               >
                 <View style={{ position: 'absolute', top: -4, left: -4, zIndex: 10, backgroundColor: color, width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#000' }}>
                   <Text style={{ color: '#000', fontFamily: 'SpaceMono', fontSize: 8, fontWeight: 'bold' }}>#{idx + 1}</Text>
@@ -618,8 +618,13 @@ export default function CommunityScreen() {
   const [boardTypeFilter, setBoardTypeFilter] = useState<'movie' | 'tv' | null>(null);
   const [boardSort, setBoardSort] = useState<'recent' | 'rating'>('recent');
 
-  // Pulse Filter
+  // Pulse Filter & Pagination
   const [pulseFilter, setPulseFilter] = useState<'all' | 'collection' | 'notes' | 'comments'>('all');
+  const [visiblePulseCount, setVisiblePulseCount] = useState(8);
+
+  useEffect(() => {
+    setVisiblePulseCount(8);
+  }, [pulseFilter, activeTab]);
 
   // Data
   const { data: following } = useFollowing(userId);
@@ -1254,7 +1259,7 @@ export default function CommunityScreen() {
                   <Text style={{ color: '#525252', fontFamily: 'SpaceMono', fontSize: 11, textAlign: 'center', lineHeight: 18 }}>When your network adds titles, pins notes, or comments on movies, they will appear here.</Text>
                </View>
             ) : (
-              processedCommunityFeed.map((item: any, idx: number) => {
+              processedCommunityFeed.slice(0, visiblePulseCount).map((item: any, idx: number) => {
                 if (item.type === 'story_group') {
                    const profile = item.profiles;
                    return (
@@ -1564,6 +1569,30 @@ export default function CommunityScreen() {
                   </View>
                 );
               })
+            )}
+
+            {visiblePulseCount < processedCommunityFeed.length && (
+              <Pressable 
+                onPress={() => {
+                  setVisiblePulseCount(prev => prev + 10);
+                  playSound('click');
+                }}
+                style={{ 
+                  backgroundColor: '#111', 
+                  borderWidth: 1, 
+                  borderColor: '#222', 
+                  borderRadius: 8, 
+                  paddingVertical: 12, 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  marginTop: 8, 
+                  marginBottom: 24 
+                }}
+              >
+                <Text style={{ color: '#f59e0b', fontFamily: 'SpaceMono', fontSize: 10, fontWeight: 'bold', letterSpacing: 2 }}>
+                  LOAD MORE ACTIVITY ({processedCommunityFeed.length - visiblePulseCount} REMAINING)
+                </Text>
+              </Pressable>
             )}
           </View>
 
