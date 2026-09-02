@@ -69,17 +69,24 @@ export function GlobalHeader() {
         <View
             style={[
                 styles.container,
-                { paddingTop: isDesktop ? 12 : Math.max(insets.top, 20) }
+                { paddingTop: isDesktop ? 12 : Math.max(insets.top, 16) }
             ]}
             className="bg-neutral-950 border-b border-neutral-900"
         >
-            <View style={[styles.innerContainer, isDesktop && { maxWidth: 1400, width: '100%', alignSelf: 'center', paddingHorizontal: 32 }]}>
+            <View
+                style={[
+                    styles.innerContainer,
+                    isDesktop
+                        ? { maxWidth: 1400, width: '100%', alignSelf: 'center', paddingHorizontal: 32 }
+                        : { paddingHorizontal: 16 }
+                ]}
+            >
                 {/* Logo & Descriptor */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flexShrink: 1 }}>
                     <Pressable onPress={() => { playSound('click'); router.push('/'); }}>
                         <Image
                             source={logoSource}
-                            style={{ width: isDesktop ? 160 : 182, height: isDesktop ? 50 : 60, maxWidth: '100%', flexShrink: 1 }}
+                            style={{ width: isDesktop ? 160 : 140, height: isDesktop ? 50 : 44, maxWidth: '100%', flexShrink: 1 }}
                             resizeMode="contain"
                         />
                     </Pressable>
@@ -87,6 +94,7 @@ export function GlobalHeader() {
                         <Text
                             className="text-amber-500/70 text-[8px] uppercase tracking-[2px] mt-1 ml-1"
                             style={{ fontFamily: 'VCR_OSD_MONO' }}
+                            numberOfLines={1}
                         >
                             {getDescriptor()}
                         </Text>
@@ -149,33 +157,52 @@ export function GlobalHeader() {
                     </View>
                 )}
 
-                {/* Right controls: Thrift toggle & Quick Add (mobile) */}
-                <View className="flex-row items-center gap-4 ml-auto flex-shrink-0">
-                    <View className="flex-row items-center gap-2 bg-neutral-900/60 px-3 py-1.5 rounded-lg border border-neutral-800/80">
-                        <Text
-                            className="text-neutral-400 text-[10px] tracking-widest font-mono"
-                            style={{ fontFamily: 'VCR_OSD_MONO' }}
-                        >
-                            THRIFT MODE
-                        </Text>
-                        <Switch
-                            value={thriftMode}
-                            onValueChange={handleToggleThrift}
-                            trackColor={{ false: '#262626', true: '#059669' }}
-                            thumbColor="#fff"
-                        />
+                {/* Right controls */}
+                {isDesktop ? (
+                    <View className="flex-row items-center gap-4 ml-auto flex-shrink-0">
+                        <View className="flex-row items-center gap-2 bg-neutral-900/60 px-3 py-1.5 rounded-lg border border-neutral-800/80">
+                            <Text
+                                className="text-neutral-400 text-[10px] tracking-widest font-mono"
+                                style={{ fontFamily: 'VCR_OSD_MONO' }}
+                            >
+                                THRIFT MODE
+                            </Text>
+                            <Switch
+                                value={thriftMode}
+                                onValueChange={handleToggleThrift}
+                                trackColor={{ false: '#262626', true: '#059669' }}
+                                thumbColor="#fff"
+                            />
+                        </View>
                     </View>
+                ) : (
+                    isHome && (
+                        <View className="flex-row items-center gap-3 ml-2 flex-shrink-0">
+                            <Pressable
+                                onPress={() => { playSound('click'); router.push('/add'); }}
+                                className="bg-neutral-900 p-2 rounded-lg border border-neutral-800"
+                                hitSlop={10}
+                            >
+                                <FontAwesome name="plus" size={18} color="#f59e0b" />
+                            </Pressable>
 
-                    {!isDesktop && isHome && (
-                        <Pressable
-                            onPress={() => { playSound('click'); router.push('/add'); }}
-                            className="bg-neutral-900 p-2 rounded-lg border border-neutral-800"
-                            hitSlop={10}
-                        >
-                            <FontAwesome name="plus" size={18} color="#f59e0b" />
-                        </Pressable>
-                    )}
-                </View>
+                            <View className="flex-row items-center gap-2">
+                                <Text
+                                    className="text-neutral-500 text-[10px] tracking-widest"
+                                    style={{ fontFamily: 'VCR_OSD_MONO' }}
+                                >
+                                    THRIFT
+                                </Text>
+                                <Switch
+                                    value={thriftMode}
+                                    onValueChange={handleToggleThrift}
+                                    trackColor={{ false: '#262626', true: '#059669' }}
+                                    thumbColor="#fff"
+                                />
+                            </View>
+                        </View>
+                    )
+                )}
             </View>
         </View>
     );
@@ -190,8 +217,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 32,
-        paddingBottom: 16,
+        paddingBottom: 12,
     },
 });
-

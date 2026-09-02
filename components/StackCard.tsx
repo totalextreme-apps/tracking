@@ -75,9 +75,9 @@ const DEFAULT_CARD_HEIGHT = 150;
 const getStackTransforms = (idx: number) => {
   if (idx === 0) return { rotate: '0deg', left: 0, top: 0 };
   
-  const rotations = ['-6deg', '5deg', '-4deg', '7deg', '-5deg', '4deg'];
-  const shiftsX = [-5, 7, -4, 6, -6, 5];
-  const shiftsY = [6, 12, 18, 24, 30, 36]; // Increasing Y significantly to build bolder depth
+  const rotations = ['-3deg', '3deg', '-2deg', '4deg', '-3deg', '2deg'];
+  const shiftsX = [-3, 3, -2, 3, -3, 2];
+  const shiftsY = [5, 10, 15, 20, 25, 30];
   
   const r = rotations[(idx - 1) % rotations.length];
   const x = shiftsX[(idx - 1) % shiftsX.length];
@@ -530,7 +530,7 @@ export function StackCard({
           onPressOut={isWishlist ? undefined : onPressOut}
           style={[
             animatedStyle,
-            { width: width + 10, margin: 6 },
+            { width: width, alignSelf: 'center' },
           ]}
         >
           <View className="items-center" style={{ paddingTop: 10 }}>
@@ -618,7 +618,7 @@ export function StackCard({
         delayLongPress={500}
         onPressIn={isWishlist ? undefined : onPressIn}
         onPressOut={isWishlist ? undefined : onPressOut}
-        style={[animatedStyle, { width: width, margin: 6 }]}
+        style={[animatedStyle, { width: width, alignSelf: 'center' }]}
       >
         <View style={{ width: width, alignItems: 'center' }}>
           <View style={{ width: width, height: posterContainerHeight, justifyContent: 'flex-end', alignItems: 'center' }}>
