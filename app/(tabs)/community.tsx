@@ -36,6 +36,7 @@ import { StatusBar } from 'expo-status-bar';
 import * as Haptics from 'expo-haptics';
 import { supabase } from '@/lib/supabase';
 import { ConfirmModal } from '@/components/ConfirmModal';
+import { DesktopContainer } from '@/components/DesktopContainer';
 import { searchMedia, TmdbMediaResult, getMovieById, getTvShowById } from '@/lib/tmdb';
 import { BulletinPostItem } from '@/components/BulletinPostItem';
 import { MemberCard } from '@/components/MemberCard';
@@ -965,7 +966,8 @@ export default function CommunityScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#0a0a0a' }}>
-      <StatusBar style="light" />
+      <DesktopContainer style={{ flex: 1 }}>
+        <StatusBar style="light" />
       <Stack.Screen options={{ headerShown: false }} />
       <ConfirmModal
         visible={!!showDeleteConfirm}
@@ -2183,6 +2185,7 @@ export default function CommunityScreen() {
         items={top5}
         userId={userId || ''}
       />
+      </DesktopContainer>
     </View>
   );
 }

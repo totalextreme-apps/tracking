@@ -1,7 +1,7 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { Image, Platform } from 'react-native';
+import { Image, Platform, useWindowDimensions } from 'react-native';
 
 import { useColorScheme } from '@/components/useColorScheme';
 import { useSound } from '@/context/SoundContext';
@@ -33,7 +33,9 @@ export default function TabLayout() {
   const { userId } = useAuth();
   const { data: profile } = useProfile(userId ?? null);
   const { data: notifications } = useNotifications(userId ?? undefined);
+  const { width } = useWindowDimensions();
   const unreadCount = notifications?.filter((n: any) => !n.is_read).length || 0;
+  const isDesktop = Platform.OS === 'web' && width >= 768;
 
   const handleToggleThrift = (value: boolean) => {
     playSound('tv_off');
@@ -45,12 +47,13 @@ export default function TabLayout() {
       screenOptions={{
         tabBarActiveTintColor: '#f59e0b', // Amber-500
         tabBarInactiveTintColor: '#525252', // Neutral-600
-        headerShown: true,
+        headerShown: false,
         headerStyle: {
           backgroundColor: '#0a0a0a', // Dark background for header
           borderBottomColor: '#262626', // Neutral-800
         },
         tabBarStyle: {
+          display: isDesktop ? 'none' : 'flex',
           backgroundColor: '#000000',
           borderTopWidth: 1,
           borderTopColor: '#262626',

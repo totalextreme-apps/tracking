@@ -16,6 +16,8 @@ import { QuickActionModal } from '@/components/QuickActionModal';
 import { StackCard } from '@/components/StackCard';
 import { RouletteModal } from '@/components/RouletteModal';
 import { ShareModal } from '@/components/ShareModal';
+import { DesktopContainer } from '@/components/DesktopContainer';
+import { useResponsiveColumns } from '@/hooks/useResponsiveColumns';
 import { useAuth } from '@/context/AuthContext';
 import { useSound } from '@/context/SoundContext';
 import { useThriftMode } from '@/context/ThriftModeContext';
@@ -172,13 +174,14 @@ export default function HomeScreen() {
   const [sortBy, setSortBy] = useState<'recent' | 'title' | 'release' | 'rating' | 'value'>('recent');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [useFranchiseSort, setUseFranchiseSort] = useState(true);
+  const { numColumns: responsiveWebCols, isDesktop: isDesktopWeb } = useResponsiveColumns(2);
   const { width: windowWidth } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && windowWidth > 1024;
   const [viewMode, setViewMode] = usePersistedState<'list' | 'grid2' | 'grid4' | 'custom'>('stacks_viewMode', isDesktop ? 'grid4' : 'grid2');
   const [numColumns, setNumColumns, columnsHydrated] = usePersistedState<number>('stacks_numColumns', isDesktop ? 4 : 2);
   const [isSliderLocked, setIsSliderLocked] = usePersistedState<boolean>('slider_locked', false);
 
-  const resolvedColumns = viewMode === 'list' ? 1 : viewMode === 'grid2' ? 2 : viewMode === 'grid4' ? 4 : numColumns;
+  const resolvedColumns = viewMode === 'list' ? 1 : (isDesktopWeb ? responsiveWebCols : (viewMode === 'grid2' ? 2 : viewMode === 'grid4' ? 4 : numColumns));
   const [searchQuery, setSearchQuery] = useState('');
   const [searchMode, setSearchMode] = useState<'title' | 'actor' | 'director'>('title');
   const [creditTmdbIds, setCreditTmdbIds] = useState<Set<string> | null>(null);
@@ -488,7 +491,8 @@ export default function HomeScreen() {
         contentContainerStyle={{ paddingBottom: 160 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#f59e0b" />}
       >
-        <View className="flex-1">
+        <DesktopContainer>
+          <View className="flex-1">
           {/* ON DISPLAY SECTION (OWNED) - ONLY IN STACKS MODE */}
           {onDisplay.length > 0 && !thriftMode && (
             <View className="mb-8 mt-6">
@@ -903,6 +907,7 @@ export default function HomeScreen() {
             )}
           </View>
         </View>
+        </DesktopContainer>
       </ScrollView>
 
       {quickActionItem && <QuickActionModal item={quickActionItem} visible={!!quickActionItem} collection={collection || []} userId={userId || ''} onClose={() => setQuickActionItem(null)} />}

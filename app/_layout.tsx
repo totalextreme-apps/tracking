@@ -138,11 +138,6 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
     setShowStatic(false);
   }, [pathname, staticEnabled]);
 
-  // Handle Desktop Warning on Web - Only show after mount to avoid hydration mismatch
-  if (Platform.OS === 'web' && isMounted && isDesktop && !dismissedWarning) {
-    return <DesktopBlocker onDismiss={handleDismissWarning} />;
-  }
-
   // Final rendering shell - No fontsLoaded guard here to allow static rendering
   return (
     <PersistQueryClientProvider
