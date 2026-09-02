@@ -388,51 +388,210 @@ export default function SettingsScreen() {
           </Text>
         </View>
 
-        {/* MEMBER CARD */}
+        {/* MEMBER CARD & VALUATION SECTION */}
         {isDesktop ? (
-          <View className="mb-8 flex-row items-center justify-center gap-10 w-full max-w-[1200px] mx-auto px-4">
-            <View style={{ width: 340, maxWidth: 360 }}>
+          <View className="mb-8 flex-row items-start justify-center gap-10 w-full max-w-[1200px] mx-auto px-4">
+            {/* LEFT COLUMN: Shrunken Card + Username/Bio + Stats Box */}
+            <View style={{ width: 400 }} className="items-center">
               <MemberCard
                 userId={userId ?? null}
                 profile={profile || {}}
                 onEditPress={startEditing}
                 onAvatarPress={pickImage}
+                style={{ width: 400, maxWidth: 400 }}
               />
-            </View>
 
-            <View className="flex-1 items-start">
-              <View className="flex-row items-center gap-3 mb-2">
-                <Text className="text-white font-bold text-3xl tracking-tight italic" style={{ fontFamily: 'sans-serif-condensed' }}>
-                  {profile?.username || 'NEW MEMBER'}
-                </Text>
-                <Pressable
-                  onPress={startEditing}
-                  className="bg-neutral-800 p-2 rounded-full border border-neutral-700"
-                >
-                  <FontAwesome name="pencil" size={14} color="#f59e0b" />
-                </Pressable>
-              </View>
+              {/* Username + Bio */}
+              {!isEditing && (
+                <View className="mt-5 w-full items-center">
+                  <View className="flex-row items-center justify-center gap-2 mb-1">
+                    <Text className="text-white font-bold text-3xl tracking-tight italic" style={{ fontFamily: 'sans-serif-condensed' }}>
+                      {profile?.username || 'NEW MEMBER'}
+                    </Text>
+                    <Pressable
+                      onPress={startEditing}
+                      className="bg-neutral-800 p-2 rounded-full border border-neutral-700"
+                    >
+                      <FontAwesome name="pencil" size={14} color="#f59e0b" />
+                    </Pressable>
+                  </View>
 
-              {profile?.bio && (
-                <Text className="text-neutral-400 font-mono text-sm leading-5 max-w-lg mt-1">
-                  {profile.bio}
-                </Text>
+                  {profile?.bio && (
+                    <Text className="text-neutral-400 font-mono text-sm leading-4 text-center mt-1">
+                      {profile.bio}
+                    </Text>
+                  )}
+
+                  {profile?.letterboxd_username && (
+                    <Pressable
+                      onPress={() => Linking.openURL(`https://letterboxd.com/${profile.letterboxd_username}`)}
+                      className="mt-3 flex-row items-center self-center bg-neutral-900 border border-neutral-800 px-3 py-1.5 rounded-full"
+                    >
+                      <FontAwesome name="external-link" size={10} color="#f59e0b" />
+                      <Text className="text-amber-500 font-mono text-[10px] ml-1.5 uppercase font-bold tracking-wider">
+                        LETTERBOXD: @{profile.letterboxd_username}
+                      </Text>
+                    </Pressable>
+                  )}
+                </View>
               )}
 
-              {profile?.letterboxd_username && (
-                <Pressable
-                  onPress={() => Linking.openURL(`https://letterboxd.com/${profile.letterboxd_username}`)}
-                  className="mt-3 flex-row items-center self-start bg-neutral-900 border border-neutral-800 px-3 py-1.5 rounded-full"
-                >
-                  <FontAwesome name="external-link" size={10} color="#f59e0b" />
-                  <Text className="text-amber-500 font-mono text-[10px] ml-1.5 uppercase font-bold tracking-wider">
-                    LETTERBOXD: @{profile.letterboxd_username}
-                  </Text>
-                </Pressable>
+              {/* Stats Box (Items, Grails, Formats) */}
+              {!isEditing && (
+                <View className="flex-row gap-3 mt-6 w-full">
+                  <View className="flex-1 bg-neutral-900 p-3 rounded-lg border border-neutral-800 items-center">
+                    <Text className="text-2xl font-bold text-white font-mono">{totalMovies}</Text>
+                    <Text className="text-[10px] text-neutral-500 font-bold tracking-widest uppercase">Items</Text>
+                  </View>
+                  <View className="flex-1 bg-neutral-900 p-3 rounded-lg border border-neutral-800 items-center">
+                    <Text className="text-2xl font-bold text-amber-500 font-mono">{totalGrails}</Text>
+                    <Text className="text-[10px] text-neutral-500 font-bold tracking-widest uppercase">Grails</Text>
+                  </View>
+                  <View className="flex-1 bg-neutral-900 p-3 rounded-lg border border-neutral-800 items-center">
+                    <Text className="text-2xl font-bold text-white font-mono">{uniqueFormats}</Text>
+                    <Text className="text-[10px] text-neutral-500 font-bold tracking-widest uppercase">Formats</Text>
+                  </View>
+                </View>
+              )}
+            </View>
+
+            {/* RIGHT COLUMN: Valuation Stats Card */}
+            <View className="flex-1">
+              {!isEditing && valuationStats.totalOwned > 0 && (
+                <View className="bg-neutral-900 p-5 rounded-xl border border-neutral-800">
+                  <View className="flex-row items-center justify-between mb-3">
+                    <Text className="text-amber-500/90 font-mono text-xs font-bold tracking-widest uppercase">
+                      VALUATION STATS
+                    </Text>
+                    <Text className="text-neutral-500 font-mono text-[10px] font-bold">
+                      COVERAGE: {valuationStats.valuedCount}/{valuationStats.totalOwned} ITEMS
+                    </Text>
+                  </View>
+                  
+                  <View className="flex-row items-baseline mb-4">
+                    <Text className="text-white font-mono text-3xl font-bold">
+                      ${valuationStats.total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </Text>
+                    <Text className="text-neutral-500 font-mono text-xs ml-2 uppercase font-bold">Est. Portfolio Value</Text>
+                  </View>
+
+                  <View className="border-t border-dashed border-neutral-800 pt-3 gap-2">
+                    {Object.entries(valuationStats.formatStats)
+                      .filter(([_, stats]) => stats.total > 0)
+                      .map(([fmt, stats]) => (
+                        <View key={fmt} className="flex-row items-center justify-between">
+                          <View className="flex-row items-center gap-2">
+                            <View className={`w-2.5 h-2.5 rounded-full ${FORMAT_COLOR_DOTS[fmt] || 'bg-neutral-600'}`} />
+                            <Text className="text-neutral-400 font-mono text-xs">
+                              {fmt === 'BluRay' ? 'Blu-ray' : fmt}
+                              <Text className="text-neutral-600 text-[10px]"> ({stats.valued}/{stats.total} valued)</Text>
+                            </Text>
+                          </View>
+                          <Text className="text-white font-mono text-xs font-bold">
+                            ${stats.sum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </Text>
+                        </View>
+                    ))}
+                  </View>
+
+                  {/* Auto Valuation Trigger Button */}
+                  {valuationStats.totalOwned > valuationStats.valuedCount && (
+                    <View className="mt-4 border-t border-neutral-800 pt-3">
+                      {autoValuingActive ? (
+                        <View className="flex-row items-center justify-between bg-neutral-950 p-2.5 rounded-lg border border-neutral-800">
+                          <View className="flex-row items-center gap-2 flex-1 mr-2">
+                            <ActivityIndicator size="small" color="#10b981" />
+                            <Text className="text-neutral-400 font-mono text-[10px] uppercase font-bold">
+                              VALUING: {autoValuingProgress}/{autoValuingTotal} ({autoValuingSuccess} OK, {autoValuingFail} ERR)...
+                            </Text>
+                          </View>
+                          <Pressable 
+                            onPress={handleCancelAutoValuation}
+                            className="bg-red-950/40 border border-red-900/50 px-2 py-1 rounded"
+                          >
+                            <Text className="text-red-400 font-mono text-[9px] font-bold uppercase">CANCEL</Text>
+                          </Pressable>
+                        </View>
+                      ) : (
+                        <View className="p-1">
+                          <Text className="text-amber-500 font-mono text-[10px] font-bold uppercase tracking-wider text-center mb-3">
+                            AUTO-VALUE {valuationStats.totalOwned - valuationStats.valuedCount} UNESTIMATED ITEMS
+                          </Text>
+                          <View className="flex-row flex-wrap gap-2 justify-center">
+                            {[10, 50, 100].map(amt => (
+                              <Pressable
+                                key={amt}
+                                onPress={() => handleAutoValuation(amt)}
+                                className="bg-amber-600/10 border border-amber-600/40 px-3 py-2 rounded-lg flex-row items-center gap-1.5 active:bg-amber-600/20"
+                              >
+                                <Ionicons name="sparkles-outline" size={10} color="#f59e0b" />
+                                <Text className="text-amber-500 font-mono text-[9px] font-bold">
+                                  VALUE {amt}
+                                </Text>
+                              </Pressable>
+                            ))}
+                            <Pressable
+                              onPress={() => handleAutoValuation(null)}
+                              className="bg-amber-600/20 border border-amber-600 px-3 py-2 rounded-lg flex-row items-center gap-1.5 active:bg-amber-600/30"
+                            >
+                              <Ionicons name="sparkles" size={10} color="#f59e0b" />
+                              <Text className="text-amber-500 font-mono text-[9px] font-bold uppercase">
+                                VALUE ALL
+                              </Text>
+                            </Pressable>
+                          </View>
+                        </View>
+                      )}
+                    </View>
+                  )}
+
+                  {/* COLLAPSIBLE SCRAPER SETTINGS */}
+                  <View className="mt-4 border-t border-neutral-800 pt-3">
+                    <Pressable
+                      onPress={() => {
+                        playSound('click');
+                        setShowScraperSettings(prev => !prev);
+                      }}
+                      className="flex-row items-center justify-between py-1"
+                    >
+                      <Text className="text-neutral-500 font-mono text-[10px] font-bold uppercase tracking-wider">
+                        Developer Scraper Settings {showScraperSettings ? '▲' : '▼'}
+                      </Text>
+                    </Pressable>
+                    
+                    {showScraperSettings && (
+                      <View className="mt-3 gap-2 bg-neutral-950 p-3.5 rounded-lg border border-neutral-800/80">
+                        <Text className="text-neutral-400 font-mono text-[10px] leading-4">
+                          By default, local runs scrape eBay directly. On production servers or to bypass rate limits, you can enter your own free Firecrawl API key below:
+                        </Text>
+                        <TextInput
+                          nativeID="firecrawl-key-input"
+                          value={firecrawlApiKey}
+                          onChangeText={saveFirecrawlApiKey}
+                          className="bg-neutral-900 text-white p-2.5 rounded text-xs font-mono border border-neutral-800 mt-1"
+                          placeholder="Firecrawl API Key (fc-...)"
+                          placeholderTextColor="#525252"
+                          secureTextEntry
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                        />
+                        <Pressable
+                          onPress={() => Linking.openURL('https://firecrawl.dev')}
+                          className="self-start mt-1"
+                        >
+                          <Text className="text-amber-500 font-mono text-[9px] font-bold underline uppercase tracking-wider">
+                            Get free API key at firecrawl.dev
+                          </Text>
+                        </Pressable>
+                      </View>
+                    )}
+                  </View>
+                </View>
               )}
             </View>
           </View>
         ) : (
+          /* MOBILE LAYOUT: Vertical Stack */
           <View className="mb-8 items-center" style={{ width: '100%', alignItems: 'center' }}>
             <MemberCard
               userId={userId ?? null}
@@ -474,210 +633,156 @@ export default function SettingsScreen() {
                 )}
               </View>
             )}
-          </View>
-        )}
 
-          {/* Helper text if needed */}
-          {isEditing && (
-            <View className="mt-4 bg-neutral-900 p-4 rounded-lg border border-neutral-800">
-              <Text className="text-amber-500 font-bold mb-2">Edit Profile</Text>
-              <View className="gap-3">
-                <View>
-                  <TextInput
-                    nativeID="edit-username-input"
-                    {...({ name: 'username' } as any)}
-                    value={editUsername}
-                    onChangeText={setEditUsername}
-                    className="bg-neutral-800 text-white p-3 rounded text-base font-mono border border-neutral-700"
-                    placeholder="Username"
-                    placeholderTextColor="#525252"
-                  />
+            {/* Stats Row (Below Card) */}
+            {!isEditing && (
+              <View className="flex-row gap-3 mt-6 w-full">
+                <View className="flex-1 bg-neutral-900 p-3 rounded-lg border border-neutral-800 items-center">
+                  <Text className="text-2xl font-bold text-white font-mono">{totalMovies}</Text>
+                  <Text className="text-[10px] text-neutral-500 font-bold tracking-widest uppercase">Items</Text>
                 </View>
-                <View>
-                  <TextInput
-                    nativeID="edit-bio-input"
-                    {...({ name: 'bio' } as any)}
-                    value={editBio}
-                    onChangeText={setEditBio}
-                    className="bg-neutral-800 text-white p-3 rounded text-sm font-mono border border-neutral-700"
-                    placeholder="Bio"
-                    placeholderTextColor="#525252"
-                    multiline
-                    maxLength={80}
-                  />
+                <View className="flex-1 bg-neutral-900 p-3 rounded-lg border border-neutral-800 items-center">
+                  <Text className="text-2xl font-bold text-amber-500 font-mono">{totalGrails}</Text>
+                  <Text className="text-[10px] text-neutral-500 font-bold tracking-widest uppercase">Grails</Text>
                 </View>
-                <View>
-                  <TextInput
-                    nativeID="edit-letterboxd-input"
-                    {...({ name: 'letterboxd_username' } as any)}
-                    value={editLetterboxdUsername}
-                    onChangeText={setEditLetterboxdUsername}
-                    className="bg-neutral-800 text-white p-3 rounded text-sm font-mono border border-neutral-700"
-                    placeholder="Letterboxd Username"
-                    placeholderTextColor="#525252"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                  />
-                </View>
-                <View className="flex-row gap-3 mt-2">
-                  <Pressable onPress={() => setIsEditing(false)} className="flex-1 bg-neutral-800 p-3 rounded-lg items-center border border-neutral-700">
-                    <Text className="text-neutral-400 font-mono font-bold">Cancel</Text>
-                  </Pressable>
-                  <Pressable onPress={saveProfile} className="flex-1 bg-amber-600 p-3 rounded-lg items-center shadow-lg">
-                    {isUpdating ? <ActivityIndicator size="small" color="white" /> : <Text className="text-white font-mono font-bold">Save Changes</Text>}
-                  </Pressable>
+                <View className="flex-1 bg-neutral-900 p-3 rounded-lg border border-neutral-800 items-center">
+                  <Text className="text-2xl font-bold text-white font-mono">{uniqueFormats}</Text>
+                  <Text className="text-[10px] text-neutral-500 font-bold tracking-widest uppercase">Formats</Text>
                 </View>
               </View>
-            </View>
-          )}
+            )}
 
-          {/* Stats Row (Below Card) */}
-          {!isEditing && (
-            <View className="flex-row gap-3 mt-6">
-              <View className="flex-1 bg-neutral-900 p-3 rounded-lg border border-neutral-800 items-center">
-                <Text className="text-2xl font-bold text-white font-mono">{totalMovies}</Text>
-                <Text className="text-[10px] text-neutral-500 font-bold tracking-widest uppercase">Items</Text>
-              </View>
-              <View className="flex-1 bg-neutral-900 p-3 rounded-lg border border-neutral-800 items-center">
-                <Text className="text-2xl font-bold text-amber-500 font-mono">{totalGrails}</Text>
-                <Text className="text-[10px] text-neutral-500 font-bold tracking-widest uppercase">Grails</Text>
-              </View>
-              <View className="flex-1 bg-neutral-900 p-3 rounded-lg border border-neutral-800 items-center">
-                <Text className="text-2xl font-bold text-white font-mono">{uniqueFormats}</Text>
-                <Text className="text-[10px] text-neutral-500 font-bold tracking-widest uppercase">Formats</Text>
-              </View>
-            </View>
-          )}
+            {/* Valuation Stats Card */}
+            {!isEditing && valuationStats.totalOwned > 0 && (
+              <View className="mt-6 bg-neutral-900 p-4 rounded-xl border border-neutral-800 w-full">
+                <View className="flex-row items-center justify-between mb-3">
+                  <Text className="text-amber-500/90 font-mono text-xs font-bold tracking-widest uppercase">
+                    VALUATION STATS
+                  </Text>
+                  <Text className="text-neutral-500 font-mono text-[10px] font-bold">
+                    COVERAGE: {valuationStats.valuedCount}/{valuationStats.totalOwned} ITEMS
+                  </Text>
+                </View>
+                
+                <View className="flex-row items-baseline mb-4">
+                  <Text className="text-white font-mono text-3xl font-bold">
+                    ${valuationStats.total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </Text>
+                  <Text className="text-neutral-500 font-mono text-xs ml-2 uppercase font-bold">Est. Portfolio Value</Text>
+                </View>
 
-          {/* Valuation Stats Card */}
-          {!isEditing && valuationStats.totalOwned > 0 && (
-            <View className="mt-6 bg-neutral-900 p-4 rounded-xl border border-neutral-800">
-              <View className="flex-row items-center justify-between mb-3">
-                <Text className="text-amber-500/90 font-mono text-xs font-bold tracking-widest uppercase">
-                  VALUATION STATS
-                </Text>
-                <Text className="text-neutral-500 font-mono text-[10px] font-bold">
-                  COVERAGE: {valuationStats.valuedCount}/{valuationStats.totalOwned} ITEMS
-                </Text>
-              </View>
-              
-              <View className="flex-row items-baseline mb-4">
-                <Text className="text-white font-mono text-3xl font-bold">
-                  ${valuationStats.total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </Text>
-                <Text className="text-neutral-500 font-mono text-xs ml-2 uppercase font-bold">Est. Portfolio Value</Text>
-              </View>
-
-              <View className="border-t border-dashed border-neutral-800 pt-3 gap-2">
-                {Object.entries(valuationStats.formatStats)
-                  .filter(([_, stats]) => stats.total > 0)
-                  .map(([fmt, stats]) => (
-                    <View key={fmt} className="flex-row items-center justify-between">
-                      <View className="flex-row items-center gap-2">
-                        <View className={`w-2.5 h-2.5 rounded-full ${FORMAT_COLOR_DOTS[fmt] || 'bg-neutral-600'}`} />
-                        <Text className="text-neutral-400 font-mono text-xs">
-                          {fmt === 'BluRay' ? 'Blu-ray' : fmt}
-                          <Text className="text-neutral-600 text-[10px]"> ({stats.valued}/{stats.total} valued)</Text>
-                        </Text>
-                      </View>
-                      <Text className="text-white font-mono text-xs font-bold">
-                        ${stats.sum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </Text>
-                    </View>
-                ))}
-              </View>
-              {/* Auto Valuation Trigger Button */}
-              {valuationStats.totalOwned > valuationStats.valuedCount && (
-                <View className="mt-4 border-t border-neutral-800 pt-3">
-                  {autoValuingActive ? (
-                    <View className="flex-row items-center justify-between bg-neutral-950 p-2.5 rounded-lg border border-neutral-800">
-                      <View className="flex-row items-center gap-2 flex-1 mr-2">
-                        <ActivityIndicator size="small" color="#10b981" />
-                        <Text className="text-neutral-400 font-mono text-[10px] uppercase font-bold">
-                          VALUING: {autoValuingProgress}/{autoValuingTotal} ({autoValuingSuccess} OK, {autoValuingFail} ERR)...
-                        </Text>
-                      </View>
-                      <Pressable 
-                        onPress={handleCancelAutoValuation}
-                        className="bg-red-950/40 border border-red-900/50 px-2 py-1 rounded"
-                      >
-                        <Text className="text-red-400 font-mono text-[9px] font-bold uppercase">CANCEL</Text>
-                      </Pressable>
-                    </View>
-                  ) : (
-                    <View className="p-1">
-                      <Text className="text-amber-500 font-mono text-[10px] font-bold uppercase tracking-wider text-center mb-3">
-                        AUTO-VALUE {valuationStats.totalOwned - valuationStats.valuedCount} UNESTIMATED ITEMS
-                      </Text>
-                      <View className="flex-row flex-wrap gap-2 justify-center">
-                        {[10, 50, 100].map(amt => (
-                          <Pressable
-                            key={amt}
-                            onPress={() => handleAutoValuation(amt)}
-                            className="bg-amber-600/10 border border-amber-600/40 px-3 py-2 rounded-lg flex-row items-center gap-1.5 active:bg-amber-600/20"
-                          >
-                            <Ionicons name="sparkles-outline" size={10} color="#f59e0b" />
-                            <Text className="text-amber-500 font-mono text-[9px] font-bold">
-                              VALUE {amt}
-                            </Text>
-                          </Pressable>
-                        ))}
-                        <Pressable
-                          onPress={() => handleAutoValuation(null)}
-                          className="bg-amber-600/20 border border-amber-600 px-3 py-2 rounded-lg flex-row items-center gap-1.5 active:bg-amber-600/30"
-                        >
-                          <Ionicons name="sparkles" size={10} color="#f59e0b" />
-                          <Text className="text-amber-500 font-mono text-[9px] font-bold uppercase">
-                            VALUE ALL
+                <View className="border-t border-dashed border-neutral-800 pt-3 gap-2">
+                  {Object.entries(valuationStats.formatStats)
+                    .filter(([_, stats]) => stats.total > 0)
+                    .map(([fmt, stats]) => (
+                      <View key={fmt} className="flex-row items-center justify-between">
+                        <View className="flex-row items-center gap-2">
+                          <View className={`w-2.5 h-2.5 rounded-full ${FORMAT_COLOR_DOTS[fmt] || 'bg-neutral-600'}`} />
+                          <Text className="text-neutral-400 font-mono text-xs">
+                            {fmt === 'BluRay' ? 'Blu-ray' : fmt}
+                            <Text className="text-neutral-600 text-[10px]"> ({stats.valued}/{stats.total} valued)</Text>
                           </Text>
+                        </View>
+                        <Text className="text-white font-mono text-xs font-bold">
+                          ${stats.sum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </Text>
+                      </View>
+                  ))}
+                </View>
+                {/* Auto Valuation Trigger Button */}
+                {valuationStats.totalOwned > valuationStats.valuedCount && (
+                  <View className="mt-4 border-t border-neutral-800 pt-3">
+                    {autoValuingActive ? (
+                      <View className="flex-row items-center justify-between bg-neutral-950 p-2.5 rounded-lg border border-neutral-800">
+                        <View className="flex-row items-center gap-2 flex-1 mr-2">
+                          <ActivityIndicator size="small" color="#10b981" />
+                          <Text className="text-neutral-400 font-mono text-[10px] uppercase font-bold">
+                            VALUING: {autoValuingProgress}/{autoValuingTotal} ({autoValuingSuccess} OK, {autoValuingFail} ERR)...
+                          </Text>
+                        </View>
+                        <Pressable 
+                          onPress={handleCancelAutoValuation}
+                          className="bg-red-950/40 border border-red-900/50 px-2 py-1 rounded"
+                        >
+                          <Text className="text-red-400 font-mono text-[9px] font-bold uppercase">CANCEL</Text>
                         </Pressable>
                       </View>
-                    </View>
-                  )}
-                </View>
-              )}
-
-              {/* COLLAPSIBLE SCRAPER SETTINGS */}
-              <View className="mt-4 border-t border-neutral-800 pt-3">
-                <Pressable
-                  onPress={() => {
-                    playSound('click');
-                    setShowScraperSettings(prev => !prev);
-                  }}
-                  className="flex-row items-center justify-between py-1"
-                >
-                  <Text className="text-neutral-500 font-mono text-[10px] font-bold uppercase tracking-wider">
-                    Developer Scraper Settings {showScraperSettings ? '▲' : '▼'}
-                  </Text>
-                </Pressable>
-                
-                {showScraperSettings && (
-                  <View className="mt-3 gap-2 bg-neutral-950 p-3.5 rounded-lg border border-neutral-800/80">
-                    <Text className="text-neutral-400 font-mono text-[10px] leading-4">
-                      By default, local runs scrape eBay directly. On production servers or to bypass rate limits, you can enter your own free Firecrawl API key below:
-                    </Text>
-                    <TextInput
-                      nativeID="firecrawl-key-input"
-                      value={firecrawlApiKey}
-                      onChangeText={saveFirecrawlApiKey}
-                      className="bg-neutral-900 text-white p-2.5 rounded text-xs font-mono border border-neutral-800 mt-1"
-                      placeholder="Firecrawl API Key (fc-...)"
-                      placeholderTextColor="#525252"
-                      secureTextEntry
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                    />
-                    <Pressable
-                      onPress={() => Linking.openURL('https://firecrawl.dev')}
-                      className="self-start mt-1"
-                    >
-                      <Text className="text-amber-500 font-mono text-[9px] font-bold underline uppercase tracking-wider">
-                        Get free API key at firecrawl.dev
-                      </Text>
-                    </Pressable>
+                    ) : (
+                      <View className="p-1">
+                        <Text className="text-amber-500 font-mono text-[10px] font-bold uppercase tracking-wider text-center mb-3">
+                          AUTO-VALUE {valuationStats.totalOwned - valuationStats.valuedCount} UNESTIMATED ITEMS
+                        </Text>
+                        <View className="flex-row flex-wrap gap-2 justify-center">
+                          {[10, 50, 100].map(amt => (
+                            <Pressable
+                              key={amt}
+                              onPress={() => handleAutoValuation(amt)}
+                              className="bg-amber-600/10 border border-amber-600/40 px-3 py-2 rounded-lg flex-row items-center gap-1.5 active:bg-amber-600/20"
+                            >
+                              <Ionicons name="sparkles-outline" size={10} color="#f59e0b" />
+                              <Text className="text-amber-500 font-mono text-[9px] font-bold">
+                                VALUE {amt}
+                              </Text>
+                            </Pressable>
+                          ))}
+                          <Pressable
+                            onPress={() => handleAutoValuation(null)}
+                            className="bg-amber-600/20 border border-amber-600 px-3 py-2 rounded-lg flex-row items-center gap-1.5 active:bg-amber-600/30"
+                          >
+                            <Ionicons name="sparkles" size={10} color="#f59e0b" />
+                            <Text className="text-amber-500 font-mono text-[9px] font-bold uppercase">
+                              VALUE ALL
+                            </Text>
+                          </Pressable>
+                        </View>
+                      </View>
+                    )}
                   </View>
                 )}
+
+                {/* COLLAPSIBLE SCRAPER SETTINGS */}
+                <View className="mt-4 border-t border-neutral-800 pt-3">
+                  <Pressable
+                    onPress={() => {
+                      playSound('click');
+                      setShowScraperSettings(prev => !prev);
+                    }}
+                    className="flex-row items-center justify-between py-1"
+                  >
+                    <Text className="text-neutral-500 font-mono text-[10px] font-bold uppercase tracking-wider">
+                      Developer Scraper Settings {showScraperSettings ? '▲' : '▼'}
+                    </Text>
+                  </Pressable>
+                  
+                  {showScraperSettings && (
+                    <View className="mt-3 gap-2 bg-neutral-950 p-3.5 rounded-lg border border-neutral-800/80">
+                      <Text className="text-neutral-400 font-mono text-[10px] leading-4">
+                        By default, local runs scrape eBay directly. On production servers or to bypass rate limits, you can enter your own free Firecrawl API key below:
+                      </Text>
+                      <TextInput
+                        nativeID="firecrawl-key-input"
+                        value={firecrawlApiKey}
+                        onChangeText={saveFirecrawlApiKey}
+                        className="bg-neutral-900 text-white p-2.5 rounded text-xs font-mono border border-neutral-800 mt-1"
+                        placeholder="Firecrawl API Key (fc-...)"
+                        placeholderTextColor="#525252"
+                        secureTextEntry
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                      />
+                      <Pressable
+                        onPress={() => Linking.openURL('https://firecrawl.dev')}
+                        className="self-start mt-1"
+                      >
+                        <Text className="text-amber-500 font-mono text-[9px] font-bold underline uppercase tracking-wider">
+                          Get free API key at firecrawl.dev
+                        </Text>
+                      </Pressable>
+                    </View>
+                  )}
+              </View>
             </View>
+          )}
           </View>
         )}
 
