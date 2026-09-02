@@ -555,7 +555,9 @@ export function StackCard({
                     top: transforms.top,
                     transform: [{ rotate: transforms.rotate }],
                     width: width,
-                    height: width / aspectRatio,
+                    height: Math.round(width / aspectRatio),
+                    maxWidth: width,
+                    maxHeight: Math.round(width / aspectRatio),
                     zIndex: sorted.length - idx,
                     borderWidth: (idx === 0 && isGrail && isWishlist) ? 2 : 1,
                     borderColor: (idx === 0 && isGrail && isWishlist) ? '#ffd700' : 'rgba(255,255,255,0.15)',
@@ -635,7 +637,7 @@ export function StackCard({
                   posterUrl={posterUrl} 
                   isCustom={!!topItem.custom_poster_url} 
                   isBootleg={topItem.is_bootleg} 
-                  style={{ width: width, height: width / aspectRatio }} 
+                  style={{ width: width, height: Math.round(width / aspectRatio), maxWidth: width, maxHeight: Math.round(width / aspectRatio) }} 
                 />
               ) : ['DVD', 'BluRay', '4K'].includes(topItem.format) ? (
                 <GlossyCard 
@@ -643,10 +645,10 @@ export function StackCard({
                   format={topItem.format as any} 
                   isCustom={!!topItem.custom_poster_url} 
                   isBootleg={topItem.is_bootleg} 
-                  style={{ width: width, height: width / aspectRatio }} 
+                  style={{ width: width, height: Math.round(width / aspectRatio), maxWidth: width, maxHeight: Math.round(width / aspectRatio) }} 
                 />
               ) : (
-                <View className="bg-neutral-900 rounded-lg overflow-hidden border border-neutral-800" style={{ width: width, height: width / aspectRatio }}>
+                <View className="bg-neutral-900 rounded-lg overflow-hidden border border-neutral-800" style={{ width: width, height: Math.round(width / aspectRatio), maxWidth: width, maxHeight: Math.round(width / aspectRatio) }}>
                   {posterUrl ? (
                     <Image source={{ uri: posterUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
                   ) : (

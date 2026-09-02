@@ -11,11 +11,12 @@ type VHSCardProps = {
 
 export function VHSCard({ posterUrl, style, isCustom = false, isBootleg = false }: VHSCardProps) {
     const aspectRatio = isCustom ? 2 / 3.5 : 2 / 3;
+    const baseStyle = style?.height ? { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.5, shadowRadius: 5 } : { aspectRatio, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.5, shadowRadius: 5 };
 
     return (
         <View
             className="relative rounded overflow-hidden shadow-lg bg-neutral-900"
-            style={[{ aspectRatio, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.5, shadowRadius: 5 }, style]}
+            style={[baseStyle, style]}
         >
             {/* Layer 1: Poster */}
             <Image

@@ -38,20 +38,12 @@ export function GlossyCard({ posterUrl, format, style, isCustom = false, isBootl
 
     const isBluRay = format === 'BluRay' || format === '4K';
     const aspectRatio = isCustom ? (isBluRay ? 0.78 : 0.71) : 2 / 3;
+    const baseStyle = style?.height ? { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 3 } : { aspectRatio, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 3 };
 
     return (
         <View
             className="relative rounded-sm overflow-hidden shadow-lg bg-neutral-900"
-            style={[
-                {
-                    aspectRatio,
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.3,
-                    shadowRadius: 3
-                },
-                style
-            ]}
+            style={[baseStyle, style]}
         >
             {/* Layer 1: Poster */}
             {/* If overlay exists, we might need to inset the poster slightly to fit inside the case? 

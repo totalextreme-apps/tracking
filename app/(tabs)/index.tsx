@@ -181,7 +181,15 @@ export default function HomeScreen() {
   const [numColumns, setNumColumns, columnsHydrated] = usePersistedState<number>('stacks_numColumns', isDesktop ? 4 : 2);
   const [isSliderLocked, setIsSliderLocked] = usePersistedState<boolean>('slider_locked', false);
 
-  const resolvedColumns = viewMode === 'list' ? 1 : (isDesktopWeb ? responsiveWebCols : (viewMode === 'grid2' ? 2 : viewMode === 'grid4' ? 4 : numColumns));
+  const resolvedColumns = viewMode === 'list'
+    ? 1
+    : viewMode === 'custom'
+      ? numColumns
+      : viewMode === 'grid2'
+        ? 2
+        : viewMode === 'grid4'
+          ? 4
+          : (isDesktopWeb ? responsiveWebCols : 2);
   const effectiveContainerWidth = Platform.OS === 'web' && windowWidth >= 768
     ? Math.min(windowWidth - 48, 1336)
     : (windowWidth - 32);
@@ -890,7 +898,7 @@ export default function HomeScreen() {
                 <View>
                   <View className="flex-row flex-wrap" style={{ marginHorizontal: -10 }}>
                     {filteredStacks.slice(0, displayLimit).map((stack: any) => (
-                      <View key={stack[0]?.id} style={{ width: `${100 / resolvedColumns}%`, paddingHorizontal: 10, marginBottom: 32 }}>
+                      <View key={stack[0]?.id} style={{ width: `${100 / resolvedColumns}%`, paddingHorizontal: 10, marginBottom: 32, alignItems: 'center' }}>
                         <StackCard stack={stack} onPress={() => navigateToDetail(stack[0])} onToggleFavorite={toggleFavorite} onLongPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); setQuickActionItem(stack[0]); }} onRatePress={(rating) => handleGridRate(stack[0], rating)} width={calculatedCardWidth} mode={viewMode === 'list' ? 'list' : 'grid'} activeFormatFilter={formatFilter} />
                       </View>
                     ))}
