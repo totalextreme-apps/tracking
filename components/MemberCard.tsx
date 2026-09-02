@@ -10,9 +10,10 @@ type MemberCardProps = {
     onAvatarPress?: () => void;
     isReadOnly?: boolean;
     onDisplayItems?: any[];
+    style?: any;
 };
 
-export function MemberCard({ userId, profile, onEditPress, onAvatarPress, isReadOnly = false, onDisplayItems = [] }: MemberCardProps) {
+export function MemberCard({ userId, profile, onEditPress, onAvatarPress, isReadOnly = false, onDisplayItems = [], style }: MemberCardProps) {
     // Deterministic pseudo-random barcode seeded from userId
     const barcodeLines = useMemo(() => {
         let seed = (userId || 'guest').split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
@@ -26,11 +27,11 @@ export function MemberCard({ userId, profile, onEditPress, onAvatarPress, isRead
     const displayId = userId ? userId.substring(0, 8).toUpperCase() : 'UNKNOWN';
 
     return (
-        <View style={{ width: '100%', maxWidth: 520, alignSelf: 'center' }}>
+        <View style={[{ width: '100%', maxWidth: 520, alignSelf: 'center' }, style]}>
             {/* Clear Lamination Sleeve Effect */}
             <View 
                 className="rounded-xl bg-white/10 p-1.5 border border-white/20 shadow-2xl"
-                style={{ width: '100%', maxWidth: 520, aspectRatio: 1.586, alignSelf: 'center' }}
+                style={{ width: '100%', aspectRatio: 1.586, alignSelf: 'center' }}
             >
                 
                 {/* Actual Plastic Card */}

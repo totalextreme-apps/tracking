@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, Pressable, TextInput, Modal, Alert, Share, Linking } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, Pressable, TextInput, Modal, Alert, Share, Linking, useWindowDimensions, Platform } from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useProfile, useFollowers, useFollowing, useToggleFollow, useToggleTopFive, useProfileComments, useAddProfileComment, useUpdateProfileComment, useDeleteProfileComment, useUserPosts } from '@/hooks/useSocial';
@@ -21,6 +21,8 @@ type TabType = 'on-display' | 'grails' | 'collection' | 'wishlist' | 'bin' | 'an
 export type SortOption = 'recent' | 'title' | 'release' | 'rating' | 'format' | 'value';
 
 export default function UserProfileScreen() {
+  const { width: windowWidth } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && windowWidth >= 768;
   const { id, from, tab } = useLocalSearchParams<{ id: string; from?: string; tab?: TabType }>();
   const { userId: currentUserId } = useAuth();
   const router = useRouter();
@@ -337,123 +339,250 @@ export default function UserProfileScreen() {
       </View>
 
       <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 120 }}>
-        <View className="items-center mt-6 px-4">
-          <MemberCard
-             userId={id}
-             profile={profile}
-             onEditPress={() => console.log('Edit profile pressed')}
-             onAvatarPress={() => console.log('Avatar pressed')}
-          />
-          <Text className="text-amber-500 font-bold text-2xl font-mono mt-6">
-            {profile.username || 'Anonymous User'}
-          </Text>
-          {profile.bio && (
-            <Text className="text-neutral-400 font-mono text-center mt-3 px-6 text-sm leading-5">
-              {profile.bio}
-            </Text>
-          )}
+        {isDesktop ? (
+          <View className="flex-row items-center justify-center gap-10 mt-6 px-8 max-w-[1200px] mx-auto w-full">
+            {/* Shrunken Compact MemberCard on Left */}
+            <View style={{ width: 340, maxWidth: 360 }}>
+              <MemberCard
+                 userId={id}
+                 profile={profile}
+                 onEditPress={() => console.log('Edit profile pressed')}
+                 onAvatarPress={() => console.log('Avatar pressed')}
+              />
+            </View>
 
-          {profile.created_at && (
-            <View className="mt-3 bg-neutral-900 border border-neutral-800 px-3 py-1 rounded-full flex-row items-center gap-1.5">
-              <Ionicons name="calendar-outline" size={10} color="#666" />
-              <Text className="text-neutral-500 font-mono text-[9px] font-bold uppercase tracking-wider">
-                MEMBER SINCE {new Date(profile.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }).toUpperCase()}
+            {/* User Info on Right */}
+            <View className="flex-1 items-start">
+              <Text className="text-amber-500 font-bold text-3xl font-mono">
+                {profile.username || 'Anonymous User'}
               </Text>
-            </View>
-          )}
-
-          {profile.letterboxd_username && (
-            <Pressable
-              onPress={() => Linking.openURL(`https://letterboxd.com/${profile.letterboxd_username}`)}
-              className="mt-4 flex-row items-center bg-neutral-900 border border-neutral-800 px-4 py-2 rounded-full"
-            >
-              <Ionicons name="link" size={12} color="#f59e0b" />
-              <Text className="text-amber-500 font-mono text-xs ml-2 uppercase font-bold tracking-wider">
-                LETTERBOXD: @{profile.letterboxd_username}
-              </Text>
-            </Pressable>
-          )}
-
-          {(profile.movie_preferences?.length || profile.format_preferences?.length) && (
-            <View className="flex-row flex-wrap justify-center gap-2 mt-4 px-6">
-              {profile.movie_preferences?.map((pref: string) => (
-                <View key={pref} className="bg-amber-500/10 border border-amber-500/30 px-2 py-1 rounded">
-                  <Text className="text-amber-500 font-mono text-[8px] font-bold uppercase">{pref}</Text>
-                </View>
-              ))}
-              {profile.format_preferences?.map((pref: string) => (
-                <View key={pref} className="bg-neutral-800 border border-neutral-700 px-2 py-1 rounded">
-                  <Text className="text-neutral-400 font-mono text-[8px] font-bold uppercase">{pref}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-
-          <View className="flex-row items-center gap-8 mt-6">
-            <View className="items-center">
-              <Text className="text-white font-bold text-lg font-mono">{totalItems}</Text>
-              <Text className="text-neutral-600 font-mono text-xs">TITLES</Text>
-            </View>
-            <View className="items-center">
-              <Text className="text-white font-bold text-lg font-mono">{followers?.length || 0}</Text>
-              <Text className="text-neutral-600 font-mono text-xs">FOLLOWERS</Text>
-            </View>
-            <View className="items-center">
-              <Text className="text-white font-bold text-lg font-mono">{following?.length || 0}</Text>
-              <Text className="text-neutral-600 font-mono text-xs">FOLLOWING</Text>
-            </View>
-            {id !== currentUserId && (
-              <View className="items-center">
-                <Text className="text-amber-500 font-bold text-lg font-mono">{commonItems.length}</Text>
-                <Text className="text-neutral-600 font-mono text-xs">COMMON</Text>
-              </View>
-            )}
-          </View>
-
-          {!isOwnProfile && (
-            <View className="flex-row gap-2 mt-8 px-6 w-full max-w-sm justify-center">
-              <Pressable 
-                onPress={handleToggleFollow}
-                disabled={toggleFollowMutation.isPending}
-                className={`flex-1 flex-row h-12 rounded-xl border-2 items-center justify-center ${isFollowing ? 'border-neutral-800 bg-neutral-900/40' : 'border-amber-500 bg-amber-500/10'}`}
-              >
-                <Ionicons 
-                  name={isFollowing ? "person-remove-outline" : "person-add-outline"} 
-                  size={16} 
-                  color={isFollowing ? "#525252" : "#f59e0b"} 
-                />
-                <Text className={`font-mono font-bold text-[10px] ml-2 ${isFollowing ? 'text-neutral-500' : 'text-amber-500'}`}>
-                  {isFollowing ? 'UNFOLLOW' : 'TRACK'}
+              {profile.bio && (
+                <Text className="text-neutral-400 font-mono mt-2 text-sm leading-5 max-w-lg">
+                  {profile.bio}
                 </Text>
-              </Pressable>
+              )}
 
-              {isFollowing && (
-                <Pressable 
-                  onPress={handleToggleTopFive}
-                  disabled={toggleTopFiveMutation.isPending}
-                  className={`px-4 h-12 rounded-xl border-2 items-center justify-center ${isTopFive ? 'border-amber-500 bg-amber-500/10' : 'border-neutral-800 bg-neutral-900/40'}`}
+              {profile.created_at && (
+                <View className="mt-3 bg-neutral-900 border border-neutral-800 px-3 py-1 rounded-full flex-row items-center gap-1.5">
+                  <Ionicons name="calendar-outline" size={10} color="#666" />
+                  <Text className="text-neutral-500 font-mono text-[9px] font-bold uppercase tracking-wider">
+                    MEMBER SINCE {new Date(profile.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }).toUpperCase()}
+                  </Text>
+                </View>
+              )}
+
+              {profile.letterboxd_username && (
+                <Pressable
+                  onPress={() => Linking.openURL(`https://letterboxd.com/${profile.letterboxd_username}`)}
+                  className="mt-3 flex-row items-center bg-neutral-900 border border-neutral-800 px-4 py-2 rounded-full"
                 >
-                  <Ionicons 
-                    name={isTopFive ? "star" : "star-outline"} 
-                    size={16} 
-                    color={isTopFive ? "#f59e0b" : "#525252"} 
-                  />
-                  <Text className={`font-mono font-bold text-[8px] mt-1 tracking-widest ${isTopFive ? 'text-amber-500' : 'text-neutral-500'}`}>
-                    TOP 5
+                  <Ionicons name="link" size={12} color="#f59e0b" />
+                  <Text className="text-amber-500 font-mono text-xs ml-2 uppercase font-bold tracking-wider">
+                    LETTERBOXD: @{profile.letterboxd_username}
                   </Text>
                 </Pressable>
               )}
 
-              <Pressable 
-                onPress={() => router.push(`/profile/chat/${id}`)}
-                className="flex-1 flex-row h-12 rounded-xl border border-neutral-800 bg-neutral-900 items-center justify-center"
-              >
-                <Ionicons name="chatbubbles-outline" size={16} color="#f59e0b" />
-                <Text className="font-mono font-bold text-[10px] text-amber-500 ml-2">MESSAGE</Text>
-              </Pressable>
+              {(profile.movie_preferences?.length || profile.format_preferences?.length) && (
+                <View className="flex-row flex-wrap gap-2 mt-3">
+                  {profile.movie_preferences?.map((pref: string) => (
+                    <View key={pref} className="bg-amber-500/10 border border-amber-500/30 px-2 py-1 rounded">
+                      <Text className="text-amber-500 font-mono text-[8px] font-bold uppercase">{pref}</Text>
+                    </View>
+                  ))}
+                  {profile.format_preferences?.map((pref: string) => (
+                    <View key={pref} className="bg-neutral-800 border border-neutral-700 px-2 py-1 rounded">
+                      <Text className="text-neutral-400 font-mono text-[8px] font-bold uppercase">{pref}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              <View className="flex-row items-center gap-8 mt-5">
+                <View className="items-start">
+                  <Text className="text-white font-bold text-lg font-mono">{totalItems}</Text>
+                  <Text className="text-neutral-600 font-mono text-xs">TITLES</Text>
+                </View>
+                <View className="items-start">
+                  <Text className="text-white font-bold text-lg font-mono">{followers?.length || 0}</Text>
+                  <Text className="text-neutral-600 font-mono text-xs">FOLLOWERS</Text>
+                </View>
+                <View className="items-start">
+                  <Text className="text-white font-bold text-lg font-mono">{following?.length || 0}</Text>
+                  <Text className="text-neutral-600 font-mono text-xs">FOLLOWING</Text>
+                </View>
+                {id !== currentUserId && (
+                  <View className="items-start">
+                    <Text className="text-amber-500 font-bold text-lg font-mono">{commonItems.length}</Text>
+                    <Text className="text-neutral-600 font-mono text-xs">COMMON</Text>
+                  </View>
+                )}
+              </View>
+
+              {!isOwnProfile && (
+                <View className="flex-row gap-2 mt-6">
+                  <Pressable 
+                    onPress={handleToggleFollow}
+                    disabled={toggleFollowMutation.isPending}
+                    className={`flex-row h-10 px-4 rounded-xl border-2 items-center justify-center ${isFollowing ? 'border-neutral-800 bg-neutral-900/40' : 'border-amber-500 bg-amber-500/10'}`}
+                  >
+                    <Ionicons 
+                      name={isFollowing ? "person-remove-outline" : "person-add-outline"} 
+                      size={14} 
+                      color={isFollowing ? "#525252" : "#f59e0b"} 
+                    />
+                    <Text className={`font-mono font-bold text-[10px] ml-2 ${isFollowing ? 'text-neutral-500' : 'text-amber-500'}`}>
+                      {isFollowing ? 'UNFOLLOW' : 'TRACK'}
+                    </Text>
+                  </Pressable>
+
+                  {isFollowing && (
+                    <Pressable 
+                      onPress={handleToggleTopFive}
+                      disabled={toggleTopFiveMutation.isPending}
+                      className={`px-3 h-10 rounded-xl border-2 items-center justify-center ${isTopFive ? 'border-amber-500 bg-amber-500/10' : 'border-neutral-800 bg-neutral-900/40'}`}
+                    >
+                      <Ionicons 
+                        name={isTopFive ? "star" : "star-outline"} 
+                        size={14} 
+                        color={isTopFive ? "#f59e0b" : "#525252"} 
+                      />
+                      <Text className={`font-mono font-bold text-[8px] mt-0.5 tracking-widest ${isTopFive ? 'text-amber-500' : 'text-neutral-500'}`}>
+                        TOP 5
+                      </Text>
+                    </Pressable>
+                  )}
+
+                  <Pressable 
+                    onPress={() => router.push(`/profile/chat/${id}`)}
+                    className="flex-row h-10 px-4 rounded-xl border border-neutral-800 bg-neutral-900 items-center justify-center"
+                  >
+                    <Ionicons name="chatbubbles-outline" size={14} color="#f59e0b" />
+                    <Text className="font-mono font-bold text-[10px] text-amber-500 ml-2">MESSAGE</Text>
+                  </Pressable>
+                </View>
+              )}
             </View>
-          )}
-        </View>
+          </View>
+        ) : (
+          <View className="items-center mt-6 px-4">
+            <MemberCard
+               userId={id}
+               profile={profile}
+               onEditPress={() => console.log('Edit profile pressed')}
+               onAvatarPress={() => console.log('Avatar pressed')}
+            />
+            <Text className="text-amber-500 font-bold text-2xl font-mono mt-6">
+              {profile.username || 'Anonymous User'}
+            </Text>
+            {profile.bio && (
+              <Text className="text-neutral-400 font-mono text-center mt-3 px-6 text-sm leading-5">
+                {profile.bio}
+              </Text>
+            )}
+
+            {profile.created_at && (
+              <View className="mt-3 bg-neutral-900 border border-neutral-800 px-3 py-1 rounded-full flex-row items-center gap-1.5">
+                <Ionicons name="calendar-outline" size={10} color="#666" />
+                <Text className="text-neutral-500 font-mono text-[9px] font-bold uppercase tracking-wider">
+                  MEMBER SINCE {new Date(profile.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }).toUpperCase()}
+                </Text>
+              </View>
+            )}
+
+            {profile.letterboxd_username && (
+              <Pressable
+                onPress={() => Linking.openURL(`https://letterboxd.com/${profile.letterboxd_username}`)}
+                className="mt-4 flex-row items-center bg-neutral-900 border border-neutral-800 px-4 py-2 rounded-full"
+              >
+                <Ionicons name="link" size={12} color="#f59e0b" />
+                <Text className="text-amber-500 font-mono text-xs ml-2 uppercase font-bold tracking-wider">
+                  LETTERBOXD: @{profile.letterboxd_username}
+                </Text>
+              </Pressable>
+            )}
+
+            {(profile.movie_preferences?.length || profile.format_preferences?.length) && (
+              <View className="flex-row flex-wrap justify-center gap-2 mt-4 px-6">
+                {profile.movie_preferences?.map((pref: string) => (
+                  <View key={pref} className="bg-amber-500/10 border border-amber-500/30 px-2 py-1 rounded">
+                    <Text className="text-amber-500 font-mono text-[8px] font-bold uppercase">{pref}</Text>
+                  </View>
+                ))}
+                {profile.format_preferences?.map((pref: string) => (
+                  <View key={pref} className="bg-neutral-800 border border-neutral-700 px-2 py-1 rounded">
+                    <Text className="text-neutral-400 font-mono text-[8px] font-bold uppercase">{pref}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            <View className="flex-row items-center gap-8 mt-6">
+              <View className="items-center">
+                <Text className="text-white font-bold text-lg font-mono">{totalItems}</Text>
+                <Text className="text-neutral-600 font-mono text-xs">TITLES</Text>
+              </View>
+              <View className="items-center">
+                <Text className="text-white font-bold text-lg font-mono">{followers?.length || 0}</Text>
+                <Text className="text-neutral-600 font-mono text-xs">FOLLOWERS</Text>
+              </View>
+              <View className="items-center">
+                <Text className="text-white font-bold text-lg font-mono">{following?.length || 0}</Text>
+                <Text className="text-neutral-600 font-mono text-xs">FOLLOWING</Text>
+              </View>
+              {id !== currentUserId && (
+                <View className="items-center">
+                  <Text className="text-amber-500 font-bold text-lg font-mono">{commonItems.length}</Text>
+                  <Text className="text-neutral-600 font-mono text-xs">COMMON</Text>
+                </View>
+              )}
+            </View>
+
+            {!isOwnProfile && (
+              <View className="flex-row gap-2 mt-8 px-6 w-full max-w-sm justify-center">
+                <Pressable 
+                  onPress={handleToggleFollow}
+                  disabled={toggleFollowMutation.isPending}
+                  className={`flex-1 flex-row h-12 rounded-xl border-2 items-center justify-center ${isFollowing ? 'border-neutral-800 bg-neutral-900/40' : 'border-amber-500 bg-amber-500/10'}`}
+                >
+                  <Ionicons 
+                    name={isFollowing ? "person-remove-outline" : "person-add-outline"} 
+                    size={16} 
+                    color={isFollowing ? "#525252" : "#f59e0b"} 
+                  />
+                  <Text className={`font-mono font-bold text-[10px] ml-2 ${isFollowing ? 'text-neutral-500' : 'text-amber-500'}`}>
+                    {isFollowing ? 'UNFOLLOW' : 'TRACK'}
+                  </Text>
+                </Pressable>
+
+                {isFollowing && (
+                  <Pressable 
+                    onPress={handleToggleTopFive}
+                    disabled={toggleTopFiveMutation.isPending}
+                    className={`px-4 h-12 rounded-xl border-2 items-center justify-center ${isTopFive ? 'border-amber-500 bg-amber-500/10' : 'border-neutral-800 bg-neutral-900/40'}`}
+                  >
+                    <Ionicons 
+                      name={isTopFive ? "star" : "star-outline"} 
+                      size={16} 
+                      color={isTopFive ? "#f59e0b" : "#525252"} 
+                    />
+                    <Text className={`font-mono font-bold text-[8px] mt-1 tracking-widest ${isTopFive ? 'text-amber-500' : 'text-neutral-500'}`}>
+                      TOP 5
+                    </Text>
+                  </Pressable>
+                )}
+
+                <Pressable 
+                  onPress={() => router.push(`/profile/chat/${id}`)}
+                  className="flex-1 flex-row h-12 rounded-xl border border-neutral-800 bg-neutral-900 items-center justify-center"
+                >
+                  <Ionicons name="chatbubbles-outline" size={16} color="#f59e0b" />
+                  <Text className="font-mono font-bold text-[10px] text-amber-500 ml-2">MESSAGE</Text>
+                </Pressable>
+              </View>
+            )}
+          </View>
+        )}
 
         <View className="border-b border-neutral-800 mt-8 mb-4">
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>

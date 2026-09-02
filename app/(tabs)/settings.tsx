@@ -21,7 +21,7 @@ import { Image as ExpoImage } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, Switch, Text, TextInput, View, Linking } from 'react-native';
+import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, Switch, Text, TextInput, View, Linking, useWindowDimensions } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PreferenceQuizModal } from '@/components/PreferenceQuizModal';
 import { useQueryClient } from '@tanstack/react-query';
@@ -31,6 +31,8 @@ const logoSource = Platform.OS === 'web'
   : require('@/assets/images/logo_tracking.png');
 
 export default function SettingsScreen() {
+  const { width: windowWidth } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && windowWidth >= 768;
   const { playSound } = useSound();
   const { userId, session } = useAuth();
   const { data: collection, isLoading: isCollectionLoading } = useCollection(userId);
@@ -387,18 +389,19 @@ export default function SettingsScreen() {
         </View>
 
         {/* MEMBER CARD */}
-        <View className="mb-8 items-center" style={{ width: '100%', alignItems: 'center' }}>
-          <MemberCard
-            userId={userId ?? null}
-            profile={profile || {}}
-            onEditPress={startEditing}
-            onAvatarPress={pickImage}
-          />
+        {isDesktop ? (
+          <View className="mb-8 flex-row items-center justify-center gap-10 w-full max-w-[1200px] mx-auto px-4">
+            <View style={{ width: 340, maxWidth: 360 }}>
+              <MemberCard
+                userId={userId ?? null}
+                profile={profile || {}}
+                onEditPress={startEditing}
+                onAvatarPress={pickImage}
+              />
+            </View>
 
-          {/* Profile Info Below Card */}
-          {!isEditing && (
-            <View className="mt-6 px-2">
-              <View className="flex-row items-center justify-between mb-2">
+            <View className="flex-1 items-start">
+              <View className="flex-row items-center gap-3 mb-2">
                 <Text className="text-white font-bold text-3xl tracking-tight italic" style={{ fontFamily: 'sans-serif-condensed' }}>
                   {profile?.username || 'NEW MEMBER'}
                 </Text>
@@ -411,7 +414,7 @@ export default function SettingsScreen() {
               </View>
 
               {profile?.bio && (
-                <Text className="text-neutral-400 font-mono text-sm leading-4">
+                <Text className="text-neutral-400 font-mono text-sm leading-5 max-w-lg mt-1">
                   {profile.bio}
                 </Text>
               )}
@@ -428,7 +431,51 @@ export default function SettingsScreen() {
                 </Pressable>
               )}
             </View>
-          )}
+          </View>
+        ) : (
+          <View className="mb-8 items-center" style={{ width: '100%', alignItems: 'center' }}>
+            <MemberCard
+              userId={userId ?? null}
+              profile={profile || {}}
+              onEditPress={startEditing}
+              onAvatarPress={pickImage}
+            />
+
+            {!isEditing && (
+              <View className="mt-6 px-2 w-full items-center">
+                <View className="flex-row items-center justify-between mb-2 w-full">
+                  <Text className="text-white font-bold text-3xl tracking-tight italic" style={{ fontFamily: 'sans-serif-condensed' }}>
+                    {profile?.username || 'NEW MEMBER'}
+                  </Text>
+                  <Pressable
+                    onPress={startEditing}
+                    className="bg-neutral-800 p-2 rounded-full border border-neutral-700"
+                  >
+                    <FontAwesome name="pencil" size={14} color="#f59e0b" />
+                  </Pressable>
+                </View>
+
+                {profile?.bio && (
+                  <Text className="text-neutral-400 font-mono text-sm leading-4 text-center">
+                    {profile.bio}
+                  </Text>
+                )}
+
+                {profile?.letterboxd_username && (
+                  <Pressable
+                    onPress={() => Linking.openURL(`https://letterboxd.com/${profile.letterboxd_username}`)}
+                    className="mt-3 flex-row items-center self-center bg-neutral-900 border border-neutral-800 px-3 py-1.5 rounded-full"
+                  >
+                    <FontAwesome name="external-link" size={10} color="#f59e0b" />
+                    <Text className="text-amber-500 font-mono text-[10px] ml-1.5 uppercase font-bold tracking-wider">
+                      LETTERBOXD: @{profile.letterboxd_username}
+                    </Text>
+                  </Pressable>
+                )}
+              </View>
+            )}
+          </View>
+        )}
 
           {/* Helper text if needed */}
           {isEditing && (
@@ -716,7 +763,6 @@ export default function SettingsScreen() {
               </View>
             </View>
           )}
-        </View>
 
         {/* DETAILED STATS */}
         {!isEditing && <StatsSection collection={collection} />}
