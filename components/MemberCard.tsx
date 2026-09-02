@@ -1,7 +1,7 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Image } from 'expo-image';
 import React, { useMemo } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Platform, Pressable, Text, useWindowDimensions, View } from 'react-native';
 
 type MemberCardProps = {
     userId: string | null;
@@ -13,6 +13,9 @@ type MemberCardProps = {
 };
 
 export function MemberCard({ userId, profile, onEditPress, onAvatarPress, isReadOnly = false, onDisplayItems = [] }: MemberCardProps) {
+    const { width } = useWindowDimensions();
+    const isDesktop = Platform.OS === 'web' && width >= 768;
+
     // Deterministic pseudo-random barcode seeded from userId
     const barcodeLines = useMemo(() => {
         let seed = (userId || 'guest').split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
@@ -26,7 +29,7 @@ export function MemberCard({ userId, profile, onEditPress, onAvatarPress, isRead
     const displayId = userId ? userId.substring(0, 8).toUpperCase() : 'UNKNOWN';
 
     return (
-        <View className="w-full">
+        <View style={[{ width: '100%' }, isDesktop && { maxWidth: 520, alignSelf: 'center' }]}>
             {/* Clear Lamination Sleeve Effect */}
             <View className="w-full aspect-[1.586] rounded-xl bg-white/10 p-1.5 border border-white/20 shadow-2xl">
                 
