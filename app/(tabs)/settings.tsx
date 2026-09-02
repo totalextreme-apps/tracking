@@ -387,7 +387,7 @@ export default function SettingsScreen() {
         </View>
 
         {/* MEMBER CARD */}
-        <View className="mb-8">
+        <View className="mb-8 items-center" style={{ width: '100%', alignItems: 'center' }}>
           <MemberCard
             userId={userId ?? null}
             profile={profile || {}}

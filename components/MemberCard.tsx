@@ -29,9 +29,12 @@ export function MemberCard({ userId, profile, onEditPress, onAvatarPress, isRead
     const displayId = userId ? userId.substring(0, 8).toUpperCase() : 'UNKNOWN';
 
     return (
-        <View style={[{ width: '100%' }, isDesktop && { maxWidth: 520, alignSelf: 'center' }]}>
+        <View style={[{ width: '100%', alignItems: 'center' }, isDesktop && { maxWidth: 520, alignSelf: 'center' }]}>
             {/* Clear Lamination Sleeve Effect */}
-            <View className="w-full aspect-[1.586] rounded-xl bg-white/10 p-1.5 border border-white/20 shadow-2xl">
+            <View 
+                className="rounded-xl bg-white/10 p-1.5 border border-white/20 shadow-2xl"
+                style={[{ width: '100%', aspectRatio: 1.586 }, isDesktop && { maxWidth: 520, alignSelf: 'center' }]}
+            >
                 
                 {/* Actual Plastic Card */}
                 <View className="flex-1 rounded-lg bg-[#140e0b] overflow-hidden relative border border-[#2d2016]">
