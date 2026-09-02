@@ -47,7 +47,7 @@ export const createCollectionItem = (
 export const getPosterUrl = (path: string | null, size = 'w342') =>
   path ? `${TMDB_IMAGE_BASE}/${size}${path}` : null;
 
-export const getBackdropUrl = (path: string | null, size = 'w780') =>
+export const getBackdropUrl = (path: string | null, size = 'w1280') =>
   path ? `${TMDB_IMAGE_BASE}/${size}${path}` : null;
 
 // Dummy data for UI development

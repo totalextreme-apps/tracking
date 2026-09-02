@@ -6,7 +6,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, Text, TextInput, View, Share, Linking } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, Text, TextInput, View, Share, Linking, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GlossyCard } from '@/components/GlossyCard';
@@ -96,6 +96,8 @@ export default function MovieDetailScreen() {
     const { userId } = useAuth();
     const { thriftMode } = useThriftMode();
     const { playSound } = useSound();
+    const { width: windowWidth } = useWindowDimensions();
+    const isDesktop = Platform.OS === 'web' && windowWidth >= 768;
     const insets = useSafeAreaInsets();
     const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
     const [ejecting, setEjecting] = useState(false);
@@ -837,7 +839,7 @@ export default function MovieDetailScreen() {
                 }}
             >
                 {/* Backdrop */}
-                <View className="relative h-72 w-full">
+                <View style={{ height: isDesktop ? 450 : 288 }} className="relative w-full overflow-hidden">
                     {customBackdropUrl || backdropUrl ? (
                         <Image source={{ uri: customBackdropUrl || backdropUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
                     ) : (
@@ -845,7 +847,7 @@ export default function MovieDetailScreen() {
                     )}
                     <LinearGradient
                         colors={['transparent', '#0a0a0a']}
-                        style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 160 }}
+                        style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: isDesktop ? 220 : 160 }}
                     />
 
                     <Pressable

@@ -6,7 +6,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, Text, TextInput, View, Share, Linking } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, Text, TextInput, View, Share, Linking, useWindowDimensions } from 'react-native';
 import * as Sharing from 'expo-sharing';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -96,6 +96,8 @@ export default function ShowDetailScreen() {
     const { userId } = useAuth();
     const { thriftMode } = useThriftMode();
     const { playSound } = useSound();
+    const { width: windowWidth } = useWindowDimensions();
+    const isDesktop = Platform.OS === 'web' && windowWidth >= 768;
     const insets = useSafeAreaInsets();
     const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
     const [ejecting, setEjecting] = useState(false);
@@ -683,13 +685,13 @@ export default function ShowDetailScreen() {
             {/* ImagePicker is now used for both web and native for better mobile browser compatibility */}
 
             <ScrollView ref={scrollViewRef} className="flex-1" contentContainerStyle={{ paddingBottom: insets.bottom + 120, width: '100%' }}>
-                <View className="relative h-72 w-full">
+                <View style={{ height: isDesktop ? 450 : 288 }} className="relative w-full overflow-hidden">
                     {(customBackdropUrl || backdropUrl) ? (
                         <Image source={{ uri: customBackdropUrl || backdropUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
                     ) : (
                         <NoPosterPlaceholder width="100%" height="100%" />
                     )}
-                    <LinearGradient colors={['transparent', '#0a0a0a']} style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 160 }} />
+                    <LinearGradient colors={['transparent', '#0a0a0a']} style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: isDesktop ? 220 : 160 }} />
                     <Pressable 
                         onPress={() => {
                             if (from === 'community' || from === 'swap') {

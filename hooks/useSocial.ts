@@ -450,19 +450,73 @@ export const useCreatePost = (userId?: string) => {
         }
       }
 
-      const { error, data } = await supabase
-        .from('bulletin_posts')
-        .insert({
-          user_id: userId,
-          content: postData.content,
-          collection_item_id: postData.collection_item_id,
-          movie_id: dbMovieId,
-          show_id: dbShowId,
-          custom_list_name: postData.custom_list_name,
-          rating: postData.rating
-        } as any)
-        .select()
-        .single() as any;
+      // Check if user already has an existing post for this movie/show/collection item
+      let existingPostId: string | null = null;
+      if (dbMovieId) {
+        const { data: existing } = await supabase
+          .from('bulletin_posts')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('movie_id', dbMovieId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (existing) existingPostId = existing.id;
+      } else if (dbShowId) {
+        const { data: existing } = await supabase
+          .from('bulletin_posts')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('show_id', dbShowId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (existing) existingPostId = existing.id;
+      } else if (postData.collection_item_id) {
+        const { data: existing } = await supabase
+          .from('bulletin_posts')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('collection_item_id', postData.collection_item_id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (existing) existingPostId = existing.id;
+      }
+
+      let data: any;
+      let error: any;
+
+      if (existingPostId) {
+        const res = await (supabase
+          .from('bulletin_posts') as any)
+          .update({
+            content: postData.content,
+            rating: postData.rating,
+            created_at: new Date().toISOString()
+          })
+          .eq('id', existingPostId)
+          .select()
+          .single();
+        error = res.error;
+        data = res.data;
+      } else {
+        const res = await (supabase
+          .from('bulletin_posts') as any)
+          .insert({
+            user_id: userId,
+            content: postData.content,
+            collection_item_id: postData.collection_item_id,
+            movie_id: dbMovieId,
+            show_id: dbShowId,
+            custom_list_name: postData.custom_list_name,
+            rating: postData.rating
+          })
+          .select()
+          .single();
+        error = res.error;
+        data = res.data;
+      }
         
       if (error) throw error;
 
@@ -975,9 +1029,29 @@ export const useCommunityFeed = (userId?: string) => {
         ...processedListings
       ];
       
-      return activity.sort((a, b) => 
+      const sortedActivity = activity.sort((a, b) => 
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
+
+      // Deduplicate feed items by ID and by User + Movie/Show content
+      const seenKeys = new Set<string>();
+      const deduplicated = sortedActivity.filter((item: any) => {
+        const idKey = `${item.activity_type || 'post'}-${item.id}`;
+        if (seenKeys.has(idKey)) return false;
+        seenKeys.add(idKey);
+
+        if (item.activity_type === 'post') {
+          const mediaId = item.movie_id || item.movies?.id || item.show_id || item.shows?.id;
+          if (mediaId) {
+            const userMediaKey = `post-${item.user_id}-${mediaId}`;
+            if (seenKeys.has(userMediaKey)) return false;
+            seenKeys.add(userMediaKey);
+          }
+        }
+        return true;
+      });
+
+      return deduplicated;
     },
     enabled: !!userId,
     staleTime: 1000 * 30,

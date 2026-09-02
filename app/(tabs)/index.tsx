@@ -194,7 +194,19 @@ export default function HomeScreen() {
   const effectiveContainerWidth = Platform.OS === 'web' && windowWidth >= 768
     ? Math.min(windowWidth - 48, 1336)
     : (windowWidth - 32);
-  const calculatedCardWidth = Math.floor((effectiveContainerWidth - (resolvedColumns * CARD_GAP)) / resolvedColumns);
+
+  const getCardWidth = (cols: number, containerWidth: number) => {
+    const rawWidth = Math.floor((containerWidth - (cols * CARD_GAP)) / cols);
+    if (Platform.OS === 'web' && windowWidth >= 768) {
+      if (cols === 2) return Math.min(rawWidth, 420);
+      if (cols === 3) return Math.min(rawWidth, 310);
+      if (cols === 4) return Math.min(rawWidth, 240);
+      if (cols === 5) return Math.min(rawWidth, 200);
+    }
+    return rawWidth;
+  };
+
+  const calculatedCardWidth = getCardWidth(resolvedColumns, effectiveContainerWidth);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchMode, setSearchMode] = useState<'title' | 'actor' | 'director'>('title');
   const [creditTmdbIds, setCreditTmdbIds] = useState<Set<string> | null>(null);

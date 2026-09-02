@@ -56,6 +56,9 @@ export function GlobalHeader() {
     const handleToggleThrift = (value: boolean) => {
         playSound('tv_off');
         setThriftMode(value);
+        if (value && !isHome) {
+            router.push('/');
+        }
     };
 
     const navItems = [
