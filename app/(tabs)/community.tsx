@@ -339,7 +339,7 @@ function MarketplaceSection({ setActiveTab, setSelectedSwapTitleKey }: { setActi
            <Text style={{ color: '#fff', fontFamily: 'SpaceMono', fontSize: 10 }}>No matches in the swap meet.</Text>
         </View>
       ) : (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ minHeight: 160 }} contentContainerStyle={{ flexDirection: 'row', alignItems: 'center', minHeight: '100%', paddingHorizontal: 16, gap: 12 }}>
           {filteredMarketplace.map((item: any) => (
             <Pressable 
               key={item.id} 
@@ -409,7 +409,7 @@ function StoreChartsSection({ stats }: { stats: any }) {
           </Text>
         </View>
         
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexDirection: 'row', paddingHorizontal: 16, gap: 12 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ minHeight: 160 }} contentContainerStyle={{ flexDirection: 'row', alignItems: 'center', minHeight: '100%', paddingHorizontal: 16, gap: 12 }}>
           {items.map((item: any, idx: number) => {
             const mediaTitle = item.movie_title || item.show_name || 'Unknown Title';
             const mediaPoster = item.movie_poster || item.show_poster;
@@ -640,7 +640,7 @@ export default function CommunityScreen() {
   // Data
   const { data: following } = useFollowing(userId);
   const { data: bulletinFeed, isLoading: bulletinLoading } = useBulletinFeed(userId, activeTab === 'board');
-  const { data: communityFeed, isLoading: communityLoading } = useCommunityFeed(userId);
+  const { data: communityFeed, isLoading: communityLoading, isFetching: communityFetching } = useCommunityFeed(userId);
   const { data: marketplaceFeed } = useMarketplaceFeed();
   const { data: searchResults, isLoading: searchLoading } = useSearchUsers(userSearch);
   const { data: notifications, isLoading: notifLoading } = useNotifications(userId);
@@ -1183,7 +1183,7 @@ export default function CommunityScreen() {
                   </Pressable>
                 )}
               </View>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ height: 110 }} contentContainerStyle={{ flexDirection: 'row', paddingHorizontal: 16, gap: 24 }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ height: 110, minHeight: 110 }} contentContainerStyle={{ flexDirection: 'row', alignItems: 'center', minHeight: '100%', paddingHorizontal: 16, gap: 24 }}>
                 {top5.map((f: any) => {
                   const profile = f.profiles;
                   return (
@@ -1253,7 +1253,7 @@ export default function CommunityScreen() {
                 ))}
               </View>
             </View>
-            {communityLoading ? (
+            {(communityLoading || (!communityFeed && communityFetching)) ? (
               <View style={{ paddingVertical: 40, alignItems: 'center', justifyContent: 'center' }}>
                 <ActivityIndicator size="large" color="#f59e0b" style={{ marginBottom: 16 }} />
                 <Text style={{ color: '#f59e0b', fontFamily: 'SpaceMono', fontSize: 12, fontWeight: 'bold', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 6 }}>
@@ -1302,16 +1302,27 @@ export default function CommunityScreen() {
                            </Text>
                          </View>
                        </Pressable>
-                       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ height: 120 }} contentContainerStyle={{ flexDirection: 'row', paddingVertical: 10 }}>
+                       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ height: 120, minHeight: 120 }} contentContainerStyle={{ flexDirection: 'row', alignItems: 'center', minHeight: '100%', paddingVertical: 10 }}>
                           {item.items.map((sub: any, i: number) => (
                              <Pressable 
                                key={i} 
                                onPress={() => { const id = sub.movies?.id || sub.shows?.id; const t = sub.movies ? 'movie' : 'show'; router.push(`/${t}/${id}?ownerId=${sub.user_id}&from=community`); }} 
-                               style={{ width: 62, height: 98, marginRight: 8, backgroundColor: '#0a0a0a', padding: 4, borderRadius: 8, borderWidth: 1, borderColor: '#f59e0b18', justifyContent: 'space-between', flexShrink: 0 }}
+                               style={{ width: 62, height: 98, marginRight: 8, backgroundColor: '#0f0f0f', padding: 4, borderRadius: 8, borderWidth: 1, borderColor: '#f59e0b22', justifyContent: 'space-between', flexShrink: 0 }}
                              >
-                               <Image source={{ uri: getPosterUrl(sub.movies?.poster_path || sub.shows?.poster_path) || '' }} style={{ width: 54, height: 74, borderRadius: 4, backgroundColor: '#1a1a1a' }} />
+                               <View style={{ width: 54, height: 74, borderRadius: 4, backgroundColor: '#1a1a1a', overflow: 'hidden', justifyContent: 'center', alignItems: 'center' }}>
+                                 {getPosterUrl(sub.movies?.poster_path || sub.shows?.poster_path) ? (
+                                   <Image 
+                                     source={{ uri: getPosterUrl(sub.movies?.poster_path || sub.shows?.poster_path)! }} 
+                                     style={{ width: '100%', height: '100%' }} 
+                                   />
+                                 ) : (
+                                   <Text style={{ color: '#888', fontFamily: 'SpaceMono', fontSize: 6, textAlign: 'center', paddingHorizontal: 2 }} numberOfLines={3}>
+                                     {(sub.movies?.title || sub.shows?.name || 'TITLE').toUpperCase()}
+                                   </Text>
+                                 )}
+                               </View>
                                <View style={{ backgroundColor: '#1a1a1a', alignSelf: 'stretch', paddingVertical: 1, borderRadius: 2, alignItems: 'center' }}>
-                                 <Text style={{ color: '#f59e0b', fontFamily: 'SpaceMono', fontSize: 6, fontWeight: 'bold' }}>{sub.format}</Text>
+                                 <Text style={{ color: '#f59e0b', fontFamily: 'SpaceMono', fontSize: 6, fontWeight: 'bold' }}>{sub.format || 'VHS'}</Text>
                                </View>
                              </Pressable>
                           ))}

@@ -183,15 +183,34 @@ async function run() {
     }
   }
 
-  console.log('Grouped Count:', grouped.length);
+  console.log('--- STORY GROUPS INSPECTION ---');
+  for (let g of grouped) {
+    if (g.type === 'story_group') {
+      console.log(`Story Group ID: ${g.id}, Date: ${g.date}, UserID: ${g.user_id}`);
+      for (let sub of g.items) {
+        console.log('Sub item keys:', Object.keys(sub));
+        console.log('sub.movies:', JSON.stringify(sub.movies));
+        console.log('sub.shows:', JSON.stringify(sub.shows));
+        console.log('Is sub.movies Array?', Array.isArray(sub.movies));
+        console.log('Is sub.shows Array?', Array.isArray(sub.shows));
+        console.log('sub.movies?.poster_path:', sub.movies?.poster_path);
+        console.log('sub.shows?.poster_path:', sub.shows?.poster_path);
+        
+        // Check array element fallback
+        const movieObj = Array.isArray(sub.movies) ? sub.movies[0] : sub.movies;
+        const showObj = Array.isArray(sub.shows) ? sub.shows[0] : sub.shows;
+        console.log('Resolved movie poster:', movieObj?.poster_path);
+        console.log('Resolved show poster:', showObj?.poster_path);
+      }
+      break;
+    }
+  }
+  
   const storyGroup = grouped.find(g => g.type === 'story_group');
   if (storyGroup) {
     console.log('Story Group ID:', storyGroup.id);
     console.log('Story Group Username:', storyGroup.profiles?.username);
     console.log('Story Group items length:', storyGroup.items.length);
-    console.log('First sub item format:', storyGroup.items[0].format);
-    console.log('First sub item movies:', JSON.stringify(storyGroup.items[0].movies));
-    console.log('First sub item shows:', JSON.stringify(storyGroup.items[0].shows));
   } else {
     console.log('No story groups found');
   }
