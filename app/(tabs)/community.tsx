@@ -339,7 +339,7 @@ function MarketplaceSection({ setActiveTab, setSelectedSwapTitleKey }: { setActi
            <Text style={{ color: '#fff', fontFamily: 'SpaceMono', fontSize: 10 }}>No matches in the swap meet.</Text>
         </View>
       ) : (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ minHeight: 160 }} contentContainerStyle={{ flexDirection: 'row', alignItems: 'center', minHeight: '100%', paddingHorizontal: 16, gap: 12 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ height: 160, minHeight: 160 }} contentContainerStyle={{ flexDirection: 'row', alignItems: 'center', height: '100%', minHeight: 140, paddingHorizontal: 16, gap: 12 }}>
           {filteredMarketplace.map((item: any) => (
             <Pressable 
               key={item.id} 
@@ -350,7 +350,7 @@ function MarketplaceSection({ setActiveTab, setSelectedSwapTitleKey }: { setActi
                 setActiveTab('swap');
                 playSound('click');
               }}
-              style={{ width: 100 }}
+              style={{ width: 100, minWidth: 100, height: 148, minHeight: 148, flexShrink: 0 }}
             >
               <View style={{ position: 'relative', width: 100, height: 140, backgroundColor: '#111', borderRadius: 8, overflow: 'hidden', borderWidth: 1, borderColor: '#1a1a1a' }}>
                 <Image 
@@ -409,7 +409,7 @@ function StoreChartsSection({ stats }: { stats: any }) {
           </Text>
         </View>
         
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ minHeight: 160 }} contentContainerStyle={{ flexDirection: 'row', alignItems: 'center', minHeight: '100%', paddingHorizontal: 16, gap: 12 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ height: 160, minHeight: 160 }} contentContainerStyle={{ flexDirection: 'row', alignItems: 'center', height: '100%', minHeight: 140, paddingHorizontal: 16, gap: 12 }}>
           {items.map((item: any, idx: number) => {
             const mediaTitle = item.movie_title || item.show_name || 'Unknown Title';
             const mediaPoster = item.movie_poster || item.show_poster;
@@ -420,7 +420,7 @@ function StoreChartsSection({ stats }: { stats: any }) {
               <Pressable
                 key={idx}
                 onPress={() => { if (mediaId) router.push(`/${mediaType}/${mediaId}?from=community`); }}
-                style={{ width: 100, flexShrink: 0, backgroundColor: '#0a0a0a', padding: 6, borderRadius: 8, borderWidth: 1, borderColor: '#1f1f1f', alignItems: 'center' }}
+                style={{ width: 100, minWidth: 100, height: 148, minHeight: 148, flexShrink: 0, backgroundColor: '#0a0a0a', padding: 6, borderRadius: 8, borderWidth: 1, borderColor: '#1f1f1f', alignItems: 'center' }}
               >
                 <View style={{ position: 'absolute', top: -4, left: -4, zIndex: 10, backgroundColor: color, width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#000' }}>
                   <Text style={{ color: '#000', fontFamily: 'SpaceMono', fontSize: 8, fontWeight: 'bold' }}>#{idx + 1}</Text>
@@ -1183,14 +1183,14 @@ export default function CommunityScreen() {
                   </Pressable>
                 )}
               </View>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ height: 110, minHeight: 110 }} contentContainerStyle={{ flexDirection: 'row', alignItems: 'center', minHeight: '100%', paddingHorizontal: 16, gap: 24 }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ height: 110, minHeight: 110 }} contentContainerStyle={{ flexDirection: 'row', alignItems: 'center', height: '100%', minHeight: 100, paddingHorizontal: 16, gap: 24 }}>
                 {top5.map((f: any) => {
                   const profile = f.profiles;
                   return (
                     <Pressable 
                       key={f.following_id} 
                       onPress={() => router.push(`/profile/${f.following_id}?from=community`)}
-                      style={{ alignItems: 'center', width: 72, flexShrink: 0 }}
+                      style={{ alignItems: 'center', width: 72, minWidth: 72, flexShrink: 0 }}
                     >
                       <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: '#1a1a1a', borderWidth: 2, borderColor: '#f59e0b', overflow: 'hidden', marginBottom: 8, justifyContent: 'center', alignItems: 'center', shadowColor: '#f59e0b', shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } }}>
                         {profile?.avatar_url ? (
@@ -1253,6 +1253,15 @@ export default function CommunityScreen() {
                 ))}
               </View>
             </View>
+
+            {communityFetching && !communityLoading && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f59e0b15', borderWidth: 1, borderColor: '#f59e0b44', paddingVertical: 4, paddingHorizontal: 8, borderRadius: 4, marginBottom: 12 }}>
+                <ActivityIndicator size="small" color="#f59e0b" style={{ marginRight: 6 }} />
+                <Text style={{ color: '#f59e0b', fontFamily: 'SpaceMono', fontSize: 8, fontWeight: 'bold', letterSpacing: 1 }}>
+                  TUNING INTO THE PULSE...
+                </Text>
+              </View>
+            )}
             {(communityLoading || (!communityFeed && communityFetching)) ? (
               <View style={{ paddingVertical: 40, alignItems: 'center', justifyContent: 'center' }}>
                 <ActivityIndicator size="large" color="#f59e0b" style={{ marginBottom: 16 }} />
@@ -1302,12 +1311,12 @@ export default function CommunityScreen() {
                            </Text>
                          </View>
                        </Pressable>
-                       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ height: 120, minHeight: 120 }} contentContainerStyle={{ flexDirection: 'row', alignItems: 'center', minHeight: '100%', paddingVertical: 10 }}>
+                       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ height: 120, minHeight: 120 }} contentContainerStyle={{ flexDirection: 'row', alignItems: 'center', height: '100%', minHeight: 100, paddingVertical: 10 }}>
                           {item.items.map((sub: any, i: number) => (
                              <Pressable 
                                key={i} 
                                onPress={() => { const id = sub.movies?.id || sub.shows?.id; const t = sub.movies ? 'movie' : 'show'; router.push(`/${t}/${id}?ownerId=${sub.user_id}&from=community`); }} 
-                               style={{ width: 62, height: 98, marginRight: 8, backgroundColor: '#0f0f0f', padding: 4, borderRadius: 8, borderWidth: 1, borderColor: '#f59e0b22', justifyContent: 'space-between', flexShrink: 0 }}
+                               style={{ width: 62, minWidth: 62, height: 98, minHeight: 98, marginRight: 8, backgroundColor: '#0f0f0f', padding: 4, borderRadius: 8, borderWidth: 1, borderColor: '#f59e0b22', justifyContent: 'space-between', flexShrink: 0 }}
                              >
                                <View style={{ width: 54, height: 74, borderRadius: 4, backgroundColor: '#1a1a1a', overflow: 'hidden', justifyContent: 'center', alignItems: 'center' }}>
                                  {getPosterUrl(sub.movies?.poster_path || sub.shows?.poster_path) ? (
