@@ -117,6 +117,41 @@ function sortItemsWithFranchise(items: CollectionItemWithMedia[]): CollectionIte
     });
 }
 
+function renderItemRows(items: CollectionItemWithMedia[]): string {
+    const sorted = sortItemsWithFranchise(items);
+    return sorted.map(item => {
+        const rawTitle = (item.movies?.title || item.shows?.name || 'Unknown Title').toUpperCase();
+        const dateStr = item.movies?.release_date || item.shows?.first_air_date;
+        let yearStr = '';
+        if (dateStr) {
+            const yearNum = new Date(dateStr).getFullYear();
+            if (!isNaN(yearNum) && yearNum > 1800) {
+                yearStr = ` (${yearNum})`;
+            }
+        }
+        const seasonInfo = item.media_type === 'tv' && item.season_number ? ` S${item.season_number}` : '';
+        
+        const fullTitle = `${rawTitle}${yearStr}${seasonInfo}`;
+
+        const edition = item.edition ? ` [${item.edition.toUpperCase()}]` : '';
+        const isGrail = item.is_grail;
+        const isOnDisplay = item.is_on_display;
+
+        let badges = '';
+        if (isGrail) badges += ' <span class="badge grail">★ GRAIL</span>';
+        if (isOnDisplay) badges += ' <span class="badge display">◆ PICK</span>';
+
+        return `
+        <div class="row">
+            <div class="row-left">
+                <span class="bullet">•</span>
+                <span class="item-title">${fullTitle}${edition}</span>
+                ${badges}
+            </div>
+        </div>`;
+    }).join('');
+}
+
 function generateReceiptHtml(items: CollectionItemWithMedia[]) {
     const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
     const time = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
@@ -145,43 +180,35 @@ function generateReceiptHtml(items: CollectionItemWithMedia[]) {
 
         formatCounts.push({ format: formatName, count: groupItems.length });
 
-        // Sort items within this format section by franchise & title
-        const sortedGroupItems = sortItemsWithFranchise(groupItems);
+        const movies = groupItems.filter(i => i.media_type !== 'tv');
+        const tvShows = groupItems.filter(i => i.media_type === 'tv');
 
-        const rowsHtml = sortedGroupItems.map(item => {
-            const rawTitle = (item.movies?.title || item.shows?.name || 'Unknown Title').toUpperCase();
-            const dateStr = item.movies?.release_date || item.shows?.first_air_date;
-            const year = dateStr ? ` (${new Date(dateStr).getFullYear()})` : '';
-            const seasonInfo = item.media_type === 'tv' && item.season_number ? ` S${item.season_number}` : '';
-            
-            const fullTitle = `${rawTitle}${seasonInfo}${year}`;
+        let subSectionsHtml = '';
 
-            const edition = item.edition ? ` [${item.edition.toUpperCase()}]` : '';
-            const isGrail = item.is_grail;
-            const isOnDisplay = item.is_on_display;
-
-            let badges = '';
-            if (isGrail) badges += ' <span class="badge grail">★ GRAIL</span>';
-            if (isOnDisplay) badges += ' <span class="badge display">◆ PICK</span>';
-
-            return `
-            <div class="row">
-                <div class="row-left">
-                    <span class="bullet">•</span>
-                    <span class="item-title">${fullTitle}${edition}</span>
-                    ${badges}
-                </div>
+        if (movies.length > 0) {
+            subSectionsHtml += `
+            <div class="sub-section">
+                <div class="sub-header">── MOVIES [${movies.length}] ──</div>
+                ${renderItemRows(movies)}
             </div>`;
-        }).join('');
+        }
+
+        if (tvShows.length > 0) {
+            subSectionsHtml += `
+            <div class="sub-section">
+                <div class="sub-header">── TV SHOWS [${tvShows.length}] ──</div>
+                ${renderItemRows(tvShows)}
+            </div>`;
+        }
 
         sectionsHtml += `
         <div class="format-section">
-            <div class="section-title font-mono">
+            <div class="section-title">
                 <span class="section-name">=== ${formatName} ===</span>
                 <span class="section-count">[${groupItems.length} ITEM${groupItems.length === 1 ? '' : 'S'}]</span>
             </div>
             <div class="section-body">
-                ${rowsHtml}
+                ${subSectionsHtml}
             </div>
         </div>`;
     });
@@ -271,6 +298,20 @@ function generateReceiptHtml(items: CollectionItemWithMedia[]) {
 
         .section-body {
             padding-left: 4px;
+        }
+
+        .sub-section {
+            margin-bottom: 10px;
+        }
+
+        .sub-header {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: #333;
+            margin-top: 6px;
+            margin-bottom: 4px;
+            text-transform: uppercase;
         }
 
         .row {
