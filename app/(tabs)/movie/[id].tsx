@@ -118,6 +118,7 @@ export default function MovieDetailScreen() {
     // Custom art state
     const [customArtUri, setCustomArtUri] = useState<string | null>(null);
     const [customArtType, setCustomArtType] = useState<'poster' | 'backdrop'>('poster');
+    const [backdropFocal, setBackdropFocal] = useState<'top' | 'center' | 'bottom'>('top');
     const [cropModalVisible, setCropModalVisible] = useState(false);
     const [pendingImageUri, setPendingImageUri] = useState<string | null>(null);
     const [showEditionModal, setShowEditionModal] = useState(false);
@@ -839,14 +840,32 @@ export default function MovieDetailScreen() {
                 }}
             >
                 {/* Backdrop */}
-                <View style={{ height: isDesktop ? 450 : 288 }} className="relative w-full overflow-hidden">
+                <View style={{ height: isDesktop ? 540 : 300 }} className="relative w-full overflow-hidden">
                     {customBackdropUrl || backdropUrl ? (
-                        <Image source={{ uri: customBackdropUrl || backdropUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                        <Image
+                            source={{ uri: customBackdropUrl || backdropUrl }}
+                            style={{ width: '100%', height: '100%' }}
+                            contentFit="cover"
+                            contentPosition={
+                                backdropFocal === 'top'
+                                    ? { top: '10%', left: '50%' }
+                                    : backdropFocal === 'bottom'
+                                    ? { bottom: '10%', left: '50%' }
+                                    : 'center'
+                            }
+                        />
                     ) : (
                         <NoPosterPlaceholder width="100%" height="100%" />
                     )}
+                    {/* Top gradient for header button legibility */}
                     <LinearGradient
-                        colors={['transparent', '#0a0a0a']}
+                        colors={['rgba(10,10,10,0.7)', 'rgba(10,10,10,0.15)', 'transparent']}
+                        style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 90 }}
+                    />
+                    {/* Bottom gradient for smooth fade into page content */}
+                    <LinearGradient
+                        colors={['transparent', 'rgba(10,10,10,0.3)', 'rgba(10,10,10,0.85)', '#0a0a0a']}
+                        locations={[0, 0.4, 0.8, 1]}
                         style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: isDesktop ? 220 : 160 }}
                     />
 
@@ -956,6 +975,21 @@ export default function MovieDetailScreen() {
                                             </Pressable>
                                         )}
                                     </View>
+
+                                    {(customBackdropUrl || backdropUrl) && (
+                                        <Pressable
+                                            onPress={() => {
+                                                playSound('click');
+                                                setBackdropFocal(prev => (prev === 'top' ? 'center' : prev === 'center' ? 'bottom' : 'top'));
+                                            }}
+                                            className="bg-purple-600/10 border border-purple-600/30 px-3 py-2 rounded flex-row items-center"
+                                        >
+                                            <Ionicons name="scan-outline" size={12} color="#c084fc" />
+                                            <Text className="ml-1.5 font-mono text-[10px] font-bold text-purple-400">
+                                                FOCAL: {backdropFocal.toUpperCase()}
+                                            </Text>
+                                        </Pressable>
+                                    )}
                                 </View>
                             )}
 

@@ -105,6 +105,7 @@ function RecentlyWatchedCard({ item, navigateToDetail, playSound, onLongPressAct
             source={{ uri: backdropUrl }}
             style={{ width: '100%', height: '100%', opacity: 0.85 }}
             contentFit="cover"
+            contentPosition="top center"
           />
         ) : (
           <View className="flex-1 items-center justify-center bg-neutral-800 w-full h-full">
