@@ -17,6 +17,10 @@ import { ReorderShelfModal } from '@/components/ReorderShelfModal';
 import { ShareModal } from '@/components/ShareModal';
 import { getGenres, getStacks } from '@/lib/collection-utils';
 
+import { CommunityHeaderNav } from '@/components/CommunityHeaderNav';
+import { DesktopContainer } from '@/components/DesktopContainer';
+import { usePersistedState } from '@/hooks/usePersistedState';
+
 type TabType = 'on-display' | 'grails' | 'collection' | 'wishlist' | 'bin' | 'analytics' | 'in-common' | 'guestbook';
 export type SortOption = 'recent' | 'title' | 'release' | 'rating' | 'format' | 'value';
 
@@ -26,6 +30,9 @@ export default function UserProfileScreen() {
   const { id, from, tab } = useLocalSearchParams<{ id: string; from?: string; tab?: TabType }>();
   const { userId: currentUserId } = useAuth();
   const router = useRouter();
+  const { playSound } = useSound();
+
+  const [profileViewMode, setProfileViewMode] = usePersistedState<'grid2' | 'grid4' | 'grid6' | 'list'>('profile_viewMode', isDesktop ? 'grid4' : 'grid2');
 
   const { data: profile, isLoading: profileLoading } = useProfile(id);
   const { data: followers } = useFollowers(id);
@@ -242,6 +249,20 @@ export default function UserProfileScreen() {
   React.useEffect(() => {
     setDisplayLimit(50);
   }, [activeTab, searchQuery, sortBy, sortOrder, formatFilter, genreFilter, mediaTypeFilter]);
+
+  const getGridCardDimensions = () => {
+    if (profileViewMode === 'list') {
+      return { cellStyle: { width: '100%', padding: 4 }, cardWidth: undefined, cardHeight: undefined, isList: true };
+    }
+    if (profileViewMode === 'grid2') {
+      return { cellStyle: { width: isDesktop ? '50%' : '100%', padding: 8, alignItems: 'center' as const }, cardWidth: isDesktop ? 260 : 180, cardHeight: isDesktop ? 390 : 270, isList: false };
+    }
+    if (profileViewMode === 'grid6') {
+      return { cellStyle: { width: isDesktop ? '16.666%' : '33.333%', padding: 4, alignItems: 'center' as const }, cardWidth: isDesktop ? 150 : 100, cardHeight: isDesktop ? 225 : 150, isList: false };
+    }
+    // Default grid4
+    return { cellStyle: { width: isDesktop ? '25%' : '50%', padding: 6, alignItems: 'center' as const }, cardWidth: isDesktop ? 210 : 150, cardHeight: isDesktop ? 315 : 225, isList: false };
+  };
   
   const commonItems = useMemo(() => {
     if (!collection || !myCollection || id === currentUserId) return [];
@@ -307,8 +328,10 @@ export default function UserProfileScreen() {
     <View className="flex-1 bg-neutral-950">
       <StatusBar style="light" />
       <Stack.Screen options={{ headerShown: false }} />
+
+      <CommunityHeaderNav activeTab="profile" userId={id} />
       
-      <View className="pt-16 pb-4 bg-black border-b border-neutral-800 flex-row items-center justify-between px-4">
+      <View className="pt-4 pb-4 bg-black border-b border-neutral-800 flex-row items-center justify-between px-4">
         <Pressable 
           onPress={() => {
             if (from === 'community') {
@@ -613,7 +636,7 @@ export default function UserProfileScreen() {
         </View>
 
         {activeTab !== 'analytics' && activeTab !== 'guestbook' && (
-          <View className="px-4">
+          <DesktopContainer style={{ maxWidth: 1400, width: '100%', alignSelf: 'center', paddingHorizontal: 16 }}>
             <View className="mb-4">
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
                 {['ALL', 'VHS', 'DVD', 'BluRay', '4K', 'Digital', 'BOOTLEG'].map(f => {
@@ -670,6 +693,31 @@ export default function UserProfileScreen() {
                        <Ionicons name="chevron-down" size={8} color={genreFilter ? "#f59e0b" : "#444"} />
                   </Pressable>
                 </View>
+
+                {/* View Mode controls */}
+                <View className="flex-row items-center gap-2 mt-3 pt-3 border-t border-neutral-800/80 flex-wrap">
+                  <Text className="text-neutral-500 font-mono text-[9px] uppercase tracking-tighter mr-1">VIEW:</Text>
+                  <View className="flex-row bg-neutral-950 rounded border border-neutral-800 p-0.5">
+                    <Pressable onPress={() => { playSound('click'); setProfileViewMode('grid2'); }} className={`px-2.5 py-1 rounded flex-row items-center gap-1 ${profileViewMode === 'grid2' ? 'bg-neutral-800' : ''}`}>
+                      <Ionicons name="grid-outline" size={10} color={profileViewMode === 'grid2' ? '#f59e0b' : '#737373'} />
+                      <Text className={`font-mono text-[8px] font-bold ${profileViewMode === 'grid2' ? 'text-amber-500' : 'text-neutral-500'}`}>2 COLS</Text>
+                    </Pressable>
+                    <Pressable onPress={() => { playSound('click'); setProfileViewMode('grid4'); }} className={`px-2.5 py-1 rounded flex-row items-center gap-1 ${profileViewMode === 'grid4' ? 'bg-neutral-800' : ''}`}>
+                      <Ionicons name="grid-outline" size={10} color={profileViewMode === 'grid4' ? '#f59e0b' : '#737373'} />
+                      <Text className={`font-mono text-[8px] font-bold ${profileViewMode === 'grid4' ? 'text-amber-500' : 'text-neutral-500'}`}>4 COLS</Text>
+                    </Pressable>
+                    {isDesktop && (
+                      <Pressable onPress={() => { playSound('click'); setProfileViewMode('grid6'); }} className={`px-2.5 py-1 rounded flex-row items-center gap-1 ${profileViewMode === 'grid6' ? 'bg-neutral-800' : ''}`}>
+                        <Ionicons name="grid-outline" size={10} color={profileViewMode === 'grid6' ? '#f59e0b' : '#737373'} />
+                        <Text className={`font-mono text-[8px] font-bold ${profileViewMode === 'grid6' ? 'text-amber-500' : 'text-neutral-500'}`}>6 COLS</Text>
+                      </Pressable>
+                    )}
+                    <Pressable onPress={() => { playSound('click'); setProfileViewMode('list'); }} className={`px-2.5 py-1 rounded flex-row items-center gap-1 ${profileViewMode === 'list' ? 'bg-neutral-800' : ''}`}>
+                      <Ionicons name="list" size={10} color={profileViewMode === 'list' ? '#f59e0b' : '#737373'} />
+                      <Text className={`font-mono text-[8px] font-bold ${profileViewMode === 'list' ? 'text-amber-500' : 'text-neutral-500'}`}>LIST</Text>
+                    </Pressable>
+                  </View>
+                </View>
             </View>
 
             <Modal visible={isGenreDropdownOpen} transparent animationType="fade" onRequestClose={() => setIsGenreDropdownOpen(false)}>
@@ -690,10 +738,10 @@ export default function UserProfileScreen() {
                 </Pressable>
               </Pressable>
             </Modal>
-          </View>
+          </DesktopContainer>
         )}
 
-        <View className="px-4">
+        <DesktopContainer style={{ maxWidth: 1400, width: '100%', alignSelf: 'center', paddingHorizontal: 16 }}>
           {collectionLoading ? (
             <ActivityIndicator color="#f59e0b" className="mt-8" />
           ) : (
@@ -813,26 +861,30 @@ export default function UserProfileScreen() {
                     </Pressable>
                   </View>
                   {stackedCollection.length > 0 ? (
-                    <View className="flex-row flex-wrap">
-                      {stackedCollection.slice(0, displayLimit).map((stack: any) => (
-                        <View key={stack[0].id} style={{ width: '25%', padding: 4 }}>
-                          <StackCard 
-                            stack={stack} 
-                            width={80} 
-                            height={120}
-                            isReadOnly={id !== currentUserId}
-                            activeFormatFilter={formatFilter}
-                            onPress={() => {
-                              const item = stack[0];
-                              const isMovie = !!item.movies;
-                              router.push({ 
-                                pathname: isMovie ? `/movie/${item.movie_id}` as any : `/show/${item.show_id}` as any, 
-                                params: { ownerId: id, from: from || undefined } 
-                              });
-                            }}
-                          />
-                        </View>
-                      ))}
+                    <View className="flex-row flex-wrap justify-start">
+                      {stackedCollection.slice(0, displayLimit).map((stack: any) => {
+                        const { cellStyle, cardWidth, cardHeight, isList } = getGridCardDimensions();
+                        return (
+                          <View key={stack[0].id} style={cellStyle as any}>
+                            <StackCard 
+                              stack={stack} 
+                              width={cardWidth} 
+                              height={cardHeight}
+                              mode={isList ? 'list' : 'grid'}
+                              isReadOnly={id !== currentUserId}
+                              activeFormatFilter={formatFilter}
+                              onPress={() => {
+                                const item = stack[0];
+                                const isMovie = !!item.movies;
+                                router.push({ 
+                                  pathname: isMovie ? `/movie/${item.movie_id}` as any : `/show/${item.show_id}` as any, 
+                                  params: { ownerId: id, from: from || undefined } 
+                                });
+                              }}
+                            />
+                          </View>
+                        );
+                      })}
                     </View>
                   ) : (
                     <View className="p-6 items-center border-dashed border border-neutral-800 rounded-lg">
@@ -870,26 +922,30 @@ export default function UserProfileScreen() {
                     </Pressable>
                   </View>
                   {stackedWishlist.length > 0 ? (
-                    <View className="flex-row flex-wrap">
-                      {stackedWishlist.slice(0, displayLimit).map((stack: any) => (
-                        <View key={stack[0].id} style={{ width: '25%', padding: 4 }}>
-                          <StackCard 
-                            stack={stack} 
-                            width={80} 
-                            height={120}
-                            isReadOnly={id !== currentUserId}
-                            activeFormatFilter={formatFilter}
-                            onPress={() => {
-                              const item = stack[0];
-                              const isMovie = !!item.movies;
-                              router.push({ 
-                                pathname: isMovie ? `/movie/${item.movie_id}` as any : `/show/${item.show_id}` as any, 
-                                params: { ownerId: id, from: from || undefined } 
-                              });
-                            }}
-                          />
-                        </View>
-                      ))}
+                    <View className="flex-row flex-wrap justify-start">
+                      {stackedWishlist.slice(0, displayLimit).map((stack: any) => {
+                        const { cellStyle, cardWidth, cardHeight, isList } = getGridCardDimensions();
+                        return (
+                          <View key={stack[0].id} style={cellStyle as any}>
+                            <StackCard 
+                              stack={stack} 
+                              width={cardWidth} 
+                              height={cardHeight}
+                              mode={isList ? 'list' : 'grid'}
+                              isReadOnly={id !== currentUserId}
+                              activeFormatFilter={formatFilter}
+                              onPress={() => {
+                                const item = stack[0];
+                                const isMovie = !!item.movies;
+                                router.push({ 
+                                  pathname: isMovie ? `/movie/${item.movie_id}` as any : `/show/${item.show_id}` as any, 
+                                  params: { ownerId: id, from: from || undefined } 
+                                });
+                              }}
+                            />
+                          </View>
+                        );
+                      })}
                     </View>
                   ) : (
                     <View className="p-6 items-center border-dashed border border-neutral-800 rounded-lg">
@@ -914,26 +970,30 @@ export default function UserProfileScreen() {
                     <Text className="text-white font-mono text-xs uppercase tracking-widest">IN COMMON / {stackedCommon.length}</Text>
                   </View>
                   {stackedCommon.length > 0 ? (
-                    <View className="flex-row flex-wrap">
-                      {stackedCommon.slice(0, displayLimit).map((stack: any) => (
-                        <View key={stack[0].id} style={{ width: '25%', padding: 4 }}>
-                          <StackCard 
-                            stack={stack} 
-                            width={80} 
-                            height={120}
-                            isReadOnly={true}
-                            activeFormatFilter={formatFilter}
-                            onPress={() => {
-                              const item = stack[0];
-                              const isMovie = !!item.movies;
-                              router.push({ 
-                                pathname: isMovie ? `/movie/${item.movie_id}` as any : `/show/${item.show_id}` as any, 
-                                params: { ownerId: id, from: from || undefined } 
-                              });
-                            }}
-                          />
-                        </View>
-                      ))}
+                    <View className="flex-row flex-wrap justify-start">
+                      {stackedCommon.slice(0, displayLimit).map((stack: any) => {
+                        const { cellStyle, cardWidth, cardHeight, isList } = getGridCardDimensions();
+                        return (
+                          <View key={stack[0].id} style={cellStyle as any}>
+                            <StackCard 
+                              stack={stack} 
+                              width={cardWidth} 
+                              height={cardHeight}
+                              mode={isList ? 'list' : 'grid'}
+                              isReadOnly={true}
+                              activeFormatFilter={formatFilter}
+                              onPress={() => {
+                                const item = stack[0];
+                                const isMovie = !!item.movies;
+                                router.push({ 
+                                  pathname: isMovie ? `/movie/${item.movie_id}` as any : `/show/${item.show_id}` as any, 
+                                  params: { ownerId: id, from: from || undefined } 
+                                });
+                              }}
+                            />
+                          </View>
+                        );
+                      })}
                     </View>
                   ) : (
                     <View className="p-6 items-center border-dashed border border-neutral-800 rounded-lg">
@@ -1363,7 +1423,7 @@ export default function UserProfileScreen() {
               )}
             </View>
           )}
-        </View>
+        </DesktopContainer>
 
       </ScrollView>
       <ReorderShelfModal
