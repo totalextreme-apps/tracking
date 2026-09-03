@@ -1282,36 +1282,6 @@ export default function MovieDetailScreen() {
                         </Text>
                     </View>
 
-                    {/* Rating Section */}
-                    <View className="mt-6">
-                        <Text className="text-white font-bold mb-2">Rating</Text>
-                        <View className="flex-row gap-2">
-                            {[1, 2, 3, 4, 5].map((star) => {
-                                const currentRating = movieItems[0]?.rating || 0;
-                                return (
-                                    <Pressable
-                                        key={star}
-                                        disabled={isReadOnly}
-                                        onPress={async () => {
-                                            if (isReadOnly) return;
-                                            playSound('click');
-                                            // Update all formats? Or just the first one?
-                                            // Ideally rating is per movie in this app model
-                                            await Promise.all(movieItems.map((item: any) =>
-                                                updateMutation.mutateAsync({ itemId: item.id, updates: { rating: star } })
-                                            ));
-                                        }}
-                                    >
-                                        <Ionicons
-                                            name={star <= currentRating ? "star" : "star-outline"}
-                                            size={28}
-                                            color={star <= currentRating ? "#f59e0b" : "#525252"}
-                                        />
-                                    </Pressable>
-                                );
-                            })}
-                        </View>
-                    </View>
 
                     {/* Franchise & Sorting Details (Global for Movie) */}
                     {!isReadOnly && ownedFormats.length > 0 && (

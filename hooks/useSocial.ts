@@ -387,65 +387,89 @@ export const useCreatePost = (userId?: string) => {
       let dbShowId: number | undefined = undefined;
 
       if (postData.movie_id) {
-        // Fetch or cache movie row by its TMDB ID
-        const { data: existingMovie } = await supabase
+        // 1. Check if movie_id is already an internal DB primary key ID
+        const { data: existingMovieById } = await supabase
           .from('movies')
           .select('id')
-          .eq('tmdb_id', postData.movie_id)
+          .eq('id', postData.movie_id)
           .maybeSingle();
 
-        if (existingMovie) {
-          dbMovieId = existingMovie.id;
+        if (existingMovieById) {
+          dbMovieId = existingMovieById.id;
         } else {
-          try {
-            const details = await getMovieById(postData.movie_id);
-            const { data: newMovie } = await supabase
-              .from('movies')
-              .upsert({
-                tmdb_id: details.id,
-                title: details.title,
-                poster_path: details.poster_path,
-                backdrop_path: details.backdrop_path,
-                release_date: details.release_date,
-                genres: details.genres ?? null,
-              }, { onConflict: 'tmdb_id' })
-              .select('id')
-              .single();
-            if (newMovie) dbMovieId = (newMovie as any).id;
-          } catch (err) {
-            console.error('Failed to cache movie during posting:', err);
+          // 2. Check by tmdb_id
+          const { data: existingMovieByTmdb } = await supabase
+            .from('movies')
+            .select('id')
+            .eq('tmdb_id', postData.movie_id)
+            .maybeSingle();
+
+          if (existingMovieByTmdb) {
+            dbMovieId = existingMovieByTmdb.id;
+          } else {
+            // 3. Otherwise fetch from TMDB API and cache
+            try {
+              const details = await getMovieById(postData.movie_id);
+              const { data: newMovie } = await supabase
+                .from('movies')
+                .upsert({
+                  tmdb_id: details.id,
+                  title: details.title,
+                  poster_path: details.poster_path,
+                  backdrop_path: details.backdrop_path,
+                  release_date: details.release_date,
+                  genres: details.genres ?? null,
+                }, { onConflict: 'tmdb_id' })
+                .select('id')
+                .single();
+              if (newMovie) dbMovieId = (newMovie as any).id;
+            } catch (err) {
+              console.error('Failed to cache movie during posting:', err);
+            }
           }
         }
       }
 
       if (postData.show_id) {
-        // Fetch or cache show row by its TMDB ID
-        const { data: existingShow } = await supabase
+        // 1. Check if show_id is already an internal DB primary key ID
+        const { data: existingShowById } = await supabase
           .from('shows')
           .select('id')
-          .eq('tmdb_id', postData.show_id)
+          .eq('id', postData.show_id)
           .maybeSingle();
 
-        if (existingShow) {
-          dbShowId = existingShow.id;
+        if (existingShowById) {
+          dbShowId = existingShowById.id;
         } else {
-          try {
-            const details = await getTvShowById(postData.show_id);
-            const { data: newShow } = await supabase
-              .from('shows')
-              .upsert({
-                tmdb_id: details.id,
-                name: details.name,
-                poster_path: details.poster_path,
-                backdrop_path: details.backdrop_path,
-                first_air_date: details.first_air_date,
-                genres: details.genres ?? null,
-              }, { onConflict: 'tmdb_id' })
-              .select('id')
-              .single();
-            if (newShow) dbShowId = (newShow as any).id;
-          } catch (err) {
-            console.error('Failed to cache show during posting:', err);
+          // 2. Check by tmdb_id
+          const { data: existingShowByTmdb } = await supabase
+            .from('shows')
+            .select('id')
+            .eq('tmdb_id', postData.show_id)
+            .maybeSingle();
+
+          if (existingShowByTmdb) {
+            dbShowId = existingShowByTmdb.id;
+          } else {
+            // 3. Otherwise fetch from TMDB API and cache
+            try {
+              const details = await getTvShowById(postData.show_id);
+              const { data: newShow } = await supabase
+                .from('shows')
+                .upsert({
+                  tmdb_id: details.id,
+                  name: details.name,
+                  poster_path: details.poster_path,
+                  backdrop_path: details.backdrop_path,
+                  first_air_date: details.first_air_date,
+                  genres: details.genres ?? null,
+                }, { onConflict: 'tmdb_id' })
+                .select('id')
+                .single();
+              if (newShow) dbShowId = (newShow as any).id;
+            } catch (err) {
+              console.error('Failed to cache show during posting:', err);
+            }
           }
         }
       }
