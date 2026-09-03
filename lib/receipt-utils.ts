@@ -4,7 +4,7 @@ import { shareAsync } from 'expo-sharing';
 import { Platform } from 'react-native';
 
 export async function printInventoryReceipt(items: CollectionItemWithMedia[]) {
-    // 1. Generate HTML with format grouping, Movies/TV separation, & franchise sorting
+    // 1. Generate HTML matching authentic retro video store thermal receipt
     const html = generateReceiptHtml(items);
 
     // 2. Print / Share PDF
@@ -130,30 +130,44 @@ function renderItemRows(items: CollectionItemWithMedia[]): string {
             }
         }
         const seasonInfo = item.media_type === 'tv' && item.season_number ? ` S${item.season_number}` : '';
-        
         const fullTitle = `${rawTitle}${yearStr}${seasonInfo}`;
 
         const edition = item.edition ? ` [${item.edition.toUpperCase()}]` : '';
         const isGrail = item.is_grail;
         const isOnDisplay = item.is_on_display;
+        const priceVal = item.value_estimate ? `$${Number(item.value_estimate).toFixed(2).padStart(7, ' ')}` : '  [OWNED]';
 
         let badges = '';
-        if (isGrail) badges += ' <span class="badge grail">[★ GRAIL]</span>';
-        if (isOnDisplay) badges += ' <span class="badge display">[◆ PICK]</span>';
+        if (isGrail) badges += ' [★ GRAIL]';
+        if (isOnDisplay) badges += ' [◆ PICK]';
 
         return `
-        <div class="row">
-            <span class="bullet">•</span>
-            <span class="item-title">${fullTitle}${edition}</span>
-            ${badges}
+        <div class="item-row">
+            <div class="item-line1">
+                <span class="item-name">${fullTitle}${edition}${badges}</span>
+                <span class="item-price">${priceVal}</span>
+            </div>
         </div>`;
     }).join('');
 }
 
 function generateReceiptHtml(items: CollectionItemWithMedia[]) {
-    const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-    const time = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    const date = new Date().toLocaleDateString('en-US', { year: '2-digit', month: '2-digit', day: '2-digit' });
+    const time = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
     const totalCount = items.length;
+
+    // Calculate total value if available
+    let totalValuedSum = 0;
+    items.forEach(i => {
+        if (i.value_estimate !== null && i.value_estimate !== undefined) {
+            totalValuedSum += Number(i.value_estimate) || 0;
+        }
+    });
+
+    const totalValuedStr = totalValuedSum > 0 ? `$ ${totalValuedSum.toFixed(2)}` : '$   0.00';
+    const tenderedStr = totalValuedSum > 0 ? `$ ${(totalValuedSum * 1.25).toFixed(2)}` : '$ 100.00';
+    const changeStr = totalValuedSum > 0 ? `$ ${(totalValuedSum * 0.25).toFixed(2)}` : '$ 100.00';
+    const transNo = Math.floor(100000 + Math.random() * 900000);
 
     // Group items by format
     const formatOrder = ['4K ULTRA HD', 'BLU-RAY', 'DVD', 'VHS', 'DIGITAL', 'BOOTLEG', 'OTHER'];
@@ -202,9 +216,7 @@ function generateReceiptHtml(items: CollectionItemWithMedia[]) {
         sectionsHtml += `
         <div class="format-section">
             <div class="section-banner">
-                ==================================================<br />
-                === ${formatName} (${groupItems.length} ITEM${groupItems.length === 1 ? '' : 'S'}) ===<br />
-                ==================================================
+                *** ${formatName} (${groupItems.length} ITEM${groupItems.length === 1 ? '' : 'S'}) ***
             </div>
             <div class="section-body">
                 ${subSectionsHtml}
@@ -225,7 +237,7 @@ function generateReceiptHtml(items: CollectionItemWithMedia[]) {
         @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
         
         @page {
-            margin: 10mm;
+            margin: 8mm;
             size: auto;
         }
 
@@ -239,136 +251,156 @@ function generateReceiptHtml(items: CollectionItemWithMedia[]) {
             font-family: 'Courier Prime', 'Courier New', monospace;
             background-color: #ffffff;
             color: #000000;
-            padding: 12px;
+            padding: 10px;
             font-size: 11px;
-            line-height: 1.4;
+            line-height: 1.35;
             margin: 0 auto;
-            max-width: 800px;
+            max-width: 480px;
         }
         
         .header {
             text-align: center;
-            margin-bottom: 18px;
+            margin-bottom: 16px;
             font-weight: bold;
         }
         
         .store-title {
-            font-size: 20px;
+            font-size: 18px;
             font-weight: 700;
-            letter-spacing: 2px;
+            letter-spacing: 1px;
             display: block;
             margin-bottom: 2px;
         }
 
-        .doc-title {
-            font-size: 13px;
-            font-weight: 700;
-            letter-spacing: 1.5px;
-            margin-bottom: 4px;
+        .store-sub {
+            font-size: 10px;
+            margin-bottom: 2px;
         }
         
-        .meta {
+        .divider-stars {
+            letter-spacing: 1px;
+            margin: 4px 0;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+
+        .tagline {
+            font-size: 11px;
+            font-weight: 700;
+            margin: 4px 0;
+        }
+
+        .promo-block {
             font-size: 10px;
-            color: #000000;
+            margin: 6px 0;
+            line-height: 1.3;
+        }
+
+        .meta-grid {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            margin-top: 6px;
         }
 
         .format-section {
-            margin-top: 16px;
-            margin-bottom: 16px;
+            margin-top: 14px;
+            margin-bottom: 14px;
             page-break-inside: avoid;
         }
 
         .section-banner {
-            font-size: 12px;
-            font-weight: 700;
-            letter-spacing: 1px;
-            background-color: #eeeeee;
-            padding: 6px;
-            margin-bottom: 8px;
-            text-align: center;
-            border: 1px solid #000000;
-            white-space: pre-wrap;
-        }
-
-        .section-body {
-            padding-left: 4px;
-        }
-
-        .sub-section {
-            margin-bottom: 12px;
-        }
-
-        .sub-header {
             font-size: 11px;
             font-weight: 700;
             letter-spacing: 1px;
-            color: #000000;
-            margin-top: 8px;
+            background-color: #eeeeee;
+            padding: 4px;
             margin-bottom: 6px;
-            text-transform: uppercase;
+            text-align: center;
+            border-top: 1px dashed #000000;
             border-bottom: 1px dashed #000000;
-            padding-bottom: 2px;
         }
 
-        .row {
-            display: block;
-            padding: 3px 0;
-            border-bottom: 1px dotted #cccccc;
+        .section-body {
+            padding-left: 2px;
+        }
+
+        .sub-section {
+            margin-bottom: 10px;
+        }
+
+        .sub-header {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: #000000;
+            margin-top: 6px;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
+
+        .item-row {
+            padding: 2px 0;
+            border-bottom: 1px dotted #dddddd;
+        }
+
+        .item-line1 {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .item-name {
+            font-weight: 700;
+            color: #000000;
+            flex: 1;
+            padding-right: 8px;
             word-break: break-word;
         }
 
-        .bullet {
-            font-weight: bold;
-            margin-right: 4px;
+        .item-price {
+            font-weight: 700;
+            white-space: nowrap;
         }
 
-        .item-title {
+        .totals-block {
+            margin-top: 16px;
+            padding-top: 8px;
+            border-top: 1px dashed #000000;
             font-weight: 700;
-            color: #000000;
+            font-size: 11px;
         }
 
-        .badge {
-            font-size: 9px;
-            font-weight: 700;
-            margin-left: 6px;
+        .totals-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 3px;
         }
 
-        .badge.grail {
-            font-weight: 700;
-            color: #000000;
-        }
-
-        .badge.display {
-            font-weight: 700;
-            color: #333333;
+        .totals-line {
+            border-top: 1px solid #000000;
+            margin: 4px 0;
         }
 
         .footer {
-            margin-top: 24px;
-            border-top: 2px dashed #000000;
-            padding-top: 14px;
+            margin-top: 20px;
+            border-top: 1px dashed #000000;
+            padding-top: 12px;
             text-align: center;
             font-weight: bold;
         }
 
         .summary-line {
-            font-size: 10px;
-            margin-bottom: 10px;
-            padding-bottom: 8px;
+            font-size: 9px;
+            margin-bottom: 8px;
+            padding-bottom: 6px;
             border-bottom: 1px dotted #888888;
-        }
-
-        .total-count {
-            font-size: 14px;
-            font-weight: 700;
-            letter-spacing: 1px;
-            margin-bottom: 6px;
         }
 
         .notice {
             font-size: 9px;
             color: #333333;
-            margin-top: 4px;
+            margin-top: 6px;
         }
 
         @media print {
@@ -383,23 +415,70 @@ function generateReceiptHtml(items: CollectionItemWithMedia[]) {
 </head>
 <body>
     <div class="header">
-        ==================================================<br />
         <span class="store-title">TRACKING HOME VIDEO</span>
-        <div class="doc-title">INVENTORY RECEIPT</div>
-        <div class="meta">PRINTED: ${date} AT ${time}</div>
-        ==================================================
+        <div class="store-sub">412 QUAKER STREET</div>
+        <div class="store-sub">LUBBOCK, TX 79416</div>
+        <div class="store-sub">(806) 791-5001</div>
+        <div class="divider-stars">************************************************</div>
+        <div class="tagline">Thank You! Make It A Tracking Night!</div>
+        
+        <div class="promo-block">
+            We want to hear from you!<br />
+            Visit www.trackingapp.com/feedback<br />
+            Tell us about your collection and<br />
+            receive community perks via email.
+        </div>
+
+        <div class="divider-stars">************************************************</div>
+        <div class="meta-grid">
+            <span>Store: 91241</span>
+            <span>Clerk: MEMBER #1</span>
+        </div>
+        <div class="meta-grid">
+            <span>Date: ${date} ${time}</span>
+            <span>Trans: #${transNo}</span>
+        </div>
+        <div class="divider-stars">************************************************</div>
     </div>
 
     <div class="content">
         ${sectionsHtml}
     </div>
 
+    <div class="totals-block">
+        <div class="totals-row">
+            <span>Total Collection Items</span>
+            <span>${totalCount}</span>
+        </div>
+        <div class="totals-row">
+            <span>Est. Portfolio Value</span>
+            <span>${totalValuedStr}</span>
+        </div>
+        <div class="totals-row">
+            <span>Tax</span>
+            <span>$   0.00</span>
+        </div>
+        <div class="totals-line"></div>
+        <div class="totals-row">
+            <span>Subtotal</span>
+            <span>${totalValuedStr}</span>
+        </div>
+        <div class="totals-row">
+            <span>Tendered CASH</span>
+            <span>${tenderedStr}</span>
+        </div>
+        <div class="totals-row">
+            <span>Change Due</span>
+            <span>${changeStr}</span>
+        </div>
+    </div>
+
     <div class="footer">
         <div class="summary-line">FORMAT BREAKDOWN: ${formatSummaryHtml}</div>
-        <div class="total-count">TOTAL COLLECTION ITEMS: ${totalCount}</div>
-        <div>KEEP THIS RECEIPT FOR YOUR RECORDS</div>
-        <div class="notice">* OFFICIAL INVENTORY ARCHIVE RECEIPT *</div>
-        ==================================================
+        <div>THANK YOU FOR TRACKING WITH US!</div>
+        <div class="notice">BE KIND -- PLEASE REWIND YOUR TAPES!</div>
+        <div class="notice">* KEEP THIS RECEIPT FOR YOUR RECORDS *</div>
+        <div class="divider-stars" style="margin-top:8px;">************************************************</div>
     </div>
 </body>
 </html>
