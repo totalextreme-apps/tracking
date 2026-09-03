@@ -20,6 +20,7 @@ import { getGenres, getStacks } from '@/lib/collection-utils';
 import { CommunityHeaderNav } from '@/components/CommunityHeaderNav';
 import { DesktopContainer } from '@/components/DesktopContainer';
 import { usePersistedState } from '@/hooks/usePersistedState';
+import Slider from '@react-native-community/slider';
 
 type TabType = 'on-display' | 'grails' | 'collection' | 'wishlist' | 'bin' | 'analytics' | 'in-common' | 'guestbook';
 export type SortOption = 'recent' | 'title' | 'release' | 'rating' | 'format' | 'value';
@@ -32,7 +33,9 @@ export default function UserProfileScreen() {
   const router = useRouter();
   const { playSound } = useSound();
 
-  const [profileViewMode, setProfileViewMode] = usePersistedState<'grid2' | 'grid4' | 'grid6' | 'list'>('profile_viewMode', isDesktop ? 'grid4' : 'grid2');
+  const [profileViewMode, setProfileViewMode] = usePersistedState<'grid2' | 'grid4' | 'grid6' | 'custom' | 'list'>('profile_viewMode', isDesktop ? 'grid4' : 'grid2');
+  const [numColumns, setNumColumns] = usePersistedState<number>('profile_num_columns', isDesktop ? 4 : 2);
+  const [isSliderLocked, setIsSliderLocked] = usePersistedState<boolean>('profile_slider_locked', false);
 
   const { data: profile, isLoading: profileLoading } = useProfile(id);
   const { data: followers } = useFollowers(id);
@@ -254,14 +257,20 @@ export default function UserProfileScreen() {
     if (profileViewMode === 'list') {
       return { cellStyle: { width: '100%', padding: 4 }, cardWidth: undefined, cardHeight: undefined, isList: true };
     }
-    if (profileViewMode === 'grid2') {
-      return { cellStyle: { width: isDesktop ? '50%' : '100%', padding: 8, alignItems: 'center' as const }, cardWidth: isDesktop ? 260 : 180, cardHeight: isDesktop ? 390 : 270, isList: false };
-    }
-    if (profileViewMode === 'grid6') {
-      return { cellStyle: { width: isDesktop ? '16.666%' : '33.333%', padding: 4, alignItems: 'center' as const }, cardWidth: isDesktop ? 150 : 100, cardHeight: isDesktop ? 225 : 150, isList: false };
-    }
-    // Default grid4
-    return { cellStyle: { width: isDesktop ? '25%' : '50%', padding: 6, alignItems: 'center' as const }, cardWidth: isDesktop ? 210 : 150, cardHeight: isDesktop ? 315 : 225, isList: false };
+
+    const cols = numColumns || (profileViewMode === 'grid2' ? 2 : profileViewMode === 'grid6' ? 6 : 4);
+    const cellWidthPct = `${100 / cols}%`;
+    const targetWidth = isDesktop 
+      ? Math.max(130, Math.min(280, Math.round(1100 / cols)))
+      : Math.max(95, Math.min(180, Math.round(360 / cols)));
+    const targetHeight = Math.round(targetWidth * 1.5);
+
+    return { 
+      cellStyle: { width: cellWidthPct, padding: 6, alignItems: 'center' as const }, 
+      cardWidth: targetWidth, 
+      cardHeight: targetHeight, 
+      isList: false 
+    };
   };
   
   const commonItems = useMemo(() => {
@@ -694,29 +703,66 @@ export default function UserProfileScreen() {
                   </Pressable>
                 </View>
 
-                {/* View Mode controls */}
-                <View className="flex-row items-center gap-2 mt-3 pt-3 border-t border-neutral-800/80 flex-wrap">
-                  <Text className="text-neutral-500 font-mono text-[9px] uppercase tracking-tighter mr-1">VIEW:</Text>
-                  <View className="flex-row bg-neutral-950 rounded border border-neutral-800 p-0.5">
-                    <Pressable onPress={() => { playSound('click'); setProfileViewMode('grid2'); }} className={`px-2.5 py-1 rounded flex-row items-center gap-1 ${profileViewMode === 'grid2' ? 'bg-neutral-800' : ''}`}>
-                      <Ionicons name="grid-outline" size={10} color={profileViewMode === 'grid2' ? '#f59e0b' : '#737373'} />
-                      <Text className={`font-mono text-[8px] font-bold ${profileViewMode === 'grid2' ? 'text-amber-500' : 'text-neutral-500'}`}>2 COLS</Text>
-                    </Pressable>
-                    <Pressable onPress={() => { playSound('click'); setProfileViewMode('grid4'); }} className={`px-2.5 py-1 rounded flex-row items-center gap-1 ${profileViewMode === 'grid4' ? 'bg-neutral-800' : ''}`}>
-                      <Ionicons name="grid-outline" size={10} color={profileViewMode === 'grid4' ? '#f59e0b' : '#737373'} />
-                      <Text className={`font-mono text-[8px] font-bold ${profileViewMode === 'grid4' ? 'text-amber-500' : 'text-neutral-500'}`}>4 COLS</Text>
-                    </Pressable>
-                    {isDesktop && (
-                      <Pressable onPress={() => { playSound('click'); setProfileViewMode('grid6'); }} className={`px-2.5 py-1 rounded flex-row items-center gap-1 ${profileViewMode === 'grid6' ? 'bg-neutral-800' : ''}`}>
-                        <Ionicons name="grid-outline" size={10} color={profileViewMode === 'grid6' ? '#f59e0b' : '#737373'} />
-                        <Text className={`font-mono text-[8px] font-bold ${profileViewMode === 'grid6' ? 'text-amber-500' : 'text-neutral-500'}`}>6 COLS</Text>
+                {/* View Mode & Interactive Column Slider */}
+                <View className="flex-row items-center justify-between mt-3 pt-3 border-t border-neutral-800/80 flex-wrap gap-3">
+                  <View className="flex-row items-center gap-2">
+                    <Text className="text-neutral-500 font-mono text-[9px] uppercase tracking-tighter mr-1">VIEW:</Text>
+                    <View className="flex-row bg-neutral-950 rounded border border-neutral-800 p-0.5">
+                      <Pressable onPress={() => { playSound('click'); setProfileViewMode('grid2'); setNumColumns(2); }} className={`px-2.5 py-1 rounded flex-row items-center gap-1 ${profileViewMode === 'grid2' ? 'bg-neutral-800' : ''}`}>
+                        <Ionicons name="grid-outline" size={10} color={profileViewMode === 'grid2' ? '#f59e0b' : '#737373'} />
+                        <Text className={`font-mono text-[8px] font-bold ${profileViewMode === 'grid2' ? 'text-amber-500' : 'text-neutral-500'}`}>2 COLS</Text>
                       </Pressable>
-                    )}
-                    <Pressable onPress={() => { playSound('click'); setProfileViewMode('list'); }} className={`px-2.5 py-1 rounded flex-row items-center gap-1 ${profileViewMode === 'list' ? 'bg-neutral-800' : ''}`}>
-                      <Ionicons name="list" size={10} color={profileViewMode === 'list' ? '#f59e0b' : '#737373'} />
-                      <Text className={`font-mono text-[8px] font-bold ${profileViewMode === 'list' ? 'text-amber-500' : 'text-neutral-500'}`}>LIST</Text>
-                    </Pressable>
+                      <Pressable onPress={() => { playSound('click'); setProfileViewMode('grid4'); setNumColumns(4); }} className={`px-2.5 py-1 rounded flex-row items-center gap-1 ${profileViewMode === 'grid4' ? 'bg-neutral-800' : ''}`}>
+                        <Ionicons name="grid-outline" size={10} color={profileViewMode === 'grid4' ? '#f59e0b' : '#737373'} />
+                        <Text className={`font-mono text-[8px] font-bold ${profileViewMode === 'grid4' ? 'text-amber-500' : 'text-neutral-500'}`}>4 COLS</Text>
+                      </Pressable>
+                      {isDesktop && (
+                        <Pressable onPress={() => { playSound('click'); setProfileViewMode('grid6'); setNumColumns(6); }} className={`px-2.5 py-1 rounded flex-row items-center gap-1 ${profileViewMode === 'grid6' ? 'bg-neutral-800' : ''}`}>
+                          <Ionicons name="grid-outline" size={10} color={profileViewMode === 'grid6' ? '#f59e0b' : '#737373'} />
+                          <Text className={`font-mono text-[8px] font-bold ${profileViewMode === 'grid6' ? 'text-amber-500' : 'text-neutral-500'}`}>6 COLS</Text>
+                        </Pressable>
+                      )}
+                      <Pressable onPress={() => { playSound('click'); setProfileViewMode('list'); }} className={`px-2.5 py-1 rounded flex-row items-center gap-1 ${profileViewMode === 'list' ? 'bg-neutral-800' : ''}`}>
+                        <Ionicons name="list" size={10} color={profileViewMode === 'list' ? '#f59e0b' : '#737373'} />
+                        <Text className={`font-mono text-[8px] font-bold ${profileViewMode === 'list' ? 'text-amber-500' : 'text-neutral-500'}`}>LIST</Text>
+                      </Pressable>
+                    </View>
                   </View>
+
+                  {/* Interactive Column Slider & Lock */}
+                  {profileViewMode !== 'list' && (
+                    <View className="flex-row items-center flex-1 max-w-[240px] ml-auto">
+                      <Slider 
+                        style={{ flex: 1, height: 28 }} 
+                        minimumValue={1} 
+                        maximumValue={isDesktop ? 8 : 4} 
+                        step={1} 
+                        value={numColumns} 
+                        onValueChange={(val) => { 
+                          if (!isSliderLocked) {
+                            setNumColumns(val); 
+                            if (val === 2) setProfileViewMode('grid2');
+                            else if (val === 4) setProfileViewMode('grid4');
+                            else if (val === 6) setProfileViewMode('grid6');
+                            else setProfileViewMode('custom');
+                          }
+                        }} 
+                        minimumTrackTintColor={isSliderLocked ? "#666" : "#f59e0b"} 
+                        maximumTrackTintColor="#333" 
+                        thumbTintColor={isSliderLocked ? "#666" : "#f59e0b"} 
+                        disabled={isSliderLocked}
+                      />
+                      <Pressable 
+                        onPress={() => {
+                            setIsSliderLocked(!isSliderLocked);
+                            playSound('click');
+                        }} 
+                        className={`ml-2 p-1 rounded-full ${isSliderLocked ? 'bg-amber-900/30' : 'bg-neutral-800'}`}
+                      >
+                        <Ionicons name={isSliderLocked ? "lock-closed" : "lock-open-outline"} size={14} color={isSliderLocked ? "#f59e0b" : "#666"} />
+                      </Pressable>
+                    </View>
+                  )}
                 </View>
             </View>
 
