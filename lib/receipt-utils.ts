@@ -416,9 +416,9 @@ function generateReceiptHtml(items: CollectionItemWithMedia[]) {
 <body>
     <div class="header">
         <span class="store-title">TRACKING HOME VIDEO</span>
-        <div class="store-sub">412 QUAKER STREET</div>
-        <div class="store-sub">LUBBOCK, TX 79416</div>
-        <div class="store-sub">(806) 791-5001</div>
+        <div class="store-sub">1428 ELM STREET</div>
+        <div class="store-sub">SPRINGWOOD, OH 44107</div>
+        <div class="store-sub">(800) 555-1985</div>
         <div class="divider-stars">************************************************</div>
         <div class="tagline">Thank You! Make It A Tracking Night!</div>
         
