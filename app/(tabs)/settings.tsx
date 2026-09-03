@@ -1007,12 +1007,16 @@ export default function SettingsScreen() {
                     return;
                   }
  
-                  const player = createAudioPlayer(require('@/assets/sounds/dotmatrix_noise.mp3'));
-                  player.play();
- 
+                  try {
+                    const player = createAudioPlayer(require('@/assets/sounds/dotmatrix_noise.mp3'));
+                    player?.play();
+                  } catch (soundErr) {
+                    console.log('Audio playback skipped for receipt print:', soundErr);
+                  }
+
                   await printInventoryReceipt(inventoryItems);
                 } catch (e) {
-                  Alert.alert('Error', (e as Error).message);
+                  Alert.alert('Print Error', (e as Error).message || 'Failed to print receipt.');
                 }
               }}
               disabled={isCollectionLoading}

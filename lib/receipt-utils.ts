@@ -14,27 +14,63 @@ export async function printInventoryReceipt(items: CollectionItemWithMedia[]) {
     // 2. Generate HTML
     const html = generateReceiptHtml(sortedItems);
 
-    // 3. Play Sound (Optional - can be passed in or handled here if we assume assets)
-    // We'll let the UI handle sound to avoid asset loading issues here, or load a default.
-
-    // 4. Print / Generate PDF
+    // 3. Print / Share PDF
     if (Platform.OS === 'web') {
-        const printWindow = window.open('', '', 'width=800,height=600');
-        if (printWindow) {
-            printWindow.document.write(html);
-            printWindow.document.close();
-            printWindow.focus();
-            // Wait slightly for resources to load if any, though ours are mostly text/inline styles
-            setTimeout(() => {
-                printWindow.print();
-                printWindow.close();
-            }, 250);
-        } else {
-            alert('Pop-up blocker prevented printing. Please allow pop-ups for this site.');
+        try {
+            await Print.printAsync({ html });
+        } catch (e) {
+            printViaIframe(html);
         }
     } else {
-        const { uri } = await Print.printToFileAsync({ html });
-        await shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
+        try {
+            await Print.printAsync({ html });
+        } catch (e) {
+            try {
+                const { uri } = await Print.printToFileAsync({ html });
+                await shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
+            } catch (err) {
+                console.error('Mobile native print error:', err);
+                throw new Error('Failed to generate print dialog on this device.');
+            }
+        }
+    }
+}
+
+function printViaIframe(html: string) {
+    if (typeof document === 'undefined') return;
+
+    try {
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = '0';
+        document.body.appendChild(iframe);
+
+        const doc = iframe.contentWindow?.document || iframe.contentDocument;
+        if (doc) {
+            doc.open();
+            doc.write(html);
+            doc.close();
+
+            setTimeout(() => {
+                try {
+                    iframe.contentWindow?.focus();
+                    iframe.contentWindow?.print();
+                } catch (err) {
+                    console.error('Print iframe trigger error:', err);
+                }
+                setTimeout(() => {
+                    if (document.body.contains(iframe)) {
+                        document.body.removeChild(iframe);
+                    }
+                }, 2000);
+            }, 300);
+        }
+    } catch (e) {
+        console.error('Iframe creation error:', e);
     }
 }
 
@@ -45,7 +81,7 @@ function generateReceiptHtml(items: CollectionItemWithMedia[]) {
 
     const rows = items.map(item => {
         const rawTitle = item.movies?.title || item.shows?.name || 'Unknown Title';
-        const seasonInfo = item.media_type === 'tv' ? ` S${item.season_number}` : '';
+        const seasonInfo = item.media_type === 'tv' ? ` S${item.season_number || 1}` : '';
         const fullTitle = `${rawTitle}${seasonInfo}`.toUpperCase();
 
         // Take first 25 chars, pad with dots
@@ -76,6 +112,7 @@ function generateReceiptHtml(items: CollectionItemWithMedia[]) {
             color: #000;
             padding: 20px;
             font-size: 12px;
+            margin: 0;
         }
         
         .header {
@@ -101,6 +138,7 @@ function generateReceiptHtml(items: CollectionItemWithMedia[]) {
             justify-content: space-between;
             margin-bottom: 4px;
             white-space: pre;
+            font-family: monospace;
         }
         
         .footer {
