@@ -4,7 +4,7 @@ import { shareAsync } from 'expo-sharing';
 import { Platform } from 'react-native';
 
 export async function printInventoryReceipt(items: CollectionItemWithMedia[]) {
-    // 1. Generate HTML with format grouping & franchise sorting
+    // 1. Generate HTML with format grouping, Movies/TV separation, & franchise sorting
     const html = generateReceiptHtml(items);
 
     // 2. Print / Share PDF
@@ -138,16 +138,14 @@ function renderItemRows(items: CollectionItemWithMedia[]): string {
         const isOnDisplay = item.is_on_display;
 
         let badges = '';
-        if (isGrail) badges += ' <span class="badge grail">★ GRAIL</span>';
-        if (isOnDisplay) badges += ' <span class="badge display">◆ PICK</span>';
+        if (isGrail) badges += ' <span class="badge grail">[★ GRAIL]</span>';
+        if (isOnDisplay) badges += ' <span class="badge display">[◆ PICK]</span>';
 
         return `
         <div class="row">
-            <div class="row-left">
-                <span class="bullet">•</span>
-                <span class="item-title">${fullTitle}${edition}</span>
-                ${badges}
-            </div>
+            <span class="bullet">•</span>
+            <span class="item-title">${fullTitle}${edition}</span>
+            ${badges}
         </div>`;
     }).join('');
 }
@@ -188,7 +186,7 @@ function generateReceiptHtml(items: CollectionItemWithMedia[]) {
         if (movies.length > 0) {
             subSectionsHtml += `
             <div class="sub-section">
-                <div class="sub-header">── MOVIES [${movies.length}] ──</div>
+                <div class="sub-header">--- MOVIES (${movies.length}) ---</div>
                 ${renderItemRows(movies)}
             </div>`;
         }
@@ -196,16 +194,17 @@ function generateReceiptHtml(items: CollectionItemWithMedia[]) {
         if (tvShows.length > 0) {
             subSectionsHtml += `
             <div class="sub-section">
-                <div class="sub-header">── TV SHOWS [${tvShows.length}] ──</div>
+                <div class="sub-header">--- TV SHOWS (${tvShows.length}) ---</div>
                 ${renderItemRows(tvShows)}
             </div>`;
         }
 
         sectionsHtml += `
         <div class="format-section">
-            <div class="section-title">
-                <span class="section-name">=== ${formatName} ===</span>
-                <span class="section-count">[${groupItems.length} ITEM${groupItems.length === 1 ? '' : 'S'}]</span>
+            <div class="section-banner">
+                ==================================================<br />
+                === ${formatName} (${groupItems.length} ITEM${groupItems.length === 1 ? '' : 'S'}) ===<br />
+                ==================================================
             </div>
             <div class="section-body">
                 ${subSectionsHtml}
@@ -213,12 +212,7 @@ function generateReceiptHtml(items: CollectionItemWithMedia[]) {
         </div>`;
     });
 
-    const formatSummaryHtml = formatCounts.map(f => `
-        <div class="summary-pill">
-            <span class="summary-label">${f.format}:</span>
-            <span class="summary-val">${f.count}</span>
-        </div>
-    `).join('');
+    const formatSummaryHtml = formatCounts.map(f => `${f.format}: ${f.count}`).join(' | ');
 
     return `
 <!DOCTYPE html>
@@ -231,19 +225,21 @@ function generateReceiptHtml(items: CollectionItemWithMedia[]) {
         @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
         
         @page {
-            margin: 12mm;
+            margin: 10mm;
             size: auto;
         }
 
         * {
             box-sizing: border-box;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
         }
 
         body {
             font-family: 'Courier Prime', 'Courier New', monospace;
             background-color: #ffffff;
             color: #000000;
-            padding: 16px;
+            padding: 12px;
             font-size: 11px;
             line-height: 1.4;
             margin: 0 auto;
@@ -252,48 +248,46 @@ function generateReceiptHtml(items: CollectionItemWithMedia[]) {
         
         .header {
             text-align: center;
-            margin-bottom: 20px;
-            border-bottom: 2px dashed #000;
-            padding-bottom: 12px;
+            margin-bottom: 18px;
+            font-weight: bold;
         }
         
         .store-title {
-            font-size: 22px;
+            font-size: 20px;
             font-weight: 700;
             letter-spacing: 2px;
             display: block;
-            margin-bottom: 4px;
+            margin-bottom: 2px;
         }
 
         .doc-title {
             font-size: 13px;
             font-weight: 700;
             letter-spacing: 1.5px;
-            margin-bottom: 6px;
+            margin-bottom: 4px;
         }
         
         .meta {
             font-size: 10px;
-            color: #222;
+            color: #000000;
         }
 
         .format-section {
-            margin-top: 18px;
-            margin-bottom: 18px;
+            margin-top: 16px;
+            margin-bottom: 16px;
             page-break-inside: avoid;
         }
 
-        .section-title {
+        .section-banner {
             font-size: 12px;
             font-weight: 700;
-            border-top: 1.5px solid #000;
-            border-bottom: 1.5px solid #000;
-            padding: 4px 6px;
-            margin-bottom: 8px;
             letter-spacing: 1px;
-            display: flex;
-            justify-content: space-between;
-            background-color: #f4f4f4;
+            background-color: #eeeeee;
+            padding: 6px;
+            margin-bottom: 8px;
+            text-align: center;
+            border: 1px solid #000000;
+            white-space: pre-wrap;
         }
 
         .section-body {
@@ -301,105 +295,80 @@ function generateReceiptHtml(items: CollectionItemWithMedia[]) {
         }
 
         .sub-section {
-            margin-bottom: 10px;
+            margin-bottom: 12px;
         }
 
         .sub-header {
-            font-size: 10px;
+            font-size: 11px;
             font-weight: 700;
             letter-spacing: 1px;
-            color: #333;
-            margin-top: 6px;
-            margin-bottom: 4px;
+            color: #000000;
+            margin-top: 8px;
+            margin-bottom: 6px;
             text-transform: uppercase;
+            border-bottom: 1px dashed #000000;
+            padding-bottom: 2px;
         }
 
         .row {
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
+            display: block;
             padding: 3px 0;
-            border-bottom: 1px dotted #e0e0e0;
-        }
-
-        .row-left {
-            display: flex;
-            align-items: baseline;
-            flex-wrap: wrap;
-            gap: 4px;
+            border-bottom: 1px dotted #cccccc;
+            word-break: break-word;
         }
 
         .bullet {
             font-weight: bold;
-            margin-right: 2px;
+            margin-right: 4px;
         }
 
         .item-title {
             font-weight: 700;
-            color: #000;
+            color: #000000;
         }
 
         .badge {
-            font-size: 8px;
+            font-size: 9px;
             font-weight: 700;
-            padding: 0 4px;
-            border-radius: 2px;
-            text-transform: uppercase;
+            margin-left: 6px;
         }
 
         .badge.grail {
-            border: 1px solid #000;
-            background-color: #000;
-            color: #fff;
+            font-weight: 700;
+            color: #000000;
         }
 
         .badge.display {
-            border: 1px solid #444;
-            background-color: #eee;
-            color: #111;
+            font-weight: 700;
+            color: #333333;
         }
 
         .footer {
-            margin-top: 28px;
-            border-top: 2px dashed #000;
-            padding-top: 16px;
+            margin-top: 24px;
+            border-top: 2px dashed #000000;
+            padding-top: 14px;
             text-align: center;
+            font-weight: bold;
         }
 
-        .summary-box {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 12px;
-            margin-bottom: 14px;
-            padding-bottom: 10px;
-            border-bottom: 1px dotted #aaa;
-        }
-
-        .summary-pill {
+        .summary-line {
             font-size: 10px;
-            font-weight: 700;
-        }
-
-        .summary-label {
-            color: #444;
-        }
-
-        .summary-val {
-            color: #000;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px dotted #888888;
         }
 
         .total-count {
-            font-size: 15px;
+            font-size: 14px;
             font-weight: 700;
             letter-spacing: 1px;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
 
         .notice {
             font-size: 9px;
-            color: #555;
-            margin-top: 6px;
+            color: #333333;
+            margin-top: 4px;
         }
 
         @media print {
@@ -414,9 +383,11 @@ function generateReceiptHtml(items: CollectionItemWithMedia[]) {
 </head>
 <body>
     <div class="header">
+        ==================================================<br />
         <span class="store-title">TRACKING HOME VIDEO</span>
         <div class="doc-title">INVENTORY RECEIPT</div>
         <div class="meta">PRINTED: ${date} AT ${time}</div>
+        ==================================================
     </div>
 
     <div class="content">
@@ -424,13 +395,11 @@ function generateReceiptHtml(items: CollectionItemWithMedia[]) {
     </div>
 
     <div class="footer">
-        <div class="summary-box">
-            ${formatSummaryHtml}
-        </div>
-
+        <div class="summary-line">FORMAT BREAKDOWN: ${formatSummaryHtml}</div>
         <div class="total-count">TOTAL COLLECTION ITEMS: ${totalCount}</div>
         <div>KEEP THIS RECEIPT FOR YOUR RECORDS</div>
         <div class="notice">* OFFICIAL INVENTORY ARCHIVE RECEIPT *</div>
+        ==================================================
     </div>
 </body>
 </html>
