@@ -84,7 +84,7 @@ export function GlobalHeader() {
                         : { paddingHorizontal: 16 }
                 ]}
             >
-                {/* Logo & Descriptor */}
+                {/* Logo */}
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flexShrink: 1 }}>
                     <Pressable onPress={() => { playSound('click'); router.push('/'); }}>
                         <Image
@@ -93,15 +93,6 @@ export function GlobalHeader() {
                             resizeMode="contain"
                         />
                     </Pressable>
-                    {!isDesktop && (
-                        <Text
-                            className="text-amber-500/70 text-[8px] uppercase tracking-[2px] mt-1 ml-1"
-                            style={{ fontFamily: 'VCR_OSD_MONO' }}
-                            numberOfLines={1}
-                        >
-                            {getDescriptor()}
-                        </Text>
-                    )}
                 </View>
 
                 {/* Desktop Navigation Tabs */}

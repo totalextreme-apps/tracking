@@ -16,6 +16,7 @@ import { QuickActionModal } from '@/components/QuickActionModal';
 import { StackCard } from '@/components/StackCard';
 import { RouletteModal } from '@/components/RouletteModal';
 import { ShareModal } from '@/components/ShareModal';
+import { WatchLogModal } from '@/components/WatchLogModal';
 import { DesktopContainer } from '@/components/DesktopContainer';
 import { useResponsiveColumns } from '@/hooks/useResponsiveColumns';
 import { useAuth } from '@/context/AuthContext';
@@ -287,6 +288,7 @@ export default function HomeScreen() {
   const [shareTitle, setShareTitle] = useState('');
   const [shareLinkMessage, setShareLinkMessage] = useState('');
   const [shareTextMessage, setShareTextMessage] = useState('');
+  const [showWatchLogModal, setShowWatchLogModal] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -581,10 +583,20 @@ export default function HomeScreen() {
           {recentlyWatched.length > 0 && !thriftMode && (
             <View className="mb-8 mt-2">
               <View className="px-4 md:px-8 flex-row items-center justify-between mb-3 max-w-7xl mx-auto w-full gap-2 flex-wrap">
-                <View className="flex-row items-baseline gap-2 flex-wrap flex-1 min-w-[200px]">
+                <Pressable
+                  onPress={() => {
+                    playSound('click');
+                    setShowWatchLogModal(true);
+                  }}
+                  className="flex-row items-center gap-2 flex-wrap flex-1 min-w-[200px] active:opacity-75"
+                >
                   <Text className="text-emerald-500 font-bold text-2xl tracking-tighter uppercase" style={{ fontFamily: 'VCR_OSD_MONO' }}>RECENTLY WATCHED</Text>
-                  <Text className="text-neutral-500 font-mono text-xs ml-1">/ {recentlyWatched.length}</Text>
-                </View>
+                  <Text className="text-neutral-500 font-mono text-xs ml-0.5">/ {recentlyWatched.length}</Text>
+                  <View className="bg-emerald-950 px-2 py-0.5 rounded border border-emerald-500/30 flex-row items-center gap-1 ml-1">
+                    <Ionicons name="list" size={10} color="#10b981" />
+                    <Text className="text-emerald-400 font-mono text-[9px] font-bold uppercase">VIEW LOG ›</Text>
+                  </View>
+                </Pressable>
                 <View className="flex-row items-center gap-2">
                   <Pressable onPress={scrollRecentlyWatchedLeft} className="p-2 bg-neutral-900 rounded-full border border-neutral-800 active:bg-neutral-800"><Ionicons name="chevron-back" size={16} color="#10b981" /></Pressable>
                   <Pressable onPress={scrollRecentlyWatchedRight} className="p-2 bg-neutral-900 rounded-full border border-neutral-800 active:bg-neutral-800"><Ionicons name="chevron-forward" size={16} color="#10b981" /></Pressable>
@@ -958,6 +970,13 @@ export default function HomeScreen() {
         title={shareTitle}
         messageLink={shareLinkMessage}
         messageText={shareTextMessage}
+      />
+
+      <WatchLogModal
+        visible={showWatchLogModal}
+        onClose={() => setShowWatchLogModal(false)}
+        collection={collection || []}
+        navigateToDetail={navigateToDetail}
       />
 
       {showRewind && (
