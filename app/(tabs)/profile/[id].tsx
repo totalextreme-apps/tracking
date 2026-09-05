@@ -260,12 +260,26 @@ export default function UserProfileScreen() {
 
     const cols = numColumns || (profileViewMode === 'grid2' ? 2 : profileViewMode === 'grid6' ? 6 : 4);
     const cellWidthPct = `${100 / cols}%`;
+    const CARD_GAP = 12;
     const containerWidth = isDesktop ? Math.min(1336, (windowWidth || 1200) - 64) : ((windowWidth || 390) - 32);
-    const targetWidth = Math.max(90, Math.floor((containerWidth / cols) - 12));
+    const rawWidth = Math.floor((containerWidth - (cols * CARD_GAP)) / cols);
+
+    let targetWidth = rawWidth;
+    if (isDesktop) {
+      if (cols === 2) targetWidth = Math.min(rawWidth, 400);
+      else if (cols === 3) targetWidth = Math.min(rawWidth, 290);
+      else if (cols === 4) targetWidth = Math.min(rawWidth, 230);
+      else if (cols === 5) targetWidth = Math.min(rawWidth, 190);
+      else if (cols === 6) targetWidth = Math.min(rawWidth, 160);
+      else if (cols >= 7) targetWidth = Math.min(rawWidth, 135);
+    } else {
+      targetWidth = Math.max(90, rawWidth);
+    }
+
     const targetHeight = Math.round(targetWidth * 1.5);
 
     return { 
-      cellStyle: { width: cellWidthPct, padding: 6, alignItems: 'center' as const }, 
+      cellStyle: { width: cellWidthPct, paddingHorizontal: CARD_GAP / 2, marginBottom: 20, alignItems: 'center' as const }, 
       cardWidth: targetWidth, 
       cardHeight: targetHeight, 
       isList: false 

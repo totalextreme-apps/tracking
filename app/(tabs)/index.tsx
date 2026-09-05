@@ -924,7 +924,7 @@ export default function HomeScreen() {
                 <View>
                   <View className="flex-row flex-wrap" style={{ marginHorizontal: -(CARD_GAP / 2) }}>
                     {filteredStacks.slice(0, displayLimit).map((stack: any) => (
-                      <View key={stack[0]?.id} style={{ width: `${100 / resolvedColumns}%`, paddingHorizontal: CARD_GAP / 2, marginBottom: 40, alignItems: 'center' }}>
+                      <View key={stack[0]?.id} style={{ width: `${100 / resolvedColumns}%`, paddingHorizontal: CARD_GAP / 2, marginBottom: 20, alignItems: 'center' }}>
                         <StackCard stack={stack} onPress={() => navigateToDetail(stack[0])} onToggleFavorite={toggleFavorite} onLongPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); setQuickActionItem(stack[0]); }} onRatePress={(rating) => handleGridRate(stack[0], rating)} width={calculatedCardWidth} mode={viewMode === 'list' ? 'list' : 'grid'} activeFormatFilter={formatFilter} />
                       </View>
                     ))}

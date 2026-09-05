@@ -304,8 +304,8 @@ function generateReceiptHtml(items: CollectionItemWithMedia[]) {
         }
 
         .format-section {
-            margin-top: 14px;
-            margin-bottom: 14px;
+            margin-top: 8px;
+            margin-bottom: 8px;
             page-break-inside: avoid;
         }
 
@@ -314,8 +314,8 @@ function generateReceiptHtml(items: CollectionItemWithMedia[]) {
             font-weight: 700;
             letter-spacing: 1px;
             background-color: #eeeeee;
-            padding: 4px;
-            margin-bottom: 6px;
+            padding: 2px 4px;
+            margin-bottom: 3px;
             text-align: center;
             border-top: 1px dashed #000000;
             border-bottom: 1px dashed #000000;
@@ -326,7 +326,7 @@ function generateReceiptHtml(items: CollectionItemWithMedia[]) {
         }
 
         .sub-section {
-            margin-bottom: 10px;
+            margin-bottom: 4px;
         }
 
         .sub-header {
@@ -334,13 +334,13 @@ function generateReceiptHtml(items: CollectionItemWithMedia[]) {
             font-weight: 700;
             letter-spacing: 1px;
             color: #000000;
-            margin-top: 6px;
-            margin-bottom: 4px;
+            margin-top: 3px;
+            margin-bottom: 2px;
             text-transform: uppercase;
         }
 
         .item-row {
-            padding: 2px 0;
+            padding: 1px 0;
             border-bottom: 1px dotted #dddddd;
         }
 

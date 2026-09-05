@@ -251,14 +251,14 @@ export function StackCard({
   const renderInfoBox = () => {
     return (
       <View 
-        className="bg-neutral-900/60 border border-neutral-800/60 rounded-xl p-2.5 mt-3 w-full"
-        style={{ minHeight: 68, justifyContent: 'space-between', alignItems: 'center' }}
+        className="bg-neutral-900/60 border border-neutral-800/60 rounded-xl p-2 mt-1.5 w-full"
+        style={{ minHeight: 52, justifyContent: 'space-between', alignItems: 'center' }}
       >
         {/* Title */}
         <Text 
           className="text-white font-mono text-[9px] font-bold text-center" 
           numberOfLines={2} 
-          style={{ minHeight: 24, width: '100%', lineHeight: 12 }}
+          style={{ minHeight: 20, width: '100%', lineHeight: 11 }}
         >
           {media 
             ? (topItem.media_type === 'tv' && topItem.season_number 
@@ -268,7 +268,7 @@ export function StackCard({
         </Text>
 
         {/* Format & Rating row */}
-        <View className="flex-row w-full justify-center items-center mt-1.5 gap-1.5 flex-wrap">
+        <View className="flex-row w-full justify-center items-center mt-1 gap-1 flex-wrap">
           {sorted.map((item) => (
             <Pressable
               key={item.id}
