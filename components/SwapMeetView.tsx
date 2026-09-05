@@ -90,10 +90,12 @@ const FORMAT_COLORS: Record<string, string> = {
 
 export function SwapMeetView({ 
   selectedSwapTitleKey, 
-  setSelectedSwapTitleKey 
+  setSelectedSwapTitleKey,
+  scrollEnabled = true
 }: { 
   selectedSwapTitleKey?: string | null; 
   setSelectedSwapTitleKey?: (key: string | null) => void;
+  scrollEnabled?: boolean;
 }) {
   const router = useRouter();
   const { userId: currentUserId } = useAuth();
@@ -423,12 +425,15 @@ export function SwapMeetView({
           keyExtractor={item => item.id}
           renderItem={renderTitleCard}
           contentContainerStyle={styles.listContent}
+          scrollEnabled={scrollEnabled}
           refreshControl={
-            <RefreshControl
-              refreshing={isRefetching}
-              onRefresh={refetch}
-              tintColor="#f59e0b"
-            />
+            scrollEnabled ? (
+              <RefreshControl
+                refreshing={isRefetching}
+                onRefresh={refetch}
+                tintColor="#f59e0b"
+              />
+            ) : undefined
           }
         />
       )}

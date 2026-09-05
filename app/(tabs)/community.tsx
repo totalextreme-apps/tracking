@@ -967,8 +967,7 @@ export default function CommunityScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#0a0a0a' }}>
-      <DesktopContainer style={{ flex: 1 }}>
-        <StatusBar style="light" />
+      <StatusBar style="light" />
       <Stack.Screen options={{ headerShown: false }} />
       <ConfirmModal
         visible={!!showDeleteConfirm}
@@ -981,27 +980,29 @@ export default function CommunityScreen() {
         onCancel={() => setShowDeleteConfirm(null)}
       />
 
-      {/* ── HEADER ── */}
-      <CommunityHeaderNav activeTab={activeTab as any} onTabChange={(t) => setActiveTab(t as Tab)} userId={userId} />
+      <ScrollView
+        key={`tab-scroll-${activeTab}`}
+        ref={activeTab === 'activity' ? scrollRef : activeTab === 'board' ? boardScrollRef : undefined}
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 160 }}
+        keyboardShouldPersistTaps="handled"
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#f59e0b"
+            colors={['#f59e0b']}
+            progressBackgroundColor="#111"
+          />
+        }
+      >
+        <DesktopContainer>
+          {/* ── HEADER ── */}
+          <CommunityHeaderNav activeTab={activeTab as any} onTabChange={(t) => setActiveTab(t as Tab)} userId={userId} />
 
-      {/* ══════════════════════════ ACTIVITY TAB ══════════════════════════ */}
-      {activeTab === 'activity' && (
-        <ScrollView
-          key="tab-activity"
-          ref={scrollRef}
-          style={{ flex: 1 }}
-          contentContainerStyle={{ paddingBottom: 160 }}
-          keyboardShouldPersistTaps="handled"
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor="#f59e0b"
-              colors={['#f59e0b']}
-              progressBackgroundColor="#111"
-            />
-          }
-        >
+          {/* ══════════════════════════ ACTIVITY TAB ══════════════════════════ */}
+          {activeTab === 'activity' && (
+            <View style={{ flex: 1, paddingTop: 16 }}>
           <MarketplaceSection setActiveTab={setActiveTab} setSelectedSwapTitleKey={setSelectedSwapTitleKey} />
           {/* Member Card Feed */}
           {/* Top 5 Members (Horizontal shelf style) */}
@@ -1497,17 +1498,12 @@ export default function CommunityScreen() {
             </View>
           )}
 
-        </ScrollView>
-      )}
+            </View>
+          )}
 
-      {/* ══════════════════════════ DIRECTORY TAB ══════════════════════════ */}
-      {activeTab === 'directory' && (
-        <ScrollView
-          key="tab-directory"
-          style={{ flex: 1 }}
-          contentContainerStyle={{ paddingBottom: 160, paddingTop: 16 }}
-          keyboardShouldPersistTaps="handled"
-        >
+          {/* ══════════════════════════ DIRECTORY TAB ══════════════════════════ */}
+          {activeTab === 'directory' && (
+            <View style={{ flex: 1, paddingTop: 16 }}>
           {/* User Search inside Directory */}
           <View style={{ paddingHorizontal: 16, marginBottom: 24 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#111', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: '#1f1f1f', marginBottom: 4 }}>
@@ -1589,26 +1585,12 @@ export default function CommunityScreen() {
                </View>
             </View>
           </View>
-        </ScrollView>
-      )}
+            </View>
+          )}
 
-      {/* ══════════════════════════ BOARD TAB ══════════════════════════ */}
-      {activeTab === 'board' && (
-        <ScrollView
-          ref={boardScrollRef}
-          key="tab-board"
-          style={{ flex: 1 }}
-          contentContainerStyle={{ paddingBottom: 160 }}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor="#f59e0b"
-              colors={['#f59e0b']}
-              progressBackgroundColor="#111"
-            />
-          }
-        >
+          {/* ══════════════════════════ BOARD TAB ══════════════════════════ */}
+          {activeTab === 'board' && (
+            <View style={{ flex: 1, paddingTop: 16 }}>
           <ImageBackground source={{ uri: CORK_BG }} style={{ marginHorizontal: 16, borderRadius: 12, overflow: 'hidden', marginTop: 16, marginBottom: 16 }} imageStyle={{ opacity: 0.35, borderRadius: 12 }}>
             <View style={{ backgroundColor: 'rgba(100, 60, 20, 0.4)', padding: 14 }}>
               <View style={{ backgroundColor: 'rgba(255,249,220,0.92)', borderRadius: 4, padding: 12, marginBottom: 16, shadowColor: '#000', shadowOffset: { width: 2, height: 4 }, shadowOpacity: 0.4, shadowRadius: 6 }}>
@@ -1829,25 +1811,12 @@ export default function CommunityScreen() {
               )}
             </View>
           </ImageBackground>
-        </ScrollView>
-      )}
+            </View>
+          )}
 
-      {/* ══════════════════════════ INBOX TAB ══════════════════════════ */}
-      {activeTab === 'inbox' && (
-        <ScrollView
-          key="tab-inbox"
-          style={{ flex: 1 }}
-          contentContainerStyle={{ paddingBottom: 160 }}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor="#f59e0b"
-              colors={['#f59e0b']}
-              progressBackgroundColor="#111"
-            />
-          }
-        >
+          {/* ══════════════════════════ INBOX TAB ══════════════════════════ */}
+          {activeTab === 'inbox' && (
+            <View style={{ flex: 1, paddingTop: 16 }}>
           <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: '#111', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <Text style={{ color: '#2a2a2a', fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold', letterSpacing: 2, textTransform: 'uppercase' }}>Direct Messages</Text>
             <Pressable onPress={() => { /* Wait, to create message we just switch to directory to click member */ setActiveTab('directory'); }} style={{ backgroundColor: '#111', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: '#f59e0b44' }}>
@@ -1885,25 +1854,12 @@ export default function CommunityScreen() {
               </Pressable>
             ))
           )}
-        </ScrollView>
-      )}
+            </View>
+          )}
 
-      {/* ══════════════════════════ ALERTS TAB ══════════════════════════ */}
-      {activeTab === 'alerts' && (
-        <ScrollView
-          key="tab-alerts"
-          style={{ flex: 1 }}
-          contentContainerStyle={{ paddingBottom: 160 }}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor="#f59e0b"
-              colors={['#f59e0b']}
-              progressBackgroundColor="#111"
-            />
-          }
-        >
+          {/* ══════════════════════════ ALERTS TAB ══════════════════════════ */}
+          {activeTab === 'alerts' && (
+            <View style={{ flex: 1, paddingTop: 16 }}>
           <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: '#111', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <Text style={{ color: '#2a2a2a', fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold', letterSpacing: 2, textTransform: 'uppercase' }}>Alerts</Text>
             {notifications && notifications.some((n: any) => n.is_read) && (
@@ -1952,15 +1908,18 @@ export default function CommunityScreen() {
               </Pressable>
             ))
           )}
-        </ScrollView>
-      )}
-      {activeTab === 'swap' && (
-        <SwapMeetView 
-          key="tab-swap"
-          selectedSwapTitleKey={selectedSwapTitleKey}
-          setSelectedSwapTitleKey={setSelectedSwapTitleKey}
-        />
-      )}
+            </View>
+          )}
+          {activeTab === 'swap' && (
+            <SwapMeetView 
+              key="tab-swap"
+              selectedSwapTitleKey={selectedSwapTitleKey}
+              setSelectedSwapTitleKey={setSelectedSwapTitleKey}
+              scrollEnabled={false}
+            />
+          )}
+        </DesktopContainer>
+      </ScrollView>
       {/* Insert Image Link Modal */}
       <Modal
         visible={imageModalVisible}
@@ -2021,7 +1980,6 @@ export default function CommunityScreen() {
         items={top5}
         userId={userId || ''}
       />
-      </DesktopContainer>
     </View>
   );
 }
