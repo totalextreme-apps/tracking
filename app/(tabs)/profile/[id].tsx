@@ -845,17 +845,21 @@ export default function UserProfileScreen() {
                     </Pressable>
                   </View>
                   {onDisplayItems.length > 0 ? (
-                    <View className="flex-row flex-wrap justify-between">
-                      {onDisplayItems.map((item: any) => (
-                        <View key={item.id} className="w-[31%] mb-4">
-                          <OnDisplayCard 
-                            item={item} 
-                            scale={0.9} 
-                            isReadOnly={id !== currentUserId}
-                            onSingleTapAction={() => router.push({ pathname: item.movies ? `/movie/${item.movie_id}` as any : `/show/${item.show_id}` as any, params: { ownerId: id, from: from || undefined } })}
-                          />
-                        </View>
-                      ))}
+                    <View className="flex-row flex-wrap justify-start">
+                      {onDisplayItems.map((item: any) => {
+                        const { cellStyle, cardWidth } = getGridCardDimensions();
+                        const calculatedScale = cardWidth ? Math.max(0.4, Math.min(1.4, cardWidth / 200)) : 0.9;
+                        return (
+                          <View key={item.id} style={cellStyle as any}>
+                            <OnDisplayCard 
+                              item={item} 
+                              scale={calculatedScale} 
+                              isReadOnly={id !== currentUserId}
+                              onSingleTapAction={() => router.push({ pathname: item.movies ? `/movie/${item.movie_id}` as any : `/show/${item.show_id}` as any, params: { ownerId: id, from: from || undefined } })}
+                            />
+                          </View>
+                        );
+                      })}
                     </View>
                   ) : (
                     <View className="bg-neutral-900 border border-neutral-800 rounded-lg p-6 items-center border-dashed">
@@ -893,17 +897,21 @@ export default function UserProfileScreen() {
                     </Pressable>
                   </View>
                   {grails.length > 0 ? (
-                    <View className="flex-row flex-wrap justify-between">
-                      {grails.map((item: any) => (
-                        <View key={item.id} className="w-[31%] mb-4">
-                          <OnDisplayCard 
-                            item={item} 
-                            scale={0.9} 
-                            isReadOnly={id !== currentUserId}
-                            onSingleTapAction={() => router.push({ pathname: item.movies ? `/movie/${item.movie_id}` as any : `/show/${item.show_id}` as any, params: { ownerId: id, from: from || undefined } })}
-                          />
-                        </View>
-                      ))}
+                    <View className="flex-row flex-wrap justify-start">
+                      {grails.map((item: any) => {
+                        const { cellStyle, cardWidth } = getGridCardDimensions();
+                        const calculatedScale = cardWidth ? Math.max(0.4, Math.min(1.4, cardWidth / 200)) : 0.9;
+                        return (
+                          <View key={item.id} style={cellStyle as any}>
+                            <OnDisplayCard 
+                              item={item} 
+                              scale={calculatedScale} 
+                              isReadOnly={id !== currentUserId}
+                              onSingleTapAction={() => router.push({ pathname: item.movies ? `/movie/${item.movie_id}` as any : `/show/${item.show_id}` as any, params: { ownerId: id, from: from || undefined } })}
+                            />
+                          </View>
+                        );
+                      })}
                     </View>
                   ) : (
                     <View className="bg-neutral-900 border border-neutral-800 rounded-lg p-6 items-center border-dashed">
