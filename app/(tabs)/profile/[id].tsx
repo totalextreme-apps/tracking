@@ -644,9 +644,10 @@ export default function UserProfileScreen() {
           </ScrollView>
         </View>
 
-        {activeTab !== 'analytics' && activeTab !== 'guestbook' && (
-          <DesktopContainer style={{ maxWidth: 1400, width: '100%', alignSelf: 'center', paddingHorizontal: 16 }}>
-            <View className="mb-4">
+        <DesktopContainer style={{ maxWidth: 1400, width: '100%', alignSelf: 'center', paddingHorizontal: 16 }}>
+          {activeTab !== 'analytics' && activeTab !== 'guestbook' && (
+            <>
+              <View className="mb-4">
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
                 {['ALL', 'VHS', 'DVD', 'BluRay', '4K', 'Digital', 'BOOTLEG'].map(f => {
                    const isSelected = f === 'ALL' ? formatFilter === null : formatFilter === f;
@@ -784,10 +785,8 @@ export default function UserProfileScreen() {
                 </Pressable>
               </Pressable>
             </Modal>
-          </DesktopContainer>
-        )}
-
-        <DesktopContainer style={{ maxWidth: 1400, width: '100%', alignSelf: 'center', paddingHorizontal: 16 }}>
+            </>
+          )}
           {collectionLoading ? (
             <ActivityIndicator color="#f59e0b" className="mt-8" />
           ) : (
