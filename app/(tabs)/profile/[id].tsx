@@ -260,9 +260,8 @@ export default function UserProfileScreen() {
 
     const cols = numColumns || (profileViewMode === 'grid2' ? 2 : profileViewMode === 'grid6' ? 6 : 4);
     const cellWidthPct = `${100 / cols}%`;
-    const targetWidth = isDesktop 
-      ? Math.max(130, Math.min(280, Math.round(1100 / cols)))
-      : Math.max(95, Math.min(180, Math.round(360 / cols)));
+    const containerWidth = isDesktop ? Math.min(1336, (windowWidth || 1200) - 64) : ((windowWidth || 390) - 32);
+    const targetWidth = Math.max(90, Math.floor((containerWidth / cols) - 12));
     const targetHeight = Math.round(targetWidth * 1.5);
 
     return { 
@@ -733,26 +732,53 @@ export default function UserProfileScreen() {
                   {/* Interactive Column Slider & Lock */}
                   {profileViewMode !== 'list' && (
                     <View className="flex-row items-center flex-1 max-w-[240px] ml-auto">
-                      <Slider 
-                        style={{ flex: 1, height: 28 }} 
-                        minimumValue={1} 
-                        maximumValue={isDesktop ? 8 : 4} 
-                        step={1} 
-                        value={numColumns} 
-                        onValueChange={(val) => { 
-                          if (!isSliderLocked) {
-                            setNumColumns(val); 
-                            if (val === 2) setProfileViewMode('grid2');
-                            else if (val === 4) setProfileViewMode('grid4');
-                            else if (val === 6) setProfileViewMode('grid6');
-                            else setProfileViewMode('custom');
-                          }
-                        }} 
-                        minimumTrackTintColor={isSliderLocked ? "#666" : "#f59e0b"} 
-                        maximumTrackTintColor="#333" 
-                        thumbTintColor={isSliderLocked ? "#666" : "#f59e0b"} 
-                        disabled={isSliderLocked}
-                      />
+                      {Platform.OS === 'web' ? (
+                        <input
+                          type="range"
+                          min={1}
+                          max={isDesktop ? 8 : 4}
+                          step={1}
+                          value={numColumns}
+                          disabled={isSliderLocked}
+                          onChange={(e) => {
+                            if (!isSliderLocked) {
+                              const val = Number(e.target.value);
+                              setNumColumns(val);
+                              if (val === 2) setProfileViewMode('grid2');
+                              else if (val === 4) setProfileViewMode('grid4');
+                              else if (val === 6) setProfileViewMode('grid6');
+                              else setProfileViewMode('custom');
+                            }
+                          }}
+                          style={{
+                            flex: 1,
+                            height: 24,
+                            accentColor: isSliderLocked ? '#666' : '#f59e0b',
+                            cursor: isSliderLocked ? 'not-allowed' : 'pointer',
+                          }}
+                        />
+                      ) : (
+                        <Slider 
+                          style={{ flex: 1, height: 28 }} 
+                          minimumValue={1} 
+                          maximumValue={isDesktop ? 8 : 4} 
+                          step={1} 
+                          value={numColumns} 
+                          onValueChange={(val) => { 
+                            if (!isSliderLocked) {
+                              setNumColumns(val); 
+                              if (val === 2) setProfileViewMode('grid2');
+                              else if (val === 4) setProfileViewMode('grid4');
+                              else if (val === 6) setProfileViewMode('grid6');
+                              else setProfileViewMode('custom');
+                            }
+                          }} 
+                          minimumTrackTintColor={isSliderLocked ? "#666" : "#f59e0b"} 
+                          maximumTrackTintColor="#333" 
+                          thumbTintColor={isSliderLocked ? "#666" : "#f59e0b"} 
+                          disabled={isSliderLocked}
+                        />
+                      )}
                       <Pressable 
                         onPress={() => {
                             setIsSliderLocked(!isSliderLocked);

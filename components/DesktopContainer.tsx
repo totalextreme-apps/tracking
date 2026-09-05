@@ -31,6 +31,7 @@ export function DesktopContainer({ children, style, maxWidth = 1400 }: DesktopCo
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
     width: '100%',
   },
 });
