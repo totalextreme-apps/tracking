@@ -279,7 +279,7 @@ export default function UserProfileScreen() {
     const targetHeight = Math.round(targetWidth * 1.5);
 
     return { 
-      cellStyle: { width: cellWidthPct, paddingHorizontal: CARD_GAP / 2, marginBottom: 20, alignItems: 'center' as const }, 
+      cellStyle: { width: cellWidthPct, paddingHorizontal: CARD_GAP / 2, marginBottom: 24, alignItems: 'center' as const }, 
       cardWidth: targetWidth, 
       cardHeight: targetHeight, 
       isList: false 

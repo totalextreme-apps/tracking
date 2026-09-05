@@ -135,7 +135,7 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
 
   const baseWidth = 100;
   const layoutWidth = baseWidth * scale + 10;
-  const contentHeight = (isPhysical ? 180 : 160) * scale;
+  const contentHeight = (isPhysical ? 225 : 210) * scale;
 
   const wrapperStyle = {
     width: layoutWidth,
