@@ -9,11 +9,7 @@ export async function printInventoryReceipt(items: CollectionItemWithMedia[]) {
 
     // 2. Print / Share PDF
     if (Platform.OS === 'web') {
-        try {
-            await Print.printAsync({ html });
-        } catch (e) {
-            printViaIframe(html);
-        }
+        printViaIframe(html);
     } else {
         try {
             await Print.printAsync({ html });
@@ -54,16 +50,34 @@ function printViaIframe(html: string) {
                     iframe.contentWindow?.print();
                 } catch (err) {
                     console.error('Print iframe trigger error:', err);
+                    const blob = new Blob([html], { type: 'text/html' });
+                    const blobUrl = URL.createObjectURL(blob);
+                    const win = window.open(blobUrl, '_blank');
+                    if (win) {
+                        win.focus();
+                        win.print();
+                    }
                 }
                 setTimeout(() => {
                     if (document.body.contains(iframe)) {
                         document.body.removeChild(iframe);
                     }
                 }, 2000);
-            }, 300);
+            }, 400);
         }
     } catch (e) {
         console.error('Iframe creation error:', e);
+        try {
+            const blob = new Blob([html], { type: 'text/html' });
+            const blobUrl = URL.createObjectURL(blob);
+            const win = window.open(blobUrl, '_blank');
+            if (win) {
+                win.focus();
+                win.print();
+            }
+        } catch (winErr) {
+            console.error('Window print error:', winErr);
+        }
     }
 }
 

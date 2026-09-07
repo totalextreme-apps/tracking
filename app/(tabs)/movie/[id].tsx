@@ -26,7 +26,7 @@ import { CelebrationOverlay } from '@/components/CelebrationOverlay';
 import { deleteFromCloudinary, uploadToCloudinary } from '@/lib/cloudinary';
 import { getCustomLists } from '@/lib/collection-utils';
 import { supabase } from '@/lib/supabase';
-import { fetchEbaySoldValue, getEbaySearchUrl } from '@/lib/pricing';
+import { fetchEbaySoldValue, getEbaySearchUrl, isErrantShippingPrice } from '@/lib/pricing';
 import { useReactions } from '@/hooks/useReactions';
 import { ReactionSummary } from '@/components/ReactionSummary';
 import { ReactionPicker } from '@/components/ReactionPicker';
@@ -1511,7 +1511,7 @@ export default function MovieDetailScreen() {
                                                 placeholder="Enter custom value..."
                                                 placeholderTextColor="#525252"
                                                 keyboardType="decimal-pad"
-                                                value={localValues[item.id] !== undefined ? localValues[item.id] : (item.value_estimate && Number(item.value_estimate) !== 5.39 ? item.value_estimate.toString() : '')}
+                                                value={localValues[item.id] !== undefined ? localValues[item.id] : (item.value_estimate && !isErrantShippingPrice(item.value_estimate) ? item.value_estimate.toString() : '')}
                                                 onChangeText={(text) => setLocalValues(prev => ({ ...prev, [item.id]: text }))}
                                             />
                                         </View>
@@ -1703,8 +1703,8 @@ export default function MovieDetailScreen() {
                                                             <Text className="text-neutral-400 font-mono text-[9px] font-bold uppercase tracking-wider">WISHLIST</Text>
                                                         </View>
                                                     )}
-                                                    {item.value_estimate !== null && item.value_estimate !== undefined && (
-                                                        <View className="bg-neutral-800 border border-neutral-700/50 px-2 py-0.5 rounded">
+                                                    {item.value_estimate !== null && item.value_estimate !== undefined && !isErrantShippingPrice(item.value_estimate) && (
+                                                        <View className="bg-neutral-800 border border-neutral-700/50 px-2 py-0.5 rounded ml-2">
                                                             <Text className="text-amber-400 font-mono text-[10px] font-bold">
                                                                 EST: ${Number(item.value_estimate).toFixed(2)}
                                                             </Text>

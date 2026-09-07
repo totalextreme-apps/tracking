@@ -42,23 +42,28 @@ export function useCollection(userId: string | undefined) {
         const items = await fetchAllItems();
 
         if (items && items.length > 0) {
-          // Automatic Background Cleanup: Reset errant $5.39 values to null
-          const errantItems = items.filter((i: any) => i.value_estimate === 5.39);
+          // Automatic Background Cleanup: Reset errant shipping values ($5.15 - $5.55) to null
+          const isErrantShippingPrice = (val: number | null | undefined) => {
+            if (val === null || val === undefined) return false;
+            return (val >= 5.15 && val <= 5.55);
+          };
+
+          const errantItems = items.filter((i: any) => isErrantShippingPrice(i.value_estimate));
           if (errantItems.length > 0) {
-            console.log(`Auto-cleaning ${errantItems.length} errant $5.39 items in background...`);
+            console.log(`Auto-cleaning ${errantItems.length} errant shipping items in background...`);
+            const errantIds = errantItems.map((i: any) => i.id);
             supabase
               .from('collection_items')
               .update({ value_estimate: null })
-              .eq('user_id', userId)
-              .eq('value_estimate', 5.39)
+              .in('id', errantIds)
               .then(({ error }: { error: any }) => {
-                if (error) console.error('Background $5.39 cleanup error:', error);
+                if (error) console.error('Background cleanup error:', error);
                 else console.log(`Background cleanup reset ${errantItems.length} items to null.`);
               });
 
             // Modify in-memory array so the UI immediately reflects cleaned state
             items.forEach((i: any) => {
-              if (i.value_estimate === 5.39) {
+              if (isErrantShippingPrice(i.value_estimate)) {
                 i.value_estimate = null;
               }
             });

@@ -74,6 +74,14 @@ function isShippingContext(text: string, index: number, matchedStr: string): boo
 }
 
 /**
+ * Checks if a numeric value is an errant Media Mail shipping cost artifact (e.g. $5.15 - $5.55).
+ */
+export function isErrantShippingPrice(val: number | null | undefined): boolean {
+    if (val === null || val === undefined) return false;
+    return (val >= 5.15 && val <= 5.55);
+}
+
+/**
  * Parses eBay search results HTML and extracts listing prices.
  */
 export function parseEbayPrices(html: string): number[] {
@@ -124,20 +132,22 @@ export function parseEbayPrices(html: string): number[] {
         }
     }
 
+
+
     // 3. Fallback for Firecrawl Markdown / raw text: Match explicit item sold price patterns ONLY
     if (prices.length === 0) {
         const explicitSoldRegex = /(?:sold|price)[^\$]{0,20}\$([0-9]+\.[0-9]{2})|\$([0-9]+\.[0-9]{2})[^\$]{0,20}(?:free shipping|sold)/gi;
         let expMatch;
         while ((expMatch = explicitSoldRegex.exec(html)) !== null) {
             const p = parseFloat(expMatch[1] || expMatch[2]);
-            if (!isNaN(p) && p > 0.50 && p < 2500 && p !== 5.39) {
+            if (!isNaN(p) && p > 0.50 && p < 2500 && !isErrantShippingPrice(p)) {
                 prices.push(p);
             }
         }
     }
 
-    // Filter out isolated 5.39 shipping cost artifacts
-    const nonShippingPrices = prices.filter(p => p !== 5.39);
+    // Filter out isolated shipping cost artifacts (e.g. $5.15 - $5.55)
+    const nonShippingPrices = prices.filter(p => !isErrantShippingPrice(p));
     return nonShippingPrices;
 }
 
