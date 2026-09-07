@@ -632,12 +632,26 @@ export default function ShowDetailScreen() {
                 refetch();
                 playSound('peel');
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                Alert.alert("Market Value Found", `Estimated market value of $${valStr} assigned based on recent eBay sales.`);
+                if (Platform.OS === 'web') {
+                    window.alert(`Market Value Found: Estimated value of $${valStr} assigned.`);
+                } else {
+                    Alert.alert("Market Value Found", `Estimated market value of $${valStr} assigned based on recent eBay sales.`);
+                }
             } else {
-                Alert.alert(
-                    "No Price Found", 
-                    `Could not find recent completed sales for "${targetTitle}" (${format}) on eBay.\n\nYou can manually enter an estimated value in the field below.`
-                );
+                setLocalValues(prev => ({ ...prev, [itemId]: '' }));
+                await updateMutation.mutateAsync({
+                    itemId,
+                    updates: { value_estimate: null }
+                });
+                refetch();
+                if (Platform.OS === 'web') {
+                    window.alert(`No eBay sales found for "${targetTitle}" (${format}). Value reset.`);
+                } else {
+                    Alert.alert(
+                        "No Price Found", 
+                        `Could not find recent completed sales for "${targetTitle}" (${format}) on eBay.\n\nYou can manually enter an estimated value in the field below.`
+                    );
+                }
             }
         } catch (e: any) {
             console.error('handleGenerateValue show error:', e);
