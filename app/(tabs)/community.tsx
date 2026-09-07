@@ -615,13 +615,15 @@ export default function CommunityScreen() {
   const { tab, postId } = useLocalSearchParams<{ tab?: string; postId?: string }>();
   
   React.useEffect(() => {
-    if (tab === 'board') {
-      setActiveTab('board');
-      if (postId) {
-        setExpandedPostIds(prev => new Set(prev).add(postId));
-      }
+    if (tab && ['activity', 'directory', 'board', 'swap', 'inbox', 'alerts'].includes(tab)) {
+      setActiveTab(tab as Tab);
+    }
+    if (tab === 'board' && postId) {
+      setExpandedPostIds(prev => new Set(prev).add(postId));
     }
   }, [tab, postId]);
+
+  const currentTab: Tab = ['activity', 'directory', 'board', 'swap', 'inbox', 'alerts'].includes(activeTab) ? activeTab : 'activity';
   
   // Media Search State (Bulletin)
   const [mediaQuery, setMediaQuery] = useState('');
@@ -655,13 +657,13 @@ export default function CommunityScreen() {
 
   // Data
   const { data: following } = useFollowing(userId);
-  const { data: bulletinFeed, isLoading: bulletinLoading } = useBulletinFeed(userId, activeTab === 'board');
+  const { data: bulletinFeed, isLoading: bulletinLoading } = useBulletinFeed(userId, currentTab === 'board');
   const { data: communityFeed, isLoading: communityLoading, isFetching: communityFetching } = useCommunityFeed(userId);
   const { data: marketplaceFeed } = useMarketplaceFeed();
   const { data: searchResults, isLoading: searchLoading } = useSearchUsers(userSearch);
   const { data: notifications, isLoading: notifLoading } = useNotifications(userId);
   const { data: suggestedMembers } = useSuggestedUsers(userId);
-  const { data: allUsers, isLoading: allUsersLoading } = useAllUsers(userId, activeTab === 'directory');
+  const { data: allUsers, isLoading: allUsersLoading } = useAllUsers(userId, currentTab === 'directory');
   const { data: conversations, isLoading: inboxLoading } = useConversations(userId);
   const { data: appWideStats } = useAppWideStats();
 
@@ -995,8 +997,8 @@ export default function CommunityScreen() {
       />
 
       <ScrollView
-        key={`tab-scroll-${activeTab}`}
-        ref={activeTab === 'activity' ? scrollRef : activeTab === 'board' ? boardScrollRef : undefined}
+        key={`tab-scroll-${currentTab}`}
+        ref={currentTab === 'activity' ? scrollRef : currentTab === 'board' ? boardScrollRef : undefined}
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingBottom: 160 }}
         keyboardShouldPersistTaps="handled"
@@ -1012,10 +1014,10 @@ export default function CommunityScreen() {
       >
         <DesktopContainer>
           {/* ── HEADER ── */}
-          <CommunityHeaderNav activeTab={activeTab as any} onTabChange={(t) => setActiveTab(t as Tab)} userId={userId} />
+          <CommunityHeaderNav activeTab={currentTab} onTabChange={(t) => setActiveTab(t as Tab)} userId={userId} />
 
           {/* ══════════════════════════ ACTIVITY TAB ══════════════════════════ */}
-          {activeTab === 'activity' && (
+          {currentTab === 'activity' && (
             <View style={{ flex: 1, paddingTop: 16 }}>
           <MarketplaceSection setActiveTab={setActiveTab} setSelectedSwapTitleKey={setSelectedSwapTitleKey} />
           {/* Member Card Feed */}
@@ -1227,7 +1229,7 @@ export default function CommunityScreen() {
 
                    // Check if this comment is part of a multi-title addition story group by ownerId around the same date
                    let storyGroupItems: any[] = [];
-                   if (collectionItem && communityFeed) {
+                   if (collectionItem && collectionItem.created_at && ownerId && communityFeed) {
                      const itemDateStr = new Date(collectionItem.created_at).toDateString();
                      storyGroupItems = communityFeed.filter((f: any) => 
                        f.user_id === ownerId && 
@@ -1239,7 +1241,7 @@ export default function CommunityScreen() {
                    // If the comment explicitly mentions a specific title in the comment text, resolve that item for highlight
                    let specificMatchedItem: any = null;
                    if (collectionItem && item.content && storyGroupItems.length > 0) {
-                     const lowerContent = item.content.toLowerCase();
+                     const lowerContent = (item.content || '').toLowerCase();
                      specificMatchedItem = storyGroupItems.find((f: any) => {
                        const title = (f.movies?.title || f.shows?.name || '').toLowerCase();
                        return title.length > 1 && lowerContent.includes(title);
@@ -1253,6 +1255,7 @@ export default function CommunityScreen() {
                    const mediaType = collectionItem?.movies ? 'movie' : 'show';
                    const mediaId = collectionItem?.movies?.id || collectionItem?.shows?.id;
                    const isMultiStory = storyGroupItems.length > 1;
+                   const formattedDate = item.created_at ? new Date(item.created_at).toLocaleDateString() : '';
 
                    return (
                      <View key={item.id + '-' + idx} style={{ marginBottom: 20 }}>
@@ -1265,19 +1268,19 @@ export default function CommunityScreen() {
                            <Text style={{ color: '#525252', fontFamily: 'SpaceMono', fontSize: 8, textTransform: 'uppercase' }}>
                              {isMultiStory 
                                ? `commented on @${ownerUsername}'s addition of ${storyGroupItems.length} titles`
-                               : `commented on @${ownerUsername}'s addition of "${mediaTitle}"`} · {new Date(item.created_at).toLocaleDateString()}
+                               : `commented on @${ownerUsername}'s addition of "${mediaTitle}"`} {formattedDate ? `· ${formattedDate}` : ''}
                            </Text>
                          </View>
                        </Pressable>
                        
                        <View style={{ backgroundColor: '#111', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#1a1a1a', borderLeftWidth: 3, borderLeftColor: '#f59e0b' }}>
-                         <Text style={{ color: '#ccc', fontFamily: 'SpaceMono', fontSize: 12, lineHeight: 18, fontStyle: 'italic', marginBottom: 8 }}>"{item.content}"</Text>
+                         <Text style={{ color: '#ccc', fontFamily: 'SpaceMono', fontSize: 12, lineHeight: 18, fontStyle: 'italic', marginBottom: 8 }}>"{item.content || ''}"</Text>
                          
                          {/* If multi-title addition, show truncated mini-poster story preview row */}
                          {isMultiStory ? (
                            <View style={{ marginBottom: 4 }}>
                              <Text style={{ color: '#666', fontFamily: 'SpaceMono', fontSize: 7, textTransform: 'uppercase', marginBottom: 4, letterSpacing: 0.5 }}>
-                               ADDITION BATCH ({storyGroupItems.length} TITLES BY @{ownerUsername.toUpperCase()})
+                               ADDITION BATCH ({storyGroupItems.length} TITLES BY @{(ownerUsername || 'member').toUpperCase()})
                              </Text>
                              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ height: 80, minHeight: 80 }} contentContainerStyle={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 4 }}>
                                {storyGroupItems.map((sub: any, i: number) => {
@@ -1288,7 +1291,7 @@ export default function CommunityScreen() {
                                  return (
                                    <Pressable 
                                      key={i} 
-                                     onPress={() => { if (mId) router.push(`/${mType}/${mId}?ownerId=${ownerId}&from=community`); }}
+                                     onPress={() => { if (mId && ownerId) router.push(`/${mType}/${mId}?ownerId=${ownerId}&from=community`); }}
                                      style={{ width: 44, minWidth: 44, height: 68, minHeight: 68, borderRadius: 6, backgroundColor: '#0a0a0a', overflow: 'hidden', borderWidth: isHighlight ? 2 : 1, borderColor: isHighlight ? '#f59e0b' : '#222' }}
                                    >
                                      {poster ? (
@@ -1308,7 +1311,7 @@ export default function CommunityScreen() {
                          ) : collectionItem ? (
                            <View>
                              <Pressable 
-                               onPress={() => { if (mediaId) router.push(`/${mediaType}/${mediaId}?ownerId=${ownerId}&from=community`); }}
+                               onPress={() => { if (mediaId && ownerId) router.push(`/${mediaType}/${mediaId}?ownerId=${ownerId}&from=community`); }}
                                style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#0a0a0a', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#222' }}
                              >
                                <Image 
@@ -1319,7 +1322,7 @@ export default function CommunityScreen() {
                                  <Text style={{ color: '#fff', fontFamily: 'SpaceMono', fontSize: 10, fontWeight: 'bold' }} numberOfLines={1}>{mediaTitle}</Text>
                                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
                                    <View style={{ backgroundColor: '#f59e0b22', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 2, borderWidth: 1, borderColor: '#f59e0b44', marginRight: 4 }}>
-                                     <Text style={{ color: '#f59e0b', fontSize: 6, fontFamily: 'SpaceMono', fontWeight: 'bold' }}>{collectionItem.format}</Text>
+                                     <Text style={{ color: '#f59e0b', fontSize: 6, fontFamily: 'SpaceMono', fontWeight: 'bold' }}>{collectionItem.format || 'VHS'}</Text>
                                    </View>
                                    <Text style={{ color: '#444', fontFamily: 'SpaceMono', fontSize: 8 }}>@{ownerUsername}'S SHELF</Text>
                                  </View>
@@ -1332,7 +1335,7 @@ export default function CommunityScreen() {
                          {collectionItem && (
                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, paddingTop: 6, borderTopWidth: 1, borderTopColor: '#222' }}>
                              <Pressable 
-                               onPress={() => { if (mediaId) router.push(`/${mediaType}/${mediaId}?ownerId=${ownerId}&from=community`); }}
+                               onPress={() => { if (mediaId && ownerId) router.push(`/${mediaType}/${mediaId}?ownerId=${ownerId}&from=community`); }}
                                style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
                              >
                                <Ionicons name="chatbubble-outline" size={10} color="#737373" />
@@ -1579,7 +1582,7 @@ export default function CommunityScreen() {
           )}
 
           {/* ══════════════════════════ DIRECTORY TAB ══════════════════════════ */}
-          {activeTab === 'directory' && (
+          {currentTab === 'directory' && (
             <View style={{ flex: 1, paddingTop: 16 }}>
           {/* User Search inside Directory */}
           <View style={{ paddingHorizontal: 16, marginBottom: 24 }}>
@@ -1666,7 +1669,7 @@ export default function CommunityScreen() {
           )}
 
           {/* ══════════════════════════ BOARD TAB ══════════════════════════ */}
-          {activeTab === 'board' && (
+          {currentTab === 'board' && (
             <View style={{ flex: 1, paddingTop: 16 }}>
           <ImageBackground source={{ uri: CORK_BG }} style={{ marginHorizontal: 16, borderRadius: 12, overflow: 'hidden', marginTop: 16, marginBottom: 16 }} imageStyle={{ opacity: 0.35, borderRadius: 12 }}>
             <View style={{ backgroundColor: 'rgba(100, 60, 20, 0.4)', padding: 14 }}>
@@ -1892,7 +1895,7 @@ export default function CommunityScreen() {
           )}
 
           {/* ══════════════════════════ INBOX TAB ══════════════════════════ */}
-          {activeTab === 'inbox' && (
+          {currentTab === 'inbox' && (
             <View style={{ flex: 1, paddingTop: 16 }}>
           <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: '#111', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <Text style={{ color: '#2a2a2a', fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold', letterSpacing: 2, textTransform: 'uppercase' }}>Direct Messages</Text>
@@ -1935,7 +1938,7 @@ export default function CommunityScreen() {
           )}
 
           {/* ══════════════════════════ ALERTS TAB ══════════════════════════ */}
-          {activeTab === 'alerts' && (
+          {currentTab === 'alerts' && (
             <View style={{ flex: 1, paddingTop: 16 }}>
           <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: '#111', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <Text style={{ color: '#2a2a2a', fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold', letterSpacing: 2, textTransform: 'uppercase' }}>Alerts</Text>

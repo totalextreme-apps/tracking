@@ -37,26 +37,27 @@ export function CommunityHeaderNav({ activeTab = 'activity', onTabChange, userId
   const handleTabPress = (tabKey: string) => {
     playSound('click');
 
-    if (onTabChange) {
-      onTabChange(tabKey);
-    }
-
     if (tabKey === 'profile') {
       if (myProfileId) {
         router.push({ pathname: `/profile/${myProfileId}`, params: { from: 'community' } } as any);
       }
-    } else if (tabKey === 'activity') {
-      router.push({ pathname: '/community', params: { tab: 'activity' } } as any);
-    } else if (tabKey === 'directory') {
-      router.push({ pathname: '/community', params: { tab: 'directory' } } as any);
-    } else if (tabKey === 'board') {
-      router.push({ pathname: '/community', params: { tab: 'board' } } as any);
-    } else if (tabKey === 'swap') {
-      router.push({ pathname: '/community', params: { tab: 'swap' } } as any);
-    } else if (tabKey === 'inbox') {
-      router.push({ pathname: '/community', params: { tab: 'inbox' } } as any);
-    } else if (tabKey === 'alerts') {
-      router.push({ pathname: '/community', params: { tab: 'alerts' } } as any);
+    } else {
+      if (onTabChange) {
+        onTabChange(tabKey);
+      }
+      if (tabKey === 'activity') {
+        router.push({ pathname: '/community', params: { tab: 'activity' } } as any);
+      } else if (tabKey === 'directory') {
+        router.push({ pathname: '/community', params: { tab: 'directory' } } as any);
+      } else if (tabKey === 'board') {
+        router.push({ pathname: '/community', params: { tab: 'board' } } as any);
+      } else if (tabKey === 'swap') {
+        router.push({ pathname: '/community', params: { tab: 'swap' } } as any);
+      } else if (tabKey === 'inbox') {
+        router.push({ pathname: '/community', params: { tab: 'inbox' } } as any);
+      } else if (tabKey === 'alerts') {
+        router.push({ pathname: '/community', params: { tab: 'alerts' } } as any);
+      }
     }
   };
 
