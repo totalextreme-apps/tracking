@@ -117,8 +117,8 @@ export const RouletteModal: React.FC<RouletteModalProps> = ({
 
   return (
     <Modal visible={visible} transparent animationType="slide">
-      <View className="flex-1 bg-black/90 justify-center p-6">
-        <View className="bg-neutral-950 border border-neutral-800 rounded-2xl overflow-hidden shadow-2xl">
+      <View className="flex-1 bg-black/90 justify-center items-center p-4 md:p-6">
+        <View className="bg-neutral-950 border border-neutral-800 rounded-2xl overflow-hidden shadow-2xl w-full max-w-md max-h-[90vh]">
           {/* Header */}
           <View className="bg-amber-500 py-4 px-6 flex-row justify-between items-center">
             <View className="flex-row items-center">
@@ -132,7 +132,7 @@ export const RouletteModal: React.FC<RouletteModalProps> = ({
             </Pressable>
           </View>
 
-          <View className="p-6">
+          <ScrollView className="p-6" contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
             {step === 'setup' && (
               <View>
                 <Text className="text-white font-bold text-xl mb-2">What are you in the mood for?</Text>
@@ -238,7 +238,7 @@ export const RouletteModal: React.FC<RouletteModalProps> = ({
                     </Pressable>
                   </View>
                 ) : (
-                  <View className="w-full">
+                  <View className="w-full items-center">
                     <Text className="text-neutral-400 font-mono text-center mb-2 tracking-widest text-xs uppercase">
                       THE DICE HAVE SPOKEN:
                     </Text>
@@ -257,14 +257,14 @@ export const RouletteModal: React.FC<RouletteModalProps> = ({
                       </View>
                     )}
                     
-                    <View className="bg-neutral-900 rounded-xl overflow-hidden border border-amber-500/30 mb-6">
+                    <View className="bg-neutral-900 rounded-xl overflow-hidden border border-amber-500/30 mb-6 w-full max-w-[260px] shadow-lg">
                       <Image 
                         source={{ uri: `https://image.tmdb.org/t/p/w500${(result.movies || result.shows)?.poster_path}` }}
                         style={{ width: '100%', aspectRatio: 2/3 }}
                         contentFit="cover"
                       />
                       <View className="p-4 bg-neutral-900 border-t border-neutral-800">
-                        <Text className="text-white font-bold text-xl mb-1 text-center" numberOfLines={2}>
+                        <Text className="text-white font-bold text-lg mb-1 text-center" numberOfLines={2}>
                           {(result.movies || result.shows)?.title || (result.movies || result.shows)?.name}
                         </Text>
                         <Text className="text-amber-500 font-mono text-xs text-center">
@@ -273,7 +273,7 @@ export const RouletteModal: React.FC<RouletteModalProps> = ({
                       </View>
                     </View>
 
-                    <View className="flex-row gap-3">
+                    <View className="flex-row gap-3 w-full">
                       <Pressable 
                         onPress={handleRoll}
                         className="flex-1 bg-neutral-800 py-4 rounded-xl items-center justify-center border border-neutral-700"
@@ -282,7 +282,7 @@ export const RouletteModal: React.FC<RouletteModalProps> = ({
                       </Pressable>
                       <Pressable 
                         onPress={navigateToDetail}
-                        className="flex-2 bg-amber-500 py-4 rounded-xl items-center justify-center pl-8 pr-8"
+                        className="flex-2 bg-amber-500 py-4 rounded-xl items-center justify-center px-6"
                       >
                         <Text className="text-black font-mono font-bold uppercase tracking-widest">Go to Item</Text>
                       </Pressable>
@@ -291,7 +291,7 @@ export const RouletteModal: React.FC<RouletteModalProps> = ({
                 )}
               </View>
             )}
-          </View>
+          </ScrollView>
         </View>
       </View>
     </Modal>
