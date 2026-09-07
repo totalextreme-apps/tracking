@@ -26,7 +26,7 @@ import { CelebrationOverlay } from '@/components/CelebrationOverlay';
 import { deleteFromCloudinary, uploadToCloudinary } from '@/lib/cloudinary';
 import { getCustomLists } from '@/lib/collection-utils';
 import { supabase } from '@/lib/supabase';
-import { fetchEbaySoldValue, getEbaySearchUrl } from '@/lib/pricing';
+import { fetchEbaySoldValue, getEbaySearchUrl, isErrantShippingPrice } from '@/lib/pricing';
 import { useReactions } from '@/hooks/useReactions';
 import { ReactionSummary } from '@/components/ReactionSummary';
 import { ReactionPicker } from '@/components/ReactionPicker';
@@ -607,11 +607,9 @@ export default function ShowDetailScreen() {
             const apiKey = await AsyncStorage.getItem('firecrawl_api_key');
             
             const itemObj = showItems.find((i: any) => i.id === itemId);
-            const targetTitle = 
-                itemObj?.shows?.name ||
-                activeShow?.name || 
-                (activeShow as any)?.title || 
-                '';
+            const showName = itemObj?.shows?.name || activeShow?.name || (activeShow as any)?.title || '';
+            const seasonPart = itemObj?.season_number ? `Season ${itemObj.season_number}` : '';
+            const targetTitle = `${showName} ${seasonPart}`.trim();
 
             if (!targetTitle) {
                 Alert.alert("Error", "Could not determine show title for price lookup.");
@@ -1195,7 +1193,7 @@ export default function ShowDetailScreen() {
                                                 <Text className="text-neutral-400 font-mono text-[9px] font-bold uppercase tracking-wider">WISHLIST</Text>
                                             </View>
                                         )}
-                                        {item.value_estimate !== null && item.value_estimate !== undefined && (
+                                        {item.value_estimate !== null && item.value_estimate !== undefined && !isErrantShippingPrice(item.value_estimate) && (
                                             <View className="bg-neutral-800 border border-neutral-700/50 px-2 py-0.5 rounded ml-2">
                                                 <Text className="text-amber-400 font-mono text-[10px] font-bold">
                                                     EST: ${Number(item.value_estimate).toFixed(2)}
@@ -1281,7 +1279,7 @@ export default function ShowDetailScreen() {
                                             placeholder="Enter custom value..."
                                             placeholderTextColor="#525252"
                                             keyboardType="decimal-pad"
-                                            value={localValues[item.id] !== undefined ? localValues[item.id] : (item.value_estimate?.toString() || '')}
+                                            value={localValues[item.id] !== undefined ? localValues[item.id] : (item.value_estimate && !isErrantShippingPrice(item.value_estimate) ? item.value_estimate.toString() : '')}
                                             onChangeText={(text) => setLocalValues(prev => ({ ...prev, [item.id]: text }))}
                                         />
                                     </View>
