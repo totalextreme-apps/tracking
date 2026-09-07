@@ -1441,7 +1441,7 @@ export default function MovieDetailScreen() {
                                             <View className={`px-2 py-1 rounded shrink-0 ${FORMAT_COLORS[item.format] || 'bg-neutral-800'}`}>
                                                 <Text className="text-white font-mono text-xs font-bold">{item.format === 'BluRay' ? 'Blu-ray' : item.format}</Text>
                                             </View>
-                                            {item.value_estimate !== null && item.value_estimate !== undefined && Number(item.value_estimate) !== 5.39 && (
+                                            {item.value_estimate !== null && item.value_estimate !== undefined && !isErrantShippingPrice(item.value_estimate) && (
                                                 <View className="bg-neutral-800 border border-neutral-700/50 px-2 py-0.5 rounded ml-2">
                                                     <Text className="text-amber-400 font-mono text-[10px] font-bold">
                                                         EST: ${Number(item.value_estimate).toFixed(2)}
