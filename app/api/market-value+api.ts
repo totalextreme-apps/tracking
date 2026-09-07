@@ -1,4 +1,4 @@
-import { calculateMedianPrice, parseEbayPrices } from '../../lib/pricing';
+import { calculateMedianPrice, fetchEbaySoldViaDDG, parseEbayPrices } from '../../lib/pricing';
 
 export async function GET(request: Request) {
     const url = new URL(request.url);
@@ -15,7 +15,7 @@ export async function GET(request: Request) {
 
     const userApiKey = request.headers.get('x-firecrawl-api-key') || '';
 
-    // 1. Try a direct HTTP query to eBay first (works on residential IPs like local dev, and bypasses Firecrawl limits)
+    // 1. Try a direct HTTP query to eBay first
     try {
         console.log(`Attempting direct eBay scrape for "${search}"...`);
         const response = await fetch(ebayUrl, {
@@ -34,15 +34,34 @@ export async function GET(request: Request) {
                 directOk = true;
                 console.log(`Direct scrape succeeded for "${search}": found ${prices.length} prices`);
             }
-        } else {
-            console.log(`Direct scrape returned status: ${response.status}`);
         }
     } catch (e) {
         console.log(`Direct scrape failed or timed out for "${search}":`, e instanceof Error ? e.message : e);
     }
 
-    // 2. If direct query failed (blocked by Akamai on datacenter IPs), fall back to Firecrawl
+    // 2. DuckDuckGo Search Fallback if direct scrape returned 0 prices
     if (!directOk) {
+        try {
+            console.log(`Attempting DDG fallback for "${search}"...`);
+            const parts = search.split(' ');
+            const format = parts[parts.length - 1] || '';
+            const title = parts.slice(0, -1).join(' ') || search;
+            
+            const ddgResult = await fetchEbaySoldViaDDG(title, format);
+            if (ddgResult && ddgResult.value !== null) {
+                return Response.json({
+                    value: ddgResult.value,
+                    pricesCount: ddgResult.pricesCount,
+                    source: ddgResult.source
+                });
+            }
+        } catch (e) {
+            console.warn('DDG fallback in API route failed:', e);
+        }
+    }
+
+    // 3. Firecrawl Fallback (if key provided or configured)
+    if (!directOk && (userApiKey || process.env.FIRECRAWL_API_KEY)) {
         try {
             console.log(`Scraping eBay completed values for "${search}" via Firecrawl HTML...`);
             const headers: Record<string, string> = {
@@ -70,17 +89,10 @@ export async function GET(request: Request) {
                     const html = firecrawlData.data.rawHtml;
                     prices = parseEbayPrices(html);
                     source = 'firecrawl-success';
-                } else {
-                    console.error('Firecrawl response success is false or missing html:', firecrawlData);
-                    source = 'firecrawl-no-data';
                 }
-            } else {
-                console.error(`Firecrawl response error status: ${firecrawlRes.status}`);
-                source = 'firecrawl-request-failed';
             }
         } catch (err) {
             console.error('Firecrawl scrape request threw error:', err);
-            source = 'firecrawl-exception';
         }
     }
 
@@ -92,5 +104,6 @@ export async function GET(request: Request) {
         source
     });
 }
+
 
 

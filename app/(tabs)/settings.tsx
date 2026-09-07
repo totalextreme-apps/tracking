@@ -73,11 +73,11 @@ export default function SettingsScreen() {
     const unvaluedItems = collection.filter(
       (item: any) =>
         item.status === 'owned' &&
-        (item.value_estimate === null || item.value_estimate === undefined)
+        (item.value_estimate === null || item.value_estimate === undefined || item.value_estimate === 5.39)
     );
 
     if (unvaluedItems.length === 0) {
-      Alert.alert('Finished', 'All items in your collection are already valued!');
+      Alert.alert('Finished', 'All items in your collection are already accurately valued!');
       return;
     }
 
@@ -130,8 +130,8 @@ export default function SettingsScreen() {
         }
 
         setAutoValuingProgress(prev => Math.min(itemsToProcess.length, prev + 1));
-        // Add a long delay between scrapes to prevent IP ban / 403 Forbidden
-        await new Promise(r => setTimeout(r, 2000));
+        // Add a delay between scrapes to prevent rate limits
+        await new Promise(r => setTimeout(r, 1500));
       }
     };
 
@@ -151,11 +151,47 @@ export default function SettingsScreen() {
     // Show summary Alert
     Alert.alert(
       'Finished',
-      `Auto-valuation complete!\n\n• Successfully Valued: ${successCount} items\n• Failed/Skipped: ${failCount} items${
-        failCount > 0 
-          ? '\n\nNote: eBay lookups can fail if there are no matching sold listings or if API rate limits are hit. You can add a Firecrawl API key in settings below for higher scraping success.'
-          : ''
-      }`
+      `Auto-valuation complete!\n\n• Successfully Valued: ${successCount} items\n• Failed/Skipped: ${failCount} items`
+    );
+  };
+
+  const handleResetFiveThirtyNine = async () => {
+    if (!userId || !collection) return;
+    playSound('click');
+    const itemsToReset = collection.filter((item: any) => item.value_estimate === 5.39);
+    if (itemsToReset.length === 0) {
+      Alert.alert('No $5.39 Items', 'No items in your collection currently have an errant $5.39 value.');
+      return;
+    }
+
+    Alert.alert(
+      'Reset $5.39 Values',
+      `Found ${itemsToReset.length} items with the errant $5.39 price tag. Would you like to reset them to unvalued so they can be re-calculated?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: `Reset ${itemsToReset.length} Items`,
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const ids = itemsToReset.map((i: any) => i.id);
+              const { error } = await supabase
+                .from('collection_items')
+                .update({ value_estimate: null })
+                .in('id', ids)
+                .eq('user_id', userId);
+
+              if (error) throw error;
+              await queryClient.invalidateQueries({ queryKey: ['collection', userId] });
+              playSound('peel');
+              Alert.alert('Success', `Reset ${ids.length} items! You can now run Auto-Valuation to calculate their true market values.`);
+            } catch (err) {
+              console.error('Reset failed:', err);
+              Alert.alert('Error', 'Failed to reset $5.39 items.');
+            }
+          }
+        }
+      ]
     );
   };
 
@@ -495,7 +531,7 @@ export default function SettingsScreen() {
                   </View>
 
                   {/* Auto Valuation Trigger Button */}
-                  {valuationStats.totalOwned > valuationStats.valuedCount && (
+                  {(valuationStats.totalOwned > valuationStats.valuedCount || (collection && collection.some((i: any) => i.value_estimate === 5.39))) && (
                     <View className="mt-4 border-t border-neutral-800 pt-3">
                       {autoValuingActive ? (
                         <View className="flex-row items-center justify-between bg-neutral-950 p-2.5 rounded-lg border border-neutral-800">
@@ -515,7 +551,7 @@ export default function SettingsScreen() {
                       ) : (
                         <View className="p-1">
                           <Text className="text-amber-500 font-mono text-[10px] font-bold uppercase tracking-wider text-center mb-3">
-                            AUTO-VALUE {valuationStats.totalOwned - valuationStats.valuedCount} UNESTIMATED ITEMS
+                            AUTO-VALUE {collection?.filter((i: any) => i.status === 'owned' && (i.value_estimate === null || i.value_estimate === undefined || i.value_estimate === 5.39)).length || 0} ITEMS
                           </Text>
                           <View className="flex-row flex-wrap gap-2 justify-center">
                             {[10, 50, 100].map(amt => (
@@ -540,6 +576,18 @@ export default function SettingsScreen() {
                               </Text>
                             </Pressable>
                           </View>
+
+                          {collection && collection.some((i: any) => i.value_estimate === 5.39) && (
+                            <Pressable
+                              onPress={handleResetFiveThirtyNine}
+                              className="mt-3 bg-red-950/30 border border-red-800/40 py-2 px-3 rounded-lg flex-row items-center justify-center gap-1.5 active:bg-red-950/50"
+                            >
+                              <Ionicons name="trash-outline" size={11} color="#f87171" />
+                              <Text className="text-red-400 font-mono text-[9px] font-bold uppercase">
+                                RESET {collection.filter((i: any) => i.value_estimate === 5.39).length} ERRANT $5.39 TITLES
+                              </Text>
+                            </Pressable>
+                          )}
                         </View>
                       )}
                     </View>

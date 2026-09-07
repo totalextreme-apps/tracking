@@ -561,7 +561,28 @@ export default function MovieDetailScreen() {
         try {
             setIsGeneratingValue(prev => ({ ...prev, [itemId]: true }));
             const apiKey = await AsyncStorage.getItem('firecrawl_api_key');
-            const res = await fetchEbaySoldValue(movie?.title || '', format, edition, undefined, apiKey || undefined);
+            
+            const itemObj = movieItems.find((i: any) => i.id === itemId);
+            const targetTitle = 
+                itemObj?.movies?.title ||
+                movie?.title || 
+                activeMovie?.title || 
+                (movie as any)?.name || 
+                '';
+
+            if (!targetTitle) {
+                Alert.alert("Error", "Could not determine title for price lookup.");
+                return;
+            }
+
+            // 1. Initial search with edition if provided
+            let res = await fetchEbaySoldValue(targetTitle, format, edition, undefined, apiKey || undefined);
+            
+            // 2. Fallback: Retry without edition if initial search yielded no data
+            if ((res.value === null || res.value === undefined) && edition) {
+                res = await fetchEbaySoldValue(targetTitle, format, null, undefined, apiKey || undefined);
+            }
+
             if (res.value !== null && res.value !== undefined) {
                 const valStr = res.value.toFixed(2);
                 setLocalValues(prev => ({ ...prev, [itemId]: valStr }));
@@ -570,11 +591,17 @@ export default function MovieDetailScreen() {
                     updates: { value_estimate: res.value }
                 });
                 refetch();
-                Alert.alert("Success", `Found and saved an estimated market value of $${valStr} based on recent eBay sales.`);
+                playSound('peel');
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                Alert.alert("Market Value Found", `Estimated market value of $${valStr} assigned based on recent eBay sales.`);
             } else {
-                Alert.alert("No Data", "Could not find enough recent sold listings on eBay to determine a value.");
+                Alert.alert(
+                    "No Price Found", 
+                    `Could not find recent completed sales for "${targetTitle}" (${format}) on eBay.\n\nYou can manually enter an estimated value in the field below.`
+                );
             }
         } catch (e: any) {
+            console.error('handleGenerateValue error:', e);
             Alert.alert("Error", e.message || "Failed to fetch market value.");
         } finally {
             setIsGeneratingValue(prev => ({ ...prev, [itemId]: false }));
@@ -1400,7 +1427,7 @@ export default function MovieDetailScreen() {
                                             <View className={`px-2 py-1 rounded shrink-0 ${FORMAT_COLORS[item.format] || 'bg-neutral-800'}`}>
                                                 <Text className="text-white font-mono text-xs font-bold">{item.format === 'BluRay' ? 'Blu-ray' : item.format}</Text>
                                             </View>
-                                            {item.value_estimate !== null && item.value_estimate !== undefined && (
+                                            {item.value_estimate !== null && item.value_estimate !== undefined && Number(item.value_estimate) !== 5.39 && (
                                                 <View className="bg-neutral-800 border border-neutral-700/50 px-2 py-0.5 rounded ml-2">
                                                     <Text className="text-amber-400 font-mono text-[10px] font-bold">
                                                         EST: ${Number(item.value_estimate).toFixed(2)}
@@ -1422,18 +1449,11 @@ export default function MovieDetailScreen() {
                                             >
                                                 <Text className="text-white font-mono text-[10px] font-bold">BOOT</Text>
                                             </Pressable>
-                                            {item.edition && (
-                                                <Text className="text-neutral-500 font-mono text-xs ml-2 flex-1" style={{ minWidth: 100 }}>({item.edition})</Text>
-                                            )}
-                                            {item.created_at && (
-                                                <Text className="text-neutral-500 font-mono text-[9px] ml-auto">
-                                                    ADDED: {new Date(item.created_at).toLocaleDateString()} {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                </Text>
-                                            )}
+                                            <Text className="text-neutral-500 font-mono text-[9px] ml-auto uppercase font-bold">
+                                                Added: {new Date(item.created_at).toLocaleDateString()} {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </Text>
                                         </View>
                                         <TextInput
-                                             nativeID={`edition-input-${item.id}`}
-                                             {...({ name: `edition-${item.id}` } as any)}
                                              className="bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm mb-2"
                                              placeholder="Edition (Theatrical, Unrated, Director's Cut, etc.)"
                                              placeholderTextColor="#525252"
@@ -1443,10 +1463,8 @@ export default function MovieDetailScreen() {
                                              autoCorrect={false}
                                          />
                                         <TextInput
-                                            nativeID={`notes-input-${item.id}`}
-                                            {...({ name: `notes-${item.id}` } as any)}
-                                            className="bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm min-h-[80px]"
-                                            placeholder={`Add notes for your ${item.format} copy...`}
+                                            className="bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm"
+                                            placeholder={`Add notes for your ${item.format === 'BluRay' ? 'Blu-ray' : item.format} copy...`}
                                             placeholderTextColor="#525252"
                                             multiline
                                             value={localNotes[item.id] !== undefined ? localNotes[item.id] : (item.notes || '')}
@@ -1475,7 +1493,8 @@ export default function MovieDetailScreen() {
                                                         <Pressable
                                                             onPress={() => {
                                                                 playSound('click');
-                                                                Linking.openURL(getEbaySearchUrl(movie?.title || '', item.format));
+                                                                const targetTitle = item.movies?.title || movie?.title || activeMovie?.title || '';
+                                                                Linking.openURL(getEbaySearchUrl(targetTitle, item.format, item.edition));
                                                             }}
                                                             className="bg-neutral-800 px-2 py-1 rounded border border-neutral-700 flex-row items-center gap-1 active:opacity-75"
                                                         >
@@ -1492,7 +1511,7 @@ export default function MovieDetailScreen() {
                                                 placeholder="Enter custom value..."
                                                 placeholderTextColor="#525252"
                                                 keyboardType="decimal-pad"
-                                                value={localValues[item.id] !== undefined ? localValues[item.id] : (item.value_estimate?.toString() || '')}
+                                                value={localValues[item.id] !== undefined ? localValues[item.id] : (item.value_estimate && Number(item.value_estimate) !== 5.39 ? item.value_estimate.toString() : '')}
                                                 onChangeText={(text) => setLocalValues(prev => ({ ...prev, [item.id]: text }))}
                                             />
                                         </View>

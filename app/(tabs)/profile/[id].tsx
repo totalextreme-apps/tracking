@@ -861,15 +861,23 @@ export default function UserProfileScreen() {
                   {onDisplayItems.length > 0 ? (
                     <View className="flex-row flex-wrap justify-start">
                       {onDisplayItems.map((item: any) => {
-                        const { cellStyle, cardWidth } = getGridCardDimensions();
-                        const calculatedScale = cardWidth ? Math.max(0.4, Math.min(1.4, cardWidth / 200)) : 0.9;
+                        const { cellStyle, cardWidth, cardHeight, isList } = getGridCardDimensions();
                         return (
                           <View key={item.id} style={cellStyle as any}>
-                            <OnDisplayCard 
-                              item={item} 
-                              scale={calculatedScale} 
+                            <StackCard 
+                              stack={[item]} 
+                              width={cardWidth} 
+                              height={cardHeight}
+                              mode={isList ? 'list' : 'grid'}
                               isReadOnly={id !== currentUserId}
-                              onSingleTapAction={() => router.push({ pathname: item.movies ? `/movie/${item.movie_id}` as any : `/show/${item.show_id}` as any, params: { ownerId: id, from: from || undefined } })}
+                              activeFormatFilter={formatFilter}
+                              onPress={() => {
+                                const isMovie = !!item.movies;
+                                router.push({ 
+                                  pathname: isMovie ? `/movie/${item.movie_id}` as any : `/show/${item.show_id}` as any, 
+                                  params: { ownerId: id, from: from || undefined } 
+                                });
+                              }}
                             />
                           </View>
                         );
@@ -913,15 +921,23 @@ export default function UserProfileScreen() {
                   {grails.length > 0 ? (
                     <View className="flex-row flex-wrap justify-start">
                       {grails.map((item: any) => {
-                        const { cellStyle, cardWidth } = getGridCardDimensions();
-                        const calculatedScale = cardWidth ? Math.max(0.4, Math.min(1.4, cardWidth / 200)) : 0.9;
+                        const { cellStyle, cardWidth, cardHeight, isList } = getGridCardDimensions();
                         return (
                           <View key={item.id} style={cellStyle as any}>
-                            <OnDisplayCard 
-                              item={item} 
-                              scale={calculatedScale} 
+                            <StackCard 
+                              stack={[item]} 
+                              width={cardWidth} 
+                              height={cardHeight}
+                              mode={isList ? 'list' : 'grid'}
                               isReadOnly={id !== currentUserId}
-                              onSingleTapAction={() => router.push({ pathname: item.movies ? `/movie/${item.movie_id}` as any : `/show/${item.show_id}` as any, params: { ownerId: id, from: from || undefined } })}
+                              activeFormatFilter={formatFilter}
+                              onPress={() => {
+                                const isMovie = !!item.movies;
+                                router.push({ 
+                                  pathname: isMovie ? `/movie/${item.movie_id}` as any : `/show/${item.show_id}` as any, 
+                                  params: { ownerId: id, from: from || undefined } 
+                                });
+                              }}
                             />
                           </View>
                         );

@@ -31,9 +31,7 @@ export function ReviewSection({ movieId, showId, collectionItemId, initialRating
   }, [initialRating]);
 
   useEffect(() => {
-    if (initialReview) {
-      setContent(initialReview);
-    }
+    setContent(initialReview || '');
   }, [initialReview]);
 
   const handleStarPress = async (star: number) => {
@@ -82,6 +80,7 @@ export function ReviewSection({ movieId, showId, collectionItemId, initialRating
       collection_item_id: collectionItemId
     }, {
       onSuccess: () => {
+        setContent('');
         setIsEditing(false);
       }
     });

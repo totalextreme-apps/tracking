@@ -41,7 +41,31 @@ export function useCollection(userId: string | undefined) {
 
         const items = await fetchAllItems();
 
-        if (items && items.length > 0) return items as CollectionItemWithMedia[];
+        if (items && items.length > 0) {
+          // Automatic Background Cleanup: Reset errant $5.39 values to null
+          const errantItems = items.filter((i: any) => i.value_estimate === 5.39);
+          if (errantItems.length > 0) {
+            console.log(`Auto-cleaning ${errantItems.length} errant $5.39 items in background...`);
+            supabase
+              .from('collection_items')
+              .update({ value_estimate: null })
+              .eq('user_id', userId)
+              .eq('value_estimate', 5.39)
+              .then(({ error }: { error: any }) => {
+                if (error) console.error('Background $5.39 cleanup error:', error);
+                else console.log(`Background cleanup reset ${errantItems.length} items to null.`);
+              });
+
+            // Modify in-memory array so the UI immediately reflects cleaned state
+            items.forEach((i: any) => {
+              if (i.value_estimate === 5.39) {
+                i.value_estimate = null;
+              }
+            });
+          }
+
+          return items as CollectionItemWithMedia[];
+        }
 
         // Mock Fallback
         if (userId === '00000000-0000-0000-0000-000000000000') {

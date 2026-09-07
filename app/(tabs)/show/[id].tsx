@@ -605,7 +605,25 @@ export default function ShowDetailScreen() {
         try {
             setIsGeneratingValue(prev => ({ ...prev, [itemId]: true }));
             const apiKey = await AsyncStorage.getItem('firecrawl_api_key');
-            const res = await fetchEbaySoldValue(activeShow?.name || '', format, edition, undefined, apiKey || undefined);
+            
+            const itemObj = showItems.find((i: any) => i.id === itemId);
+            const targetTitle = 
+                itemObj?.shows?.name ||
+                activeShow?.name || 
+                (activeShow as any)?.title || 
+                '';
+
+            if (!targetTitle) {
+                Alert.alert("Error", "Could not determine show title for price lookup.");
+                return;
+            }
+
+            let res = await fetchEbaySoldValue(targetTitle, format, edition, undefined, apiKey || undefined);
+            
+            if ((res.value === null || res.value === undefined) && edition) {
+                res = await fetchEbaySoldValue(targetTitle, format, null, undefined, apiKey || undefined);
+            }
+
             if (res.value !== null && res.value !== undefined) {
                 const valStr = res.value.toFixed(2);
                 setLocalValues(prev => ({ ...prev, [itemId]: valStr }));
@@ -614,11 +632,17 @@ export default function ShowDetailScreen() {
                     updates: { value_estimate: res.value }
                 });
                 refetch();
-                Alert.alert("Success", `Found and saved an estimated market value of $${valStr} based on recent eBay sales.`);
+                playSound('peel');
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                Alert.alert("Market Value Found", `Estimated market value of $${valStr} assigned based on recent eBay sales.`);
             } else {
-                Alert.alert("No Data", "Could not find enough recent sold listings on eBay to determine a value.");
+                Alert.alert(
+                    "No Price Found", 
+                    `Could not find recent completed sales for "${targetTitle}" (${format}) on eBay.\n\nYou can manually enter an estimated value in the field below.`
+                );
             }
         } catch (e: any) {
+            console.error('handleGenerateValue show error:', e);
             Alert.alert("Error", e.message || "Failed to fetch market value.");
         } finally {
             setIsGeneratingValue(prev => ({ ...prev, [itemId]: false }));
