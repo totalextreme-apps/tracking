@@ -1018,7 +1018,7 @@ export default function CommunityScreen() {
 
           {/* ══════════════════════════ ACTIVITY TAB ══════════════════════════ */}
           {currentTab === 'activity' && (
-            <View style={{ flex: 1, paddingTop: 16 }}>
+            <View style={{ paddingTop: 16 }}>
           <MarketplaceSection setActiveTab={setActiveTab} setSelectedSwapTitleKey={setSelectedSwapTitleKey} />
           {/* Member Card Feed */}
           {/* Top 5 Members (Horizontal shelf style) */}
@@ -1583,7 +1583,7 @@ export default function CommunityScreen() {
 
           {/* ══════════════════════════ DIRECTORY TAB ══════════════════════════ */}
           {currentTab === 'directory' && (
-            <View style={{ flex: 1, paddingTop: 16 }}>
+            <View style={{ paddingTop: 16 }}>
           {/* User Search inside Directory */}
           <View style={{ paddingHorizontal: 16, marginBottom: 24 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#111', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: '#1f1f1f', marginBottom: 4 }}>
@@ -1670,7 +1670,7 @@ export default function CommunityScreen() {
 
           {/* ══════════════════════════ BOARD TAB ══════════════════════════ */}
           {currentTab === 'board' && (
-            <View style={{ flex: 1, paddingTop: 16 }}>
+            <View style={{ paddingTop: 16 }}>
           <ImageBackground source={{ uri: CORK_BG }} style={{ marginHorizontal: 16, borderRadius: 12, overflow: 'hidden', marginTop: 16, marginBottom: 16 }} imageStyle={{ opacity: 0.35, borderRadius: 12 }}>
             <View style={{ backgroundColor: 'rgba(100, 60, 20, 0.4)', padding: 14 }}>
               <View style={{ backgroundColor: 'rgba(255,249,220,0.92)', borderRadius: 4, padding: 12, marginBottom: 16, shadowColor: '#000', shadowOffset: { width: 2, height: 4 }, shadowOpacity: 0.4, shadowRadius: 6 }}>
@@ -1896,7 +1896,7 @@ export default function CommunityScreen() {
 
           {/* ══════════════════════════ INBOX TAB ══════════════════════════ */}
           {currentTab === 'inbox' && (
-            <View style={{ flex: 1, paddingTop: 16 }}>
+            <View style={{ paddingTop: 16 }}>
           <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: '#111', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <Text style={{ color: '#2a2a2a', fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold', letterSpacing: 2, textTransform: 'uppercase' }}>Direct Messages</Text>
             <Pressable onPress={() => { /* Wait, to create message we just switch to directory to click member */ setActiveTab('directory'); }} style={{ backgroundColor: '#111', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: '#f59e0b44' }}>
@@ -1939,7 +1939,7 @@ export default function CommunityScreen() {
 
           {/* ══════════════════════════ ALERTS TAB ══════════════════════════ */}
           {currentTab === 'alerts' && (
-            <View style={{ flex: 1, paddingTop: 16 }}>
+            <View style={{ paddingTop: 16 }}>
           <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: '#111', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <Text style={{ color: '#2a2a2a', fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold', letterSpacing: 2, textTransform: 'uppercase' }}>Alerts</Text>
             {notifications && notifications.some((n: any) => n.is_read) && (

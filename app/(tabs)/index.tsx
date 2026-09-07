@@ -520,7 +520,7 @@ export default function HomeScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#f59e0b" />}
       >
         <DesktopContainer>
-          <View className="flex-1">
+          <View>
           {/* ON DISPLAY SECTION (OWNED) - ONLY IN STACKS MODE */}
           {onDisplay.length > 0 && !thriftMode && (
             <View className="mb-8 mt-6">
