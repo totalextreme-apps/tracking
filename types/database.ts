@@ -248,6 +248,7 @@ export interface Profile {
   movie_preferences?: string[] | null;
   format_preferences?: string[] | null;
   letterboxd_username?: string | null;
+  clerk_rank?: string | null;
   updated_at: string | null;
   created_at?: string | null;
 }

@@ -174,6 +174,11 @@ export function BulletinPostItem({ post, userId, idx, startEditing, setShowDelet
             {post.profiles?.avatar_url ? <Image source={{ uri: post.profiles.avatar_url }} style={{ width: '100%', height: '100%' }} /> : <Ionicons name="person" size={12} color="#888" />}
           </View>
           <Text style={{ fontFamily: 'SpaceMono', fontSize: 11, fontWeight: 'bold', color: '#2d2016' }}>@{post.profiles?.username}</Text>
+          {post.profiles?.clerk_rank && (
+            <View style={{ backgroundColor: '#b91c1c', paddingHorizontal: 4, paddingVertical: 2, borderRadius: 2, marginLeft: 6, borderWidth: 1, borderColor: '#7f1d1d', shadowColor: '#000', shadowOffset: { width: 1, height: 1 }, shadowOpacity: 0.2, shadowRadius: 1 }}>
+               <Text style={{ color: 'white', fontFamily: 'SpaceMono', fontSize: 7, fontWeight: '900', letterSpacing: 1 }}>{post.profiles.clerk_rank.toUpperCase()}</Text>
+            </View>
+          )}
         </Pressable>
         <View style={{ flex: 1 }} />
         <View style={{ flexDirection: 'row' }}>

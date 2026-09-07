@@ -65,7 +65,13 @@ export function MemberCard({ userId, profile, onEditPress, onAvatarPress, isRead
                                         {profile?.username ? '@' + profile.username.toUpperCase() : 'UNKNOWN'}
                                     </Text>
                                 </View>
-                                <Text className="text-[#888] font-mono text-[7px] mt-0.5">
+                                <View className="flex-row items-center mt-1">
+                                    <Text className="text-[#a89880] font-mono text-[9px] mr-2">RANK:</Text>
+                                    <View className="bg-red-700 px-1 py-0.5 rounded-sm border border-red-900 shadow-sm">
+                                        <Text className="text-white font-black text-[7px] tracking-widest uppercase">{profile?.clerk_rank || 'TRAINEE'}</Text>
+                                    </View>
+                                </View>
+                                <Text className="text-[#888] font-mono text-[7px] mt-1">
                                     AUTH ID: {displayId}
                                     {profile?.created_at && ` • SINCE: ${new Date(profile.created_at).toLocaleDateString()}`}
                                 </Text>
