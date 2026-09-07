@@ -76,7 +76,7 @@ function MovieReactionSection({ collectionItemId, userId }: { collectionItemId: 
   );
 }
 
-function ItemCommentSectionInline({ collectionItemId, initialComments, isFocused }: { collectionItemId: string, initialComments?: any[], isFocused?: boolean }) {
+function ItemCommentSectionInline({ collectionItemId, groupItems, initialComments, isFocused }: { collectionItemId: string, groupItems?: any[], initialComments?: any[], isFocused?: boolean }) {
   const { userId } = useAuth();
   const { playSound } = useSound();
   const { data: comments, isLoading } = useItemComments(collectionItemId, initialComments);
@@ -91,8 +91,22 @@ function ItemCommentSectionInline({ collectionItemId, initialComments, isFocused
   }, [isFocused]);
 
   const handleSend = () => {
-    if (!text.trim()) return;
-    createComment.mutate({ collectionItemId, content: text.trim() }, {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+
+    let targetId = collectionItemId;
+    if (groupItems && groupItems.length > 0) {
+      const lower = trimmed.toLowerCase();
+      const matched = groupItems.find((sub: any) => {
+        const title = (sub.movies?.title || sub.shows?.name || '').toLowerCase();
+        return title.length > 1 && lower.includes(title);
+      });
+      if (matched) {
+        targetId = matched.id;
+      }
+    }
+
+    createComment.mutate({ collectionItemId: targetId, content: trimmed }, {
       onSuccess: () => {
         setText('');
         playSound('click');
@@ -1197,7 +1211,7 @@ export default function CommunityScreen() {
                                    </Pressable>
                                    <MovieReactionSection collectionItemId={firstItem.id} userId={userId || ''} />
                                  </View>
-                                 <ItemCommentSectionInline collectionItemId={firstItem.id} initialComments={firstItem.item_comments} isFocused={focusedItemId === firstItem.id} />
+                                 <ItemCommentSectionInline collectionItemId={firstItem.id} groupItems={item.items} initialComments={firstItem.item_comments} isFocused={focusedItemId === firstItem.id} />
                                </View>
                             );
                          })()}
@@ -1207,7 +1221,24 @@ export default function CommunityScreen() {
                 
                 if (item.activity_type === 'comment') {
                    const profile = item.profiles;
-                   const collectionItem = item.collection_items;
+                   let collectionItem = item.collection_items;
+                   
+                   // Smart lookup: If comment content mentions a title in owner's feed, resolve that item
+                   if (collectionItem && item.content && communityFeed) {
+                     const lowerContent = item.content.toLowerCase();
+                     const matchingFeedItem = communityFeed.find((f: any) => {
+                       if (f.user_id !== collectionItem.user_id) return false;
+                       const title = (f.movies?.title || f.shows?.name || '').toLowerCase();
+                       return title.length > 1 && lowerContent.includes(title);
+                     });
+                     if (matchingFeedItem && matchingFeedItem.id !== collectionItem.id) {
+                       collectionItem = {
+                         ...matchingFeedItem,
+                         profiles: collectionItem.profiles
+                       };
+                     }
+                   }
+
                    const mediaTitle = collectionItem?.movies?.title || collectionItem?.shows?.name || 'a title';
                    const mediaType = collectionItem?.movies ? 'movie' : 'show';
                    const mediaId = collectionItem?.movies?.id || collectionItem?.shows?.id;
@@ -1222,8 +1253,8 @@ export default function CommunityScreen() {
                          </View>
                          <View style={{ flex: 1 }}>
                            <Text style={{ color: '#ddd', fontFamily: 'SpaceMono', fontSize: 11, fontWeight: 'bold' }}>@{profile?.username || 'member'}</Text>
-                           <Text style={{ color: '#333', fontFamily: 'SpaceMono', fontSize: 8, textTransform: 'uppercase' }}>
-                             commented on @{ownerUsername}'s title · {new Date(item.created_at).toLocaleDateString()}
+                           <Text style={{ color: '#525252', fontFamily: 'SpaceMono', fontSize: 8, textTransform: 'uppercase' }}>
+                             commented on @{ownerUsername}'s {mediaTitle ? `addition of "${mediaTitle}"` : 'title'} · {new Date(item.created_at).toLocaleDateString()}
                            </Text>
                          </View>
                        </Pressable>
