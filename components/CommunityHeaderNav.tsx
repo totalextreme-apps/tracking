@@ -22,7 +22,7 @@ export function CommunityHeaderNav({ activeTab = 'activity', onTabChange, userId
   const { data: notifications } = useNotifications(currentUserId ?? undefined);
 
   const unreadAlertsCount = notifications?.filter((n: any) => !n.is_read).length || 0;
-  const targetUserId = userId || currentUserId;
+  const myProfileId = currentUserId;
 
   const mainTabs = [
     { key: 'profile', label: 'PROFILE' },
@@ -32,6 +32,8 @@ export function CommunityHeaderNav({ activeTab = 'activity', onTabChange, userId
     { key: 'swap', label: 'SWAP MEET' },
   ];
 
+  const isMyProfile = !userId || userId === currentUserId;
+
   const handleTabPress = (tabKey: string) => {
     playSound('click');
 
@@ -40,8 +42,8 @@ export function CommunityHeaderNav({ activeTab = 'activity', onTabChange, userId
     }
 
     if (tabKey === 'profile') {
-      if (!pathname.startsWith('/profile/')) {
-        router.push({ pathname: `/profile/${targetUserId}`, params: { from: 'community' } } as any);
+      if (myProfileId) {
+        router.push({ pathname: `/profile/${myProfileId}`, params: { from: 'community' } } as any);
       }
     } else if (tabKey === 'activity') {
       router.push({ pathname: '/community', params: { tab: 'activity' } } as any);
@@ -72,7 +74,7 @@ export function CommunityHeaderNav({ activeTab = 'activity', onTabChange, userId
           style={{ backgroundColor: '#111', borderRadius: 10, padding: 3 }}
         >
           {mainTabs.map(tab => {
-            const isActive = activeTab === tab.key;
+            const isActive = tab.key === 'profile' ? (activeTab === 'profile' && isMyProfile) : activeTab === tab.key;
             return (
               <Pressable
                 key={tab.key}

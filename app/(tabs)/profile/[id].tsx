@@ -630,21 +630,21 @@ export default function UserProfileScreen() {
         )}
 
         <View className="border-b border-neutral-800 mt-8 mb-4">
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }}>
             <Pressable onPress={() => setActiveTab('on-display')} className={`px-4 py-3 items-center justify-center border-b-2 ${activeTab === 'on-display' ? 'border-amber-500' : 'border-transparent'}`}>
               <Text adjustsFontSizeToFit numberOfLines={1} className={`font-mono text-[10px] text-center font-bold ${activeTab === 'on-display' ? 'text-amber-500' : 'text-neutral-500'}`}>ON DISPLAY</Text>
             </Pressable>
-            <Pressable onPress={() => setActiveTab('collection')} className={`px-4 py-3 items-center justify-center border-b-2 ${activeTab === 'collection' ? 'border-neutral-400' : 'border-transparent'}`}>
-              <Text adjustsFontSizeToFit numberOfLines={1} className={`font-mono text-[10px] text-center font-bold ${activeTab === 'collection' ? 'text-neutral-200' : 'text-neutral-500'}`}>COLLECTION</Text>
+            <Pressable onPress={() => setActiveTab('collection')} className={`px-4 py-3 items-center justify-center border-b-2 ${activeTab === 'collection' ? 'border-amber-500' : 'border-transparent'}`}>
+              <Text adjustsFontSizeToFit numberOfLines={1} className={`font-mono text-[10px] text-center font-bold ${activeTab === 'collection' ? 'text-amber-500' : 'text-neutral-500'}`}>COLLECTION</Text>
             </Pressable>
             <Pressable onPress={() => setActiveTab('wishlist')} className={`px-4 py-3 items-center justify-center border-b-2 ${activeTab === 'wishlist' ? 'border-pink-500' : 'border-transparent'}`}>
               <Text adjustsFontSizeToFit numberOfLines={1} className={`font-mono text-[10px] text-center font-bold ${activeTab === 'wishlist' ? 'text-pink-500' : 'text-neutral-500'}`}>WANTED</Text>
             </Pressable>
-            <Pressable onPress={() => setActiveTab('grails')} className={`px-4 py-3 items-center justify-center border-b-2 ${activeTab === 'grails' ? 'border-white' : 'border-transparent'}`}>
-              <Text adjustsFontSizeToFit numberOfLines={1} className={`font-mono text-[10px] text-center font-bold ${activeTab === 'grails' ? 'text-white' : 'text-neutral-500'}`}>GRAILS</Text>
+            <Pressable onPress={() => setActiveTab('grails')} className={`px-4 py-3 items-center justify-center border-b-2 ${activeTab === 'grails' ? 'border-amber-400' : 'border-transparent'}`}>
+              <Text adjustsFontSizeToFit numberOfLines={1} className={`font-mono text-[10px] text-center font-bold ${activeTab === 'grails' ? 'text-amber-400' : 'text-neutral-500'}`}>GRAILS</Text>
             </Pressable>
-            <Pressable onPress={() => setActiveTab('guestbook')} className={`px-4 py-3 items-center justify-center border-b-2 ${activeTab === 'guestbook' ? 'border-amber-600' : 'border-transparent'}`}>
-              <Text adjustsFontSizeToFit numberOfLines={1} className={`font-mono text-[10px] text-center font-bold ${activeTab === 'guestbook' ? 'text-amber-600' : 'text-neutral-500'}`}>GUESTBOOK</Text>
+            <Pressable onPress={() => setActiveTab('guestbook')} className={`px-4 py-3 items-center justify-center border-b-2 ${activeTab === 'guestbook' ? 'border-amber-500' : 'border-transparent'}`}>
+              <Text adjustsFontSizeToFit numberOfLines={1} className={`font-mono text-[10px] text-center font-bold ${activeTab === 'guestbook' ? 'text-amber-500' : 'text-neutral-500'}`}>GUESTBOOK</Text>
             </Pressable>
             <Pressable onPress={() => setActiveTab('bin')} className={`px-4 py-3 items-center justify-center border-b-2 ${activeTab === 'bin' ? 'border-emerald-500' : 'border-transparent'}`}>
               <Text adjustsFontSizeToFit numberOfLines={1} className={`font-mono text-[10px] text-center font-bold ${activeTab === 'bin' ? 'text-emerald-500' : 'text-neutral-500'}`}>THE BIN</Text>
@@ -664,13 +664,14 @@ export default function UserProfileScreen() {
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
                 {['ALL', 'VHS', 'DVD', 'BluRay', '4K', 'Digital', 'BOOTLEG'].map(f => {
                    const isSelected = f === 'ALL' ? formatFilter === null : formatFilter === f;
+                   const labelText = f === 'BluRay' ? 'BLU-RAY' : f.toUpperCase();
                    return (
                      <Pressable 
                        key={f} 
                        onPress={() => setFormatFilter(f === 'ALL' ? null : f)} 
                        className={`px-3 py-1 rounded-full border ${isSelected ? 'bg-amber-500/20 border-amber-500/50' : 'bg-neutral-900 border-neutral-800'}`}
                      >
-                       <Text className={`font-mono text-[10px] uppercase font-bold ${isSelected ? 'text-amber-500' : 'text-neutral-500'}`}>{f === 'BluRay' ? 'Blu-ray' : f}</Text>
+                       <Text className={`font-mono text-[10px] uppercase font-bold ${isSelected ? 'text-amber-500' : 'text-neutral-500'}`}>{labelText}</Text>
                      </Pressable>
                    );
                 })}

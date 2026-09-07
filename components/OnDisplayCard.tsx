@@ -36,9 +36,10 @@ type OnDisplayCardProps = {
   onToggleFavorite?: (item: CollectionItemWithMedia) => void;
   onRatePress?: (rating: number) => void;
   isReadOnly?: boolean;
+  showReactions?: boolean;
 };
 
-export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPressAction, onToggleFavorite, onRatePress, isReadOnly = false }: OnDisplayCardProps) {
+export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPressAction, onToggleFavorite, onRatePress, isReadOnly = false, showReactions = false }: OnDisplayCardProps) {
   const { playSound } = useSound();
   const { genreStickersEnabled } = useSettings();
   const { userId } = useAuth();
@@ -263,7 +264,7 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
             )}
           </View>
         </View>
-        {userId && (
+        {userId && showReactions && (
           <ReactionSummary
             reactions={reactions}
             currentUserId={userId}
@@ -293,7 +294,7 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
           <CardContent />
         </Animated.View>
       </Pressable>
-      {userId && (
+      {userId && showReactions && (
         <ReactionPicker
           visible={pickerVisible}
           onClose={() => setPickerVisible(false)}
