@@ -1222,28 +1222,37 @@ export default function CommunityScreen() {
                 if (item.activity_type === 'comment') {
                    const profile = item.profiles;
                    let collectionItem = item.collection_items;
-                   
-                   // Smart lookup: If comment content mentions a title in owner's feed, resolve that item
-                   if (collectionItem && item.content && communityFeed) {
+                   const ownerUsername = collectionItem?.profiles?.username || 'member';
+                   const ownerId = collectionItem?.user_id;
+
+                   // Check if this comment is part of a multi-title addition story group by ownerId around the same date
+                   let storyGroupItems: any[] = [];
+                   if (collectionItem && communityFeed) {
+                     const itemDateStr = new Date(collectionItem.created_at).toDateString();
+                     storyGroupItems = communityFeed.filter((f: any) => 
+                       f.user_id === ownerId && 
+                       f.created_at && 
+                       new Date(f.created_at).toDateString() === itemDateStr
+                     );
+                   }
+
+                   // If the comment explicitly mentions a specific title in the comment text, resolve that item for highlight
+                   let specificMatchedItem: any = null;
+                   if (collectionItem && item.content && storyGroupItems.length > 0) {
                      const lowerContent = item.content.toLowerCase();
-                     const matchingFeedItem = communityFeed.find((f: any) => {
-                       if (f.user_id !== collectionItem.user_id) return false;
+                     specificMatchedItem = storyGroupItems.find((f: any) => {
                        const title = (f.movies?.title || f.shows?.name || '').toLowerCase();
                        return title.length > 1 && lowerContent.includes(title);
                      });
-                     if (matchingFeedItem && matchingFeedItem.id !== collectionItem.id) {
-                       collectionItem = {
-                         ...matchingFeedItem,
-                         profiles: collectionItem.profiles
-                       };
+                     if (specificMatchedItem) {
+                       collectionItem = specificMatchedItem;
                      }
                    }
 
                    const mediaTitle = collectionItem?.movies?.title || collectionItem?.shows?.name || 'a title';
                    const mediaType = collectionItem?.movies ? 'movie' : 'show';
                    const mediaId = collectionItem?.movies?.id || collectionItem?.shows?.id;
-                   const ownerUsername = collectionItem?.profiles?.username || 'member';
-                   const ownerId = collectionItem?.user_id;
+                   const isMultiStory = storyGroupItems.length > 1;
 
                    return (
                      <View key={item.id + '-' + idx} style={{ marginBottom: 20 }}>
@@ -1254,7 +1263,9 @@ export default function CommunityScreen() {
                          <View style={{ flex: 1 }}>
                            <Text style={{ color: '#ddd', fontFamily: 'SpaceMono', fontSize: 11, fontWeight: 'bold' }}>@{profile?.username || 'member'}</Text>
                            <Text style={{ color: '#525252', fontFamily: 'SpaceMono', fontSize: 8, textTransform: 'uppercase' }}>
-                             commented on @{ownerUsername}'s {mediaTitle ? `addition of "${mediaTitle}"` : 'title'} · {new Date(item.created_at).toLocaleDateString()}
+                             {isMultiStory 
+                               ? `commented on @${ownerUsername}'s addition of ${storyGroupItems.length} titles`
+                               : `commented on @${ownerUsername}'s addition of "${mediaTitle}"`} · {new Date(item.created_at).toLocaleDateString()}
                            </Text>
                          </View>
                        </Pressable>
@@ -1262,7 +1273,39 @@ export default function CommunityScreen() {
                        <View style={{ backgroundColor: '#111', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#1a1a1a', borderLeftWidth: 3, borderLeftColor: '#f59e0b' }}>
                          <Text style={{ color: '#ccc', fontFamily: 'SpaceMono', fontSize: 12, lineHeight: 18, fontStyle: 'italic', marginBottom: 8 }}>"{item.content}"</Text>
                          
-                         {collectionItem && (
+                         {/* If multi-title addition, show truncated mini-poster story preview row */}
+                         {isMultiStory ? (
+                           <View style={{ marginBottom: 4 }}>
+                             <Text style={{ color: '#666', fontFamily: 'SpaceMono', fontSize: 7, textTransform: 'uppercase', marginBottom: 4, letterSpacing: 0.5 }}>
+                               ADDITION BATCH ({storyGroupItems.length} TITLES BY @{ownerUsername.toUpperCase()})
+                             </Text>
+                             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ height: 80, minHeight: 80 }} contentContainerStyle={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 4 }}>
+                               {storyGroupItems.map((sub: any, i: number) => {
+                                 const mId = sub.movies?.id || sub.shows?.id;
+                                 const mType = sub.movies ? 'movie' : 'show';
+                                 const poster = getPosterUrl(sub.movies?.poster_path || sub.shows?.poster_path);
+                                 const isHighlight = specificMatchedItem && sub.id === specificMatchedItem.id;
+                                 return (
+                                   <Pressable 
+                                     key={i} 
+                                     onPress={() => { if (mId) router.push(`/${mType}/${mId}?ownerId=${ownerId}&from=community`); }}
+                                     style={{ width: 44, minWidth: 44, height: 68, minHeight: 68, borderRadius: 6, backgroundColor: '#0a0a0a', overflow: 'hidden', borderWidth: isHighlight ? 2 : 1, borderColor: isHighlight ? '#f59e0b' : '#222' }}
+                                   >
+                                     {poster ? (
+                                       <Image source={{ uri: poster }} style={{ width: '100%', height: '100%' }} />
+                                     ) : (
+                                       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 2 }}>
+                                         <Text style={{ color: '#888', fontFamily: 'SpaceMono', fontSize: 6, textAlign: 'center' }} numberOfLines={2}>
+                                           {(sub.movies?.title || sub.shows?.name || 'TITLE').toUpperCase()}
+                                         </Text>
+                                       </View>
+                                     )}
+                                   </Pressable>
+                                 );
+                               })}
+                             </ScrollView>
+                           </View>
+                         ) : collectionItem ? (
                            <View>
                              <Pressable 
                                onPress={() => { if (mediaId) router.push(`/${mediaType}/${mediaId}?ownerId=${ownerId}&from=community`); }}
@@ -1283,16 +1326,19 @@ export default function CommunityScreen() {
                                </View>
                                <Ionicons name="chevron-forward" size={12} color="#444" />
                              </Pressable>
-                             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, paddingTop: 6, borderTopWidth: 1, borderTopColor: '#222' }}>
-                               <Pressable 
-                                 onPress={() => { if (mediaId) router.push(`/${mediaType}/${mediaId}?ownerId=${ownerId}&from=community`); }}
-                                 style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
-                               >
-                                 <Ionicons name="chatbubble-outline" size={10} color="#737373" />
-                                 <Text style={{ fontFamily: 'SpaceMono', fontSize: 8, color: '#737373' }}>COMMENT / REPLY</Text>
-                               </Pressable>
-                               <MovieReactionSection collectionItemId={collectionItem.id} userId={userId || ''} />
-                             </View>
+                           </View>
+                         ) : null}
+                         
+                         {collectionItem && (
+                           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, paddingTop: 6, borderTopWidth: 1, borderTopColor: '#222' }}>
+                             <Pressable 
+                               onPress={() => { if (mediaId) router.push(`/${mediaType}/${mediaId}?ownerId=${ownerId}&from=community`); }}
+                               style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                             >
+                               <Ionicons name="chatbubble-outline" size={10} color="#737373" />
+                               <Text style={{ fontFamily: 'SpaceMono', fontSize: 8, color: '#737373' }}>COMMENT / REPLY</Text>
+                             </Pressable>
+                             <MovieReactionSection collectionItemId={collectionItem.id} userId={userId || ''} />
                            </View>
                          )}
                        </View>
