@@ -638,24 +638,31 @@ export const useDeletePost = (userId?: string) => {
 };
 
 // 8. Fetch Item Comments
-export const useItemComments = (collectionItemId?: string, initialData?: any[]) => {
+export const useItemComments = (collectionItemId?: string | string[], initialData?: any[]) => {
   return useQuery({
     queryKey: ['item-comments', collectionItemId],
     queryFn: async () => {
-      if (!collectionItemId) return [];
-      const { data, error } = await supabase
+      if (!collectionItemId || (Array.isArray(collectionItemId) && collectionItemId.length === 0)) return [];
+      
+      let query = supabase
         .from('item_comments')
         .select(`
           *,
           profiles(*)
-        `)
-        .eq('collection_item_id', collectionItemId)
-        .order('created_at', { ascending: true });
+        `);
+        
+      if (Array.isArray(collectionItemId)) {
+        query = query.in('collection_item_id', collectionItemId);
+      } else {
+        query = query.eq('collection_item_id', collectionItemId);
+      }
+      
+      const { data, error } = await query.order('created_at', { ascending: true });
 
       if (error) throw error;
       return data as ItemCommentWithProfile[];
     },
-    enabled: !!collectionItemId,
+    enabled: Array.isArray(collectionItemId) ? collectionItemId.length > 0 : !!collectionItemId,
     initialData,
     staleTime: 1000 * 60 * 5,
   });
@@ -682,7 +689,8 @@ export const useCreateComment = (userId?: string) => {
       return data;
     },
     onSuccess: (_, { collectionItemId }) => {
-      queryClient.invalidateQueries({ queryKey: ['item-comments', collectionItemId] });
+      queryClient.invalidateQueries({ queryKey: ['item-comments'] });
+      queryClient.invalidateQueries({ queryKey: ['community_feed'] });
     },
   });
 };

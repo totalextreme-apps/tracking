@@ -79,7 +79,14 @@ function MovieReactionSection({ collectionItemId, userId }: { collectionItemId: 
 function ItemCommentSectionInline({ collectionItemId, groupItems, initialComments, isFocused }: { collectionItemId: string, groupItems?: any[], initialComments?: any[], isFocused?: boolean }) {
   const { userId } = useAuth();
   const { playSound } = useSound();
-  const { data: comments, isLoading } = useItemComments(collectionItemId, initialComments);
+  const targetIds = useMemo(() => {
+    if (groupItems && groupItems.length > 0) {
+      return groupItems.map((i: any) => i.id);
+    }
+    return [collectionItemId];
+  }, [groupItems, collectionItemId]);
+
+  const { data: comments, isLoading } = useItemComments(targetIds, initialComments);
   const createComment = useCreateComment(userId);
   const [text, setText] = useState('');
   const inputRef = useRef<TextInput>(null);
@@ -1213,7 +1220,7 @@ export default function CommunityScreen() {
                                    </Pressable>
                                    <MovieReactionSection collectionItemId={firstItem.id} userId={userId || ''} />
                                  </View>
-                                 <ItemCommentSectionInline collectionItemId={firstItem.id} groupItems={item.items} initialComments={firstItem.item_comments} isFocused={focusedItemId === firstItem.id} />
+                                 <ItemCommentSectionInline collectionItemId={firstItem.id} groupItems={item.items} initialComments={item.items.flatMap((sub: any) => sub.item_comments || [])} isFocused={focusedItemId === firstItem.id} />
                                </View>
                             );
                          })()}

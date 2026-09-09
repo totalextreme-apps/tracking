@@ -82,27 +82,25 @@ export async function searchMedia(query: string, page = 1): Promise<TmdbSearchRe
   // ─── NEW: Multi-Cast Search Logic ───
   if (trimmedQuery.includes(',')) {
     const names = trimmedQuery.split(',').map(n => n.trim()).filter(n => n.length > 0);
-    if (names.length >= 1) {
+    if (names.length >= 2) {
       try {
         // Resolve names to Person IDs
         const personPromises = names.map(name => tmdbFetch<any>(`/search/person?query=${encodeURIComponent(name)}&page=1`));
         const personResults = await Promise.all(personPromises);
         const personIds = personResults.map(r => r.results?.[0]?.id).filter(id => !!id);
 
-        if (personIds.length > 0) {
+        if (personIds.length === names.length && personIds.length >= 2) {
           // Use Discover API with with_cast parameter (comma = AND logic in TMDB discover)
           const discoverData = await tmdbFetch<any>(`/discover/movie?with_cast=${personIds.join(',')}&page=${page}&sort_by=popularity.desc`);
-          const tvDiscoverData = await tmdbFetch<any>(`/discover/tv?with_cast=${personIds.join(',')}&page=${page}&sort_by=popularity.desc`);
           
           const combinedResults = [
-            ...(discoverData.results || []).map((r: any) => ({ ...r, media_type: 'movie' })),
-            ...(tvDiscoverData.results || []).map((r: any) => ({ ...r, media_type: 'tv' }))
+            ...(discoverData.results || []).map((r: any) => ({ ...r, media_type: 'movie' }))
           ];
 
           return {
             page: page,
             results: combinedResults,
-            total_pages: Math.max(discoverData.total_pages || 0, tvDiscoverData.total_pages || 0),
+            total_pages: discoverData.total_pages || 1,
             total_results: combinedResults.length
           };
         }
@@ -210,10 +208,9 @@ export async function searchMedia(query: string, page = 1): Promise<TmdbSearchRe
   // ─── NEW: Descriptive String Fallback (for noisy Barcode titles) ───
   if ((!data.results || data.results.length === 0) && cleanQuery.includes(' ')) {
     const words = cleanQuery.split(' ').filter(w => w.length > 0);
-    if (words.length >= 4) {
-      // Try searching for the first 3, 4, 5 words respectively
-      for (let i = 5; i >= 3; i--) {
-        if (words.length < i) continue;
+    if (words.length >= 2) {
+      // Drop words from the end one-by-one until we find a match
+      for (let i = words.length - 1; i >= 1; i--) {
         const subQuery = words.slice(0, i).join(' ');
         try {
           const fallbackData = await tmdbFetch<any>(`/search/multi?query=${encodeURIComponent(subQuery)}&page=${page}`);
