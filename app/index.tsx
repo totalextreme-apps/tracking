@@ -1,3 +1,4 @@
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -197,7 +198,8 @@ export default function LandingPage() {
         <View style={styles.featuresSection}>
           <Text style={styles.featuresHeadline}>Everything you need to track.</Text>
           
-          <Animated.ScrollView 
+          <View style={{ position: 'relative' }}>
+            <Animated.ScrollView 
             horizontal 
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.carouselContainer}
@@ -240,6 +242,15 @@ export default function LandingPage() {
               </View>
             ))}
           </Animated.ScrollView>
+
+          {/* Visual Scroll Indicators */}
+          <View pointerEvents="none" style={styles.carouselArrowLeft}>
+            <FontAwesome name="chevron-left" size={20} color="rgba(255,255,255,0.5)" style={{ marginLeft: -2 }} />
+          </View>
+          <View pointerEvents="none" style={styles.carouselArrowRight}>
+            <FontAwesome name="chevron-right" size={20} color="rgba(255,255,255,0.5)" style={{ marginRight: -2 }} />
+          </View>
+        </View>
         </View>
 
         {/* Feature Breakdown Section */}
@@ -446,6 +457,32 @@ const styles = StyleSheet.create({
     color: '#a3a3a3',
     fontSize: 15,
     lineHeight: 22,
+  },
+  carouselArrowLeft: {
+    position: 'absolute',
+    left: 16,
+    top: '40%',
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  carouselArrowRight: {
+    position: 'absolute',
+    right: 16,
+    top: '40%',
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   breakdownSection: {
     paddingVertical: 80,
