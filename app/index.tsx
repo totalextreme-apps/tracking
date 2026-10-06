@@ -279,7 +279,7 @@ export default function LandingPage() {
           
           <View style={[styles.thriftImageContainer, { width: Platform.OS === 'web' || dimensions.width > 768 ? 320 : dimensions.width * 0.8, height: Platform.OS === 'web' || dimensions.width > 768 ? 650 : dimensions.width * 0.8 * 2.03 }]}>
             <Image 
-              source={require('@/assets/images/screenshots/IMG_7817.jpg')} 
+              source={require('@/assets/images/screenshots/IMG_7835.jpg')} 
               style={styles.thriftImage} 
               contentFit="cover"
             />
