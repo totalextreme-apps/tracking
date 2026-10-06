@@ -32,7 +32,17 @@ const POSTERS = [
   "/dqoshZPLNsXlC1qtz5n34raUyrE.jpg", // Candyman
   "/8gZWMhJHRvaXdXsNhERtqNHYpH3.jpg", // The Fly
   "/hVEqUASJmCQaolkKFEySCHZ8uKG.jpg", // An American Werewolf in London
-  "/mRy7JnuvqFnQ0VFScfnMzfqM67W.jpg"  // Suspiria
+  "/mRy7JnuvqFnQ0VFScfnMzfqM67W.jpg", // Suspiria
+  "/5mVyFHSY2rSsNgD4NfEwV82HigU.jpg", // The Girl Next Door
+  "/2ZkuQXvVhh45uSvkBej4S7Ix1NJ.jpg", // Mean Girls
+  "/aHTUpo45qy9QYIOnVITGGqLoVcA.jpg", // White Chicks
+  "/9ohlMrJHQqKhfUKh7Zr3JQqHNLZ.jpg", // Legally Blonde
+  "/bnVby0qI0dS7YunbShP7mw68HY3.jpg", // Bring It On
+  "/8AwVTcgpTnmeOs4TdTWqcFDXEsA.jpg", // Clueless
+  "/ujERk3aKABXU3NDXOAxEQYTHe9A.jpg", // 10 Things I Hate About You
+  "/rtzcrwgsuESV2adSDhIuLyQoZmp.jpg", // Heathers
+  "/76cCsRtQ5MJBAqoigojXsLXLJwh.jpg", // Cruel Intentions
+  "/5P68by2Thn8wHAziyWGEw2O7hco.jpg"  // American Pie
 ].map(path => `https://image.tmdb.org/t/p/w500${path}`);
 
 // Shuffle function for randomizing poster order per column
@@ -191,13 +201,13 @@ export default function LandingPage() {
             horizontal 
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.carouselContainer}
-            snapToInterval={Platform.OS === 'web' ? 420 : dimensions.width * 0.85 + 24}
+            snapToInterval={Platform.OS === 'web' || dimensions.width > 768 ? 424 : dimensions.width * 0.85 + 24}
             decelerationRate="fast"
           >
             {[
               {
                 title: "Beautiful Cover Art",
-                desc: "Browse your collection like a real video store shelf with high quality, tactile cover art and custom metadata.",
+                desc: "Browse your collection like a real video store shelf with high quality, tactile cover art and custom metadata. Set your favorites On Display with a Staff Pick sticker.",
                 image: require('@/assets/images/screenshots/IMG_7813.jpg')
               },
               {
@@ -207,16 +217,16 @@ export default function LandingPage() {
               },
               {
                 title: "Deep Dive Details",
-                desc: "Log your watch history, view trailers, check Letterboxd ratings, and adjust the texture of your cases.",
+                desc: "Log your watch history, view trailers, check Letterboxd ratings, and set custom cover art to make your shelves exactly how you want.",
                 image: require('@/assets/images/screenshots/IMG_7815.jpg')
               },
               {
-                title: "Community Charts",
-                desc: "See the most circulated and most wanted titles in the community. Share your stacks and discover what others are tracking.",
+                title: "Community & Friends",
+                desc: "See what your friends are watching and adding. View the most circulated and most wanted titles in the Tracking community.",
                 image: require('@/assets/images/screenshots/IMG_7816.jpg')
               }
             ].map((item, index) => (
-              <View key={index} style={[styles.featureCard, { width: Platform.OS === 'web' ? 400 : dimensions.width * 0.85 }]}>
+              <View key={index} style={[styles.featureCard, { width: Platform.OS === 'web' || dimensions.width > 768 ? 400 : dimensions.width * 0.85 }]}>
                 <Image 
                   source={item.image} 
                   style={styles.screenshotImage} 
@@ -230,6 +240,50 @@ export default function LandingPage() {
               </View>
             ))}
           </Animated.ScrollView>
+        </View>
+
+        {/* Feature Breakdown Section */}
+        <View style={styles.breakdownSection}>
+          <Text style={styles.breakdownHeadline}>More than just a shelf.</Text>
+          <View style={styles.breakdownGrid}>
+            
+            <View style={[styles.breakdownCard, { width: Platform.OS === 'web' || dimensions.width > 768 ? '30%' : '100%' }]}>
+              <Text style={styles.breakdownIcon}>📄</Text>
+              <Text style={styles.breakdownTitle}>PDF & CSV Export</Text>
+              <Text style={styles.breakdownDesc}>Need an insurance record or a beautiful receipt of your collection? Export your library to PDF or CSV in seconds.</Text>
+            </View>
+
+            <View style={[styles.breakdownCard, { width: Platform.OS === 'web' || dimensions.width > 768 ? '30%' : '100%' }]}>
+              <Text style={styles.breakdownIcon}>📸</Text>
+              <Text style={styles.breakdownTitle}>Lightning Fast Scanning</Text>
+              <Text style={styles.breakdownDesc}>Add movies in seconds using the blazing fast barcode scanner, or log titles instantly using voice-to-text.</Text>
+            </View>
+
+            <View style={[styles.breakdownCard, { width: Platform.OS === 'web' || dimensions.width > 768 ? '30%' : '100%' }]}>
+              <Text style={styles.breakdownIcon}>📈</Text>
+              <Text style={styles.breakdownTitle}>Market Value Engine</Text>
+              <Text style={styles.breakdownDesc}>Integrated pricing data automatically updates to show you exactly what your physical collection is worth today.</Text>
+            </View>
+
+            <View style={[styles.breakdownCard, { width: Platform.OS === 'web' || dimensions.width > 768 ? '30%' : '100%' }]}>
+              <Text style={styles.breakdownIcon}>📼</Text>
+              <Text style={styles.breakdownTitle}>Custom Cover Art</Text>
+              <Text style={styles.breakdownDesc}>Upload custom slipcovers, VHS boxes, and steelbooks to make your digital shelf reflect reality perfectly.</Text>
+            </View>
+
+            <View style={[styles.breakdownCard, { width: Platform.OS === 'web' || dimensions.width > 768 ? '30%' : '100%' }]}>
+              <Text style={styles.breakdownIcon}>🎬</Text>
+              <Text style={styles.breakdownTitle}>Letterboxd Connected</Text>
+              <Text style={styles.breakdownDesc}>View Letterboxd ratings directly on your shelf and log watch history to keep track of every viewing.</Text>
+            </View>
+
+            <View style={[styles.breakdownCard, { width: Platform.OS === 'web' || dimensions.width > 768 ? '30%' : '100%' }]}>
+              <Text style={styles.breakdownIcon}>🏷️</Text>
+              <Text style={styles.breakdownTitle}>Thrift Mode & Grails</Text>
+              <Text style={styles.breakdownDesc}>Highlight your most wanted titles as 'Grails' and flip the app into Thrift Mode when you're hunting in the wild.</Text>
+            </View>
+
+          </View>
         </View>
       </ScrollView>
     </View>
@@ -392,5 +446,54 @@ const styles = StyleSheet.create({
     color: '#a3a3a3',
     fontSize: 15,
     lineHeight: 22,
+  },
+  breakdownSection: {
+    paddingVertical: 80,
+    paddingHorizontal: 32,
+    backgroundColor: '#0a0a0a',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.05)',
+    paddingBottom: Platform.OS === 'web' ? 120 : 100,
+  },
+  breakdownHeadline: {
+    color: '#ffffff',
+    fontSize: Platform.OS === 'web' ? 40 : 32,
+    fontFamily: 'SpaceMono',
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 64,
+  },
+  breakdownGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 24,
+    maxWidth: 1200,
+    width: '100%',
+  },
+  breakdownCard: {
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: 24,
+    padding: 32,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+    minWidth: 300,
+  },
+  breakdownIcon: {
+    fontSize: 32,
+    marginBottom: 20,
+  },
+  breakdownTitle: {
+    color: '#ffffff',
+    fontSize: 20,
+    fontFamily: 'SpaceMono',
+    fontWeight: 'bold',
+    marginBottom: 12,
+  },
+  breakdownDesc: {
+    color: '#a3a3a3',
+    fontSize: 15,
+    lineHeight: 24,
   },
 });
