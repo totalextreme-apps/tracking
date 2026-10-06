@@ -177,13 +177,13 @@ export default function LandingPage() {
 
         {/* Hero Section */}
         <View style={[styles.content, { minHeight: dimensions.height - 84 }]}>
-          <Text style={styles.headline}>
+          <Text style={[styles.headline, { fontSize: dimensions.width > 768 ? 64 : 40, lineHeight: dimensions.width > 768 ? 72 : 46 }]}>
             Rewind your collection.
           </Text>
-          <Text style={styles.subHeadline}>
+          <Text style={[styles.subHeadline, { fontSize: dimensions.width > 768 ? 24 : 20 }]}>
             Build the video store you always wanted.
           </Text>
-          <Text style={styles.subtext}>
+          <Text style={[styles.subtext, { fontSize: dimensions.width > 768 ? 18 : 15, lineHeight: dimensions.width > 768 ? 30 : 24 }]}>
             Tracking makes managing your collection—from VHS to 4K—feel like collecting again. It's part collection manager, part hunting companion, and part digital recreation of the video store you wish still existed.
           </Text>
           <Pressable 
@@ -196,14 +196,14 @@ export default function LandingPage() {
 
         {/* Features Carousel Section */}
         <View style={styles.featuresSection}>
-          <Text style={styles.featuresHeadline}>Everything you need to track.</Text>
+          <Text style={[styles.featuresHeadline, { fontSize: dimensions.width > 768 ? 40 : 32 }]}>Everything you need to track.</Text>
           
           <View style={{ position: 'relative' }}>
             <Animated.ScrollView 
             horizontal 
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.carouselContainer}
-            snapToInterval={Platform.OS === 'web' || dimensions.width > 768 ? 424 : dimensions.width * 0.85 + 24}
+            snapToInterval={dimensions.width > 768 ? 424 : dimensions.width * 0.85 + 24}
             decelerationRate="fast"
           >
             {[
@@ -228,7 +228,7 @@ export default function LandingPage() {
                 image: require('@/assets/images/screenshots/IMG_7816.jpg')
               }
             ].map((item, index) => (
-              <View key={index} style={[styles.featureCard, { width: Platform.OS === 'web' || dimensions.width > 768 ? 400 : dimensions.width * 0.85 }]}>
+              <View key={index} style={[styles.featureCard, { width: dimensions.width > 768 ? 400 : dimensions.width * 0.85 }]}>
                 <Image 
                   source={item.image} 
                   style={styles.screenshotImage} 
@@ -254,7 +254,7 @@ export default function LandingPage() {
         </View>
 
         {/* Thrift Mode Section */}
-        <View style={[styles.thriftSection, { flexDirection: Platform.OS === 'web' || dimensions.width > 768 ? 'row' : 'column' }]}>
+        <View style={[styles.thriftSection, { flexDirection: dimensions.width > 768 ? 'row' : 'column' }]}>
           <View style={styles.thriftContent}>
             <Text style={styles.thriftHeadline}>BUILT FOR THE HUNT.</Text>
             <Text style={styles.thriftSubHeadline}>Ever bought a movie you already owned?</Text>
@@ -277,7 +277,7 @@ export default function LandingPage() {
             </Pressable>
           </View>
           
-          <View style={[styles.thriftImageContainer, { width: Platform.OS === 'web' || dimensions.width > 768 ? 320 : dimensions.width * 0.8, height: Platform.OS === 'web' || dimensions.width > 768 ? 650 : dimensions.width * 0.8 * 2.03 }]}>
+          <View style={[styles.thriftImageContainer, { width: dimensions.width > 768 ? 320 : dimensions.width * 0.8, height: dimensions.width > 768 ? 650 : dimensions.width * 0.8 * 2.03 }]}>
             <Image 
               source={require('@/assets/images/screenshots/IMG_7835.jpg')} 
               style={styles.thriftImage} 
@@ -288,40 +288,40 @@ export default function LandingPage() {
 
         {/* Feature Breakdown Section */}
         <View style={styles.breakdownSection}>
-          <Text style={styles.breakdownHeadline}>Built for people who still buy movies.</Text>
+          <Text style={[styles.breakdownHeadline, { fontSize: dimensions.width > 768 ? 40 : 32 }]}>Built for people who still buy movies.</Text>
           <View style={styles.breakdownGrid}>
             
-            <View style={[styles.breakdownCard, { width: Platform.OS === 'web' || dimensions.width > 768 ? '30%' : '100%' }]}>
+            <View style={[styles.breakdownCard, { width: dimensions.width > 768 ? '30%' : '100%' }]}>
               <Text style={styles.breakdownIcon}>📄</Text>
               <Text style={styles.breakdownTitle}>PDF & CSV Export</Text>
               <Text style={styles.breakdownDesc}>Create an external backup of your collection so your data is always safe. Export your entire library to PDF or CSV in seconds.</Text>
             </View>
 
-            <View style={[styles.breakdownCard, { width: Platform.OS === 'web' || dimensions.width > 768 ? '30%' : '100%' }]}>
+            <View style={[styles.breakdownCard, { width: dimensions.width > 768 ? '30%' : '100%' }]}>
               <Text style={styles.breakdownIcon}>📸</Text>
               <Text style={styles.breakdownTitle}>Lightning Fast Scanning</Text>
               <Text style={styles.breakdownDesc}>Log titles in seconds using the blazing fast barcode scanner, dictate using voice-to-text, or type them in manually.</Text>
             </View>
 
-            <View style={[styles.breakdownCard, { width: Platform.OS === 'web' || dimensions.width > 768 ? '30%' : '100%' }]}>
+            <View style={[styles.breakdownCard, { width: dimensions.width > 768 ? '30%' : '100%' }]}>
               <Text style={styles.breakdownIcon}>📈</Text>
               <Text style={styles.breakdownTitle}>Powerful Sorting & Tags</Text>
               <Text style={styles.breakdownDesc}>Organize exactly how you want. Use custom tags, advanced filters, and group sequels automatically with Franchise Mode.</Text>
             </View>
 
-            <View style={[styles.breakdownCard, { width: Platform.OS === 'web' || dimensions.width > 768 ? '30%' : '100%' }]}>
+            <View style={[styles.breakdownCard, { width: dimensions.width > 768 ? '30%' : '100%' }]}>
               <Text style={styles.breakdownIcon}>📼</Text>
               <Text style={styles.breakdownTitle}>Custom Cover Art</Text>
               <Text style={styles.breakdownDesc}>Upload custom slipcovers, VHS boxes, and steelbooks to make your digital shelf reflect reality perfectly.</Text>
             </View>
 
-            <View style={[styles.breakdownCard, { width: Platform.OS === 'web' || dimensions.width > 768 ? '30%' : '100%' }]}>
+            <View style={[styles.breakdownCard, { width: dimensions.width > 768 ? '30%' : '100%' }]}>
               <Text style={styles.breakdownIcon}>🎬</Text>
               <Text style={styles.breakdownTitle}>Community Hub</Text>
               <Text style={styles.breakdownDesc}>Track what you and your friends are watching and adding. Share your stacks and discover what other collectors are tracking.</Text>
             </View>
 
-            <View style={[styles.breakdownCard, { width: Platform.OS === 'web' || dimensions.width > 768 ? '30%' : '100%' }]}>
+            <View style={[styles.breakdownCard, { width: dimensions.width > 768 ? '30%' : '100%' }]}>
               <Text style={styles.breakdownIcon}>📈</Text>
               <Text style={styles.breakdownTitle}>Market Value Engine</Text>
               <Text style={styles.breakdownDesc}>Integrated pricing data automatically updates to show you exactly what your physical collection is worth today.</Text>
