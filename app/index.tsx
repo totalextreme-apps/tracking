@@ -198,22 +198,22 @@ export default function LandingPage() {
               {
                 title: "Beautiful Cover Art",
                 desc: "Browse your collection like a real video store shelf with high quality, tactile cover art and custom metadata.",
-                image: require('@/assets/images/tour/1.png')
+                image: require('@/assets/images/screenshots/IMG_7813.jpg')
               },
               {
                 title: "Hunt for Grails",
                 desc: "Activate Thrift Mode to turn your wish list into a hit list. Keep track of what you're hunting for when you're out at the shops.",
-                image: require('@/assets/images/tour/2.png')
+                image: require('@/assets/images/screenshots/IMG_7817.jpg')
               },
               {
                 title: "Deep Dive Details",
                 desc: "Log your watch history, view trailers, check Letterboxd ratings, and adjust the texture of your cases.",
-                image: require('@/assets/images/tour/3.png')
+                image: require('@/assets/images/screenshots/IMG_7815.jpg')
               },
               {
                 title: "Community Charts",
                 desc: "See the most circulated and most wanted titles in the community. Share your stacks and discover what others are tracking.",
-                image: require('@/assets/images/tour/4.png')
+                image: require('@/assets/images/screenshots/IMG_7816.jpg')
               }
             ].map((item, index) => (
               <View key={index} style={[styles.featureCard, { width: Platform.OS === 'web' ? 400 : dimensions.width * 0.85 }]}>
