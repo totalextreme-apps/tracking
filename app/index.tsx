@@ -250,19 +250,19 @@ export default function LandingPage() {
             <View style={[styles.breakdownCard, { width: Platform.OS === 'web' || dimensions.width > 768 ? '30%' : '100%' }]}>
               <Text style={styles.breakdownIcon}>📄</Text>
               <Text style={styles.breakdownTitle}>PDF & CSV Export</Text>
-              <Text style={styles.breakdownDesc}>Need an insurance record or a beautiful receipt of your collection? Export your library to PDF or CSV in seconds.</Text>
+              <Text style={styles.breakdownDesc}>Create an external backup of your collection so your data is always safe. Export your entire library to PDF or CSV in seconds.</Text>
             </View>
 
             <View style={[styles.breakdownCard, { width: Platform.OS === 'web' || dimensions.width > 768 ? '30%' : '100%' }]}>
               <Text style={styles.breakdownIcon}>📸</Text>
               <Text style={styles.breakdownTitle}>Lightning Fast Scanning</Text>
-              <Text style={styles.breakdownDesc}>Add movies in seconds using the blazing fast barcode scanner, or log titles instantly using voice-to-text.</Text>
+              <Text style={styles.breakdownDesc}>Log titles in seconds using the blazing fast barcode scanner, dictate using voice-to-text, or type them in manually.</Text>
             </View>
 
             <View style={[styles.breakdownCard, { width: Platform.OS === 'web' || dimensions.width > 768 ? '30%' : '100%' }]}>
               <Text style={styles.breakdownIcon}>📈</Text>
-              <Text style={styles.breakdownTitle}>Market Value Engine</Text>
-              <Text style={styles.breakdownDesc}>Integrated pricing data automatically updates to show you exactly what your physical collection is worth today.</Text>
+              <Text style={styles.breakdownTitle}>Powerful Sorting & Tags</Text>
+              <Text style={styles.breakdownDesc}>Organize exactly how you want. Use custom tags, advanced filters, and group sequels automatically with Franchise Mode.</Text>
             </View>
 
             <View style={[styles.breakdownCard, { width: Platform.OS === 'web' || dimensions.width > 768 ? '30%' : '100%' }]}>
@@ -273,8 +273,8 @@ export default function LandingPage() {
 
             <View style={[styles.breakdownCard, { width: Platform.OS === 'web' || dimensions.width > 768 ? '30%' : '100%' }]}>
               <Text style={styles.breakdownIcon}>🎬</Text>
-              <Text style={styles.breakdownTitle}>Letterboxd Connected</Text>
-              <Text style={styles.breakdownDesc}>View Letterboxd ratings directly on your shelf and log watch history to keep track of every viewing.</Text>
+              <Text style={styles.breakdownTitle}>Community Hub</Text>
+              <Text style={styles.breakdownDesc}>Track what you and your friends are watching and adding. Share your stacks and discover what other collectors are tracking.</Text>
             </View>
 
             <View style={[styles.breakdownCard, { width: Platform.OS === 'web' || dimensions.width > 768 ? '30%' : '100%' }]}>
