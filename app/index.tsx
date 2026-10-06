@@ -293,8 +293,17 @@ export default function LandingPage() {
               <Text style={styles.breakdownTitle}>Thrift Mode & Grails</Text>
               <Text style={styles.breakdownDesc}>Highlight your most wanted titles as 'Grails' and flip the app into Thrift Mode when you're hunting in the wild.</Text>
             </View>
-
           </View>
+        </View>
+
+        {/* Footer */}
+        <View style={styles.footer}>
+          <View style={styles.footerLinks}>
+            <Text style={styles.footerLink}>Terms of Service</Text>
+            <Text style={styles.footerLink}>Privacy Policy</Text>
+            <Text style={styles.footerLink}>Contact Us</Text>
+          </View>
+          <Text style={styles.footerText}>© {new Date().getFullYear()} Tracking App. All rights reserved.</Text>
         </View>
       </ScrollView>
     </View>
@@ -532,5 +541,25 @@ const styles = StyleSheet.create({
     color: '#a3a3a3',
     fontSize: 15,
     lineHeight: 24,
+  },
+  footer: {
+    paddingVertical: 40,
+    backgroundColor: '#050505',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.05)',
+  },
+  footerLinks: {
+    flexDirection: 'row',
+    gap: 24,
+    marginBottom: 16,
+  },
+  footerLink: {
+    color: '#a3a3a3',
+    fontSize: 14,
+  },
+  footerText: {
+    color: '#666666',
+    fontSize: 12,
   },
 });
