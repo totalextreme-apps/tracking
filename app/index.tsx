@@ -253,6 +253,39 @@ export default function LandingPage() {
         </View>
         </View>
 
+        {/* Thrift Mode Section */}
+        <View style={[styles.thriftSection, { flexDirection: Platform.OS === 'web' || dimensions.width > 768 ? 'row' : 'column' }]}>
+          <View style={styles.thriftContent}>
+            <Text style={styles.thriftHeadline}>BUILT FOR THE HUNT.</Text>
+            <Text style={styles.thriftSubHeadline}>Ever bought a movie you already owned?</Text>
+            <Text style={styles.thriftSubHeadline}>Yeah. Us too.</Text>
+            
+            <Text style={styles.thriftDesc}>
+              Flip on Thrift Mode when you're digging through a thrift store, flea market or record shop and turn Tracking into your collection-hunting companion.
+            </Text>
+            <View style={styles.thriftList}>
+              <Text style={styles.thriftListItem}>• See what you're looking for.</Text>
+              <Text style={styles.thriftListItem}>• Spot your Grails.</Text>
+              <Text style={styles.thriftListItem}>• Know what's already sitting at home.</Text>
+            </View>
+            
+            <Pressable 
+              style={({ pressed }) => [styles.thriftCta, pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] }]}
+              onPress={() => router.push('/auth?mode=signup')}
+            >
+              <Text style={styles.thriftCtaText}>SHOW ME THRIFT MODE</Text>
+            </Pressable>
+          </View>
+          
+          <View style={[styles.thriftImageContainer, { width: Platform.OS === 'web' || dimensions.width > 768 ? 320 : dimensions.width * 0.8, height: Platform.OS === 'web' || dimensions.width > 768 ? 650 : dimensions.width * 0.8 * 2.03 }]}>
+            <Image 
+              source={require('@/assets/images/screenshots/IMG_7817.jpg')} 
+              style={styles.thriftImage} 
+              contentFit="cover"
+            />
+          </View>
+        </View>
+
         {/* Feature Breakdown Section */}
         <View style={styles.breakdownSection}>
           <Text style={styles.breakdownHeadline}>Built for people who still buy movies.</Text>
@@ -289,9 +322,9 @@ export default function LandingPage() {
             </View>
 
             <View style={[styles.breakdownCard, { width: Platform.OS === 'web' || dimensions.width > 768 ? '30%' : '100%' }]}>
-              <Text style={styles.breakdownIcon}>🏷️</Text>
-              <Text style={styles.breakdownTitle}>Thrift Mode & Grails</Text>
-              <Text style={styles.breakdownDesc}>Highlight your most wanted titles as 'Grails' and flip the app into Thrift Mode when you're hunting in the wild.</Text>
+              <Text style={styles.breakdownIcon}>📈</Text>
+              <Text style={styles.breakdownTitle}>Market Value Engine</Text>
+              <Text style={styles.breakdownDesc}>Integrated pricing data automatically updates to show you exactly what your physical collection is worth today.</Text>
             </View>
           </View>
         </View>
@@ -541,6 +574,68 @@ const styles = StyleSheet.create({
     color: '#a3a3a3',
     fontSize: 15,
     lineHeight: 24,
+  },
+  thriftSection: {
+    paddingVertical: 100,
+    paddingHorizontal: 32,
+    backgroundColor: '#050505',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 64,
+  },
+  thriftContent: {
+    maxWidth: 500,
+  },
+  thriftHeadline: {
+    color: '#ffffff',
+    fontSize: 32,
+    fontFamily: 'SpaceMono',
+    fontWeight: 'bold',
+    marginBottom: 24,
+  },
+  thriftSubHeadline: {
+    color: '#e5e5e5',
+    fontSize: 20,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  thriftDesc: {
+    color: '#a3a3a3',
+    fontSize: 16,
+    lineHeight: 24,
+    marginTop: 16,
+    marginBottom: 24,
+  },
+  thriftList: {
+    marginBottom: 32,
+  },
+  thriftListItem: {
+    color: '#ffffff',
+    fontSize: 16,
+    marginBottom: 8,
+    fontWeight: 'bold',
+  },
+  thriftCta: {
+    backgroundColor: '#ffffff',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 30,
+    alignSelf: 'flex-start',
+  },
+  thriftCtaText: {
+    color: '#000000',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  thriftImageContainer: {
+    borderRadius: 32,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  thriftImage: {
+    width: '100%',
+    height: '100%',
   },
   footer: {
     paddingVertical: 40,
