@@ -19,7 +19,6 @@ import 'react-native-reanimated';
 import { AuthErrorBanner } from '@/components/AuthErrorBanner';
 import { DesktopBlocker } from '@/components/DesktopBlocker';
 import { GlobalHeader } from '@/components/GlobalHeader';
-import { AppTour } from '@/components/AppTour'; // Added AppTour import
 import { FranchiseAnnouncement } from '@/components/FranchiseAnnouncement';
 import { StaticOverlay } from '@/components/StaticOverlay';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -178,7 +177,6 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
                 </Stack>
               </View>
               <StaticOverlay visible={showStatic} />
-              <AppTour />
               {Platform.OS === 'web' && (
                 <>
                   <Analytics />
