@@ -71,11 +71,7 @@ export default function AuthScreen() {
                     });
                     if (error) throw error;
                     if (data.session) {
-                        if (router.canGoBack()) {
-                            router.back();
-                        } else {
-                            router.replace('/');
-                        }
+                        router.replace('/(tabs)');
                     }
                 }
             } catch (error: any) {
@@ -143,11 +139,7 @@ export default function AuthScreen() {
                             </Text>
                             <Pressable
                                 onPress={() => {
-                                    if (router.canGoBack()) {
-                                        router.back();
-                                    } else {
-                                        router.replace('/');
-                                    }
+                                    router.replace('/(tabs)');
                                 }}
                                 className="bg-amber-500 px-10 py-4 rounded-xl active:opacity-80"
                                 style={{ shadowColor: '#f59e0b', shadowOpacity: 0.5, shadowRadius: 16, shadowOffset: { width: 0, height: 4 } }}
