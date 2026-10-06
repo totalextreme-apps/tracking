@@ -109,6 +109,7 @@ export default function LandingPage() {
         id: i,
         images: shuffle(POSTERS),
         speed: 100000 + Math.random() * 40000, // Vary speed slightly and make it much slower
+      });
     }
     return cols;
   }, [columnsCount]);
