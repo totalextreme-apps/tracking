@@ -3,7 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Dimensions, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -108,9 +108,7 @@ export default function LandingPage() {
       cols.push({
         id: i,
         images: shuffle(POSTERS),
-        reverse: i % 2 !== 0,
-        speed: 40000 + Math.random() * 20000, // Vary speed slightly
-      });
+        speed: 100000 + Math.random() * 40000, // Vary speed slightly and make it much slower
     }
     return cols;
   }, [columnsCount]);
@@ -147,34 +145,94 @@ export default function LandingPage() {
         pointerEvents="none"
       />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <Image
-          source={logoSource}
-          style={{ width: 140, height: 40 }}
-          contentFit="contain"
-        />
-        <Pressable onPress={() => router.push('/auth')} style={styles.signInButton}>
-          <Text style={styles.signInText}>Sign In</Text>
-        </Pressable>
-      </View>
+      {/* Main Content inside ScrollView */}
+      <ScrollView 
+        style={StyleSheet.absoluteFillObject}
+        contentContainerStyle={{ flexGrow: 1 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <Image
+            source={logoSource}
+            style={{ width: 140, height: 40 }}
+            contentFit="contain"
+          />
+          <Pressable onPress={() => router.push('/auth')} style={styles.signInButton}>
+            <Text style={styles.signInText}>Sign In</Text>
+          </Pressable>
+        </View>
 
-      {/* Main Content */}
-      <View style={styles.content}>
-        <Text style={styles.headline}>
-          Your physical shelf, preserved.
-        </Text>
-        <Text style={styles.subtext}>
-          Tracking is the ultimate app for your physical shelf. Scan a barcode, watch it land in your collection — with cover art, editions, condition, and what it's worth.
-        </Text>
-        <Pressable 
-          style={({ pressed }) => [styles.ctaButton, pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] }]}
-          onPress={() => router.replace('/(tabs)')}
-        >
-          <Text style={styles.ctaText}>Start Tracking</Text>
-        </Pressable>
-      </View>
+        {/* Hero Section */}
+        <View style={[styles.content, { minHeight: dimensions.height - 84 }]}>
+          <Text style={styles.headline}>
+            Your Personal Video Store
+          </Text>
+          <Text style={styles.subHeadline}>
+            Browse your collection like it's a Friday night.
+          </Text>
+          <Text style={styles.subtext}>
+            Tracking is the ultimate app for your physical media collection. Scan a barcode, use voice-to-text, or manually log your collection. Never buy a duplicate copy again. View your entire library with beautiful cover art, track your watch history, and connect with other collectors.
+          </Text>
+          <Pressable 
+            style={({ pressed }) => [styles.ctaButton, pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] }]}
+            onPress={() => router.replace('/(tabs)')}
+          >
+            <Text style={styles.ctaText}>Start Tracking</Text>
+          </Pressable>
+        </View>
+
+        {/* Features Carousel Section */}
+        <View style={styles.featuresSection}>
+          <Text style={styles.featuresHeadline}>Everything you need to track.</Text>
+          
+          <Animated.ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.carouselContainer}
+            snapToInterval={Platform.OS === 'web' ? 420 : dimensions.width * 0.85 + 24}
+            decelerationRate="fast"
+          >
+            {[
+              {
+                title: "Beautiful Cover Art",
+                desc: "Browse your collection like a real video store shelf with high quality, tactile cover art and custom metadata.",
+                image: require('@/assets/images/tour/1.png')
+              },
+              {
+                title: "Hunt for Grails",
+                desc: "Activate Thrift Mode to turn your wish list into a hit list. Keep track of what you're hunting for when you're out at the shops.",
+                image: require('@/assets/images/tour/2.png')
+              },
+              {
+                title: "Deep Dive Details",
+                desc: "Log your watch history, view trailers, check Letterboxd ratings, and adjust the texture of your cases.",
+                image: require('@/assets/images/tour/3.png')
+              },
+              {
+                title: "Community Charts",
+                desc: "See the most circulated and most wanted titles in the community. Share your stacks and discover what others are tracking.",
+                image: require('@/assets/images/tour/4.png')
+              }
+            ].map((item, index) => (
+              <View key={index} style={[styles.featureCard, { width: Platform.OS === 'web' ? 400 : dimensions.width * 0.85 }]}>
+                <Image 
+                  source={item.image} 
+                  style={styles.screenshotImage} 
+                  contentFit="cover"
+                  contentPosition="top center"
+                />
+                <View style={styles.featureInfo}>
+                  <Text style={styles.featureTitle}>{item.title}</Text>
+                  <Text style={styles.featureDesc}>{item.desc}</Text>
+                </View>
+              </View>
+            ))}
+          </Animated.ScrollView>
+        </View>
+      </ScrollView>
     </View>
+
   );
 }
 
@@ -233,7 +291,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   content: {
-    flex: 1,
     justifyContent: 'flex-end',
     alignItems: 'center',
     paddingHorizontal: 32,
@@ -250,15 +307,24 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: Platform.OS === 'web' ? 72 : 54,
     letterSpacing: -2,
+    marginBottom: 8,
+  },
+  subHeadline: {
+    color: '#f59e0b',
+    fontSize: Platform.OS === 'web' ? 24 : 20,
+    fontFamily: 'SpaceMono',
+    fontWeight: 'bold',
+    textAlign: 'center',
     marginBottom: 24,
+    letterSpacing: -0.5,
   },
   subtext: {
     color: '#a3a3a3',
-    fontSize: Platform.OS === 'web' ? 20 : 16,
+    fontSize: Platform.OS === 'web' ? 18 : 15,
     textAlign: 'center',
-    lineHeight: Platform.OS === 'web' ? 32 : 24,
+    lineHeight: Platform.OS === 'web' ? 30 : 24,
     marginBottom: 48,
-    maxWidth: 600,
+    maxWidth: 700,
   },
   ctaButton: {
     backgroundColor: '#f59e0b',
@@ -277,5 +343,53 @@ const styles = StyleSheet.create({
     fontFamily: 'SpaceMono',
     fontWeight: 'bold',
     letterSpacing: 0.5,
+  },
+  featuresSection: {
+    paddingVertical: 80,
+    backgroundColor: '#0a0a0a', // Solid background so it blocks the grid when scrolling down
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.05)',
+  },
+  featuresHeadline: {
+    color: '#ffffff',
+    fontSize: Platform.OS === 'web' ? 40 : 32,
+    fontFamily: 'SpaceMono',
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 48,
+    paddingHorizontal: 24,
+  },
+  carouselContainer: {
+    paddingHorizontal: Platform.OS === 'web' ? 64 : 24,
+    gap: 24,
+  },
+  featureCard: {
+    backgroundColor: '#141414',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+    overflow: 'hidden',
+  },
+  screenshotImage: {
+    width: '100%',
+    aspectRatio: 9 / 16,
+    backgroundColor: '#1a1a1a',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.05)',
+  },
+  featureInfo: {
+    padding: 24,
+  },
+  featureTitle: {
+    color: '#ffffff',
+    fontSize: 20,
+    fontFamily: 'SpaceMono',
+    fontWeight: 'bold',
+    marginBottom: 12,
+  },
+  featureDesc: {
+    color: '#a3a3a3',
+    fontSize: 15,
+    lineHeight: 22,
   },
 });
