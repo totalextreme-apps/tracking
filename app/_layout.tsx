@@ -38,7 +38,7 @@ export {
 } from 'expo-router';
 
 export const unstable_settings = {
-  initialRouteName: '(tabs)',
+  initialRouteName: 'index',
 };
 
 export default function RootLayout() {
@@ -161,7 +161,7 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
                   <link rel="canonical" href="https://mediatracking.app" />
                 </Head>
               )}
-              <GlobalHeader />
+              {pathname !== '/' && pathname !== '/index' && <GlobalHeader />}
               {authError && (
                 <AuthErrorBanner
                   errorCode={authError.code}
@@ -171,6 +171,7 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
               )}
               <View style={{ flex: 1, paddingTop: 0 }}>
                 <Stack>
+                  <Stack.Screen name="index" options={{ headerShown: false }} />
                   <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                   <Stack.Screen name="auth" options={{ presentation: 'modal', headerShown: false }} />
                   <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
