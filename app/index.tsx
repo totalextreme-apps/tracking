@@ -183,7 +183,7 @@ export default function LandingPage() {
             Build the video store you always wanted.
           </Text>
           <Text style={styles.subtext}>
-            Tracking makes maintaining a collection feel like collecting. It's part collection manager, part hunting companion, and part digital recreation of the video store you wish still existed.
+            Tracking makes maintaining your entire collection—from VHS to Digital—feel like collecting. It's part collection manager, part hunting companion, and part digital recreation of the video store you wish still existed.
           </Text>
           <Pressable 
             style={({ pressed }) => [styles.ctaButton, pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] }]}
@@ -207,7 +207,7 @@ export default function LandingPage() {
             {[
               {
                 title: "Beautiful Cover Art",
-                desc: "Browse your collection like a real video store shelf with high quality, tactile cover art and custom metadata. Set your favorites On Display with a Staff Pick sticker.",
+                desc: "Track every format from VHS to Digital. Browse your collection like a real video store shelf with high quality, tactile cover art and custom metadata. Set your favorites On Display with a Staff Pick sticker.",
                 image: require('@/assets/images/screenshots/IMG_7813.jpg')
               },
               {
