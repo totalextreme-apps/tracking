@@ -177,13 +177,13 @@ export default function LandingPage() {
         {/* Hero Section */}
         <View style={[styles.content, { minHeight: dimensions.height - 84 }]}>
           <Text style={styles.headline}>
-            Your Personal Video Store
+            Rewind your collection.
           </Text>
           <Text style={styles.subHeadline}>
-            Browse your collection like it's a Friday night.
+            Build the video store you always wanted.
           </Text>
           <Text style={styles.subtext}>
-            Tracking is the ultimate app for your physical media collection. Scan a barcode, use voice-to-text, or manually log your collection. Never buy a duplicate copy again. View your entire library with beautiful cover art, track your watch history, and connect with other collectors.
+            Tracking makes maintaining a collection feel like collecting. It's part collection manager, part hunting companion, and part digital recreation of the video store you wish still existed.
           </Text>
           <Pressable 
             style={({ pressed }) => [styles.ctaButton, pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] }]}
@@ -244,7 +244,7 @@ export default function LandingPage() {
 
         {/* Feature Breakdown Section */}
         <View style={styles.breakdownSection}>
-          <Text style={styles.breakdownHeadline}>More than just a shelf.</Text>
+          <Text style={styles.breakdownHeadline}>Built for collectors. Not accountants.</Text>
           <View style={styles.breakdownGrid}>
             
             <View style={[styles.breakdownCard, { width: Platform.OS === 'web' || dimensions.width > 768 ? '30%' : '100%' }]}>
