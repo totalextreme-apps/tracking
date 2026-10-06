@@ -1,5 +1,5 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import {
     ActivityIndicator,
@@ -24,7 +24,8 @@ export default function AuthScreen() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
-    const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+    const { mode: initialMode } = useLocalSearchParams<{ mode?: 'signin' | 'signup' }>();
+    const [mode, setMode] = useState<'signin' | 'signup'>(initialMode || 'signin');
     const [signUpSuccess, setSignUpSuccess] = useState(false);
     const [showWelcome, setShowWelcome] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');

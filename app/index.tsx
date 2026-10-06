@@ -187,7 +187,7 @@ export default function LandingPage() {
           </Text>
           <Pressable 
             style={({ pressed }) => [styles.ctaButton, pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] }]}
-            onPress={() => router.replace('/(tabs)')}
+            onPress={() => router.push('/auth?mode=signup')}
           >
             <Text style={styles.ctaText}>Start Tracking</Text>
           </Pressable>
