@@ -367,8 +367,12 @@ export default function ShowDetailScreen() {
     }, [showItems, activeShow?.name, isReadOnly]);
 
 
-    const customArtUrl = showItems.find((i: any) => i.custom_poster_url)?.custom_poster_url;
-    const customBackdropUrl = showItems.find((i: any) => i.custom_backdrop_url)?.custom_backdrop_url;
+    const seasonPosterPath = activeItem?.season_number && tmdbShow?.seasons 
+        ? tmdbShow.seasons.find((s: any) => s.season_number === activeItem.season_number)?.poster_path 
+        : undefined;
+
+    const customArtUrl = activeItem?.custom_poster_url || showItems.find((i: any) => i.custom_poster_url)?.custom_poster_url;
+    const customBackdropUrl = activeItem?.custom_backdrop_url || showItems.find((i: any) => i.custom_backdrop_url)?.custom_backdrop_url;
 
     const launchLibrary = async (type: 'poster' | 'backdrop') => {
         try {
@@ -595,7 +599,7 @@ export default function ShowDetailScreen() {
     const customGenreValue = localCustomGenre !== undefined ? localCustomGenre : (displayShow?.custom_genre || '');
 
     const backdropUrl = getBackdropUrl(displayShow.backdrop_path);
-    const posterUrl = getPosterUrl(displayShow.poster_path);
+    const posterUrl = getPosterUrl(seasonPosterPath || displayShow.poster_path);
 
     // Resolve show cast & director
     const resolvedShowCast = displayShow?.show_cast || (tmdbShow?.credits?.cast ? tmdbShow.credits.cast.slice(0, 25).map((c: any) => ({

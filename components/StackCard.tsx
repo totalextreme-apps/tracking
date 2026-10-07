@@ -203,9 +203,10 @@ export function StackCard({
         item.format = 'Digital';
       }
 
-      // Key off Normalized Format + Edition
+      // Key off Normalized Format + Edition + Season (if TV show)
       const edition = (item.edition || '').trim().toLowerCase();
-      const key = `${fmt}|${edition}`;
+      const seasonKey = item.media_type === 'tv' ? `|s${item.season_number}` : '';
+      const key = `${fmt}|${edition}${seasonKey}`;
 
       if (!seenKeys.has(key)) {
         seenKeys.add(key);
@@ -263,9 +264,7 @@ export function StackCard({
           style={{ minHeight: 20, width: '100%', lineHeight: 11 }}
         >
           {media 
-            ? (topItem.media_type === 'tv' && topItem.season_number 
-                ? `${(media as any).name} (Season ${topItem.season_number})`
-                : ((media as any).title || (media as any).name))
+            ? ((media as any).title || (media as any).name)
             : `ID: ${topItem.movie_id || topItem.show_id}`}
         </Text>
 
@@ -288,7 +287,7 @@ export function StackCard({
               }}
             >
               <Text className="text-white font-mono text-[8px] font-bold">
-                {item.format === 'BluRay' ? 'Blu-ray' : item.format}
+                {item.media_type === 'tv' && item.season_number ? `S${item.season_number} ` : ''}{item.format === 'BluRay' ? 'Blu-ray' : item.format}
               </Text>
               {item.is_bootleg && (
                 <Image source={require('@/assets/images/overlays/boot_sticker.png')} style={{ width: 10, height: 10 }} contentFit="contain" />
@@ -432,9 +431,7 @@ export function StackCard({
         <View className="flex-1 px-3 py-1 justify-center">
           <Text className="text-white font-bold text-sm leading-tight" numberOfLines={2}>
             {media 
-              ? (topItem.media_type === 'tv' && topItem.season_number 
-                  ? `${(media as any).name} (Season ${topItem.season_number})`
-                  : ((media as any).title || (media as any).name))
+              ? ((media as any).title || (media as any).name)
               : `ID: ${topItem.movie_id || topItem.show_id}`}
           </Text>
           <View className="flex-row my-1">
@@ -474,7 +471,7 @@ export function StackCard({
                   }}
                 >
                   <Text style={{ fontSize: 7, fontWeight: 'bold', color: 'white', fontFamily: 'SpaceMono' }}>
-                    {item.format === 'BluRay' ? 'Blu-ray' : item.format}
+                    {item.media_type === 'tv' && item.season_number ? `S${item.season_number} ` : ''}{item.format === 'BluRay' ? 'Blu-ray' : item.format}
                   </Text>
                   {item.is_bootleg && (
                     <Image source={require('@/assets/images/overlays/boot_sticker.png')} style={{ width: 10, height: 10, marginLeft: 2 }} contentFit="contain" />
