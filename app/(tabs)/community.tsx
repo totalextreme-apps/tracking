@@ -495,6 +495,8 @@ export default function CommunityScreen() {
   const queryClient = useQueryClient();
   const scrollRef = useRef<ScrollView>(null);
   const boardScrollRef = useRef<ScrollView>(null);
+  const postLayouts = useRef<Record<string, number>>({});
+  const hasScrolledToPost = useRef<string | null>(null);
 
   // Auto-repair any mismatched bulletin posts on mount
   useEffect(() => {
@@ -627,8 +629,19 @@ export default function CommunityScreen() {
     }
     if (tab === 'board' && postId) {
       setExpandedPostIds(prev => new Set(prev).add(postId));
+      setFocusedPostId(postId);
+      
+      if (hasScrolledToPost.current !== postId) {
+        setTimeout(() => {
+          const y = postLayouts.current[postId];
+          if (y !== undefined) {
+            boardScrollRef.current?.scrollTo({ y: Math.max(0, y - 50), animated: true });
+            hasScrolledToPost.current = postId;
+          }
+        }, 300);
+      }
     }
-  }, [tab, postId]);
+  }, [tab, postId, bulletinFeed]);
 
   const currentTab: Tab = ['activity', 'directory', 'board', 'swap', 'inbox', 'alerts'].includes(activeTab) ? activeTab : 'activity';
   
@@ -1880,20 +1893,21 @@ export default function CommunityScreen() {
                     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
                   })
                   .map((post: any, idx: number) => (
-                    <BulletinPostItem 
-                      key={post.id} 
-                      post={post} 
-                      userId={userId} 
-                      idx={idx} 
-                      startEditing={startEditing} 
-                      setShowDeleteConfirm={setShowDeleteConfirm} 
-                      isFocused={focusedPostId === post.id}
-                      onReplyPress={() => {
-                        setFocusedPostId(null);
-                        setTimeout(() => setFocusedPostId(post.id), 50);
-                      }}
-                      CommentSectionComponent={PostCommentSection} 
-                    />
+                    <View key={post.id} onLayout={(e) => { postLayouts.current[post.id] = e.nativeEvent.layout.y; }}>
+                      <BulletinPostItem 
+                        post={post} 
+                        userId={userId} 
+                        idx={idx} 
+                        startEditing={startEditing} 
+                        setShowDeleteConfirm={setShowDeleteConfirm} 
+                        isFocused={focusedPostId === post.id}
+                        onReplyPress={() => {
+                          setFocusedPostId(null);
+                          setTimeout(() => setFocusedPostId(post.id), 50);
+                        }}
+                        CommentSectionComponent={PostCommentSection} 
+                      />
+                    </View>
                   ))
               )}
             </View>
