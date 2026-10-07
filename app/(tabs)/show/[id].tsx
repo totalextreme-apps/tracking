@@ -283,6 +283,11 @@ export default function ShowDetailScreen() {
     const activeFormat: string | null = activeItem ? activeItem.format : null;
     const commentActiveItem = activeItem || showItems[0];
 
+    useEffect(() => {
+        setLocalFranchise(undefined);
+        setLocalFranchiseOrder(undefined);
+    }, [activeItem?.id]);
+
     const showFromDb = showItems[0]?.shows;
     const { data: dbShow } = useQuery({
         queryKey: ['shows-db-detail', showIdNum || showFromDb?.id],
@@ -593,8 +598,8 @@ export default function ShowDetailScreen() {
 
     const displayShow = { ...activeShow, ...tmdbShow };
 
-    const franchiseValue = localFranchise !== undefined ? localFranchise : (showItems[0]?.franchise || '');
-    const franchiseOrderValue = localFranchiseOrder !== undefined ? localFranchiseOrder : (showItems[0]?.franchise_order?.toString() || '');
+    const franchiseValue = localFranchise !== undefined ? localFranchise : (activeItem?.franchise || '');
+    const franchiseOrderValue = localFranchiseOrder !== undefined ? localFranchiseOrder : (activeItem?.franchise_order?.toString() || '');
     const sortingTagsValue = localSortingTags !== undefined ? localSortingTags : (displayShow?.sorting_tags || '');
     const customGenreValue = localCustomGenre !== undefined ? localCustomGenre : (displayShow?.custom_genre || '');
 
@@ -1249,8 +1254,8 @@ return (
                                     ))}
                                 </ScrollView>
                             </View>
-                            {(localFranchise !== (showItems[0]?.franchise || '') || 
-                              localFranchiseOrder !== (showItems[0]?.franchise_order?.toString() || '') ||
+                            {(localFranchise !== (activeItem?.franchise || '') || 
+                              localFranchiseOrder !== (activeItem?.franchise_order?.toString() || '') ||
                               localSortingTags !== (displayShow?.sorting_tags || '') ||
                               localCustomGenre !== (displayShow?.custom_genre || '')) && (
                                 <Pressable
