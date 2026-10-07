@@ -161,7 +161,7 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
                   <link rel="canonical" href="https://mediatracking.app" />
                 </Head>
               )}
-              {!(segments.length === 0 || (segments.length === 1 && segments[0] === 'index')) && <GlobalHeader />}
+              {!((segments as string[]).length === 0 || ((segments as string[]).length === 1 && (segments as string[])[0] === 'index')) && <GlobalHeader />}
               {authError && (
                 <AuthErrorBanner
                   errorCode={authError.code}

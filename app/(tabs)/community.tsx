@@ -623,25 +623,7 @@ export default function CommunityScreen() {
   const [expandedPostIds, setExpandedPostIds] = useState<Set<string>>(new Set());
   const { tab, postId } = useLocalSearchParams<{ tab?: string; postId?: string }>();
   
-  React.useEffect(() => {
-    if (tab && ['activity', 'directory', 'board', 'swap', 'inbox', 'alerts'].includes(tab)) {
-      setActiveTab(tab as Tab);
-    }
-    if (tab === 'board' && postId) {
-      setExpandedPostIds(prev => new Set(prev).add(postId));
-      setFocusedPostId(postId);
-      
-      if (hasScrolledToPost.current !== postId) {
-        setTimeout(() => {
-          const y = postLayouts.current[postId];
-          if (y !== undefined) {
-            boardScrollRef.current?.scrollTo({ y: Math.max(0, y - 50), animated: true });
-            hasScrolledToPost.current = postId;
-          }
-        }, 300);
-      }
-    }
-  }, [tab, postId, bulletinFeed]);
+
 
   const currentTab: Tab = ['activity', 'directory', 'board', 'swap', 'inbox', 'alerts'].includes(activeTab) ? activeTab : 'activity';
   
@@ -678,6 +660,26 @@ export default function CommunityScreen() {
   // Data
   const { data: following } = useFollowing(userId);
   const { data: bulletinFeed, isLoading: bulletinLoading } = useBulletinFeed(userId, currentTab === 'board');
+
+  React.useEffect(() => {
+    if (tab && ['activity', 'directory', 'board', 'swap', 'inbox', 'alerts'].includes(tab)) {
+      setActiveTab(tab as Tab);
+    }
+    if (tab === 'board' && postId) {
+      setExpandedPostIds(prev => new Set(prev).add(postId));
+      setFocusedPostId(postId);
+      
+      if (hasScrolledToPost.current !== postId) {
+        setTimeout(() => {
+          const y = postLayouts.current[postId];
+          if (y !== undefined) {
+            boardScrollRef.current?.scrollTo({ y: Math.max(0, y - 50), animated: true });
+            hasScrolledToPost.current = postId;
+          }
+        }, 300);
+      }
+    }
+  }, [tab, postId, bulletinFeed]);
   const { data: communityFeed, isLoading: communityLoading, isFetching: communityFetching } = useCommunityFeed(userId);
   const { data: marketplaceFeed } = useMarketplaceFeed();
   const { data: searchResults, isLoading: searchLoading } = useSearchUsers(userSearch);
