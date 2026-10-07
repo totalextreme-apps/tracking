@@ -1300,9 +1300,15 @@ return (
                                 {showItems.filter((i: any) => i.status === 'owned').map((item: any) => (
                                     <View key={item.id} className="mb-4">
                                         <View className="flex-row items-center flex-wrap mb-2">
-                                            <View className={`px-2 py-1 rounded shrink-0 ${FORMAT_COLORS[item.format] || 'bg-neutral-800'}`}>
+                                            <Pressable 
+                                                onPress={() => {
+                                                    setSelectedItemId(item.id);
+                                                    playSound('click');
+                                                }}
+                                                className={`px-2 py-1 rounded shrink-0 ${FORMAT_COLORS[item.format] || 'bg-neutral-800'}`}
+                                            >
                                                 <Text className="text-white font-mono text-xs font-bold">{`S${item.season_number || 1} • ${item.format === 'BluRay' ? 'Blu-ray' : item.format}`}</Text>
-                                            </View>
+                                            </Pressable>
                                             {item.value_estimate !== null && item.value_estimate !== undefined && !isErrantShippingPrice(item.value_estimate) && (
                                                 <View className="bg-neutral-800 border border-neutral-700/50 px-2 py-0.5 rounded ml-2">
                                                     <Text className="text-amber-400 font-mono text-[10px] font-bold">
