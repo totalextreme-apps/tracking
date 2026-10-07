@@ -10,7 +10,7 @@ import '../global.css';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Stack, usePathname } from 'expo-router';
+import { Stack, usePathname, useSegments } from 'expo-router';
 import Head from 'expo-router/head';
 import { useEffect, useState } from 'react';
 import { Dimensions, Platform, View } from 'react-native';
@@ -65,6 +65,7 @@ export default function RootLayout() {
 function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
   const colorScheme = useColorScheme();
   const pathname = usePathname();
+  const segments = useSegments();
   const [showStatic, setShowStatic] = useState(false);
   const { staticEnabled, onboardingKey } = useSettings();
   const [isDesktop, setIsDesktop] = useState(false);
@@ -160,7 +161,7 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
                   <link rel="canonical" href="https://mediatracking.app" />
                 </Head>
               )}
-              {pathname !== '/' && pathname !== '/index' && <GlobalHeader />}
+              {!(segments.length === 0 || (segments.length === 1 && segments[0] === 'index')) && <GlobalHeader />}
               {authError && (
                 <AuthErrorBanner
                   errorCode={authError.code}
