@@ -231,7 +231,10 @@ export default function LandingPage() {
               <View key={index} style={[styles.featureCard, { width: dimensions.width > 768 ? 400 : dimensions.width * 0.85 }]}>
                 <Image 
                   source={item.image} 
-                  style={styles.screenshotImage} 
+                  style={[styles.screenshotImage, { 
+                    aspectRatio: dimensions.width > 768 ? 9 / 16 : undefined,
+                    height: dimensions.width > 768 ? undefined : 450
+                  }]} 
                   contentFit="cover"
                   contentPosition="top center"
                 />
@@ -256,7 +259,7 @@ export default function LandingPage() {
         {/* Thrift Mode Section */}
         <View style={[styles.thriftSection, { flexDirection: dimensions.width > 768 ? 'row' : 'column' }]}>
           <View style={styles.thriftContent}>
-            <Text style={styles.thriftHeadline}>BUILT FOR THE HUNT.</Text>
+            <Text style={styles.thriftHeadline}>READY FOR THE HUNT.</Text>
             <Text style={styles.thriftSubHeadline}>Ever bought a movie you already owned?</Text>
             <Text style={styles.thriftSubHeadline}>Yeah. Us too.</Text>
             

@@ -90,7 +90,7 @@ export function getStacks(
     
     if (item.media_type === 'tv') {
       const showId = tmdbId || item.show_id || item.shows?.id || item.id;
-      key = `tv-${showId}-s${item.season_number ?? 0}`;
+      key = `tv-${showId}`;
     } else {
       const movieId = tmdbId || item.movie_id || item.movies?.id || item.id;
       key = `movie-${movieId}`;
@@ -101,12 +101,19 @@ export function getStacks(
     groups.set(key, existing);
   }
 
-  // Sort each stack by format quality (highest first)
+  // Sort each stack by season number (asc) then format quality (highest first)
   const stacks: CollectionItemWithMedia[][] = [];
   for (const group of groups.values()) {
-    const sorted = [...group].sort(
-      (a, b) => (FORMAT_ORDER[b.format] ?? 0) - (FORMAT_ORDER[a.format] ?? 0)
-    );
+    const sorted = [...group].sort((a, b) => {
+      if (a.media_type === 'tv' && b.media_type === 'tv') {
+        const seasonA = a.season_number ?? 0;
+        const seasonB = b.season_number ?? 0;
+        if (seasonA !== seasonB) {
+          return seasonA - seasonB;
+        }
+      }
+      return (FORMAT_ORDER[b.format] ?? 0) - (FORMAT_ORDER[a.format] ?? 0);
+    });
     stacks.push(sorted);
   }
 

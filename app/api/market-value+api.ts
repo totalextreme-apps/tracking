@@ -1,4 +1,4 @@
-import { calculateMedianPrice, fetchEbaySoldViaDDG, parseEbayPrices } from '../../lib/pricing';
+import { calculateMedianPrice, fetchEbaySoldViaDDG, fetchPriceChartingValue, parseEbayPrices } from '../../lib/pricing';
 
 export async function GET(request: Request) {
     const url = new URL(request.url);
@@ -39,7 +39,28 @@ export async function GET(request: Request) {
         console.log(`Direct scrape failed or timed out for "${search}":`, e instanceof Error ? e.message : e);
     }
 
-    // 2. DuckDuckGo Search Fallback if direct scrape returned 0 prices
+    // 2. PriceCharting Search Fallback if direct scrape returned 0 prices
+    if (!directOk) {
+        try {
+            console.log(`Attempting PriceCharting fallback for "${search}"...`);
+            const parts = search.split(' ');
+            const format = parts[parts.length - 1] || '';
+            const title = parts.slice(0, -1).join(' ') || search;
+            
+            const pcResult = await fetchPriceChartingValue(title, format);
+            if (pcResult && pcResult.value !== null) {
+                return Response.json({
+                    value: pcResult.value,
+                    pricesCount: pcResult.pricesCount,
+                    source: pcResult.source
+                });
+            }
+        } catch (e) {
+            console.warn('PriceCharting fallback in API route failed:', e);
+        }
+    }
+
+    // 3. DuckDuckGo Search Fallback
     if (!directOk) {
         try {
             console.log(`Attempting DDG fallback for "${search}"...`);

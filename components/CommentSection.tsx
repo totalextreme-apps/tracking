@@ -148,6 +148,8 @@ export function CommentSection({ collectionItemId }: CommentSectionProps) {
                             {comment.user_id === userId && !editingCommentId && (
                                 <View className="flex-row gap-4 mt-1 ml-1">
                                     <Pressable 
+                                        hitSlop={15}
+                                        className="py-1 pr-2"
                                         onPress={() => {
                                             setEditingCommentId(comment.id);
                                             setEditText(comment.content);
@@ -155,7 +157,10 @@ export function CommentSection({ collectionItemId }: CommentSectionProps) {
                                     >
                                         <Text className="text-neutral-600 font-mono text-[10px]">EDIT</Text>
                                     </Pressable>
-                                    <Pressable onPress={() => handleDelete(comment.id)}>
+                                    <Pressable 
+                                        hitSlop={15}
+                                        className="py-1 px-2"
+                                        onPress={() => handleDelete(comment.id)}>
                                         <Text className="text-red-900 font-mono text-[10px]">DELETE</Text>
                                     </Pressable>
                                 </View>

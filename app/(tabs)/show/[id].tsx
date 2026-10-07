@@ -127,7 +127,9 @@ export default function ShowDetailScreen() {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [pendingFormat, setPendingFormat] = useState<string | null>(null);
     const [editionInput, setEditionInput] = useState('');
+    const [seasonInput, setSeasonInput] = useState('');
     const [isGeneratingValue, setIsGeneratingValue] = useState<Record<string, boolean>>({});
+    const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
 
     // Curated Stacks State
     const [showNewStackInput, setShowNewStackInput] = useState(false);
@@ -250,6 +252,13 @@ export default function ShowDetailScreen() {
         }
     };
 
+    const toggleGrail = async () => {
+        if (!activeItem) return;
+        const newGrail = !activeItem.is_grail;
+        // Haptics...
+        await updateMutation.mutateAsync({ itemId: activeItem.id, updates: { is_grail: newGrail } });
+    };
+
     // For TV shows, we group by show_id and season_number.
     const showIdNum = typeof id === 'string' && /^\d+$/.test(id) ? parseInt(id, 10) : undefined;
     const itemUuid = typeof id === 'string' && !/^\d+$/.test(id) ? id : null;
@@ -260,9 +269,19 @@ export default function ShowDetailScreen() {
     const showItems = collection?.filter((item: any) => {
         const itemShowId = item.show_id;
         return (itemShowId === showIdNum || (item.shows?.id === showIdNum) || item.id === itemUuid);
-    }).filter((item: any) => seasonNumber === undefined || item.season_number === seasonNumber) ?? [];
+    }) ?? [];
 
-    const commentActiveItem = showItems[0];
+    const FORMAT_PRIORITY = ['4K', 'BluRay', 'DVD', 'VHS', 'Digital'];
+
+    // Derive activeItem and activeFormat
+    const activeItem = (selectedItemId && showItems.some((i: any) => i.id === selectedItemId))
+        ? showItems.find((i: any) => i.id === selectedItemId)
+        : (showItems.length > 0
+            ? [...showItems].sort((a, b) => FORMAT_PRIORITY.indexOf(a.format) - FORMAT_PRIORITY.indexOf(b.format))[0]
+            : null);
+
+    const activeFormat: string | null = activeItem ? activeItem.format : null;
+    const commentActiveItem = activeItem || showItems[0];
 
     const showFromDb = showItems[0]?.shows;
     const { data: dbShow } = useQuery({
@@ -589,14 +608,7 @@ export default function ShowDetailScreen() {
     const ownedFormats = showItems.map((i: any) => i.format);
     const isGrail = showItems.some((i: any) => i.is_grail);
 
-    const FORMAT_PRIORITY = ['4K', 'BluRay', 'DVD', 'VHS', 'Digital'];
-    const activeFormat = (selectedFormat && ownedFormats.includes(selectedFormat))
-        ? selectedFormat
-        : (ownedFormats.length > 0
-            ? [...ownedFormats].sort((a, b) => FORMAT_PRIORITY.indexOf(a) - FORMAT_PRIORITY.indexOf(b))[0]
-            : null);
 
-    const activeItem = showItems.find((i: any) => i.format === activeFormat);
     const isBootleg = (activeItem && localBootlegs[activeItem.id] !== undefined)
         ? localBootlegs[activeItem.id]
         : (activeItem?.is_bootleg || false);
@@ -669,14 +681,14 @@ export default function ShowDetailScreen() {
                 formats: [pendingFormat as MovieFormat],
                 status: modalStatus,
                 edition: editionInput.trim() || null,
-                seasonNumber: seasonNumber
+                seasonNumber: parseInt(seasonInput, 10) || 1
             });
             playSound(pendingFormat === 'VHS' ? 'insert' : 'click');
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            setSelectedFormat(pendingFormat);
             setShowEditionModal(false);
             setPendingFormat(null);
             setEditionInput('');
+            setSeasonInput('');
         } catch (e: any) {
             const msg = e?.message || String(e);
             if (msg.startsWith('WISHLIST_CONFLICT:::')) {
@@ -714,16 +726,27 @@ export default function ShowDetailScreen() {
         }
     };
 
-    return (
+    
+    const resolvedCast = displayShow?.shows_cast || [];
+return (
         <View className="flex-1 bg-neutral-950">
             <StatusBar style="light" />
             <Stack.Screen options={{ headerShown: false }} />
 
-            {/* ImagePicker is now used for both web and native for better mobile browser compatibility */}
+            {/* Hidden file input replaced by ImagePicker for better mobile compatibility */}
 
-            <ScrollView ref={scrollViewRef} className="flex-1" contentContainerStyle={{ paddingBottom: insets.bottom + 120, width: '100%' }}>
+            <ScrollView
+                ref={scrollViewRef}
+                className="flex-1"
+                contentContainerStyle={{
+                    paddingBottom: insets.bottom + 120,
+                    paddingHorizontal: 0,
+                    width: '100%'
+                }}
+            >
+                {/* Backdrop */}
                 <View style={{ height: isDesktop ? 540 : 300 }} className="relative w-full overflow-hidden">
-                    {(customBackdropUrl || backdropUrl) ? (
+                    {customBackdropUrl || backdropUrl ? (
                         <Image
                             source={{ uri: customBackdropUrl || backdropUrl }}
                             style={{ width: '100%', height: '100%' }}
@@ -750,7 +773,8 @@ export default function ShowDetailScreen() {
                         locations={[0, 0.4, 0.8, 1]}
                         style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: isDesktop ? 220 : 160 }}
                     />
-                    <Pressable 
+
+                    <Pressable
                         onPress={() => {
                             if (from === 'community' || from === 'swap') {
                                 router.push('/community' as any);
@@ -767,6 +791,8 @@ export default function ShowDetailScreen() {
                     >
                         <Ionicons name="close" size={24} color="white" />
                     </Pressable>
+
+                    {/* Share Button */}
                     <Pressable
                         onPress={() => setShowShareModal(true)}
                         style={{ top: Math.max(insets.top, 16) }}
@@ -778,12 +804,24 @@ export default function ShowDetailScreen() {
 
                 <View className="max-w-7xl mx-auto w-full px-4 md:px-8 -mt-20">
                     <View className="flex-row items-start">
-                        <View className="w-24 rounded-lg shadow-xl relative">
+                        {/* Poster */}
+                        <View className="w-24 rounded-lg shadow-xl relative" style={{ elevation: 12, shadowColor: '#000', shadowOpacity: 0.6, shadowRadius: 12 }}>
                             {(() => {
                                 const finalPosterUrl = customArtUrl || posterUrl;
-                                if (activeFormat === 'VHS') return <VHSCard posterUrl={finalPosterUrl} isCustom={!!customArtUrl} style={{ width: '100%' }} />;
-                                if (activeFormat && ['DVD', 'BluRay', '4K'].includes(activeFormat)) return <GlossyCard posterUrl={finalPosterUrl} format={activeFormat as MovieFormat} isCustom={!!customArtUrl} style={{ width: '100%' }} />;
-                                return <Image source={{ uri: finalPosterUrl }} style={{ width: '100%', aspectRatio: 2 / 3, borderRadius: 8 }} contentFit="cover" />;
+                                const isCustom = !!customArtUrl;
+
+                                if (activeFormat === 'VHS') return <VHSCard posterUrl={finalPosterUrl} isCustom={isCustom} style={{ width: '100%' }} />;
+                                if (activeFormat && ['DVD', 'BluRay', '4K'].includes(activeFormat)) return <GlossyCard posterUrl={finalPosterUrl} format={activeFormat as any} isCustom={isCustom} style={{ width: '100%' }} />;
+
+                                const ratio = isCustom
+                                    ? (activeFormat === 'VHS' ? 2 / 3.5 : (activeFormat === 'BluRay' || activeFormat === '4K') ? 0.78 : 0.71)
+                                    : 2 / 3;
+
+                                if (!finalPosterUrl) {
+                                    return <NoPosterPlaceholder width="100%" height="100%" style={{ aspectRatio: ratio, borderRadius: 8 }} />;
+                                }
+
+                                return <Image source={{ uri: finalPosterUrl }} style={{ width: '100%', aspectRatio: ratio, borderRadius: 8 }} contentFit="cover" />;
                             })()}
 
                             {/* Bootleg Sticker - TOP LEVEL */}
@@ -797,31 +835,52 @@ export default function ShowDetailScreen() {
                                 </View>
                             )}
                         </View>
+
+                        {/* Controls + Title Info */}
                         <View className="flex-1 ml-4 pt-1">
-                            {showItems.length > 0 && (
+                            {/* Art Controls (Matching Attachment 2) */}
+                            {showItems.length > 0 && !isReadOnly && (
                                 <View className="flex-row items-center gap-2 mb-3 flex-wrap">
                                     <View className="flex-row items-center">
-                                        <Pressable onPress={() => handleUploadCustomArt('poster')} className="bg-amber-600/10 border border-amber-600/30 px-3 py-2 rounded flex-row items-center">
+                                        <Pressable
+                                            onPress={() => handleUploadCustomArt('poster')}
+                                            className="bg-amber-600/10 border border-amber-600/30 px-3 py-2 rounded flex-row items-center"
+                                        >
                                             <Ionicons name="image-outline" size={12} color="#f59e0b" />
-                                            <Text className="ml-1.5 font-mono text-[10px] font-bold text-amber-500">{customArtUrl ? 'CHANGE COVER' : 'UPLOAD COVER'}</Text>
+                                            <Text className="ml-1.5 font-mono text-[10px] font-bold text-amber-500">
+                                                {customArtUrl ? 'CHANGE COVER' : 'UPLOAD COVER'}
+                                            </Text>
                                         </Pressable>
                                         {customArtUrl && (
-                                            <Pressable onPress={() => handleRemoveCustomArt('poster')} className="ml-1.5 bg-red-900/20 px-2 py-2 rounded border border-red-900/40 items-center justify-center">
+                                            <Pressable
+                                                onPress={() => handleRemoveCustomArt('poster')}
+                                                className="ml-1.5 bg-red-900/20 px-2 py-2 rounded border border-red-900/40 items-center justify-center"
+                                            >
                                                 <Ionicons name="trash-outline" size={14} color="#ef4444" />
                                             </Pressable>
                                         )}
                                     </View>
+
                                     <View className="flex-row items-center">
-                                        <Pressable onPress={() => handleUploadCustomArt('backdrop')} className="bg-blue-600/10 border border-blue-600/30 px-3 py-2 rounded flex-row items-center">
+                                        <Pressable
+                                            onPress={() => handleUploadCustomArt('backdrop')}
+                                            className="bg-blue-600/10 border border-blue-600/30 px-3 py-2 rounded flex-row items-center"
+                                        >
                                             <Ionicons name="images-outline" size={12} color="#60a5fa" />
-                                            <Text className="ml-1.5 font-mono text-[10px] font-bold text-blue-400">{customBackdropUrl ? 'CHANGE BACKDROP' : 'UPLOAD BACKDROP'}</Text>
+                                            <Text className="ml-1.5 font-mono text-[10px] font-bold text-blue-400">
+                                                {customBackdropUrl ? 'CHANGE BACKDROP' : 'UPLOAD BACKDROP'}
+                                            </Text>
                                         </Pressable>
                                         {customBackdropUrl && (
-                                            <Pressable onPress={() => handleRemoveCustomArt('backdrop')} className="ml-1.5 bg-red-900/20 px-2 py-2 rounded border border-red-900/40 items-center justify-center">
+                                            <Pressable
+                                                onPress={() => handleRemoveCustomArt('backdrop')}
+                                                className="ml-1.5 bg-red-900/20 px-2 py-2 rounded border border-red-900/40 items-center justify-center"
+                                            >
                                                 <Ionicons name="trash-outline" size={14} color="#ef4444" />
                                             </Pressable>
                                         )}
                                     </View>
+
                                     {(customBackdropUrl || backdropUrl) && (
                                         <Pressable
                                             onPress={() => {
@@ -838,11 +897,9 @@ export default function ShowDetailScreen() {
                                     )}
                                 </View>
                             )}
+
                             <Text className="text-white font-bold text-xl leading-6 mb-0.5">
-                                {displayShow.name} {displayShow.first_air_date ? `(${displayShow.first_air_date.slice(0, 4)})` : ''}
-                            </Text>
-                            <Text className="text-neutral-500 font-mono text-xs">
-                                Season {seasonNumber}
+                                {displayShow.title} {displayShow.release_date ? `(${displayShow.release_date.slice(0, 4)})` : ''}
                             </Text>
                             {/* Franchise Tag Badge */}
                             {showItems[0]?.franchise ? (
@@ -854,7 +911,7 @@ export default function ShowDetailScreen() {
                                 </View>
                             ) : null}
                             {displayShow.genres && Array.isArray(displayShow.genres) && displayShow.genres.length > 0 && (
-                                <Text className="text-neutral-500 font-mono text-[10px] mt-1.5 uppercase tracking-wider">
+                                <Text className="text-neutral-500 font-mono text-[10px] mt-1 uppercase tracking-wider">
                                     {displayShow.genres.map((g: any) => g?.name).filter(Boolean).join('  •  ')}
                                 </Text>
                             )}
@@ -888,89 +945,103 @@ export default function ShowDetailScreen() {
                             </View>
                         </View>
                     </View>
-                    {!isReadOnly && showItems.length > 0 && (
-                        <View className="flex-row mt-4 gap-2">
-                            {activeItem && activeItem.status === 'wishlist' ? (
-                                <Pressable
-                                    onPress={async () => {
-                                        playSound('peel');
-                                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                        setTimeout(() => {
-                                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                                        }, 100);
-                                        setTimeout(() => {
-                                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                                        }, 250);
+                    {/* Actions Bar (Full width style from attachment 2) */}
+                    <View className="max-w-7xl mx-auto w-full px-4 md:px-8 flex-row mt-4 gap-2">
+                        {!isReadOnly && (
+                            <>
+                                {activeItem && activeItem.status === 'wishlist' ? (
+                                    <Pressable
+                                        onPress={async () => {
+                                            playSound('peel');
+                                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                            setTimeout(() => {
+                                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                                            }, 100);
+                                            setTimeout(() => {
+                                                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                                            }, 250);
 
-                                        const itemToCelebrate = {
-                                            ...activeItem,
-                                            shows: activeShow,
-                                        };
-                                        setCelebratedItem(itemToCelebrate);
-                                        setShowCelebration(true);
+                                            const itemToCelebrate = {
+                                                ...activeItem,
+                                                movies: activeShow,
+                                            };
+                                            setCelebratedItem(itemToCelebrate);
+                                            setShowCelebration(true);
 
-                                        await updateMutation.mutateAsync({
-                                            itemId: activeItem.id,
-                                            updates: {
-                                                status: 'owned',
-                                                created_at: new Date().toISOString()
-                                            }
-                                        });
-                                        refetch();
-                                    }}
-                                    className="flex-1 flex-row items-center justify-center p-3 rounded-lg border bg-green-600/10 border-green-500 active:bg-green-600/20"
-                                >
-                                    <Ionicons name="checkmark-circle-outline" size={16} color="#10b981" />
-                                    <Text className="ml-2 font-mono text-xs font-bold tracking-widest text-green-500 uppercase">
-                                        MARK ACQUIRED
-                                    </Text>
-                                </Pressable>
-                            ) : thriftMode || isGrail ? (
+                                            await updateMutation.mutateAsync({
+                                                itemId: activeItem.id,
+                                                updates: {
+                                                    status: 'owned',
+                                                    created_at: new Date().toISOString()
+                                                }
+                                            });
+                                            refetch();
+                                        }}
+                                        className="flex-1 flex-row items-center justify-center p-3 rounded-lg border bg-green-600/10 border-green-500 active:bg-green-600/20"
+                                    >
+                                        <Ionicons name="checkmark-circle-outline" size={16} color="#10b981" />
+                                        <Text className="ml-2 font-mono text-xs font-bold tracking-widest text-green-500 uppercase">
+                                            MARK ACQUIRED
+                                        </Text>
+                                    </Pressable>
+                                ) : thriftMode || isGrail ? (
+                                    <Pressable
+                                        onPress={toggleGrail}
+                                        className={`flex-1 flex-row items-center justify-center p-3 rounded-lg border ${isGrail ? 'bg-amber-500/10 border-amber-500' : 'bg-neutral-900 border-neutral-800'}`}
+                                    >
+                                        <Ionicons name={isGrail ? "trophy" : "trophy-outline"} size={16} color={isGrail ? "#f59e0b" : "#404040"} />
+                                        <Text className={`ml-2 font-mono text-xs font-bold tracking-widest ${isGrail ? 'text-amber-500' : 'text-neutral-600'}`}>
+                                            {isGrail ? 'GRAIL' : 'MAKE GRAIL'}
+                                        </Text>
+                                    </Pressable>
+                                ) : (
+                                    <Pressable
+                                        onPress={async () => {
+                                            if (!activeItem) return;
+                                            const isOnDisplay = activeItem.is_on_display || false;
+                                            await updateMutation.mutateAsync({ itemId: activeItem.id, updates: { is_on_display: !isOnDisplay } });
+                                            playSound('click');
+                                        }}
+                                        className={`flex-1 flex-row items-center justify-center p-3 rounded-lg border ${activeItem?.is_on_display ? 'bg-indigo-500/10 border-indigo-500' : 'bg-neutral-900 border-neutral-800'}`}
+                                    >
+                                        <Ionicons name={activeItem?.is_on_display ? "star" : "star-outline"} size={16} color={activeItem?.is_on_display ? "#6366f1" : "#404040"} />
+                                        <Text className={`ml-2 font-mono text-xs font-bold tracking-widest ${activeItem?.is_on_display ? 'text-indigo-500' : 'text-neutral-600'}`}>
+                                            {activeItem?.is_on_display ? 'STAFF PICK' : 'MAKE STAFF PICK'}
+                                        </Text>
+                                    </Pressable>
+                                )}
+
                                 <Pressable
-                                    onPress={async () => {
-                                        await Promise.all(showItems.map((item: any) =>
-                                            updateMutation.mutateAsync({ itemId: item.id, updates: { is_grail: !isGrail } })
-                                        ));
-                                        playSound('peel');
-                                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                                    }}
-                                    className={`flex-1 flex-row items-center justify-center p-3 rounded-lg border ${isGrail ? 'bg-amber-500/10 border-amber-500' : 'bg-neutral-900 border-neutral-800'}`}
+                                    onPress={deleteShow}
+                                    className="bg-red-900/10 px-4 rounded-lg border border-red-900/40 items-center justify-center"
                                 >
-                                    <Ionicons name={isGrail ? "trophy" : "trophy-outline"} size={16} color={isGrail ? "#f59e0b" : "#404040"} />
-                                    <Text className={`ml-2 font-mono text-xs font-bold tracking-widest ${isGrail ? 'text-amber-500' : 'text-neutral-600'}`}>
-                                        {isGrail ? 'GRAIL' : 'MAKE GRAIL'}
-                                    </Text>
+                                    <Ionicons name="trash-outline" size={20} color="#ef4444" />
                                 </Pressable>
-                            ) : (
-                                <Pressable
-                                    onPress={async () => {
-                                        const isOnDisplay = showItems.some((i: any) => i.is_on_display);
-                                        await Promise.all(showItems.map((item: any) =>
-                                            updateMutation.mutateAsync({ itemId: item.id, updates: { is_on_display: !isOnDisplay } })
-                                        ));
-                                        playSound('click');
-                                    }}
-                                    className={`flex-1 flex-row items-center justify-center p-3 rounded-lg border ${showItems.some((i: any) => i.is_on_display) ? 'bg-indigo-500/10 border-indigo-500' : 'bg-neutral-900 border-neutral-800'}`}
-                                >
-                                    <Ionicons name={showItems.some((i: any) => i.is_on_display) ? "star" : "star-outline"} size={16} color={showItems.some((i: any) => i.is_on_display) ? "#6366f1" : "#404040"} />
-                                    <Text className={`ml-2 font-mono text-xs font-bold tracking-widest ${showItems.some((i: any) => i.is_on_display) ? 'text-indigo-500' : 'text-neutral-600'}`}>
-                                        {showItems.some((i: any) => i.is_on_display) ? 'STAFF PICK' : 'MAKE STAFF PICK'}
-                                    </Text>
-                                </Pressable>
-                            )}
-                            <Pressable onPress={deleteShow} className="bg-red-900/10 px-4 rounded-lg border border-red-900/40 items-center justify-center">
-                                <Ionicons name="trash-outline" size={20} color="#ef4444" />
-                            </Pressable>
-                            {!thriftMode && (
-                                <Pressable 
-                                    onPress={() => setShowPostModal(true)}
-                                    className="bg-amber-600/10 px-4 rounded-lg border border-amber-600/40 items-center justify-center"
-                                >
-                                    <Ionicons name="pin" size={20} color="#f59e0b" />
-                                </Pressable>
-                            )}
-                        </View>
-                    )}
+
+                                {/* PIN TO BULLETIN BOARD */}
+                                {!thriftMode && (
+                                    <Pressable 
+                                        onPress={() => setShowPostModal(true)}
+                                        className="bg-amber-600/10 px-4 rounded-lg border border-amber-600/40 items-center justify-center"
+                                    >
+                                        <Ionicons name="pin" size={20} color="#f59e0b" />
+                                    </Pressable>
+                                )}
+                                
+                                {/* LOG WATCH EVENT */}
+                                {!thriftMode && activeItem && activeItem.status === 'owned' && (
+                                    <Pressable 
+                                        onPress={handleLogWatch}
+                                        className="bg-green-600/10 px-4 rounded-lg border border-green-600/40 items-center justify-center"
+                                    >
+                                        <Ionicons name="eye" size={20} color="#10b981" />
+                                    </Pressable>
+                                )}
+                                
+                                {/* EDIT MANUAL RECORD REMOVED */}
+                            </>
+                        )}
+                    </View>
 
                     {/* Retro Watch Tracker Section */}
                     {activeItem && activeItem.status === 'owned' && (
@@ -1054,33 +1125,58 @@ export default function ShowDetailScreen() {
                         </View>
                     )}
 
-                    {resolvedShowCast && resolvedShowCast.length > 0 && (
-                        <View className="mt-6 mb-2">
+                    {/* Rating and Review Section (Bulletin Board Sync) */}
+                    {activeItem && (
+                        <ReviewSection 
+                            showId={activeShow.id}
+                            collectionItemId={activeItem.id}
+                            initialRating={activeItem.rating}
+                            initialReview={activeItem.review}
+                        />
+                    )}
+
+                    {/* Cast Section */}
+                    {resolvedCast && resolvedCast.length > 0 && (
+                        <View className="mt-4 mb-2 px-4 md:px-8">
                             <Text className="text-amber-500 font-bold text-xl mb-3 font-mono uppercase tracking-widest" style={{ fontFamily: 'VCR_OSD_MONO' }}>STARRING</Text>
                             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                                {resolvedShowCast.map((member: any) => (
+                                {resolvedCast.map((member: any) => (
                                     <View key={member.id} className="mr-4 items-center w-20">
                                         <View className="w-16 h-16 rounded-full overflow-hidden bg-neutral-800 mb-2 border border-neutral-700">
                                             {member.profile_path ? (
-                                                <Image source={{ uri: `https://image.tmdb.org/t/p/w185${member.profile_path}` }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                                                <Image
+                                                    source={{ uri: `https://image.tmdb.org/t/p/w185${member.profile_path}` }}
+                                                    style={{ width: '100%', height: '100%' }}
+                                                    contentFit="cover"
+                                                />
                                             ) : (
-                                                <View className="flex-1 items-center justify-center"><Ionicons name="person" size={24} color="#525252" /></View>
+                                                <View className="flex-1 items-center justify-center">
+                                                    <Ionicons name="person" size={24} color="#525252" />
+                                                </View>
                                             )}
                                         </View>
-                                        <Text className="text-white text-[10px] text-center font-bold leading-3 mb-0.5" numberOfLines={2}>{member.name}</Text>
-                                        <Text className="text-neutral-500 text-[9px] text-center leading-3" numberOfLines={2}>{member.character}</Text>
+                                        <Text className="text-white text-[10px] text-center font-bold leading-3 mb-0.5" numberOfLines={2}>
+                                            {member.name}
+                                        </Text>
+                                        <Text className="text-neutral-500 text-[9px] text-center leading-3" numberOfLines={2}>
+                                            {member.character}
+                                        </Text>
                                     </View>
                                 ))}
                             </ScrollView>
                         </View>
                     )}
 
-                    <View className="mt-4">
+                    {/* Overview */}
+                    <View className="mt-6">
                         <Text className="text-amber-500 font-bold text-xl mb-2 font-mono uppercase tracking-widest" style={{ fontFamily: 'VCR_OSD_MONO' }}>Overview</Text>
-                        <Text className="text-neutral-400 leading-6">{displayShow.overview || "No overview available."}</Text>
+                        <Text className="text-neutral-400 leading-6">
+                            {tmdbShow?.overview || (displayShow as any)?.overview || "No overview available."}
+                        </Text>
                     </View>
 
-                    {/* Franchise & Sorting Details (Global for Show) */}
+
+                    {/* Franchise & Sorting Details (Global for Movie) */}
                     {!isReadOnly && ownedFormats.length > 0 && (
                         <View className="mt-6">
                             <Text className="text-white font-bold mb-2">Franchise & Sorting Tags</Text>
@@ -1161,7 +1257,7 @@ export default function ShowDetailScreen() {
                                                 const franchiseOrderToSave = franchiseOrderValue.trim() === '' ? null : parseFloat(franchiseOrderValue);
                                                 await updateShowFranchiseMutation.mutateAsync({
                                                     showId: activeShow?.id || displayShow.id,
-                                                    seasonNumber: seasonNumber,
+                                                    seasonNumber: activeItem?.season_number || 1,
                                                     franchise: franchiseValue || null,
                                                     franchiseOrder: isNaN(franchiseOrderToSave as any) ? null : franchiseOrderToSave,
                                                     sortingTags: sortingTagsValue || null,
@@ -1187,263 +1283,408 @@ export default function ShowDetailScreen() {
                         </View>
                     )}
 
-                    {ownedFormats.length > 0 && !isReadOnly && (
-                        <View className="mt-6">
-                            <Text className="text-white font-bold mb-3">
-                                {showItems.every((i: any) => i.status === 'wishlist')
-                                    ? 'Wishlist Format Notes'
-                                    : showItems.every((i: any) => i.status === 'owned')
-                                        ? 'Format Notes'
-                                        : 'Format Notes (Owned & Wishlist)'}
-                            </Text>
-                            {showItems.map((item: any) => (
-                                <View key={item.id} className="mb-4">
-                                    <View className="flex-row items-center flex-wrap mb-2">
-                                        <View className={`px-2 py-1 rounded shrink-0 ${FORMAT_COLORS[item.format] || 'bg-neutral-800'}`}>
-                                            <Text className="text-white font-mono text-xs font-bold">{item.format === 'BluRay' ? 'Blu-ray' : item.format}</Text>
+                    {/* Format Notes Section */}
+                    {
+                        ownedFormats.length > 0 && (
+                            <View className="mt-6">
+                                <Text className="text-white font-bold mb-2">Format Notes</Text>
+                                {showItems.filter((i: any) => i.status === 'owned').map((item: any) => (
+                                    <View key={item.id} className="mb-4">
+                                        <View className="flex-row items-center flex-wrap mb-2">
+                                            <View className={`px-2 py-1 rounded shrink-0 ${FORMAT_COLORS[item.format] || 'bg-neutral-800'}`}>
+                                                <Text className="text-white font-mono text-xs font-bold">{`S${item.season_number || 1} • ${item.format === 'BluRay' ? 'Blu-ray' : item.format}`}</Text>
+                                            </View>
+                                            {item.value_estimate !== null && item.value_estimate !== undefined && !isErrantShippingPrice(item.value_estimate) && (
+                                                <View className="bg-neutral-800 border border-neutral-700/50 px-2 py-0.5 rounded ml-2">
+                                                    <Text className="text-amber-400 font-mono text-[10px] font-bold">
+                                                        EST: ${Number(item.value_estimate).toFixed(2)}
+                                                    </Text>
+                                                </View>
+                                            )}
+                                            <Pressable
+                                                onPress={async () => {
+                                                    const isBoot = localBootlegs[item.id] !== undefined ? localBootlegs[item.id] : (item.is_bootleg || false);
+                                                    const newVal = !isBoot;
+                                                    setLocalBootlegs(prev => ({ ...prev, [item.id]: newVal }));
+                                                    playSound('click');
+                                                    await updateMutation.mutateAsync({
+                                                        itemId: item.id,
+                                                        updates: { is_bootleg: newVal }
+                                                    });
+                                                }}
+                                                className={`ml-2 px-2 py-1 rounded border ${(localBootlegs[item.id] !== undefined ? localBootlegs[item.id] : (item.is_bootleg || false)) ? 'bg-red-500 border-red-400' : 'bg-neutral-800 border-neutral-700'}`}
+                                            >
+                                                <Text className="text-white font-mono text-[10px] font-bold">BOOT</Text>
+                                            </Pressable>
+                                            <Text className="text-neutral-500 font-mono text-[9px] ml-auto uppercase font-bold">
+                                                Added: {new Date(item.created_at).toLocaleDateString()} {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </Text>
                                         </View>
-                                        {item.status === 'wishlist' && (
-                                            <View className="border border-dashed border-neutral-500 px-1.5 py-0.5 rounded-sm ml-2">
-                                                <Text className="text-neutral-400 font-mono text-[9px] font-bold uppercase tracking-wider">WISHLIST</Text>
+                                        <TextInput
+                                             className="bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm mb-2"
+                                             placeholder="Edition (Theatrical, Unrated, Director's Cut, etc.)"
+                                             placeholderTextColor="#525252"
+                                             value={localEditions[item.id] !== undefined ? localEditions[item.id] : (item.edition || '')}
+                                             onChangeText={(text) => setLocalEditions(prev => ({ ...prev, [item.id]: text }))}
+                                             autoCapitalize="words"
+                                             autoCorrect={false}
+                                         />
+                                        <TextInput
+                                            className="bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm"
+                                            placeholder={`Add notes for your ${`S${item.season_number || 1} • ${item.format === 'BluRay' ? 'Blu-ray' : item.format}`} copy...`}
+                                            placeholderTextColor="#525252"
+                                            multiline
+                                            value={localNotes[item.id] !== undefined ? localNotes[item.id] : (item.notes || '')}
+                                            onChangeText={(text) => setLocalNotes(prev => ({ ...prev, [item.id]: text }))}
+                                        />
+
+                                        <View className="mt-2 mb-1">
+                                            <View className="flex-row items-center justify-between mb-1">
+                                                <Text className="text-neutral-500 font-mono text-[10px] font-bold uppercase">Estimated Market Value ($)</Text>
+                                                <View className="flex-row items-center gap-2">
+                                                    <Pressable
+                                                        onPress={() => handleGenerateValue(item.id, item.format, item.edition)}
+                                                        disabled={isGeneratingValue[item.id]}
+                                                        className={`bg-neutral-800 px-2 py-1 rounded border border-neutral-700 flex-row items-center gap-1 active:opacity-75 ${isGeneratingValue[item.id] ? 'opacity-50' : ''}`}
+                                                    >
+                                                        {isGeneratingValue[item.id] ? (
+                                                            <ActivityIndicator size={10} color="#10b981" />
+                                                        ) : (
+                                                            <Ionicons name="sparkles" size={10} color="#10b981" style={{ marginTop: -1 }} />
+                                                        )}
+                                                        <Text className="text-emerald-500 font-mono text-[9px] font-bold uppercase">
+                                                            {isGeneratingValue[item.id] ? 'GENERATING...' : 'AUTO VALUE'}
+                                                        </Text>
+                                                    </Pressable>
+                                                    {Platform.OS === 'web' && (
+                                                        <Pressable
+                                                            onPress={() => {
+                                                                playSound('click');
+                                                                const targetTitle = item.shows?.name || activeShow?.name || displayShow?.name || '';
+                                                                Linking.openURL(getEbaySearchUrl(targetTitle, item.format, item.edition));
+                                                            }}
+                                                            className="bg-neutral-800 px-2 py-1 rounded border border-neutral-700 flex-row items-center gap-1 active:opacity-75"
+                                                        >
+                                                            <Ionicons name="search-outline" size={10} color="#f59e0b" style={{ marginTop: -1 }} />
+                                                            <Text className="text-amber-500 font-mono text-[9px] font-bold uppercase">Search eBay</Text>
+                                                        </Pressable>
+                                                    )}
+                                                </View>
+                                            </View>
+                                            <TextInput
+                                                nativeID={`value-input-${item.id}`}
+                                                {...({ name: `value-${item.id}` } as any)}
+                                                className="bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm"
+                                                placeholder="Enter custom value..."
+                                                placeholderTextColor="#525252"
+                                                keyboardType="decimal-pad"
+                                                value={localValues[item.id] !== undefined ? localValues[item.id] : (item.value_estimate && !isErrantShippingPrice(item.value_estimate) ? item.value_estimate.toString() : '')}
+                                                onChangeText={(text) => setLocalValues(prev => ({ ...prev, [item.id]: text }))}
+                                            />
+                                        </View>
+                                        
+                                        <View className="flex-row gap-2 my-2">
+                                            <Pressable
+                                                onPress={async () => {
+                                                    const isForSale = localForSale[item.id] !== undefined ? localForSale[item.id] : (item.for_sale || false);
+                                                    const newVal = !isForSale;
+                                                    setLocalForSale(prev => ({ ...prev, [item.id]: newVal }));
+                                                    playSound('click');
+                                                    await updateMutation.mutateAsync({ itemId: item.id, updates: { for_sale: newVal } });
+                                                }}
+                                                className={`flex-1 py-3 px-3 rounded-lg flex-row items-center border ${(localForSale[item.id] !== undefined ? localForSale[item.id] : item.for_sale) ? 'bg-emerald-900/30 border-emerald-500/50' : 'bg-neutral-900 border-neutral-800'}`}
+                                            >
+                                                <Ionicons name="cash-outline" size={14} color={(localForSale[item.id] !== undefined ? localForSale[item.id] : item.for_sale) ? '#10b981' : '#a3a3a3'} />
+                                                <Text className={`font-mono font-bold text-[10px] ml-2 ${(localForSale[item.id] !== undefined ? localForSale[item.id] : item.for_sale) ? 'text-emerald-400' : 'text-neutral-500'}`}>FOR SALE</Text>
+                                            </Pressable>
+
+                                            <Pressable
+                                                onPress={async () => {
+                                                    const isForTrade = localForTrade[item.id] !== undefined ? localForTrade[item.id] : (item.for_trade || false);
+                                                    const newVal = !isForTrade;
+                                                    setLocalForTrade(prev => ({ ...prev, [item.id]: newVal }));
+                                                    playSound('click');
+                                                    await updateMutation.mutateAsync({ itemId: item.id, updates: { for_trade: newVal } });
+                                                }}
+                                                className={`flex-1 py-3 px-3 rounded-lg flex-row items-center border ${(localForTrade[item.id] !== undefined ? localForTrade[item.id] : item.for_trade) ? 'bg-blue-900/30 border-blue-500/50' : 'bg-neutral-900 border-neutral-800'}`}
+                                            >
+                                                <Ionicons name="swap-horizontal-outline" size={14} color={(localForTrade[item.id] !== undefined ? localForTrade[item.id] : item.for_trade) ? '#3b82f6' : '#a3a3a3'} />
+                                                <Text className={`font-mono font-bold text-[10px] ml-2 ${(localForTrade[item.id] !== undefined ? localForTrade[item.id] : item.for_trade) ? 'text-blue-400' : 'text-neutral-500'}`}>FOR TRADE</Text>
+                                            </Pressable>
+                                        </View>
+
+                                        {(localForSale[item.id] !== undefined ? localForSale[item.id] : item.for_sale) && (
+                                            <View className="bg-neutral-900 p-3 rounded-lg flex-row items-center border border-neutral-800 mb-2">
+                                                <Text className="text-emerald-500 font-mono font-bold mr-2">$</Text>
+                                                <TextInput
+                                                    className="flex-1 text-white font-mono text-sm h-10"
+                                                    placeholder="Asking Price"
+                                                    placeholderTextColor="#333"
+                                                    keyboardType="numeric"
+                                                    defaultValue={item.price?.toString() || ''}
+                                                    onEndEditing={async (e) => {
+                                                        const p = parseFloat(e.nativeEvent.text);
+                                                        await updateMutation.mutateAsync({ itemId: item.id, updates: { price: isNaN(p) ? null : p } });
+                                                    }}
+                                                />
                                             </View>
                                         )}
-                                        {item.value_estimate !== null && item.value_estimate !== undefined && !isErrantShippingPrice(item.value_estimate) && (
-                                            <View className="bg-neutral-800 border border-neutral-700/50 px-2 py-0.5 rounded ml-2">
-                                                <Text className="text-amber-400 font-mono text-[10px] font-bold">
-                                                    EST: ${Number(item.value_estimate).toFixed(2)}
-                                                </Text>
-                                            </View>
-                                        )}
+
                                         <Pressable
+                                            disabled={updateMutation.isPending || updateShowFranchiseMutation.isPending}
                                             onPress={async () => {
-                                                const isBoot = localBootlegs[item.id] !== undefined ? localBootlegs[item.id] : (item.is_bootleg || false);
-                                                const newVal = !isBoot;
-                                                setLocalBootlegs(prev => ({ ...prev, [item.id]: newVal }));
-                                                playSound('click');
+                                                const noteToSave = localNotes[item.id] !== undefined ? localNotes[item.id] : (item.notes || '');
+                                                const editionToSave = localEditions[item.id] !== undefined ? localEditions[item.id] : (item.edition || '');
+                                                const bootToSave = localBootlegs[item.id] !== undefined ? localBootlegs[item.id] : (item.is_bootleg || false);
+                                                const valRaw = localValues[item.id] !== undefined ? localValues[item.id] : (item.value_estimate?.toString() || '');
+                                                const valToSave = valRaw.trim() === '' ? null : parseFloat(valRaw);
+                                                // Save copy specific updates
                                                 await updateMutation.mutateAsync({
                                                     itemId: item.id,
-                                                    updates: { is_bootleg: newVal }
+                                                    updates: {
+                                                        notes: noteToSave,
+                                                        edition: editionToSave || null,
+                                                        is_bootleg: bootToSave,
+                                                        value_estimate: isNaN(valToSave as any) ? null : valToSave
+                                                    }
                                                 });
+
+                                                playSound('click');
+                                                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                                             }}
-                                            className={`ml-2 px-2 py-1 rounded border ${(localBootlegs[item.id] !== undefined ? localBootlegs[item.id] : (item.is_bootleg || false)) ? 'bg-red-500 border-red-400' : 'bg-neutral-800 border-neutral-700'}`}
+                                            className={`mt-2 self-end px-4 py-2 rounded-lg border flex-row items-center ${updateMutation.isPending ? 'bg-neutral-800 border-neutral-700' : 'bg-amber-600/10 border-amber-600/50'}`}
                                         >
-                                            <Text className="text-white font-mono text-[10px] font-bold">BOOT</Text>
-                                        </Pressable>
-                                        {item.edition && (
-                                            <Text className="text-neutral-500 font-mono text-xs ml-2 flex-1" style={{ minWidth: 100 }}>({item.edition})</Text>
-                                        )}
-                                        {item.created_at && (
-                                            <Text className="text-neutral-500 font-mono text-[9px] ml-auto">
-                                                ADDED: {new Date(item.created_at).toLocaleDateString()} {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            {updateMutation.isPending ? (
+                                                <ActivityIndicator size="small" color="#f59e0b" style={{ marginRight: 8, transform: [{ scale: 0.8 }] }} />
+                                            ) : null}
+                                            <Text className="text-amber-500 font-mono text-xs font-bold">
+                                                {updateMutation.isPending ? 'SAVING...' : `SAVE ${`S${item.season_number || 1} • ${item.format === 'BluRay' ? 'Blu-ray' : item.format}`}`}
                                             </Text>
-                                        )}
+                                        </Pressable>
                                     </View>
-                                    <TextInput
-                                        className="bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm mb-2"
-                                        placeholder="Edition (e.g. Special Edition)"
-                                        placeholderTextColor="#525252"
-                                        value={localEditions[item.id] !== undefined ? localEditions[item.id] : (item.edition || '')}
-                                        onChangeText={(text) => setLocalEditions(prev => ({ ...prev, [item.id]: text }))}
-                                    />
+                                ))}
+                            </View>
+                        )
+                    }
 
-                                    <TextInput
-                                        className="bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm min-h-[80px]"
-                                        placeholder="Add notes..."
-                                        placeholderTextColor="#525252"
-                                        multiline
-                                        value={localNotes[item.id] !== undefined ? localNotes[item.id] : (item.notes || '')}
-                                        onChangeText={(text) => setLocalNotes(prev => ({ ...prev, [item.id]: text }))}
-                                    />
+                    {/* Curated Stacks Section */}
+                    {
+                        ownedFormats.length > 0 && !isReadOnly && (
+                            <View className="mt-8">
+                                <Text className="text-white font-bold mb-3">Curated Stacks</Text>
+                                <View className="flex-row flex-wrap gap-2 mb-2">
+                                    {getCustomLists(collection).map(listName => {
+                                        const isInStack = showItems.some((i: any) => i.custom_lists?.includes(listName));
+                                        return (
+                                            <Pressable
+                                                key={listName}
+                                                onPress={() => handleToggleStack(listName)}
+                                                className={`px-3 py-1.5 border rounded-full flex-row items-center gap-1 ${isInStack ? 'bg-amber-600/20 border-amber-500' : 'bg-neutral-900 border-neutral-700'}`}
+                                            >
+                                                <Ionicons name={isInStack ? 'checkmark' : 'add'} size={14} color={isInStack ? '#f59e0b' : '#a3a3a3'} />
+                                                <Text className={`font-mono text-xs ${isInStack ? 'text-amber-500 font-bold' : 'text-neutral-400'}`}>
+                                                    {listName}
+                                                </Text>
+                                            </Pressable>
+                                        );
+                                    })}
 
-                                    <View className="mt-2 mb-1">
-                                        <View className="flex-row items-center justify-between mb-1">
-                                            <Text className="text-neutral-500 font-mono text-[10px] font-bold uppercase">Estimated Market Value ($)</Text>
-                                            <View className="flex-row items-center gap-2">
-                                                <Pressable
-                                                    onPress={() => handleGenerateValue(item.id, item.format, item.edition)}
-                                                    disabled={isGeneratingValue[item.id]}
-                                                    className={`bg-neutral-800 px-2 py-1 rounded border border-neutral-700 flex-row items-center gap-1 active:opacity-75 ${isGeneratingValue[item.id] ? 'opacity-50' : ''}`}
-                                                >
-                                                    {isGeneratingValue[item.id] ? (
-                                                        <ActivityIndicator size={10} color="#10b981" />
-                                                    ) : (
-                                                        <Ionicons name="sparkles" size={10} color="#10b981" style={{ marginTop: -1 }} />
-                                                    )}
-                                                    <Text className="text-emerald-500 font-mono text-[9px] font-bold uppercase">
-                                                        {isGeneratingValue[item.id] ? 'GENERATING...' : 'AUTO VALUE'}
-                                                    </Text>
-                                                </Pressable>
-                                                {Platform.OS === 'web' && (
+                                    <Pressable
+                                        onPress={() => {
+                                            playSound('click');
+                                            setShowNewStackInput(!showNewStackInput);
+                                        }}
+                                        className={`px-3 py-1.5 border rounded-full flex-row items-center gap-1 ${showNewStackInput ? 'bg-neutral-800 border-neutral-600' : 'bg-neutral-900 border-neutral-700 border-dashed'}`}
+                                    >
+                                        <Ionicons name={showNewStackInput ? 'close' : 'add'} size={14} color={showNewStackInput ? '#fff' : '#a3a3a3'} />
+                                        <Text className={`font-mono text-xs ${showNewStackInput ? 'text-white' : 'text-neutral-500'}`}>
+                                            {showNewStackInput ? 'CANCEL' : 'NEW STACK'}
+                                        </Text>
+                                    </Pressable>
+                                </View>
+
+                                {showNewStackInput && (
+                                    <View className="flex-row items-center gap-2 mt-2">
+                                        <TextInput
+                                            className="flex-1 bg-neutral-900 text-white px-3 py-2 rounded-lg border border-neutral-800 font-mono text-sm"
+                                            placeholder="Stack Name..."
+                                            placeholderTextColor="#525252"
+                                            value={newStackName}
+                                            onChangeText={setNewStackName}
+                                            autoFocus
+                                            onSubmitEditing={handleCreateStack}
+                                            returnKeyType="done"
+                                        />
+                                        <Pressable
+                                            onPress={handleCreateStack}
+                                            disabled={!newStackName.trim() || updateMutation.isPending}
+                                            className={`px-4 py-2 rounded-lg border ${newStackName.trim() ? 'bg-amber-600/10 border-amber-600/50' : 'bg-neutral-900 border-neutral-800'}`}
+                                        >
+                                            <Text className={`font-mono text-xs font-bold ${newStackName.trim() ? 'text-amber-500' : 'text-neutral-600'}`}>
+                                                SAVE
+                                            </Text>
+                                        </Pressable>
+                                    </View>
+                                )}
+                            </View>
+                        )
+                    }
+
+                    {/* Owned Formats Section */}
+                    {
+                        showItems.length > 0 && (
+                            <View className="mt-8">
+                                <Text className="text-white font-bold mb-3">
+                                    {showItems.every((i: any) => i.status === 'wishlist')
+                                        ? 'Wishlist Formats'
+                                        : showItems.every((i: any) => i.status === 'owned')
+                                            ? 'Owned Formats'
+                                            : 'Formats in Library'}
+                                </Text>
+                                <View className="gap-2">
+                                    {showItems.map((item: any) => {
+                                        const isLoaded = activeItem?.id === item.id;
+                                        return (
+                                            <View key={item.id} className={`flex-row items-center justify-between p-3 rounded-lg border ${isLoaded ? 'border-amber-500 bg-neutral-900' : 'border-neutral-800 bg-neutral-900'}`}>
+                                                <View className="flex-1 flex-row items-center flex-wrap gap-2 mr-2">
                                                     <Pressable
+                                                        className="flex-row items-center gap-2 active:opacity-70"
                                                         onPress={() => {
+                                                            setSelectedItemId(item.id);
                                                             playSound('click');
-                                                            Linking.openURL(getEbaySearchUrl(activeShow?.name || '', item.format));
                                                         }}
-                                                        className="bg-neutral-800 px-2 py-1 rounded border border-neutral-700 flex-row items-center gap-1 active:opacity-75"
                                                     >
-                                                        <Ionicons name="search-outline" size={10} color="#f59e0b" style={{ marginTop: -1 }} />
-                                                        <Text className="text-amber-500 font-mono text-[9px] font-bold uppercase">Search eBay</Text>
+                                                        <View style={{
+                                                            borderWidth: isLoaded ? 2 : 0,
+                                                            borderColor: '#fff',
+                                                            borderRadius: 6,
+                                                            padding: isLoaded ? 1 : 0,
+                                                        }}>
+                                                            <View className={`px-2 py-1 rounded shrink-0 ${FORMAT_COLORS[item.format] || 'bg-neutral-800'}`}>
+                                                                <Text className="text-white font-mono text-xs font-bold">{`S${item.season_number || 1} • ${item.format === 'BluRay' ? 'Blu-ray' : item.format}`}</Text>
+                                                            </View>
+                                                        </View>
+                                                    </Pressable>
+                                                    {item.status === 'wishlist' && (
+                                                        <View className="border border-dashed border-neutral-500 px-1.5 py-0.5 rounded-sm">
+                                                            <Text className="text-neutral-400 font-mono text-[9px] font-bold uppercase tracking-wider">WISHLIST</Text>
+                                                        </View>
+                                                    )}
+                                                    {item.value_estimate !== null && item.value_estimate !== undefined && !isErrantShippingPrice(item.value_estimate) && (
+                                                        <View className="bg-neutral-800 border border-neutral-700/50 px-2 py-0.5 rounded ml-2">
+                                                            <Text className="text-amber-400 font-mono text-[10px] font-bold">
+                                                                EST: ${Number(item.value_estimate).toFixed(2)}
+                                                            </Text>
+                                                        </View>
+                                                    )}
+                                                    {item.edition && (
+                                                        <Text className="text-neutral-400 font-mono text-sm flex-1" numberOfLines={2}>({item.edition})</Text>
+                                                    )}
+                                                </View>
+                                                {!isReadOnly && (
+                                                    <Pressable
+                                                        onPress={async () => {
+                                                            await deleteMutation.mutateAsync(item.id);
+                                                            playSound('click');
+                                                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                                                            
+                                                            // Auto-pop if that was the last format we owned!
+                                                            if (showItems.length <= 1) {
+                                                                if (fromStack) {
+                                                                    router.replace(`/stack/${fromStack}` as any);
+                                                                } else if (router.canGoBack()) {
+                                                                    router.back();
+                                                                } else {
+                                                                    router.replace('/' as any);
+                                                                }
+                                                            }
+                                                        }}
+                                                        className="bg-red-900/20 px-3 py-1 rounded border border-red-900/50"
+                                                    >
+                                                        <Text className="text-red-400 font-mono text-xs">Remove</Text>
                                                     </Pressable>
                                                 )}
                                             </View>
-                                        </View>
-                                        <TextInput
-                                            nativeID={`value-input-${item.id}`}
-                                            className="bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm"
-                                            placeholder="Enter custom value..."
-                                            placeholderTextColor="#525252"
-                                            keyboardType="decimal-pad"
-                                            value={localValues[item.id] !== undefined ? localValues[item.id] : (item.value_estimate && !isErrantShippingPrice(item.value_estimate) ? item.value_estimate.toString() : '')}
-                                            onChangeText={(text) => setLocalValues(prev => ({ ...prev, [item.id]: text }))}
-                                        />
-                                    </View>
-                                    
-                                    <View className="flex-row gap-2 my-2">
-                                        <Pressable
-                                            onPress={async () => {
-                                                const isForSale = localForSale[item.id] !== undefined ? localForSale[item.id] : (item.for_sale || false);
-                                                const newVal = !isForSale;
-                                                setLocalForSale(prev => ({ ...prev, [item.id]: newVal }));
-                                                playSound('click');
-                                                await updateMutation.mutateAsync({ itemId: item.id, updates: { for_sale: newVal } });
-                                            }}
-                                            className={`flex-1 py-3 px-3 rounded-lg flex-row items-center border ${(localForSale[item.id] !== undefined ? localForSale[item.id] : item.for_sale) ? 'bg-emerald-900/30 border-emerald-500/50' : 'bg-neutral-900 border-neutral-800'}`}
-                                        >
-                                            <Ionicons name="cash-outline" size={14} color={(localForSale[item.id] !== undefined ? localForSale[item.id] : item.for_sale) ? '#10b981' : '#a3a3a3'} />
-                                            <Text className={`font-mono font-bold text-[10px] ml-2 ${(localForSale[item.id] !== undefined ? localForSale[item.id] : item.for_sale) ? 'text-emerald-400' : 'text-neutral-500'}`}>FOR SALE</Text>
-                                        </Pressable>
-
-                                        <Pressable
-                                            onPress={async () => {
-                                                const isForTrade = localForTrade[item.id] !== undefined ? localForTrade[item.id] : (item.for_trade || false);
-                                                const newVal = !isForTrade;
-                                                setLocalForTrade(prev => ({ ...prev, [item.id]: newVal }));
-                                                playSound('click');
-                                                await updateMutation.mutateAsync({ itemId: item.id, updates: { for_trade: newVal } });
-                                            }}
-                                            className={`flex-1 py-3 px-3 rounded-lg flex-row items-center border ${(localForTrade[item.id] !== undefined ? localForTrade[item.id] : item.for_trade) ? 'bg-blue-900/30 border-blue-500/50' : 'bg-neutral-900 border-neutral-800'}`}
-                                        >
-                                            <Ionicons name="swap-horizontal-outline" size={14} color={(localForTrade[item.id] !== undefined ? localForTrade[item.id] : item.for_trade) ? '#3b82f6' : '#a3a3a3'} />
-                                            <Text className={`font-mono font-bold text-[10px] ml-2 ${(localForTrade[item.id] !== undefined ? localForTrade[item.id] : item.for_trade) ? 'text-blue-400' : 'text-neutral-500'}`}>FOR TRADE</Text>
-                                        </Pressable>
-                                    </View>
-
-                                    {(localForSale[item.id] !== undefined ? localForSale[item.id] : item.for_sale) && (
-                                        <View className="bg-neutral-900 p-3 rounded-lg flex-row items-center border border-neutral-800 mb-2">
-                                            <Text className="text-emerald-500 font-mono font-bold mr-2">$</Text>
-                                            <TextInput
-                                                className="flex-1 text-white font-mono text-sm h-10"
-                                                placeholder="Asking Price"
-                                                placeholderTextColor="#333"
-                                                keyboardType="numeric"
-                                                defaultValue={item.price?.toString() || ''}
-                                                onEndEditing={async (e) => {
-                                                    const p = parseFloat(e.nativeEvent.text);
-                                                    await updateMutation.mutateAsync({ itemId: item.id, updates: { price: isNaN(p) ? null : p } });
-                                                }}
-                                            />
-                                        </View>
-                                    )}
-
-                                    <Pressable
-                                        disabled={updateMutation.isPending}
-                                        onPress={async () => {
-                                            const noteToSave = localNotes[item.id] !== undefined ? localNotes[item.id] : (item.notes || '');
-                                            const editionToSave = localEditions[item.id] !== undefined ? localEditions[item.id] : (item.edition || '');
-                                            const bootToSave = localBootlegs[item.id] !== undefined ? localBootlegs[item.id] : (item.is_bootleg || false);
-                                            const valRaw = localValues[item.id] !== undefined ? localValues[item.id] : (item.value_estimate?.toString() || '');
-                                            const valToSave = valRaw.trim() === '' ? null : parseFloat(valRaw);
-
-                                            // Save copy specific updates
-                                            await updateMutation.mutateAsync({
-                                                itemId: item.id,
-                                                updates: {
-                                                    notes: noteToSave,
-                                                    edition: editionToSave || null,
-                                                    is_bootleg: bootToSave,
-                                                    value_estimate: isNaN(valToSave as any) ? null : valToSave
-                                                }
-                                            });
-
-                                            playSound('click');
-                                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                                        }}
-                                        className="mt-2 self-end px-4 py-2 bg-amber-600/10 border border-amber-600/50 rounded-lg"
-                                    >
-                                        <Text className="text-amber-500 font-mono text-xs font-bold">SAVE {item.format === 'BluRay' ? 'Blu-ray' : item.format}</Text>
-                                    </Pressable>
+                                        );
+                                    })}
                                 </View>
-                            ))}
-                        </View>
-                    )}
+                            </View>
+                        )
+                    }
 
+
+                    {/* Add Format Section */}
                     {!isReadOnly && (
                         <View className="mt-8">
-                            <Text className="text-white font-bold mb-3">Curated Stacks</Text>
-                        <View className="flex-row flex-wrap gap-2 mb-2">
-                            {getCustomLists(collection).map(listName => {
-                                const isInStack = showItems.some((i: any) => i.custom_lists?.includes(listName));
+                            <Text className="text-white font-bold mb-3">Add Season / Format</Text>
+                        <View className="flex-row flex-wrap gap-2">
+                            {FORMATS.map(fmt => {
+                                const isOwned = ownedFormats.includes(fmt);
+                                const baseColor = FORMAT_COLORS[fmt] || 'bg-neutral-800';
+
                                 return (
-                                    <Pressable key={listName} onPress={() => handleToggleStack(listName)} className={`px-3 py-1.5 border rounded-full flex-row items-center gap-1 ${isInStack ? 'bg-amber-600/20 border-amber-500' : 'bg-neutral-900 border-neutral-700'}`}>
-                                        <Ionicons name={isInStack ? 'checkmark' : 'add'} size={14} color={isInStack ? '#f59e0b' : '#a3a3a3'} />
-                                        <Text className={`font-mono text-xs ${isInStack ? 'text-amber-500 font-bold' : 'text-neutral-400'}`}>{listName}</Text>
-                                    </Pressable>
+                                    <Pressable
+                                        key={fmt}
+                                        onPress={() => { setPendingFormat(fmt); setEditionInput(''); setSeasonInput(''); setModalStatus(thriftMode ? 'wishlist' : 'owned'); setShowEditionModal(true); }}
+                                        className={`px-4 py-2 border rounded-full ${baseColor} border-neutral-700`}
+                                    >
+                                        <Text className="text-white font-mono font-bold">
+                                            {fmt === 'BluRay' ? 'Blu-ray' : fmt}
+                                        </Text>
+                                </Pressable>
                                 );
                             })}
-                            <Pressable onPress={() => setShowNewStackInput(!showNewStackInput)} className="px-3 py-1.5 border border-dashed border-neutral-700 rounded-full flex-row items-center gap-1">
-                                <Ionicons name="add" size={14} color="#a3a3a3" />
-                                <Text className="font-mono text-xs text-neutral-400">NEW STACK</Text>
-                            </Pressable>
                         </View>
-                        {showNewStackInput && (
-                            <View className="flex-row gap-2 mt-2">
-                                <TextInput
-                                    className="flex-1 bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm"
-                                    placeholder="STACK NAME..."
-                                    placeholderTextColor="#525252"
-                                    value={newStackName}
-                                    onChangeText={setNewStackName}
-                                    autoFocus
-                                />
-                                <Pressable onPress={handleCreateStack} className="bg-amber-600 px-6 rounded-lg items-center justify-center">
-                                    <Text className="text-white font-bold font-mono text-sm">ADD</Text>
-                                </Pressable>
-                            </View>
-                        )}
                     </View>
-                    )}
+                )}
 
-                    {!isReadOnly && (
-                        <View className="mt-8">
-                            <Text className="text-white font-bold mb-3">Add Format</Text>
-                            <View className="flex-row flex-wrap gap-2">
-                                {FORMATS.map(fmt => (
-                                    <Pressable key={fmt} onPress={() => { setPendingFormat(fmt); setEditionInput(''); setModalStatus(thriftMode ? 'wishlist' : 'owned'); setShowEditionModal(true); }} className={`px-4 py-2 border rounded-full ${FORMAT_COLORS[fmt] || 'bg-neutral-800'} border-neutral-700`}>
-                                        <Text className="text-white font-mono font-bold">{fmt === 'BluRay' ? 'Blu-ray' : fmt}</Text>
-                                    </Pressable>
-                                ))}
-                            </View>
-                        </View>
-                    )}
-                    
-                    {commentActiveItem?.id && (
-                        <View key={`copy-social-${commentActiveItem.id}`} className="px-4 md:px-8 mb-12">
-                    {/* Rating and Review Section (Bulletin Board Sync) */}
-                    {commentActiveItem && (
-                        <ReviewSection 
-                            showId={activeItem?.show_id}
-                            collectionItemId={commentActiveItem.id}
-                            initialRating={commentActiveItem.rating}
-                            initialReview={commentActiveItem.review}
-                        />
-                    )}
-                            <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold', fontFamily: 'SpaceMono', marginBottom: 4, letterSpacing: 2 }}>REACTIONS</Text>
-                            <ShowDetailReactionSection collectionItemId={commentActiveItem.id} userId={userId} />
-                            <CommentSection collectionItemId={commentActiveItem.id} />
-                        </View>
-                    )}
+                {commentActiveItem?.id && (
+                    <View key={`copy-social-${commentActiveItem.id}`} className="px-4 md:px-8 mb-6">
+                        <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold', fontFamily: 'SpaceMono', marginBottom: 4, letterSpacing: 2 }}>REACTIONS</Text>
+                        <ShowDetailReactionSection collectionItemId={commentActiveItem.id} userId={userId} />
+                        <CommentSection collectionItemId={commentActiveItem.id} />
+                    </View>
+                )}
+
+                {/* FORCE REMOVE (For Orphans/Bugs) */}
+                {!isReadOnly && showItems.length > 0 && (
+                    <View className="px-4 md:px-8 mb-24 mt-8 pt-8 border-t border-neutral-900">
+                        <Pressable
+                            onPress={() => {
+                                Alert.alert(
+                                    'Force Remove All?',
+                                    'This will delete every physical copy of this movie from your tracking list. There is no undo.',
+                                    [
+                                        { text: 'Cancel', style: 'cancel' },
+                                        { 
+                                            text: 'DELETE ALL', 
+                                            style: 'destructive',
+                                            onPress: async () => {
+                                                setEjecting(true);
+                                                try {
+                                                    for (const item of showItems) {
+                                                        await deleteMutation.mutateAsync(item.id);
+                                                    }
+                                                    router.back();
+                                                } catch (e) {
+                                                    Alert.alert('Error', 'Failed to remove some items');
+                                                } finally {
+                                                    setEjecting(false);
+                                                }
+                                            }
+                                        }
+                                    ]
+                                );
+                            }}
+                            className="bg-red-500/10 border border-red-500/20 p-5 rounded-2xl items-center"
+                        >
+                            <Text className="text-red-500 font-mono font-bold text-xs uppercase tracking-widest">Force Remove ALL from Collection</Text>
+                            <Text className="text-red-500/50 font-mono text-[9px] mt-1">Use this if metadata or ID matching is corrupted</Text>
+                        </Pressable>
+                    </View>
+                )}
                 </View>
-            </ScrollView>
+            </ScrollView >
 
             {/* Custom Watch Date Modal */}
             <Modal
@@ -1519,13 +1760,72 @@ export default function ShowDetailScreen() {
                 </View>
             </Modal>
 
-            <ImageCropModal
-                visible={cropModalVisible}
-                imageUri={pendingImageUri || ''}
-                targetRatio={customArtType === 'poster' ? 2 / 3 : 16 / 9}
-                onClose={() => { setCropModalVisible(false); setPendingImageUri(null); }}
-                onSave={handleSaveCustomArt}
-            />
+            <Modal
+                visible={showShareModal}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setShowShareModal(false)}
+            >
+                <View className="flex-1 bg-black/90 items-center justify-center p-4">
+                    <Text className="text-white font-mono text-lg mb-8">SHARE YOUR STACK</Text>
+
+                    <ViewShot ref={viewShotRef} options={{ format: 'png', quality: 0.9 }}>
+                        <ShareableCard media={displayShow} items={showItems} />
+                    </ViewShot>
+
+                    <View className="flex-row gap-4 mt-8">
+                        <Pressable
+                            onPress={() => setShowShareModal(false)}
+                            className="bg-neutral-800 px-6 py-3 rounded-full border border-neutral-700"
+                        >
+                            <Text className="text-white font-mono">Close</Text>
+                        </Pressable>
+                        <Pressable
+                            onPress={() => Share.share({ message: `Check out ${displayShow.title} on Tracking!\n\nhttps://mediatracking.app/movie/${id}${ownerId ? `?ownerId=${ownerId}` : ''}` })}
+                            className="bg-blue-600 px-6 py-3 rounded-full"
+                        >
+                            <Text className="text-white font-mono font-bold">Share Link</Text>
+                        </Pressable>
+                        <Pressable
+                            onPress={async () => {
+                                if (viewShotRef.current?.capture) {
+                                    try {
+                                        const uri = await viewShotRef.current.capture();
+                                        await Sharing.shareAsync(uri);
+                                    } catch (e) {
+                                        Alert.alert('Error', 'Could not share image');
+                                    }
+                                }
+                            }}
+                            className="bg-amber-600 px-6 py-3 rounded-full"
+                        >
+                            <Text className="text-white font-mono font-bold">Share Image</Text>
+                        </Pressable>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* EJECTING OVERLAY */}
+            {
+                ejecting && (
+                    <View className="absolute inset-0 z-[100] bg-[#0000AA] items-center justify-center">
+                        {/* Scanlines Effect */}
+                        <View className="absolute inset-0 opacity-10">
+                            {Array.from({ length: 100 }).map((_: any, i: number) => (
+                                <View key={i} className="h-[2px] w-full bg-black mb-[2px]" />
+                            ))}
+                        </View>
+
+                        {/* Text */}
+                        <Text className="text-white font-mono text-4xl font-bold tracking-[8px] italic">
+                            {'EJECTING >>'}
+                        </Text>
+                        <Text className="text-white font-mono text-xl mt-4 opacity-80 tracking-[10px]">
+                            PLEASE WAIT...
+                        </Text>
+                    </View>
+                )
+            }
 
             {/* Delete Confirmation Modal */}
             <Modal
@@ -1537,9 +1837,9 @@ export default function ShowDetailScreen() {
                 <View className="flex-1 bg-black/80 items-center justify-center p-4">
                     <View className="bg-neutral-900 rounded-lg p-6 w-full max-w-sm border border-neutral-800 shadow-xl">
                         <Ionicons name="trash-outline" size={32} color="#ef4444" style={{ alignSelf: 'center', marginBottom: 16 }} />
-                        <Text className="text-white font-bold text-center text-xl mb-2">Delete Show</Text>
+                        <Text className="text-white font-bold text-center text-xl mb-2">Delete Movie</Text>
                         <Text className="text-neutral-400 font-mono text-center text-sm mb-6">
-                            Are you sure you want to remove this show and all formats from your collection?
+                            Are you sure you want to remove this movie and all formats from your collection?
                         </Text>
                         <View className="flex-row gap-3">
                             <Pressable 
@@ -1602,10 +1902,23 @@ export default function ShowDetailScreen() {
                 </View>
             </Modal>
 
-            <Modal visible={showEditionModal} transparent animationType="fade">
+            {/* Edition Input Modal */}
+            <Modal
+                visible={showEditionModal}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setShowEditionModal(false)}
+            >
                 <View className="flex-1 bg-black/80 items-center justify-center p-4">
                     <View className="bg-neutral-900 rounded-lg p-6 w-full max-w-md border border-neutral-800">
-                        <Text className="text-white font-bold text-lg mb-4">Add {pendingFormat}</Text>
+                        <Text className="text-white font-bold text-lg mb-2">
+                            Add {pendingFormat}
+                        </Text>
+                        <Text className="text-neutral-400 font-mono text-xs mb-4">
+                            {showItems.some((i: any) => i.format === pendingFormat)
+                                ? '⚠️ Edition required (duplicate format)'
+                                : 'Edition optional (e.g., Theatrical, Unrated, Box Set)'}
+                        </Text>
 
                         {/* Owned / Wishlist Selection inside Modal */}
                         <View className="flex-row gap-2 mb-4">
@@ -1628,66 +1941,75 @@ export default function ShowDetailScreen() {
                         </View>
 
                         <TextInput
-                            className="bg-neutral-800 text-white p-3 rounded-lg border border-neutral-700 font-mono text-sm mb-4"
-                            placeholder="Edition (e.g., Box Set)"
+                            nativeID="modal-edition-input"
+                            {...({ name: 'modal-edition' } as any)}
+                            className="bg-neutral-800 text-white p-3 rounded-lg border border-neutral-700 font-mono text-sm mb-2"
+                            placeholder="Edition (e.g., Theatrical, Unrated)"
                             placeholderTextColor="#525252"
                             value={editionInput}
                             onChangeText={setEditionInput}
+                            autoCapitalize="words"
+                            autoCorrect={false}
                             autoFocus
                         />
+
+                        <TextInput
+                            nativeID="modal-season-input"
+                            className="bg-neutral-800 text-white p-3 rounded-lg border border-neutral-700 font-mono text-sm mb-4"
+                            placeholder="Season Number (e.g., 1)"
+                            placeholderTextColor="#525252"
+                            keyboardType="numeric"
+                            value={seasonInput}
+                            onChangeText={setSeasonInput}
+                        />
+
                         <View className="flex-row gap-2">
-                            <Pressable onPress={() => setShowEditionModal(false)} className="flex-1 bg-neutral-800 py-3 rounded-lg items-center text-neutral-400 font-mono text-sm font-bold"><Text className="text-neutral-400">CANCEL</Text></Pressable>
-                            <Pressable onPress={handleConfirmAddFormat} className="flex-1 bg-amber-600 py-3 rounded-lg items-center text-white font-mono text-sm font-bold"><Text className="text-white">ADD</Text></Pressable>
+                            <Pressable
+                                onPress={() => {
+                                    setShowEditionModal(false);
+                                    setPendingFormat(null);
+                                    setEditionInput('');
+                                }}
+                                className="flex-1 bg-neutral-800 py-3 rounded-lg items-center"
+                            >
+                                <Text className="text-neutral-400 font-mono text-sm font-bold">CANCEL</Text>
+                            </Pressable>
+                            <Pressable
+                                onPress={handleConfirmAddFormat}
+                                className="flex-1 bg-amber-600 py-3 rounded-lg items-center"
+                            >
+                                <Text className="text-white font-mono text-sm font-bold">ADD</Text>
+                            </Pressable>
                         </View>
                     </View>
                 </View>
             </Modal>
+
+            {/* Edit Manual Details Modal */}
             
-            {/* Share Modal */}
-            <Modal
-                visible={showShareModal}
-                transparent
-                animationType="fade"
-                onRequestClose={() => setShowShareModal(false)}
-            >
-                <View className="flex-1 bg-black/90 items-center justify-center p-4">
-                    <Text className="text-white font-mono text-lg mb-8">SHARE YOUR STACK</Text>
 
-                    <ViewShot ref={viewShotRef} options={{ format: 'png', quality: 0.9 }}>
-                        <ShareableCard media={show} items={showItems} />
-                    </ViewShot>
-
-                    <View className="flex-row gap-4 mt-8">
-                        <Pressable
-                            onPress={() => setShowShareModal(false)}
-                            className="bg-neutral-800 px-6 py-3 rounded-full border border-neutral-700"
-                        >
-                            <Text className="text-white font-mono">Close</Text>
-                        </Pressable>
-                        <Pressable
-                            onPress={() => Share.share({ message: `Check out ${show.name} on Tracking!\n\nhttps://mediatracking.app/show/${id}${ownerId ? `?ownerId=${ownerId}` : ''}` })}
-                            className="bg-blue-600 px-6 py-3 rounded-full"
-                        >
-                            <Text className="text-white font-mono font-bold">Share Link</Text>
-                        </Pressable>
-                        <Pressable
-                            onPress={async () => {
-                                if (viewShotRef.current?.capture) {
-                                    try {
-                                        const uri = await viewShotRef.current.capture();
-                                        await Sharing.shareAsync(uri);
-                                    } catch (e) {
-                                        Alert.alert('Error', 'Could not share image');
-                                    }
-                                }
-                            }}
-                            className="bg-amber-600 px-6 py-3 rounded-full"
-                        >
-                            <Text className="text-white font-mono font-bold">Share Image</Text>
-                        </Pressable>
-                    </View>
-                </View>
-            </Modal>
+            {/* Image Crop Modal */}
+            {
+                pendingImageUri && (
+                    <ImageCropModal
+                        visible={cropModalVisible}
+                        imageUri={pendingImageUri}
+                        onClose={() => {
+                            setCropModalVisible(false);
+                            if (pendingImageUri && pendingImageUri.startsWith('blob:')) {
+                                URL.revokeObjectURL(pendingImageUri);
+                            }
+                            setPendingImageUri(null);
+                        }}
+                        onSave={handleSaveCustomArt}
+                        targetRatio={(() => {
+                            if (customArtType === 'backdrop') return 16 / 9;
+                            const ratio = activeFormat === 'VHS' ? 2 / 3.5 : (activeFormat === 'BluRay' || activeFormat === '4K') ? 0.78 : 0.71;
+                            return ratio;
+                        })()}
+                    />
+                )
+            }
             {showCelebration && celebratedItem && (
                 <CelebrationOverlay
                     item={celebratedItem}
@@ -1698,6 +2020,7 @@ export default function ShowDetailScreen() {
                     }}
                 />
             )}
-        </View>
+        </View >
     );
+
 }

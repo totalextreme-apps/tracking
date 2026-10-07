@@ -579,11 +579,11 @@ export default function MovieDetailScreen() {
             let res = await fetchEbaySoldValue(targetTitle, format, edition, undefined, apiKey || undefined);
             
             // 2. Fallback: Retry without edition if initial search yielded no data
-            if ((res.value === null || res.value === undefined) && edition) {
+            if ((!res || res?.value == null) && edition) {
                 res = await fetchEbaySoldValue(targetTitle, format, null, undefined, apiKey || undefined);
             }
 
-            if (res.value !== null && res.value !== undefined) {
+            if (res && res.value != null) {
                 const valStr = res.value.toFixed(2);
                 setLocalValues(prev => ({ ...prev, [itemId]: valStr }));
                 await updateMutation.mutateAsync({

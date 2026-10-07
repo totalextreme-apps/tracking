@@ -420,12 +420,7 @@ export async function fetchEbaySoldValue(title: string, format: string, edition?
         }
     }
     
-    // 5. Smart format default fallback if no sales scraped
-    const fallbackVal = getFormatDefaultEstimate(format);
-    return {
-        value: fallbackVal,
-        source: 'format-estimate-fallback',
-        pricesCount: 1
-    };
+    // 5. If everything fails, return null
+    return null;
 }
 
