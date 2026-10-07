@@ -270,30 +270,56 @@ export function StackCard({
 
         {/* Format & Rating row */}
         <View className="flex-row w-full justify-center items-center mt-1 gap-1 flex-wrap">
-          {sorted.map((item) => (
-            <Pressable
-              key={item.id}
-              onPress={(e) => {
-                e.stopPropagation();
-                if (!isReadOnly) playSound('click');
-                setActiveId(item.id);
-              }}
-              className={`px-1.5 py-0.5 rounded flex-row items-center gap-1 ${FORMAT_COLORS[item.format] || 'bg-neutral-700'}`}
-              style={{
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.3,
-                shadowRadius: 1,
-              }}
-            >
-              <Text className="text-white font-mono text-[8px] font-bold">
-                {item.media_type === 'tv' && item.season_number ? `S${item.season_number} ` : ''}{item.format === 'BluRay' ? 'Blu-ray' : item.format}
-              </Text>
-              {item.is_bootleg && (
-                <Image source={require('@/assets/images/overlays/boot_sticker.png')} style={{ width: 10, height: 10 }} contentFit="contain" />
-              )}
-            </Pressable>
-          ))}
+          {(() => {
+            const maxCoins = 3;
+            const showMore = sorted.length > maxCoins + 1;
+            const displayCoins = showMore ? sorted.slice(0, maxCoins) : sorted;
+            const remaining = sorted.length - maxCoins;
+
+            return (
+              <>
+                {displayCoins.map((item) => (
+                  <Pressable
+                    key={item.id}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      if (!isReadOnly) playSound('click');
+                      setActiveId(item.id);
+                    }}
+                    className={`px-1.5 py-0.5 rounded flex-row items-center gap-1 ${FORMAT_COLORS[item.format] || 'bg-neutral-700'}`}
+                    style={{
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.3,
+                      shadowRadius: 1,
+                    }}
+                  >
+                    <Text className="text-white font-mono text-[8px] font-bold">
+                      {item.media_type === 'tv' && item.season_number ? `S${item.season_number} ` : ''}{item.format === 'BluRay' ? 'Blu-ray' : item.format}
+                    </Text>
+                    {item.is_bootleg && (
+                      <Image source={require('@/assets/images/overlays/boot_sticker.png')} style={{ width: 10, height: 10 }} contentFit="contain" />
+                    )}
+                  </Pressable>
+                ))}
+                {showMore && (
+                  <View 
+                    className="px-1.5 py-0.5 rounded flex-row items-center justify-center bg-neutral-800"
+                    style={{
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.3,
+                      shadowRadius: 1,
+                    }}
+                  >
+                    <Text className="text-neutral-400 font-mono text-[8px] font-bold">
+                      +{remaining}
+                    </Text>
+                  </View>
+                )}
+              </>
+            );
+          })()}
           {topItem.rating && (
             <View className="flex-row items-center bg-black/60 px-1 py-0.5 rounded-sm border border-neutral-800">
                <FontAwesome name="star" size={8} color="#f59e0b" />
@@ -456,29 +482,59 @@ export function StackCard({
 
           {/* Format Coins */}
           <View className="flex-row gap-1.5 mt-1 flex-wrap">
-            {sorted.map(item => (
-              <View key={item.id} className="items-center">
-                <View
-                  className={`px-1.5 h-4 rounded items-center justify-center ${FORMAT_COLORS[item.format] || 'bg-neutral-700'}`}
-                  style={{
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 1 },
-                    shadowOpacity: 0.3,
-                    shadowRadius: 1,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 2
-                  }}
-                >
-                  <Text style={{ fontSize: 7, fontWeight: 'bold', color: 'white', fontFamily: 'SpaceMono' }}>
-                    {item.media_type === 'tv' && item.season_number ? `S${item.season_number} ` : ''}{item.format === 'BluRay' ? 'Blu-ray' : item.format}
-                  </Text>
-                  {item.is_bootleg && (
-                    <Image source={require('@/assets/images/overlays/boot_sticker.png')} style={{ width: 10, height: 10, marginLeft: 2 }} contentFit="contain" />
+            {(() => {
+              const maxCoins = 5;
+              const showMore = sorted.length > maxCoins + 1;
+              const displayCoins = showMore ? sorted.slice(0, maxCoins) : sorted;
+              const remaining = sorted.length - maxCoins;
+
+              return (
+                <>
+                  {displayCoins.map(item => (
+                    <View key={item.id} className="items-center">
+                      <View
+                        className={`px-1.5 h-4 rounded items-center justify-center ${FORMAT_COLORS[item.format] || 'bg-neutral-700'}`}
+                        style={{
+                          shadowColor: '#000',
+                          shadowOffset: { width: 0, height: 1 },
+                          shadowOpacity: 0.3,
+                          shadowRadius: 1,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 2
+                        }}
+                      >
+                        <Text style={{ fontSize: 7, fontWeight: 'bold', color: 'white', fontFamily: 'SpaceMono' }}>
+                          {item.media_type === 'tv' && item.season_number ? `S${item.season_number} ` : ''}{item.format === 'BluRay' ? 'Blu-ray' : item.format}
+                        </Text>
+                        {item.is_bootleg && (
+                          <Image source={require('@/assets/images/overlays/boot_sticker.png')} style={{ width: 10, height: 10, marginLeft: 2 }} contentFit="contain" />
+                        )}
+                      </View>
+                    </View>
+                  ))}
+                  {showMore && (
+                    <View className="items-center">
+                      <View
+                        className="px-1.5 h-4 rounded items-center justify-center bg-neutral-800"
+                        style={{
+                          shadowColor: '#000',
+                          shadowOffset: { width: 0, height: 1 },
+                          shadowOpacity: 0.3,
+                          shadowRadius: 1,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <Text style={{ fontSize: 7, fontWeight: 'bold', color: '#9ca3af', fontFamily: 'SpaceMono' }}>
+                          +{remaining}
+                        </Text>
+                      </View>
+                    </View>
                   )}
-                </View>
-              </View>
-            ))}
+                </>
+              );
+            })()}
           </View>
           {userId && isReadOnly && showReactions && (
             <ReactionSummary
