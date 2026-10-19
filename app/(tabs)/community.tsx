@@ -7,6 +7,7 @@ import { useSound } from '@/context/SoundContext';
 import { useCollection, useCustomListPreview } from '@/hooks/useCollection';
 import { 
   useBulletinFeed, 
+  useBulletinPost,
   useCommunityFeed, 
   useSearchUsers, 
   useToggleFollow, 
@@ -669,7 +670,22 @@ export default function CommunityScreen() {
 
   // Data
   const { data: following } = useFollowing(userId);
-  const { data: bulletinFeed, isLoading: bulletinLoading } = useBulletinFeed(userId, currentTab === 'board');
+  const { data: bulletinFeedRaw, isLoading: bulletinLoadingRaw } = useBulletinFeed(
+    userId,
+    currentTab === 'board' || currentTab === 'alerts' || !!postId
+  );
+  const { data: deepLinkedPost } = useBulletinPost(
+    postId && !bulletinFeedRaw?.some((p: any) => p.id === postId) ? postId : undefined
+  );
+  const bulletinFeed = useMemo(() => {
+    if (!bulletinFeedRaw && !deepLinkedPost) return undefined;
+    const base = bulletinFeedRaw || [];
+    if (deepLinkedPost && !base.some((p: any) => p.id === deepLinkedPost.id)) {
+      return [deepLinkedPost, ...base];
+    }
+    return base;
+  }, [bulletinFeedRaw, deepLinkedPost]);
+  const bulletinLoading = bulletinLoadingRaw && !deepLinkedPost;
 
   React.useEffect(() => {
     if (tab && ['activity', 'directory', 'board', 'swap', 'inbox', 'alerts'].includes(tab)) {
@@ -706,7 +722,7 @@ export default function CommunityScreen() {
           if (done) hasScrolledToPost.current = targetKey;
           else if (attempts < 20) setTimeout(tryScroll, 250);
         };
-        setTimeout(tryScroll, 300);
+        setTimeout(tryScroll, 150);
       }
     }
   }, [tab, postId, commentId, bulletinFeed]);
@@ -972,20 +988,28 @@ export default function CommunityScreen() {
           if (rx.post_id) {
             goToPost(rx.post_id);
           } else if (rx.post_comment_id) {
-            const { data } = await supabase
-              .from('post_comments')
-              .select('post_id')
-              .eq('id', rx.post_comment_id)
-              .single();
-            if (data?.post_id) {
-              goToPost(data.post_id, rx.post_comment_id);
+            let targetPostId = rx.post_comments?.post_id;
+            if (!targetPostId) {
+              const { data } = await supabase
+                .from('post_comments')
+                .select('post_id')
+                .eq('id', rx.post_comment_id)
+                .single();
+              targetPostId = data?.post_id;
+            }
+            if (targetPostId) {
+              goToPost(targetPostId, rx.post_comment_id);
             }
           } else if (rx.collection_item_id) {
-            const { data: colItem } = await supabase
-              .from('collection_items')
-              .select('*, movies(*), shows(*)')
-              .eq('id', rx.collection_item_id)
-              .single();
+            let colItem = rx.collection_items;
+            if (!colItem) {
+              const { data } = await supabase
+                .from('collection_items')
+                .select('*, movies(*), shows(*)')
+                .eq('id', rx.collection_item_id)
+                .single();
+              colItem = data;
+            }
             if (colItem) {
               const ownerId = colItem.user_id;
               if (colItem.movies) {
@@ -995,18 +1019,21 @@ export default function CommunityScreen() {
               }
             }
           } else if (rx.item_comment_id) {
-            const { data: comment } = await supabase
-              .from('item_comments')
-              .select('*, collection_items(*, movies(*), shows(*))')
-              .eq('id', rx.item_comment_id)
-              .single();
-            const colItem = comment?.collection_items;
+            let colItem = rx.item_comments?.collection_items;
+            if (!colItem) {
+              const { data: comment } = await supabase
+                .from('item_comments')
+                .select('*, collection_items(*, movies(*), shows(*))')
+                .eq('id', rx.item_comment_id)
+                .single();
+              colItem = comment?.collection_items;
+            }
             if (colItem) {
               const ownerId = colItem.user_id;
               if (colItem.movies) {
-                router.push(`/movie/${colItem.id}?ownerId=${ownerId}&from=community`);
+                router.push(`/movie/${colItem.id}?ownerId=${ownerId}&from=community&commentId=${rx.item_comment_id}`);
               } else if (colItem.shows) {
-                router.push(`/show/${colItem.id}?ownerId=${ownerId}&season=${colItem.season_number || 1}&from=community`);
+                router.push(`/show/${colItem.id}?ownerId=${ownerId}&season=${colItem.season_number || 1}&from=community&commentId=${rx.item_comment_id}`);
               }
             }
           }

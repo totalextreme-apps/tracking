@@ -47,7 +47,7 @@ export function BulletinPostItem({ post, userId, idx, startEditing, setShowDelet
   const router = useRouter();
   const viewRef = useRef(null);
   const [pickerVisible, setPickerVisible] = useState(false);
-  const { reactions, toggleReaction } = useReactions('post_id', post.id);
+  const { reactions, toggleReaction } = useReactions('post_id', post.id, post.reactions);
 
   const getPosterUrl = (path: string | null) => path ? `https://image.tmdb.org/t/p/w200${path}` : null;
 

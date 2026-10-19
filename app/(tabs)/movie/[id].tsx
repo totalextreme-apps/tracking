@@ -267,10 +267,30 @@ export default function MovieDetailScreen() {
     const movieId = typeof id === 'string' && /^\d+$/.test(id) ? parseInt(id, 10) : undefined;
     const itemUuid = typeof id === 'string' && !/^\d+$/.test(id) ? id : null;
 
-    const movieItems = collection?.filter((item: any) => 
+    const collectionMovieItems = collection?.filter((item: any) => 
         item.movie_id === movieId || 
         item.id === itemUuid
     ) ?? [];
+
+    const { data: directItem } = useQuery({
+        queryKey: ['collection-item-direct', itemUuid],
+        queryFn: async () => {
+            if (!itemUuid) return null;
+            const { data, error } = await supabase
+                .from('collection_items')
+                .select('*, movies(*)')
+                .eq('id', itemUuid)
+                .single();
+            if (error) return null;
+            return data;
+        },
+        enabled: !!itemUuid && collectionMovieItems.length === 0,
+        staleTime: 1000 * 60 * 5,
+    });
+
+    const movieItems = collectionMovieItems.length > 0
+        ? collectionMovieItems
+        : (directItem ? [directItem] : []);
 
     const FORMAT_PRIORITY = ['4K', 'BluRay', 'DVD', 'VHS', 'Digital'];
 
@@ -297,10 +317,10 @@ export default function MovieDetailScreen() {
             if (error) throw error;
             return data;
         },
-        enabled: !!(movieId || internalMovie?.id),
+        enabled: !!(movieId || internalMovie?.id) && !directItem?.movies,
     });
     const resolvedInternalMovie = dbMovie || internalMovie;
-    const commentActiveItem = activeItem || movieItems[0];
+    const commentActiveItem = activeItem || movieItems[0] || (itemUuid ? { id: itemUuid } : null);
 
     const activeMovie = resolvedInternalMovie || persistedMovie;
     const tmdbIdToUse = activeMovie?.tmdb_id || (movieId && movieId > 0 ? movieId : null);

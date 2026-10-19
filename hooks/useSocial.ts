@@ -298,6 +298,10 @@ export const useBulletinFeed = (userId?: string, enabledParam = true) => {
             content,
             created_at,
             profiles(id, username, avatar_url)
+          ),
+          reactions(
+            *,
+            profiles(username, avatar_url)
           )
         `)
         .in('user_id', interestingIds)
@@ -328,6 +332,49 @@ export const useBulletinFeed = (userId?: string, enabledParam = true) => {
     },
     enabled: enabledParam && !!userId,
     staleTime: 1000 * 30, // Cache board posts for 30 seconds
+  });
+};
+
+// Single bulletin post (used for deep links from alerts so the target renders
+// immediately, even if it isn't part of the user's 50-post feed)
+export const useBulletinPost = (postId?: string) => {
+  return useQuery({
+    queryKey: ['bulletin-post', postId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('bulletin_posts')
+        .select(`
+          *,
+          profiles(*),
+          movies(id, title, poster_path, tmdb_id),
+          shows(id, name, poster_path, tmdb_id),
+          collection_items(
+            *,
+            movies(id, title, poster_path, tmdb_id),
+            shows(id, name, poster_path, tmdb_id)
+          ),
+          post_comments(
+            id,
+            content,
+            created_at,
+            profiles(id, username, avatar_url)
+          ),
+          reactions(
+            *,
+            profiles(username, avatar_url)
+          )
+        `)
+        .eq('id', postId)
+        .single();
+      if (error) throw error;
+      return {
+        ...data,
+        movies: data.collection_items?.movies || data.movies,
+        shows: data.collection_items?.shows || data.shows,
+      } as BulletinPostWithMedia;
+    },
+    enabled: !!postId,
+    staleTime: 1000 * 30,
   });
 };
 
@@ -752,6 +799,7 @@ export const usePostComments = (postId?: string, initialData?: any[]) => {
     },
     enabled: !!postId,
     initialData,
+    staleTime: 1000 * 60,
   });
 };
 
@@ -791,7 +839,8 @@ export const useNotifications = (userId?: string) => {
           actor:actor_id (id, username, avatar_url)
         `)
         .eq('user_id', userId)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(50);
       if (error) throw error;
       if (!data || data.length === 0) return [];
 
@@ -813,7 +862,7 @@ export const useNotifications = (userId?: string) => {
           ? supabase.from('bulletin_posts').select('id, content').in('id', postIds).then((res: any) => res.data || []).catch(() => [])
           : Promise.resolve([]),
         reactionIds.length > 0
-          ? supabase.from('reactions').select('id, reaction_type, post_id, collection_item_id, post_comment_id, item_comment_id, collection_items(id, user_id, movies(title), shows(name)), item_comments(id, collection_items(id, user_id, movies(title), shows(name)))').in('id', reactionIds).then((res: any) => res.data || []).catch(() => [])
+          ? supabase.from('reactions').select('id, reaction_type, post_id, collection_item_id, post_comment_id, item_comment_id, post_comments(post_id), collection_items(id, user_id, season_number, movies(title), shows(name)), item_comments(id, collection_items(id, user_id, season_number, movies(title), shows(name)))').in('id', reactionIds).then((res: any) => res.data || []).catch(() => [])
           : Promise.resolve([]),
         profileCommentIds.length > 0
           ? supabase.from('profile_comments').select('id, content').in('id', profileCommentIds).then((res: any) => res.data || []).catch(() => [])

@@ -69,20 +69,28 @@ export default function NotificationsScreen() {
           if (rx.post_id) {
             router.push({ pathname: '/community', params: { tab: 'board', postId: rx.post_id } } as any);
           } else if (rx.post_comment_id) {
-            const { data } = await supabase
-              .from('post_comments')
-              .select('post_id')
-              .eq('id', rx.post_comment_id)
-              .single();
-            if (data?.post_id) {
-              router.push({ pathname: '/community', params: { tab: 'board', postId: data.post_id, commentId: rx.post_comment_id } } as any);
+            let targetPostId = rx.post_comments?.post_id;
+            if (!targetPostId) {
+              const { data } = await supabase
+                .from('post_comments')
+                .select('post_id')
+                .eq('id', rx.post_comment_id)
+                .single();
+              targetPostId = data?.post_id;
+            }
+            if (targetPostId) {
+              router.push({ pathname: '/community', params: { tab: 'board', postId: targetPostId, commentId: rx.post_comment_id } } as any);
             }
           } else if (rx.collection_item_id) {
-            const { data: colItem } = await supabase
-              .from('collection_items')
-              .select('*, movies(*), shows(*)')
-              .eq('id', rx.collection_item_id)
-              .single();
+            let colItem = rx.collection_items;
+            if (!colItem) {
+              const { data } = await supabase
+                .from('collection_items')
+                .select('*, movies(*), shows(*)')
+                .eq('id', rx.collection_item_id)
+                .single();
+              colItem = data;
+            }
             if (colItem) {
               const ownerId = colItem.user_id;
               if (colItem.movies) {
@@ -92,12 +100,15 @@ export default function NotificationsScreen() {
               }
             }
           } else if (rx.item_comment_id) {
-            const { data: comment } = await supabase
-              .from('item_comments')
-              .select('*, collection_items(*, movies(*), shows(*))')
-              .eq('id', rx.item_comment_id)
-              .single();
-            const colItem = comment?.collection_items;
+            let colItem = rx.item_comments?.collection_items;
+            if (!colItem) {
+              const { data: comment } = await supabase
+                .from('item_comments')
+                .select('*, collection_items(*, movies(*), shows(*))')
+                .eq('id', rx.item_comment_id)
+                .single();
+              colItem = comment?.collection_items;
+            }
             if (colItem) {
               const ownerId = colItem.user_id;
               if (colItem.movies) {

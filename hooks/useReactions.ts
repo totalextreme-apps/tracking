@@ -19,7 +19,7 @@ export interface Reaction {
   } | null;
 }
 
-export function useReactions(targetType: ReactionTargetType, targetId: string) {
+export function useReactions(targetType: ReactionTargetType, targetId: string, initialData?: Reaction[]) {
   const queryClient = useQueryClient();
   const { playSound } = useSound();
 
@@ -42,6 +42,7 @@ export function useReactions(targetType: ReactionTargetType, targetId: string) {
       return data || [];
     },
     enabled: !!targetId,
+    initialData,
     staleTime: 1000 * 60 * 5,
   });
 

@@ -266,10 +266,30 @@ export default function ShowDetailScreen() {
     const seasonNumber = seasonQuery && seasonQuery !== 'undefined' && seasonQuery !== 'null' ? parseInt(seasonQuery, 10) : 1;
 
     // Find items matching this show and season locally first
-    const showItems = collection?.filter((item: any) => {
+    const collectionShowItems = collection?.filter((item: any) => {
         const itemShowId = item.show_id;
         return (itemShowId === showIdNum || (item.shows?.id === showIdNum) || item.id === itemUuid);
     }) ?? [];
+
+    const { data: directItem } = useQuery({
+        queryKey: ['collection-item-direct', itemUuid],
+        queryFn: async () => {
+            if (!itemUuid) return null;
+            const { data, error } = await supabase
+                .from('collection_items')
+                .select('*, shows(*)')
+                .eq('id', itemUuid)
+                .single();
+            if (error) return null;
+            return data;
+        },
+        enabled: !!itemUuid && collectionShowItems.length === 0,
+        staleTime: 1000 * 60 * 5,
+    });
+
+    const showItems = collectionShowItems.length > 0
+        ? collectionShowItems
+        : (directItem ? [directItem] : []);
 
     const FORMAT_PRIORITY = ['4K', 'BluRay', 'DVD', 'VHS', 'Digital'];
 
@@ -281,7 +301,7 @@ export default function ShowDetailScreen() {
             : null);
 
     const activeFormat: string | null = activeItem ? activeItem.format : null;
-    const commentActiveItem = activeItem || showItems[0];
+    const commentActiveItem = activeItem || showItems[0] || (itemUuid ? { id: itemUuid } : null);
 
     useEffect(() => {
         setLocalFranchise(undefined);
@@ -302,7 +322,7 @@ export default function ShowDetailScreen() {
             if (error) throw error;
             return data;
         },
-        enabled: !!(showIdNum || showFromDb?.id),
+        enabled: !!(showIdNum || showFromDb?.id) && !directItem?.shows,
     });
     const resolvedShow = dbShow || showFromDb;
 
@@ -313,7 +333,7 @@ export default function ShowDetailScreen() {
             if (!tmdbId) return null;
             return getTvShowById(tmdbId);
         },
-        enabled: !!collection,
+        enabled: !!(resolvedShow?.tmdb_id || showIdNum),
     });
 
 
