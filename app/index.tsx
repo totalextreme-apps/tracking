@@ -12,6 +12,7 @@ import Animated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
+import { useAuth } from '@/context/AuthContext';
 
 const POSTERS = [
   "/wGTpGGRMZmyFCcrY2YoxVTIBlli.jpg", // Nightmare on Elm Street
@@ -103,6 +104,13 @@ function ScrollingColumn({ images, reverse = false, speedMs = 30000 }: { images:
 
 export default function LandingPage() {
   const [dimensions, setDimensions] = useState(Dimensions.get('window'));
+  const { session } = useAuth();
+  const isSignedIn = !!session?.user?.id && !session.user.is_anonymous;
+
+  // Persisted session found -> skip the marketing page and go straight into the app
+  useEffect(() => {
+    if (isSignedIn) router.replace('/(tabs)');
+  }, [isSignedIn]);
 
   useEffect(() => {
     const subscription = Dimensions.addEventListener('change', ({ window }) => {
@@ -128,6 +136,10 @@ export default function LandingPage() {
   const logoSource = Platform.OS === 'web'
     ? { uri: '/logo_tracking.png' }
     : require('@/assets/images/logo_tracking.png');
+
+  if (isSignedIn) {
+    return <View style={styles.container} />;
+  }
 
   return (
     <View style={styles.container}>

@@ -510,7 +510,7 @@ export default function HomeScreen() {
   if (authPhase === 'checking' || authLoading) return <View className="flex-1 bg-black items-center justify-center"><TrackingLoader label="SYNCHRONIZING..." /></View>;
 
   return (
-    <View className="flex-1 bg-neutral-950">
+    <View className="flex-1 bg-neutral-950" style={thriftMode ? { backgroundColor: '#07140f' } : undefined}>
       <Stack.Screen options={{ headerShown: false }} />
       <StatusBar style="light" />
 
@@ -734,10 +734,13 @@ export default function HomeScreen() {
 
             <View className="pb-6 w-full">
               <View className="flex-row items-center mb-3">
-                <View className="flex-row items-center bg-neutral-900 rounded-lg border border-neutral-800 px-4 py-2.5 flex-1">
-                  <Ionicons name="search" size={16} color="#444" style={{ marginRight: 8 }} />
+                <View
+                  className="flex-row items-center bg-neutral-900 rounded-lg border border-neutral-800 px-4 py-2.5 flex-1"
+                  style={thriftMode ? { backgroundColor: 'rgba(5,150,105,0.08)', borderColor: 'rgba(5,150,105,0.35)' } : undefined}
+                >
+                  <Ionicons name="search" size={16} color={thriftMode ? '#059669' : '#444'} style={{ marginRight: 8 }} />
                   <TextInput 
-                    placeholder={searchMode === 'title' ? 'SEARCH TITLE...' : (searchMode === 'actor' ? 'SEARCH ACTOR...' : 'SEARCH DIRECTOR...')} 
+                    placeholder={`SEARCH ${thriftMode ? 'WISH LIST BY ' : ''}${searchMode === 'title' ? 'TITLE' : (searchMode === 'actor' ? 'ACTOR' : 'DIRECTOR')}...`} 
                     placeholderTextColor="#444" 
                     value={searchQuery} 
                     onChangeText={setSearchQuery} 

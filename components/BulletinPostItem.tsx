@@ -43,7 +43,7 @@ function SharedListPreview({ userId, listName, router }: { userId: string, listN
   );
 }
 
-export function BulletinPostItem({ post, userId, idx, startEditing, setShowDeleteConfirm, isFocused, onReplyPress, CommentSectionComponent }: any) {
+export function BulletinPostItem({ post, userId, idx, startEditing, setShowDeleteConfirm, isFocused, onReplyPress, CommentSectionComponent, highlightCommentId }: any) {
   const router = useRouter();
   const viewRef = useRef(null);
   const [pickerVisible, setPickerVisible] = useState(false);
@@ -242,6 +242,7 @@ export function BulletinPostItem({ post, userId, idx, startEditing, setShowDelet
         postId={post.id} 
         initialComments={post.post_comments} 
         isFocused={isFocused} 
+        highlightCommentId={highlightCommentId}
       />
       
       <ReactionPicker

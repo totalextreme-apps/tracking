@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
-import { View, Text, ScrollView, Pressable, Image, ImageBackground, TextInput, ActivityIndicator, Alert, Share, Modal, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, Pressable, Image, ImageBackground, TextInput, ActivityIndicator, Alert, Share, Modal, RefreshControl, Platform } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
@@ -174,7 +174,7 @@ function ItemCommentSectionInline({ collectionItemId, groupItems, initialComment
   );
 }
 
-function PostCommentSection({ postId, initialComments, isFocused }: { postId: string, initialComments?: any[], isFocused?: boolean }) {
+function PostCommentSection({ postId, initialComments, isFocused, highlightCommentId }: { postId: string, initialComments?: any[], isFocused?: boolean, highlightCommentId?: string | null }) {
   const router = useRouter();
   const { userId } = useAuth();
   const { playSound } = useSound();
@@ -250,7 +250,14 @@ function PostCommentSection({ postId, initialComments, isFocused }: { postId: st
   return (
     <View style={{ marginTop: 10, backgroundColor: 'rgba(0,0,0,0.03)', borderRadius: 6, padding: 8 }}>
       {(comments || []).map((c: any) => (
-        <View key={c.id} style={{ marginBottom: 6, borderLeftWidth: 1, borderLeftColor: 'rgba(0,0,0,0.1)', paddingLeft: 8 }}>
+        <View
+          key={c.id}
+          nativeID={`comment-${c.id}`}
+          style={[
+            { marginBottom: 6, borderLeftWidth: 1, borderLeftColor: 'rgba(0,0,0,0.1)', paddingLeft: 8 },
+            highlightCommentId === c.id && { borderLeftWidth: 3, borderLeftColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.18)', borderRadius: 4, paddingVertical: 4 },
+          ]}
+        >
           <Text style={{ fontFamily: 'SpaceMono', fontSize: 9, fontWeight: 'bold', color: '#4a3728' }}>@{c.profiles?.username}</Text>
           {renderContentRich(c.content)}
         </View>
@@ -621,7 +628,10 @@ export default function CommunityScreen() {
     setCanScrollRight(contentOffset.x < contentSize.width - layoutMeasurement.width - 10);
   };
   const [expandedPostIds, setExpandedPostIds] = useState<Set<string>>(new Set());
-  const { tab, postId } = useLocalSearchParams<{ tab?: string; postId?: string }>();
+  const { tab, postId, commentId } = useLocalSearchParams<{ tab?: string; postId?: string; commentId?: string }>();
+  const [highlightPostId, setHighlightPostId] = useState<string | null>(null);
+  const [highlightCommentId, setHighlightCommentId] = useState<string | null>(null);
+  const postRefs = useRef<Record<string, any>>({});
   
 
 
@@ -667,19 +677,39 @@ export default function CommunityScreen() {
     }
     if (tab === 'board' && postId) {
       setExpandedPostIds(prev => new Set(prev).add(postId));
-      setFocusedPostId(postId);
-      
-      if (hasScrolledToPost.current !== postId) {
-        setTimeout(() => {
-          const y = postLayouts.current[postId];
-          if (y !== undefined) {
-            boardScrollRef.current?.scrollTo({ y: Math.max(0, y - 50), animated: true });
-            hasScrolledToPost.current = postId;
+      setHighlightPostId(postId);
+      setHighlightCommentId(commentId || null);
+
+      const targetKey = `${postId}:${commentId || ''}`;
+      if (hasScrolledToPost.current !== targetKey && bulletinFeed) {
+        let attempts = 0;
+        const tryScroll = () => {
+          attempts++;
+          let done = false;
+          if (Platform.OS === 'web' && typeof document !== 'undefined') {
+            const el = (commentId && document.getElementById(`comment-${commentId}`)) || document.getElementById(`post-${postId}`);
+            if (el) {
+              el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              done = true;
+            }
+          } else {
+            const node: any = postRefs.current[postId];
+            const scroll: any = boardScrollRef.current;
+            const inner = scroll?.getInnerViewNode?.();
+            if (node && inner) {
+              node.measureLayout(inner, (_x: number, y: number) => {
+                scroll.scrollTo({ y: Math.max(0, y - 80), animated: true });
+              }, () => {});
+              done = true;
+            }
           }
-        }, 300);
+          if (done) hasScrolledToPost.current = targetKey;
+          else if (attempts < 20) setTimeout(tryScroll, 250);
+        };
+        setTimeout(tryScroll, 300);
       }
     }
-  }, [tab, postId, bulletinFeed]);
+  }, [tab, postId, commentId, bulletinFeed]);
   const { data: communityFeed, isLoading: communityLoading, isFetching: communityFetching } = useCommunityFeed(userId);
   const { data: marketplaceFeed } = useMarketplaceFeed();
   const { data: searchResults, isLoading: searchLoading } = useSearchUsers(userSearch);
@@ -881,6 +911,12 @@ export default function CommunityScreen() {
     }
   };
 
+  const goToPost = (targetPostId: string, targetCommentId?: string | null) => {
+    hasScrolledToPost.current = null;
+    setActiveTab('board');
+    router.setParams({ tab: 'board', postId: targetPostId, commentId: targetCommentId || '' } as any);
+  };
+
   const handleNotificationPress = async (n: any) => {
     markRead.mutate(n.id);
     try {
@@ -899,12 +935,10 @@ export default function CommunityScreen() {
           postId = data?.post_id;
         }
         if (postId) {
-          setExpandedPostIds(prev => new Set(prev).add(postId));
-          setActiveTab('board');
+          goToPost(postId, n.reference_id);
         }
       } else if (n.type === 'post_mention') {
-        setExpandedPostIds(prev => new Set(prev).add(n.reference_id));
-        setActiveTab('board');
+        goToPost(n.reference_id);
       } else if (n.type === 'item_comment') {
         let item = n.referenceData;
         if (!item || !item.collection_items) {
@@ -919,9 +953,9 @@ export default function CommunityScreen() {
         if (colItem) {
           const ownerId = colItem.user_id;
           if (colItem.movies) {
-            router.push(`/movie/${colItem.id}?ownerId=${ownerId}&from=community`);
+            router.push(`/movie/${colItem.id}?ownerId=${ownerId}&from=community&commentId=${n.reference_id}`);
           } else if (colItem.shows) {
-            router.push(`/show/${colItem.id}?ownerId=${ownerId}&season=${colItem.season_number || 1}&from=community`);
+            router.push(`/show/${colItem.id}?ownerId=${ownerId}&season=${colItem.season_number || 1}&from=community&commentId=${n.reference_id}`);
           }
         }
       } else if (n.type === 'reaction') {
@@ -936,8 +970,7 @@ export default function CommunityScreen() {
         }
         if (rx) {
           if (rx.post_id) {
-            setExpandedPostIds(prev => new Set(prev).add(rx.post_id));
-            setActiveTab('board');
+            goToPost(rx.post_id);
           } else if (rx.post_comment_id) {
             const { data } = await supabase
               .from('post_comments')
@@ -945,8 +978,7 @@ export default function CommunityScreen() {
               .eq('id', rx.post_comment_id)
               .single();
             if (data?.post_id) {
-              setExpandedPostIds(prev => new Set(prev).add(data.post_id));
-              setActiveTab('board');
+              goToPost(data.post_id, rx.post_comment_id);
             }
           } else if (rx.collection_item_id) {
             const { data: colItem } = await supabase
@@ -1895,7 +1927,13 @@ export default function CommunityScreen() {
                     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
                   })
                   .map((post: any, idx: number) => (
-                    <View key={post.id} onLayout={(e) => { postLayouts.current[post.id] = e.nativeEvent.layout.y; }}>
+                    <View
+                      key={post.id}
+                      nativeID={`post-${post.id}`}
+                      ref={(r) => { postRefs.current[post.id] = r; }}
+                      onLayout={(e) => { postLayouts.current[post.id] = e.nativeEvent.layout.y; }}
+                      style={highlightPostId === post.id && !highlightCommentId ? { borderWidth: 2, borderColor: '#f59e0b', borderRadius: 8 } : undefined}
+                    >
                       <BulletinPostItem 
                         post={post} 
                         userId={userId} 
@@ -1908,6 +1946,7 @@ export default function CommunityScreen() {
                           setTimeout(() => setFocusedPostId(post.id), 50);
                         }}
                         CommentSectionComponent={PostCommentSection} 
+                        highlightCommentId={highlightPostId === post.id ? highlightCommentId : null}
                       />
                     </View>
                   ))

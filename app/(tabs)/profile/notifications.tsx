@@ -32,7 +32,7 @@ export default function NotificationsScreen() {
           postId = data?.post_id;
         }
         if (postId) {
-          router.push({ pathname: '/community', params: { tab: 'board', postId } } as any);
+          router.push({ pathname: '/community', params: { tab: 'board', postId, commentId: notif.reference_id } } as any);
         }
       } else if (notif.type === 'post_mention') {
         router.push({ pathname: '/community', params: { tab: 'board', postId: notif.reference_id } } as any);
@@ -50,9 +50,9 @@ export default function NotificationsScreen() {
         if (colItem) {
           const ownerId = colItem.user_id;
           if (colItem.movies) {
-            router.push(`/movie/${colItem.id}?ownerId=${ownerId}` as any);
+            router.push(`/movie/${colItem.id}?ownerId=${ownerId}&commentId=${notif.reference_id}` as any);
           } else if (colItem.shows) {
-            router.push(`/show/${colItem.id}?ownerId=${ownerId}&season=${colItem.season_number || 1}` as any);
+            router.push(`/show/${colItem.id}?ownerId=${ownerId}&season=${colItem.season_number || 1}&commentId=${notif.reference_id}` as any);
           }
         }
       } else if (notif.type === 'reaction') {
@@ -75,7 +75,7 @@ export default function NotificationsScreen() {
               .eq('id', rx.post_comment_id)
               .single();
             if (data?.post_id) {
-              router.push({ pathname: '/community', params: { tab: 'board', postId: data.post_id } } as any);
+              router.push({ pathname: '/community', params: { tab: 'board', postId: data.post_id, commentId: rx.post_comment_id } } as any);
             }
           } else if (rx.collection_item_id) {
             const { data: colItem } = await supabase
@@ -101,9 +101,9 @@ export default function NotificationsScreen() {
             if (colItem) {
               const ownerId = colItem.user_id;
               if (colItem.movies) {
-                router.push(`/movie/${colItem.id}?ownerId=${ownerId}` as any);
+                router.push(`/movie/${colItem.id}?ownerId=${ownerId}&commentId=${rx.item_comment_id}` as any);
               } else if (colItem.shows) {
-                router.push(`/show/${colItem.id}?ownerId=${ownerId}&season=${colItem.season_number || 1}` as any);
+                router.push(`/show/${colItem.id}?ownerId=${ownerId}&season=${colItem.season_number || 1}&commentId=${rx.item_comment_id}` as any);
               }
             }
           }

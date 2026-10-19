@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, ActivityIndicator, Image, Alert } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, TextInput, Pressable, ActivityIndicator, Image, Alert, Platform } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
 import { useItemComments, useCreateComment, useUpdateComment, useDeleteComment } from '@/hooks/useSocial';
@@ -11,6 +12,7 @@ type CommentSectionProps = {
 
 export function CommentSection({ collectionItemId }: CommentSectionProps) {
     const { userId } = useAuth();
+    const { commentId: highlightCommentId } = useLocalSearchParams<{ commentId?: string }>();
     const { data: comments, isLoading } = useItemComments(collectionItemId);
     const createMutation = useCreateComment(userId);
     const updateMutation = useUpdateComment(userId);
@@ -19,6 +21,27 @@ export function CommentSection({ collectionItemId }: CommentSectionProps) {
     const [commentText, setCommentText] = useState('');
     const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
     const [editText, setEditText] = useState('');
+    const scrolledTo = useRef<string | null>(null);
+
+    // Deep-link: scroll the alerted comment into view once it has rendered
+    useEffect(() => {
+        if (!highlightCommentId || scrolledTo.current === highlightCommentId) return;
+        if (!comments?.some((c: any) => c.id === highlightCommentId)) return;
+        let attempts = 0;
+        const tryScroll = () => {
+            attempts++;
+            if (Platform.OS === 'web' && typeof document !== 'undefined') {
+                const el = document.getElementById(`item-comment-${highlightCommentId}`);
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    scrolledTo.current = highlightCommentId;
+                    return;
+                }
+            }
+            if (attempts < 20) setTimeout(tryScroll, 250);
+        };
+        setTimeout(tryScroll, 400);
+    }, [highlightCommentId, comments]);
 
     const handleAdd = () => {
         if (!commentText.trim()) return;
@@ -103,7 +126,11 @@ export function CommentSection({ collectionItemId }: CommentSectionProps) {
                 <Text className="text-neutral-600 font-mono text-xs italic text-center py-4">No comments yet. Be the first!</Text>
             ) : (
                 comments?.map((comment: any) => (
-                    <View key={comment.id} className="mb-6 flex-row gap-3">
+                    <View
+                        key={comment.id}
+                        nativeID={`item-comment-${comment.id}`}
+                        className={`mb-6 flex-row gap-3 ${highlightCommentId === comment.id ? 'bg-amber-500/10 border-l-2 border-amber-500 rounded-md p-2 -mx-2' : ''}`}
+                    >
                         <View className="w-10 h-10 rounded-full bg-neutral-800 overflow-hidden border border-neutral-700">
                              {comment.profiles?.avatar_url ? (
                                 <Image source={{ uri: comment.profiles.avatar_url }} className="w-full h-full" />
