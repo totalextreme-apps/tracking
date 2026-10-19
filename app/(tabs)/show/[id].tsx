@@ -808,7 +808,7 @@ return (
                             if (from === 'community' || from === 'swap') {
                                 router.push('/community' as any);
                             } else if (fromStack) {
-                                router.replace(`/stack/${fromStack}` as any);
+                                router.replace(`/stack/${encodeURIComponent(String(fromStack))}${ownerId ? `?ownerId=${ownerId}` : ''}` as any);
                             } else if (ownerId) {
                                 router.push({ pathname: `/profile/${ownerId}`, params: { from: 'community' } } as any);
                             } else {

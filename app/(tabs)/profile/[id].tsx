@@ -15,14 +15,14 @@ import { StatusBar } from 'expo-status-bar';
 import { OnDisplayCard } from '@/components/OnDisplayCard';
 import { ReorderShelfModal } from '@/components/ReorderShelfModal';
 import { ShareModal } from '@/components/ShareModal';
-import { getGenres, getStacks } from '@/lib/collection-utils';
+import { getCustomLists, getGenres, getStackMeta, getStacks } from '@/lib/collection-utils';
 
 import { CommunityHeaderNav } from '@/components/CommunityHeaderNav';
 import { DesktopContainer } from '@/components/DesktopContainer';
 import { usePersistedState } from '@/hooks/usePersistedState';
 import Slider from '@react-native-community/slider';
 
-type TabType = 'on-display' | 'grails' | 'collection' | 'wishlist' | 'bin' | 'analytics' | 'in-common' | 'guestbook';
+type TabType = 'on-display' | 'grails' | 'collection' | 'wishlist' | 'stacks' | 'bin' | 'analytics' | 'in-common' | 'guestbook';
 export type SortOption = 'recent' | 'title' | 'release' | 'rating' | 'format' | 'value';
 
 export default function UserProfileScreen() {
@@ -643,6 +643,9 @@ export default function UserProfileScreen() {
             <Pressable onPress={() => setActiveTab('grails')} className={`px-4 py-3 items-center justify-center border-b-2 ${activeTab === 'grails' ? 'border-amber-400' : 'border-transparent'}`}>
               <Text adjustsFontSizeToFit numberOfLines={1} className={`font-mono text-[10px] text-center font-bold ${activeTab === 'grails' ? 'text-amber-400' : 'text-neutral-500'}`}>GRAILS</Text>
             </Pressable>
+            <Pressable onPress={() => setActiveTab('stacks')} className={`px-4 py-3 items-center justify-center border-b-2 ${activeTab === 'stacks' ? 'border-amber-500' : 'border-transparent'}`}>
+              <Text adjustsFontSizeToFit numberOfLines={1} className={`font-mono text-[10px] text-center font-bold ${activeTab === 'stacks' ? 'text-amber-500' : 'text-neutral-500'}`}>STACKS</Text>
+            </Pressable>
             <Pressable onPress={() => setActiveTab('guestbook')} className={`px-4 py-3 items-center justify-center border-b-2 ${activeTab === 'guestbook' ? 'border-amber-500' : 'border-transparent'}`}>
               <Text adjustsFontSizeToFit numberOfLines={1} className={`font-mono text-[10px] text-center font-bold ${activeTab === 'guestbook' ? 'text-amber-500' : 'text-neutral-500'}`}>GUESTBOOK</Text>
             </Pressable>
@@ -658,7 +661,7 @@ export default function UserProfileScreen() {
         </View>
 
         <DesktopContainer style={{ maxWidth: 1400, width: '100%', alignSelf: 'center', paddingHorizontal: 16 }}>
-          {activeTab !== 'analytics' && activeTab !== 'guestbook' && (
+          {activeTab !== 'analytics' && activeTab !== 'guestbook' && activeTab !== 'stacks' && (
             <>
               <View className="mb-4">
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
@@ -1531,6 +1534,102 @@ export default function UserProfileScreen() {
                   )}
                 </View>
               )}
+            </View>
+          )}
+
+          {activeTab === 'stacks' && (
+            <View className="mt-2 mb-12" style={{ gap: 14 }}>
+              {(() => {
+                const userCustomLists = getCustomLists(collection);
+                if (userCustomLists.length === 0) {
+                  return (
+                    <View className="items-center justify-center py-16 px-6 bg-neutral-900/30 border border-dashed border-neutral-800 rounded-2xl">
+                      <Ionicons name="layers-outline" size={36} color="#525252" />
+                      <Text className="text-neutral-500 font-mono text-xs text-center mt-4">
+                        No Curated Stacks published yet.
+                      </Text>
+                    </View>
+                  );
+                }
+                return userCustomLists.map((listName) => {
+                  const stackItems = (collection || []).filter(
+                    (i: any) => i && i.custom_lists?.includes(listName)
+                  );
+                  const meta = getStackMeta(collection, listName);
+                  const orderMap = new Map<string, number>();
+                  (meta.itemOrder || []).forEach((itemId, idx) => orderMap.set(itemId, idx));
+                  const ordered = [...stackItems].sort((a: any, b: any) => {
+                    const idxA = orderMap.has(a.id) ? orderMap.get(a.id)! : 99999;
+                    const idxB = orderMap.has(b.id) ? orderMap.get(b.id)! : 99999;
+                    return idxA - idxB;
+                  });
+                  const previewPosters: string[] = [];
+                  const seenMedia = new Set<string>();
+                  for (const item of ordered) {
+                    const mKey = item.media_type === 'tv'
+                      ? `tv-${item.show_id || item.shows?.id || item.id}`
+                      : `movie-${item.movie_id || item.movies?.id || item.id}`;
+                    if (seenMedia.has(mKey)) continue;
+                    seenMedia.add(mKey);
+                    const pPath = item.movies?.poster_path || item.shows?.poster_path || null;
+                    const uri = item.custom_poster_url || getPosterUrl(pPath, 'w342');
+                    if (uri) previewPosters.push(uri);
+                    if (previewPosters.length >= 4) break;
+                  }
+                  const titleCount = seenMedia.size || stackItems.length;
+
+                  return (
+                    <Pressable
+                      key={listName}
+                      onPress={() => {
+                        playSound('click');
+                        router.push(`/stack/${encodeURIComponent(listName)}?ownerId=${id}` as any);
+                      }}
+                      className="bg-neutral-900/90 border border-neutral-800 rounded-2xl p-4 flex-row items-center active:opacity-85"
+                    >
+                      <View style={{ width: 110, height: 84, marginRight: 14, position: 'relative', justifyContent: 'center' }}>
+                        {previewPosters.map((uri, idx) => (
+                          <View
+                            key={`${listName}-${idx}`}
+                            style={{
+                              position: 'absolute',
+                              left: idx * 15,
+                              width: 52,
+                              height: 76,
+                              zIndex: previewPosters.length - idx,
+                              transform: [{ rotate: `${(idx - (previewPosters.length - 1) / 2) * 4}deg` }],
+                            }}
+                            className="rounded overflow-hidden bg-neutral-800 border border-white/15"
+                          >
+                            <Image source={{ uri }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                          </View>
+                        ))}
+                      </View>
+
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <View className="flex-row items-center flex-wrap gap-2 mb-1">
+                          <Text className="text-white text-base font-bold uppercase" style={{ fontFamily: 'VCR_OSD_MONO' }} numberOfLines={1}>
+                            {listName}
+                          </Text>
+                          {meta.isRanked && (
+                            <View className="bg-amber-500/20 border border-amber-500/50 px-2 py-0.5 rounded-full">
+                              <Text className="text-amber-400 font-mono text-[8px] font-bold">RANKED</Text>
+                            </View>
+                          )}
+                        </View>
+                        {meta.description ? (
+                          <Text className="text-neutral-300 font-mono text-xs mb-2" numberOfLines={2}>
+                            "{meta.description}"
+                          </Text>
+                        ) : null}
+                        <Text className="text-amber-500 font-mono text-[10px] font-bold">
+                          {titleCount} {titleCount === 1 ? 'TITLE' : 'TITLES'} · VIEW STACK →
+                        </Text>
+                      </View>
+                    </Pressable>
+                  );
+                });
+              })()}
             </View>
           )}
         </DesktopContainer>

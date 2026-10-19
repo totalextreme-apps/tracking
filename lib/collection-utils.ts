@@ -10,11 +10,66 @@ export function getGenres(collection: CollectionItemWithMedia[] | undefined): st
   return Array.from(genres).sort();
 }
 
+export const STACK_META_PREFIX = '__meta__:';
+
+export interface CuratedStackMeta {
+  description?: string;
+  isRanked?: boolean;
+  itemOrder?: string[]; // ordered array of item IDs or stack keys
+  updatedAt?: number;
+}
+
+export function isStackMetaEntry(entry: string, forListName?: string): boolean {
+  if (!entry.startsWith(STACK_META_PREFIX)) return false;
+  if (forListName === undefined) return true;
+  return entry.startsWith(`${STACK_META_PREFIX}${forListName}:`);
+}
+
+export function serializeStackMeta(listName: string, meta: CuratedStackMeta): string {
+  const payload: CuratedStackMeta = {
+    description: meta.description?.trim() || '',
+    isRanked: !!meta.isRanked,
+    itemOrder: meta.itemOrder || [],
+    updatedAt: meta.updatedAt || Date.now(),
+  };
+  return `${STACK_META_PREFIX}${listName}:${JSON.stringify(payload)}`;
+}
+
+export function getStackMeta(
+  collection: CollectionItemWithMedia[] | undefined,
+  listName: string
+): CuratedStackMeta {
+  if (!collection || !listName) return {};
+  const prefix = `${STACK_META_PREFIX}${listName}:`;
+  let best: CuratedStackMeta | null = null;
+
+  for (const item of collection) {
+    if (!item?.custom_lists) continue;
+    for (const entry of item.custom_lists) {
+      if (entry.startsWith(prefix)) {
+        try {
+          const parsed = JSON.parse(entry.slice(prefix.length)) as CuratedStackMeta;
+          if (!best || (parsed.updatedAt || 0) > (best.updatedAt || 0)) {
+            best = parsed;
+          }
+        } catch {
+          // ignore malformed entry
+        }
+      }
+    }
+  }
+  return best || {};
+}
+
 export function getCustomLists(collection: CollectionItemWithMedia[] | undefined): string[] {
   if (!collection) return [];
   const lists = new Set<string>();
   collection.forEach((item) => {
-    item.custom_lists?.forEach((listName) => lists.add(listName));
+    item.custom_lists?.forEach((listName) => {
+      if (listName && !listName.startsWith(STACK_META_PREFIX)) {
+        lists.add(listName);
+      }
+    });
   });
   return Array.from(lists).sort();
 }

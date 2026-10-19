@@ -9,14 +9,19 @@ interface ShareModalProps {
   title: string;
   messageLink: string;
   messageText: string;
+  onShareToBoard?: () => Promise<void> | void;
 }
 
-export function ShareModal({ visible, onClose, title, messageLink, messageText }: ShareModalProps) {
+export function ShareModal({ visible, onClose, title, messageLink, messageText, onShareToBoard }: ShareModalProps) {
   const [copied, setCopied] = useState(false);
+  const [copiedLabel, setCopiedLabel] = useState('COPIED TO CLIPBOARD!');
+  const [postingBoard, setPostingBoard] = useState(false);
 
   useEffect(() => {
     if (!visible) {
       setCopied(false);
+      setCopiedLabel('COPIED TO CLIPBOARD!');
+      setPostingBoard(false);
     }
   }, [visible]);
 
@@ -42,6 +47,7 @@ export function ShareModal({ visible, onClose, title, messageLink, messageText }
           onClose();
         } else {
           await navigator.clipboard.writeText(message);
+          setCopiedLabel('COPIED TO CLIPBOARD!');
           setCopied(true);
           setTimeout(() => {
             onClose();
@@ -53,6 +59,22 @@ export function ShareModal({ visible, onClose, title, messageLink, messageText }
           console.error('Web share/copy failed:', err);
         }
       }
+    }
+  };
+
+  const handleBoardPost = async () => {
+    if (!onShareToBoard || postingBoard) return;
+    setPostingBoard(true);
+    try {
+      await onShareToBoard();
+      setCopiedLabel('PINNED TO BULLETIN BOARD!');
+      setCopied(true);
+      setTimeout(() => {
+        onClose();
+      }, 1400);
+    } catch (e) {
+      console.error('Failed to pin stack to board:', e);
+      setPostingBoard(false);
     }
   };
 
@@ -76,7 +98,7 @@ export function ShareModal({ visible, onClose, title, messageLink, messageText }
                 <Ionicons name="checkmark" size={24} color="#10b981" />
               </View>
               <Text className="text-emerald-400 font-mono text-xs font-bold uppercase tracking-widest mt-1">
-                COPIED TO CLIPBOARD!
+                {copiedLabel}
               </Text>
             </View>
           ) : (
@@ -89,8 +111,8 @@ export function ShareModal({ visible, onClose, title, messageLink, messageText }
                   <Ionicons name="link-outline" size={18} color="#f59e0b" />
                 </View>
                 <View className="flex-1">
-                  <Text className="text-white font-mono text-xs font-bold">SHARE LINK</Text>
-                  <Text className="text-neutral-500 font-mono text-[9px] mt-0.5">OPEN IN APP LAYOUT</Text>
+                  <Text className="text-white font-mono text-xs font-bold">SHARE DIRECT LINK</Text>
+                  <Text className="text-neutral-500 font-mono text-[9px] mt-0.5">OPENS THIS STACK IN TRACKING</Text>
                 </View>
               </Pressable>
 
@@ -102,10 +124,30 @@ export function ShareModal({ visible, onClose, title, messageLink, messageText }
                   <Ionicons name="document-text-outline" size={18} color="#f59e0b" />
                 </View>
                 <View className="flex-1">
-                  <Text className="text-white font-mono text-xs font-bold">SHARE PLAIN TEXT</Text>
-                  <Text className="text-neutral-500 font-mono text-[9px] mt-0.5">LIST + PROFILE LINK</Text>
+                  <Text className="text-white font-mono text-xs font-bold">SHARE FULL LIST + LINK</Text>
+                  <Text className="text-neutral-500 font-mono text-[9px] mt-0.5">TITLES, BLURB & STACK LINK</Text>
                 </View>
               </Pressable>
+
+              {onShareToBoard && (
+                <Pressable
+                  onPress={handleBoardPost}
+                  disabled={postingBoard}
+                  className="flex-row items-center bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 active:border-amber-500 active:bg-amber-500/20 gap-3"
+                >
+                  <View className="p-2 bg-amber-500/20 rounded-lg">
+                    <Ionicons name="megaphone-outline" size={18} color="#f59e0b" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-amber-400 font-mono text-xs font-bold">
+                      {postingBoard ? 'PINNING TO BOARD...' : 'PIN TO BULLETIN BOARD'}
+                    </Text>
+                    <Text className="text-amber-500/70 font-mono text-[9px] mt-0.5">
+                      SHARE WITH THE TRACKING COMMUNITY
+                    </Text>
+                  </View>
+                </Pressable>
+              )}
             </View>
           )}
 

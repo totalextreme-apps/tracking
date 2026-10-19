@@ -17,27 +17,46 @@ function SharedListPreview({ userId, listName, router }: { userId: string, listN
   const { data: items } = useCustomListPreview(userId, listName);
   
   if (!items || items.length === 0) return null;
+
+  const openStack = () => {
+    router.push(`/stack/${encodeURIComponent(listName)}?ownerId=${userId}` as any);
+  };
   
   return (
-    <View style={{ marginTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)', paddingTop: 10 }}>
-      <Text style={{ fontFamily: 'SpaceMono', fontSize: 9, color: '#8a7060', marginBottom: 8, fontWeight: 'bold' }}>STACK: {listName}</Text>
+    <View style={{ marginTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.08)', paddingTop: 10 }}>
+      <Pressable
+        onPress={openStack}
+        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Ionicons name="layers" size={11} color="#b45309" />
+          <Text style={{ fontFamily: 'SpaceMono', fontSize: 10, color: '#2d2016', fontWeight: 'bold' }}>
+            CURATED STACK: {listName.toUpperCase()}
+          </Text>
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#2d2016', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 4 }}>
+          <Text style={{ fontFamily: 'SpaceMono', fontSize: 8, color: '#f59e0b', fontWeight: 'bold' }}>
+            VIEW STACK →
+          </Text>
+        </View>
+      </Pressable>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row' }} keyboardShouldPersistTaps="handled">
-        {items.map((item: any) => (
-          <Pressable 
-            key={item.id}
-            onPress={() => {
-              const id = item.movies?.id || item.shows?.id;
-              const type = item.movies ? 'movie' : 'show';
-              router.push(`/(tabs)/${type}/${id}?ownerId=${userId}&from=community`);
-            }}
-            style={{ marginRight: 8 }}
-          >
-             <Image 
-                source={{ uri: `https://image.tmdb.org/t/p/w200${item.movies?.poster_path || item.shows?.poster_path}` || 'https://via.placeholder.com/45x68' }} 
-                style={{ width: 45, height: 68, borderRadius: 2, backgroundColor: '#ddd' }} 
-             />
-          </Pressable>
-        ))}
+        {items.map((item: any) => {
+          const posterPath = item.movies?.poster_path || item.shows?.poster_path;
+          const uri = item.custom_poster_url || (posterPath ? `https://image.tmdb.org/t/p/w200${posterPath}` : 'https://via.placeholder.com/45x68');
+          return (
+            <Pressable 
+              key={item.id}
+              onPress={openStack}
+              style={{ marginRight: 8 }}
+            >
+               <Image 
+                  source={{ uri }} 
+                  style={{ width: 48, height: 72, borderRadius: 3, backgroundColor: '#ddd' }} 
+               />
+            </Pressable>
+          );
+        })}
       </ScrollView>
     </View>
   );

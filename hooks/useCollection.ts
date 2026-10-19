@@ -1,3 +1,4 @@
+import { CuratedStackMeta, isStackMetaEntry, serializeStackMeta, STACK_META_PREFIX } from '@/lib/collection-utils';
 import { supabase } from '@/lib/supabase';
 import { getMovieById, getTvShowById, type TmdbMediaResult } from '@/lib/tmdb';
 import type { CollectionItemWithMedia, MovieFormat } from '@/types/database';
@@ -370,16 +371,14 @@ export function useBulkUpdateCustomLists(userId: string | undefined) {
       itemIds,
       listName,
       isAdding,
+      meta,
     }: {
       itemIds: string[];
       listName: string;
       isAdding: boolean;
+      meta?: CuratedStackMeta;
     }) => {
       if (!userId) throw new Error('Not authenticated');
-
-      // Since Supabase doesn't easily support dynamic array append/remove in bulk RPC without custom functions,
-      // and we want to keep it simple: we fetch the items, modify their arrays in memory, and upsert/update them.
-      // Actually, since we only do this once on "Save Stack", we can just fetch, modify, and update.
 
       const { data: items, error: fetchError } = await supabase
         .from('collection_items')
@@ -390,16 +389,22 @@ export function useBulkUpdateCustomLists(userId: string | undefined) {
       if (fetchError) throw fetchError;
       if (!items || items.length === 0) return { itemIds };
 
-      // Run individual updates per item — using .update() ensures we never attempt
-      // an INSERT (which would fail due to NOT NULL constraints on movie_id etc.)
+      const encodedMeta = meta ? serializeStackMeta(listName, meta) : null;
+
       const updatePromises = items.map((item: any) => {
-        let currentLists = item.custom_lists || [];
+        let currentLists: string[] = item.custom_lists || [];
         if (isAdding) {
           if (!currentLists.includes(listName)) {
             currentLists = [...currentLists, listName];
           }
+          if (encodedMeta) {
+            currentLists = currentLists.filter((l: string) => !isStackMetaEntry(l, listName));
+            currentLists.push(encodedMeta);
+          }
         } else {
-          currentLists = currentLists.filter((l: string) => l !== listName);
+          currentLists = currentLists.filter(
+            (l: string) => l !== listName && !isStackMetaEntry(l, listName)
+          );
         }
         return (supabase as any)
           .from('collection_items')
@@ -416,20 +421,29 @@ export function useBulkUpdateCustomLists(userId: string | undefined) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['collection'] });
+      queryClient.invalidateQueries({ queryKey: ['custom_list_preview'] });
     },
   });
 }
 
-/** Rename a custom list across all collection items that contain it */
+/** Rename a custom list (and optionally update its metadata) across all collection items that contain it */
 export function useRenameCustomList(userId: string | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ oldName, newName }: { oldName: string; newName: string }) => {
+    mutationFn: async ({
+      oldName,
+      newName,
+      meta,
+    }: {
+      oldName: string;
+      newName: string;
+      meta?: CuratedStackMeta;
+    }) => {
       if (!userId) throw new Error('Not authenticated');
-      if (!newName.trim() || newName.trim() === oldName) return;
+      const trimmedNew = newName.trim();
+      if (!trimmedNew) return;
 
-      // Fetch all items that have oldName in their custom_lists
       const { data: items, error: fetchError } = await supabase
         .from('collection_items')
         .select('id, custom_lists')
@@ -439,10 +453,32 @@ export function useRenameCustomList(userId: string | undefined) {
       if (fetchError) throw fetchError;
       if (!items || items.length === 0) return;
 
+      const oldMetaPrefix = `${STACK_META_PREFIX}${oldName}:`;
+      const encodedNewMeta = meta ? serializeStackMeta(trimmedNew, meta) : null;
+
       const updatePromises = items.map((item: any) => {
-        const updated = (item.custom_lists || []).map((l: string) =>
-          l === oldName ? newName.trim() : l
-        );
+        let updated: string[] = [];
+        let wroteMeta = false;
+        for (const entry of item.custom_lists || []) {
+          if (entry === oldName) {
+            updated.push(trimmedNew);
+          } else if (entry.startsWith(oldMetaPrefix)) {
+            if (encodedNewMeta) {
+              if (!wroteMeta) {
+                updated.push(encodedNewMeta);
+                wroteMeta = true;
+              }
+            } else {
+              updated.push(`${STACK_META_PREFIX}${trimmedNew}:${entry.slice(oldMetaPrefix.length)}`);
+              wroteMeta = true;
+            }
+          } else {
+            updated.push(entry);
+          }
+        }
+        if (encodedNewMeta && !wroteMeta) {
+          updated.push(encodedNewMeta);
+        }
         return (supabase as any)
           .from('collection_items')
           .update({ custom_lists: updated })
@@ -456,6 +492,49 @@ export function useRenameCustomList(userId: string | undefined) {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['collection'] });
+      await queryClient.invalidateQueries({ queryKey: ['custom_list_preview'] });
+    },
+  });
+}
+
+/** Update metadata (description/blurb, isRanked, itemOrder) on an existing custom list */
+export function useUpdateStackMeta(userId: string | undefined) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ listName, meta }: { listName: string; meta: CuratedStackMeta }) => {
+      if (!userId) throw new Error('Not authenticated');
+
+      const { data: items, error: fetchError } = await supabase
+        .from('collection_items')
+        .select('id, custom_lists')
+        .contains('custom_lists', [listName])
+        .eq('user_id', userId);
+
+      if (fetchError) throw fetchError;
+      if (!items || items.length === 0) return;
+
+      const encodedMeta = serializeStackMeta(listName, { ...meta, updatedAt: Date.now() });
+
+      const updatePromises = items.map((item: any) => {
+        const cleaned = (item.custom_lists || []).filter(
+          (l: string) => !isStackMetaEntry(l, listName)
+        );
+        cleaned.push(encodedMeta);
+        return (supabase as any)
+          .from('collection_items')
+          .update({ custom_lists: cleaned })
+          .eq('id', item.id)
+          .eq('user_id', userId);
+      });
+
+      const results = await Promise.all(updatePromises);
+      const firstError = results.find((r: any) => r.error)?.error;
+      if (firstError) throw firstError;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['collection'] });
+      await queryClient.invalidateQueries({ queryKey: ['custom_list_preview'] });
     },
   });
 }
@@ -1015,6 +1094,8 @@ export function useCustomListPreview(userId: string | undefined, listName: strin
           id,
           format,
           status,
+          custom_poster_url,
+          custom_lists,
           movies (
             id,
             title,
