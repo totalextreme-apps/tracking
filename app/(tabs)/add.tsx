@@ -19,8 +19,9 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/context/AuthContext';
-import { useAddToCollection, useUpdateCollectionItem } from '@/hooks/useCollection';
+import { useAddToCollection, useCollection, useUpdateCollectionItem } from '@/hooks/useCollection';
 import { useTmdbSearch } from '@/hooks/useTmdbSearch';
+import { getExistingMultipacks } from '@/lib/collection-utils';
 import { getPosterUrl } from '@/lib/dummy-data';
 import { getTvShowById, type TmdbMediaResult } from '@/lib/tmdb';
 import type { MovieFormat } from '@/types/database';
@@ -42,6 +43,9 @@ export default function AddScreen() {
   const [selectedSeasons, setSelectedSeasons] = useState<number[]>([]);
   const [status, setStatus] = useState<'owned' | 'wishlist'>('owned');
   const [edition, setEdition] = useState('');
+  const [customTitle, setCustomTitle] = useState('');
+  const [isMultipack, setIsMultipack] = useState(false);
+  const [multipackName, setMultipackName] = useState('');
   const [isBootleg, setIsBootleg] = useState(false);
   const [triedToSubmit, setTriedToSubmit] = useState(false);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
@@ -63,6 +67,8 @@ export default function AddScreen() {
   const [searchMode, setSearchMode] = useState<'title' | 'actor' | 'director'>('title');
 
   const searchQuery = useTmdbSearch(debouncedQuery, page, searchMode);
+  const { data: collection } = useCollection(userId);
+  const existingMultipacks = getExistingMultipacks(collection);
   const addMutation = useAddToCollection(userId);
   const updateMutation = useUpdateCollectionItem(userId);
 
@@ -89,6 +95,9 @@ export default function AddScreen() {
       setSelectedSeasons([]);
       setSearchMode('title');
       setEdition('');
+      setCustomTitle('');
+      setIsMultipack(false);
+      setMultipackName('');
       setIsBootleg(false);
       setStatus('owned');
       setTriedToSubmit(false);
@@ -306,6 +315,8 @@ export default function AddScreen() {
     }
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const resolvedCustomTitle = customTitle.trim() || null;
+    const resolvedMultipack = isMultipack && multipackName.trim() ? multipackName.trim() : null;
     try {
       if (selectedItem.media_type === 'tv') {
         for (const season of selectedSeasons) {
@@ -316,6 +327,8 @@ export default function AddScreen() {
             edition: edition.trim() || null,
             isBootleg,
             seasonNumber: season,
+            customTitle: resolvedCustomTitle,
+            multipack: resolvedMultipack,
           });
         }
       } else {
@@ -325,6 +338,8 @@ export default function AddScreen() {
           status,
           edition: edition.trim() || null,
           isBootleg,
+          customTitle: resolvedCustomTitle,
+          multipack: resolvedMultipack,
         });
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -627,7 +642,25 @@ export default function AddScreen() {
                   ) : (
                     <>
                       <View className="flex-row flex-wrap gap-2 mb-3">
-                        {/* Include Season 0 if it exists */}
+                        {/* Always ensure Season 0 (Specials / Custom VHS Volumes) is available */}
+                        {!selectedItem.seasons?.some((s) => s.season_number === 0) && (
+                          <Pressable
+                            key="special-0"
+                            onPress={() => {
+                              setSelectedSeasons((prev) =>
+                                prev.includes(0)
+                                  ? prev.filter((sn) => sn !== 0)
+                                  : [...prev, 0]
+                              );
+                              Haptics.selectionAsync();
+                            }}
+                            className={`px-3 py-2 rounded ${selectedSeasons.includes(0) ? 'bg-amber-600' : 'bg-neutral-800'}`}
+                          >
+                            <Text className={`font-mono text-xs ${selectedSeasons.includes(0) ? 'text-white' : 'text-neutral-400'}`}>
+                              Specials / Custom Vol.
+                            </Text>
+                          </Pressable>
+                        )}
                         {selectedItem.seasons?.map((s) => {
                           const isSelected = selectedSeasons.includes(s.season_number);
                           return (
@@ -644,7 +677,7 @@ export default function AddScreen() {
                               className={`px-3 py-2 rounded ${isSelected ? 'bg-amber-600' : 'bg-neutral-800'}`}
                             >
                               <Text className={`font-mono text-xs ${isSelected ? 'text-white' : 'text-neutral-400'}`}>
-                                {s.season_number === 0 ? 'Specials' : `S${s.season_number}`}
+                                {s.season_number === 0 ? 'Specials / Custom Vol.' : `S${s.season_number}`}
                               </Text>
                             </Pressable>
                           );
@@ -690,14 +723,32 @@ export default function AddScreen() {
                 </View>
               )}
 
+              {/* Custom Display Title Override */}
+              <Text className="text-amber-500/90 font-mono text-xs tracking-widest mb-1 mt-2">
+                CUSTOM DISPLAY TITLE (OPTIONAL)
+              </Text>
+              <Text className="text-neutral-500 font-mono text-[10px] mb-2">
+                Override how this release displays on your shelf (e.g., South Park Vol. 1, Dead Alive)
+              </Text>
+              <TextInput
+                nativeID="custom-title-input"
+                placeholder={`e.g. ${selectedItem.media_type === 'tv' ? `${selectedItem.name ?? 'Show'}: Vol. 1` : 'Alternate Release Title'}`}
+                placeholderTextColor="#6b7280"
+                value={customTitle}
+                onChangeText={setCustomTitle}
+                className="bg-neutral-800 text-white px-3 py-2 rounded font-mono text-sm mb-4"
+                autoCapitalize="words"
+                autoCorrect={false}
+              />
+
               {/* Edition */}
-              <Text className="text-amber-500/90 font-mono text-xs tracking-widest mb-2 mt-2">
-                EDITION (OPTIONAL)
+              <Text className="text-amber-500/90 font-mono text-xs tracking-widest mb-2 mt-1">
+                EDITION / FORMAT NOTES (OPTIONAL)
               </Text>
               <TextInput
                 nativeID="edition-input"
                 {...({ name: 'edition' } as any)}
-                placeholder="Collector's Edition, Box Set, etc."
+                placeholder="Collector's Edition, Box Set, Director's Cut, etc."
                 placeholderTextColor="#6b7280"
                 value={edition}
                 onChangeText={setEdition}
@@ -705,6 +756,80 @@ export default function AddScreen() {
                 autoCapitalize="words"
                 autoCorrect={false}
               />
+
+              {/* Multi-pack / Compilation Toggle */}
+              <View className="bg-neutral-800 px-4 py-3 rounded-lg mb-4">
+                <View className="flex-row items-center justify-between">
+                  <View className="flex-1 pr-3">
+                    <Text className="text-white font-mono text-sm">PART OF A COMPILATION / MULTI-PACK?</Text>
+                    <Text className="text-neutral-400 font-mono text-[10px] mt-0.5">
+                      Group with other titles in a multi-feature pack
+                    </Text>
+                  </View>
+                  <Pressable
+                    onPress={() => {
+                      setIsMultipack(!isMultipack);
+                      Haptics.selectionAsync();
+                    }}
+                    className={`w-12 h-6 rounded-full justify-center px-1 ${isMultipack ? 'bg-amber-600' : 'bg-neutral-700'}`}
+                  >
+                    <View className={`w-4 h-4 rounded-full bg-white transition-all ${isMultipack ? 'translate-x-6' : 'translate-x-0'}`} />
+                  </Pressable>
+                </View>
+
+                {isMultipack && (
+                  <View className="mt-3 pt-3 border-t border-neutral-700">
+                    <Text className="text-amber-500 font-mono text-[10px] tracking-widest mb-1.5 uppercase">
+                      MULTI-PACK / COMPILATION TITLE
+                    </Text>
+                    <TextInput
+                      placeholder="e.g. 4 Movie Midnight Marathon Pack: Aliens"
+                      placeholderTextColor="#6b7280"
+                      value={multipackName}
+                      onChangeText={setMultipackName}
+                      className="bg-neutral-900 border border-neutral-700 text-white px-3 py-2 rounded font-mono text-sm"
+                      autoCapitalize="words"
+                      autoCorrect={false}
+                    />
+                    {existingMultipacks.length > 0 && (
+                      <View className="mt-2">
+                        <Text className="text-neutral-400 font-mono text-[9px] uppercase mb-1.5">
+                          OR TAP AN EXISTING MULTI-PACK:
+                        </Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                          <View className="flex-row gap-1.5">
+                            {existingMultipacks.map((pack) => {
+                              const active = multipackName.trim().toLowerCase() === pack.toLowerCase();
+                              return (
+                                <Pressable
+                                  key={pack}
+                                  onPress={() => {
+                                    setMultipackName(pack);
+                                    Haptics.selectionAsync();
+                                  }}
+                                  className={`px-2.5 py-1 rounded-full border ${
+                                    active
+                                      ? 'bg-amber-500/20 border-amber-500'
+                                      : 'bg-neutral-900 border-neutral-700'
+                                  }`}
+                                >
+                                  <Text
+                                    className={`font-mono text-[10px] ${
+                                      active ? 'text-amber-400 font-bold' : 'text-neutral-300'
+                                    }`}
+                                  >
+                                    📦 {pack}
+                                  </Text>
+                                </Pressable>
+                              );
+                            })}
+                          </View>
+                        </ScrollView>
+                      </View>
+                    )}
+                  </View>
+                )}
+              </View>
 
               {/* Bootleg Toggle */}
               <View className="flex-row items-center justify-between bg-neutral-800 px-4 py-3 rounded-lg mb-6">

@@ -22,7 +22,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     Alert,
     Modal,
@@ -52,6 +52,15 @@ const FORMAT_BADGE_STYLES: Record<string, { bg: string; border: string; text: st
     Digital: { bg: 'bg-emerald-500/15', border: 'border-emerald-500/40', text: 'text-emerald-300' },
 };
 
+interface ActiveDragState {
+    activeKey: string;
+    startIndex: number;
+    currentIndex: number;
+    dx: number;
+    dy: number;
+    mode: 'grid' | 'list';
+}
+
 export default function CuratedStackScreen() {
     const { name, ownerId } = useLocalSearchParams<{ name: string; ownerId?: string }>();
     const decodedName = decodeURIComponent(name || '');
@@ -71,9 +80,23 @@ export default function CuratedStackScreen() {
     const updateMetaMutation = useUpdateStackMeta(userId);
     const createPostMutation = useCreatePost(userId);
 
-    const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+    // Default to Grid view
+    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+    const [isReorderMode, setIsReorderMode] = useState(false);
     const [confirmRemoveIds, setConfirmRemoveIds] = useState<string[] | null>(null);
     const [shareVisible, setShareVisible] = useState(false);
+
+    // Quick "Jump to Rank #" modal when tapping a rank badge
+    const [jumpRankFromIndex, setJumpRankFromIndex] = useState<number | null>(null);
+
+    // Optimistic item order IDs and ranked toggle for instant zero-lag updates
+    const [optimisticOrderIds, setOptimisticOrderIds] = useState<string[] | null>(null);
+    const [optimisticRanked, setOptimisticRanked] = useState<boolean | null>(null);
+
+    // Drag-and-drop state
+    const [dragState, setDragState] = useState<ActiveDragState | null>(null);
+    const [measuredGridHeight, setMeasuredGridHeight] = useState<number>(0);
+    const [measuredListHeight, setMeasuredListHeight] = useState<number>(86);
 
     // Edit stack details modal state
     const [editModalVisible, setEditModalVisible] = useState(false);
@@ -82,6 +105,13 @@ export default function CuratedStackScreen() {
     const [editRanked, setEditRanked] = useState(false);
 
     const meta = useMemo(() => getStackMeta(collection, decodedName), [collection, decodedName]);
+    const isRanked = optimisticRanked !== null ? optimisticRanked : !!meta.isRanked;
+
+    // Sync optimistic state when collection meta updates
+    useEffect(() => {
+        setOptimisticOrderIds(null);
+        setOptimisticRanked(null);
+    }, [meta.updatedAt, decodedName]);
 
     const rawStackItems = useMemo(
         () =>
@@ -91,12 +121,14 @@ export default function CuratedStackScreen() {
         [collection, decodedName]
     );
 
+    const activeOrderIds = optimisticOrderIds ?? meta.itemOrder ?? [];
+
     // Group items by title (movie or TV show) while respecting custom rank/itemOrder
-    const stacks = useMemo(() => {
+    const baseStacks = useMemo(() => {
         if (rawStackItems.length === 0) return [];
 
         const orderMap = new Map<string, number>();
-        (meta.itemOrder || []).forEach((id, idx) => orderMap.set(id, idx));
+        activeOrderIds.forEach((id, idx) => orderMap.set(id, idx));
 
         const groups = new Map<string, CollectionItemWithMedia[]>();
         for (const item of rawStackItems) {
@@ -139,7 +171,26 @@ export default function CuratedStackScreen() {
         });
 
         return grouped;
-    }, [rawStackItems, meta.itemOrder]);
+    }, [rawStackItems, activeOrderIds]);
+
+    // Live-reordered stacks during active drag
+    const stacks = useMemo(() => {
+        if (!dragState) return baseStacks;
+        const { startIndex, currentIndex } = dragState;
+        if (
+            startIndex < 0 ||
+            startIndex >= baseStacks.length ||
+            currentIndex < 0 ||
+            currentIndex >= baseStacks.length ||
+            startIndex === currentIndex
+        ) {
+            return baseStacks;
+        }
+        const copy = [...baseStacks];
+        const [moved] = copy.splice(startIndex, 1);
+        copy.splice(currentIndex, 0, moved);
+        return copy;
+    }, [baseStacks, dragState]);
 
     const formatCounts = useMemo(() => {
         const counts: Partial<Record<MovieFormat, number>> = {};
@@ -148,6 +199,274 @@ export default function CuratedStackScreen() {
         });
         return counts;
     }, [rawStackItems]);
+
+    const containerMax = Math.min(windowWidth, 1100);
+    const listRowExtraWidth = isOwner ? 86 : isRanked ? 44 : 0;
+    const cardWidth = containerMax - 32 - listRowExtraWidth;
+
+    const gridCols = isDesktop ? 5 : 3;
+    const gridGap = 10;
+    const gridItemWidth = (containerMax - 32 - gridGap * (gridCols - 1)) / gridCols;
+    const gridStepX = gridItemWidth + gridGap;
+    const gridStepY =
+        (measuredGridHeight > 0 ? measuredGridHeight : gridItemWidth * 1.5 + 24) + gridGap + 8;
+
+    const commitReorderedStacks = useCallback(
+        (reordered: CollectionItemWithMedia[][]) => {
+            const newOrderIds = reordered.flatMap((group) => group.map((i) => i.id));
+            setOptimisticOrderIds(newOrderIds);
+            playSound('click');
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+            updateMetaMutation.mutate({
+                listName: decodedName,
+                meta: {
+                    ...meta,
+                    isRanked,
+                    itemOrder: newOrderIds,
+                    updatedAt: Date.now(),
+                },
+            });
+        },
+        [decodedName, meta, isRanked, playSound, updateMetaMutation]
+    );
+
+    const handleToggleRankedQuick = useCallback(() => {
+        if (!isOwner) return;
+        const nextRanked = !isRanked;
+        setOptimisticRanked(nextRanked);
+        playSound('click');
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+        const currentOrderIds =
+            activeOrderIds.length > 0
+                ? activeOrderIds
+                : baseStacks.flatMap((group) => group.map((i) => i.id));
+
+        updateMetaMutation.mutate({
+            listName: decodedName,
+            meta: {
+                ...meta,
+                isRanked: nextRanked,
+                itemOrder: currentOrderIds,
+                updatedAt: Date.now(),
+            },
+        });
+    }, [isOwner, isRanked, playSound, activeOrderIds, baseStacks, updateMetaMutation, decodedName, meta]);
+
+    const handleMoveToIndex = useCallback(
+        (fromIndex: number, toIndex: number) => {
+            if (!isOwner) return;
+            if (
+                fromIndex < 0 ||
+                fromIndex >= baseStacks.length ||
+                toIndex < 0 ||
+                toIndex >= baseStacks.length ||
+                fromIndex === toIndex
+            ) {
+                return;
+            }
+            const reordered = [...baseStacks];
+            const [moved] = reordered.splice(fromIndex, 1);
+            reordered.splice(toIndex, 0, moved);
+            commitReorderedStacks(reordered);
+        },
+        [isOwner, baseStacks, commitReorderedStacks]
+    );
+
+    // Mutable ref for active drag tracking so window/touch listeners always have fresh geometry
+    const dragRef = useRef<{
+        activeKey: string;
+        startIndex: number;
+        currentIndex: number;
+        startX: number;
+        startY: number;
+        mode: 'grid' | 'list';
+        hasMoved: boolean;
+        baseSnapshot: CollectionItemWithMedia[][];
+        gridCols: number;
+        gridStepX: number;
+        gridStepY: number;
+        listStepY: number;
+    } | null>(null);
+
+    const updateDragPosition = useCallback((clientX: number, clientY: number) => {
+        const ref = dragRef.current;
+        if (!ref) return;
+
+        const dx = clientX - ref.startX;
+        const dy = clientY - ref.startY;
+
+        if (!ref.hasMoved && Math.hypot(dx, dy) < 4) {
+            return;
+        }
+        ref.hasMoved = true;
+
+        const totalItems = ref.baseSnapshot.length;
+        let nextIndex = ref.startIndex;
+
+        if (ref.mode === 'grid') {
+            const startCol = ref.startIndex % ref.gridCols;
+            const startRow = Math.floor(ref.startIndex / ref.gridCols);
+            const totalRows = Math.ceil(totalItems / ref.gridCols);
+
+            const hoverCol = Math.max(
+                0,
+                Math.min(ref.gridCols - 1, Math.round((startCol * ref.gridStepX + dx) / ref.gridStepX))
+            );
+            const hoverRow = Math.max(
+                0,
+                Math.min(totalRows - 1, Math.round((startRow * ref.gridStepY + dy) / ref.gridStepY))
+            );
+            nextIndex = Math.max(0, Math.min(totalItems - 1, hoverRow * ref.gridCols + hoverCol));
+        } else {
+            nextIndex = Math.max(
+                0,
+                Math.min(totalItems - 1, Math.round((ref.startIndex * ref.listStepY + dy) / ref.listStepY))
+            );
+        }
+
+        if (nextIndex !== ref.currentIndex) {
+            ref.currentIndex = nextIndex;
+            Haptics.selectionAsync();
+        }
+
+        setDragState({
+            activeKey: ref.activeKey,
+            startIndex: ref.startIndex,
+            currentIndex: ref.currentIndex,
+            dx,
+            dy,
+            mode: ref.mode,
+        });
+    }, []);
+
+    const finishDrag = useCallback(() => {
+        const ref = dragRef.current;
+        if (!ref) return;
+        dragRef.current = null;
+        setDragState(null);
+
+        if (ref.hasMoved && ref.currentIndex !== ref.startIndex) {
+            const reordered = [...ref.baseSnapshot];
+            const [moved] = reordered.splice(ref.startIndex, 1);
+            reordered.splice(ref.currentIndex, 0, moved);
+            commitReorderedStacks(reordered);
+        }
+    }, [commitReorderedStacks]);
+
+    const beginDrag = useCallback(
+        (
+            clientX: number,
+            clientY: number,
+            key: string,
+            index: number,
+            mode: 'grid' | 'list',
+            immediate = false
+        ) => {
+            if (!isOwner) return;
+
+            dragRef.current = {
+                activeKey: key,
+                startIndex: index,
+                currentIndex: index,
+                startX: clientX,
+                startY: clientY,
+                mode,
+                hasMoved: immediate,
+                baseSnapshot: baseStacks,
+                gridCols,
+                gridStepX,
+                gridStepY,
+                listStepY: measuredListHeight > 0 ? measuredListHeight : 86,
+            };
+
+            if (immediate) {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                setDragState({
+                    activeKey: key,
+                    startIndex: index,
+                    currentIndex: index,
+                    dx: 0,
+                    dy: 0,
+                    mode,
+                });
+            }
+
+            if (Platform.OS === 'web' && typeof window !== 'undefined') {
+                const onTouchMove = (ev: TouchEvent) => {
+                    if (!dragRef.current) return;
+                    // Crucial for iOS Safari / Mobile Web: prevent native page scroll while dragging
+                    if (ev.cancelable) ev.preventDefault();
+                    const t = ev.touches[0];
+                    if (t) updateDragPosition(t.clientX, t.clientY);
+                };
+                const onMouseMove = (ev: MouseEvent) => {
+                    if (!dragRef.current) return;
+                    if (dragRef.current.hasMoved) ev.preventDefault();
+                    updateDragPosition(ev.clientX, ev.clientY);
+                };
+                const onEnd = () => {
+                    window.removeEventListener('touchmove', onTouchMove);
+                    window.removeEventListener('touchend', onEnd);
+                    window.removeEventListener('touchcancel', onEnd);
+                    window.removeEventListener('mousemove', onMouseMove);
+                    window.removeEventListener('mouseup', onEnd);
+                    finishDrag();
+                };
+                window.addEventListener('touchmove', onTouchMove, { passive: false });
+                window.addEventListener('touchend', onEnd);
+                window.addEventListener('touchcancel', onEnd);
+                window.addEventListener('mousemove', onMouseMove);
+                window.addEventListener('mouseup', onEnd);
+            }
+        },
+        [
+            isOwner,
+            baseStacks,
+            gridCols,
+            gridStepX,
+            gridStepY,
+            measuredListHeight,
+            updateDragPosition,
+            finishDrag,
+        ]
+    );
+
+    // Helper to create cross-platform drag props for any handle or card
+    const makeDragProps = (key: string, idx: number, mode: 'grid' | 'list', stopProp = false) => {
+        if (!isOwner) return {};
+        if (Platform.OS === 'web') {
+            return {
+                onTouchStart: (e: any) => {
+                    if (stopProp && e.stopPropagation) e.stopPropagation();
+                    const t = e.nativeEvent?.touches?.[0] || e.touches?.[0];
+                    if (t) beginDrag(t.clientX, t.clientY, key, idx, mode, true);
+                },
+                onMouseDown: (e: any) => {
+                    if (stopProp && e.stopPropagation) e.stopPropagation();
+                    if (e.button !== undefined && e.button !== 0) return;
+                    beginDrag(e.clientX, e.clientY, key, idx, mode, false);
+                },
+                onDragStart: (e: any) => e.preventDefault(),
+            } as any;
+        }
+        return {
+            onTouchStart: (e: any) => {
+                if (stopProp && e.stopPropagation) e.stopPropagation();
+                beginDrag(e.nativeEvent.pageX, e.nativeEvent.pageY, key, idx, mode, true);
+            },
+            onTouchMove: (e: any) => {
+                if (stopProp && e.stopPropagation) e.stopPropagation();
+                updateDragPosition(e.nativeEvent.pageX, e.nativeEvent.pageY);
+            },
+            onTouchEnd: (e: any) => {
+                if (stopProp && e.stopPropagation) e.stopPropagation();
+                finishDrag();
+            },
+            onTouchCancel: () => finishDrag(),
+        };
+    };
 
     if (collectionLoading) {
         return (
@@ -171,39 +490,11 @@ export default function CuratedStackScreen() {
         }
     };
 
-    const handleMoveRank = async (index: number, direction: 'up' | 'down') => {
-        if (!isOwner) return;
-        const targetIndex = direction === 'up' ? index - 1 : index + 1;
-        if (targetIndex < 0 || targetIndex >= stacks.length) return;
-
-        playSound('click');
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-        const reordered = [...stacks];
-        const [moved] = reordered.splice(index, 1);
-        reordered.splice(targetIndex, 0, moved);
-
-        const newOrderIds = reordered.flatMap((group) => group.map((i) => i.id));
-
-        try {
-            await updateMetaMutation.mutateAsync({
-                listName: decodedName,
-                meta: {
-                    ...meta,
-                    itemOrder: newOrderIds,
-                    updatedAt: Date.now(),
-                },
-            });
-        } catch (e) {
-            console.error('Failed to reorder stack:', e);
-        }
-    };
-
     const openEditModal = () => {
         playSound('click');
         setEditTitle(decodedName);
         setEditBlurb(meta.description || '');
-        setEditRanked(!!meta.isRanked);
+        setEditRanked(isRanked);
         setEditModalVisible(true);
     };
 
@@ -212,8 +503,8 @@ export default function CuratedStackScreen() {
         if (!cleanTitle) return;
 
         const currentOrderIds =
-            meta.itemOrder && meta.itemOrder.length > 0
-                ? meta.itemOrder
+            activeOrderIds.length > 0
+                ? activeOrderIds
                 : stacks.flatMap((group) => group.map((i) => i.id));
 
         const updatedMeta = {
@@ -223,6 +514,7 @@ export default function CuratedStackScreen() {
             updatedAt: Date.now(),
         };
 
+        setOptimisticRanked(editRanked);
         setEditModalVisible(false);
         try {
             if (cleanTitle !== decodedName) {
@@ -245,6 +537,7 @@ export default function CuratedStackScreen() {
     };
 
     const handleItemPress = (stack: CollectionItemWithMedia[]) => {
+        if (dragState) return;
         playSound('click');
         const top = stack[0];
         const ownerParam = targetUserId ? `&ownerId=${targetUserId}` : '';
@@ -278,24 +571,16 @@ export default function CuratedStackScreen() {
         const fmts = Array.from(
             new Set(stack.map((i) => (i.format === 'BluRay' ? 'Blu-ray' : i.format)))
         ).join('/');
-        const prefix = meta.isRanked ? `${idx + 1}.` : '•';
+        const prefix = isRanked ? `${idx + 1}.` : '•';
         return `${prefix} ${title}${year} [${fmts}]`;
     });
     const blurbSection = meta.description ? `"${meta.description}"\n\n` : '';
     const shareTextMessage = `📼 ${decodedName.toUpperCase()}${
-        meta.isRanked ? ' (Ranked Stack)' : ''
+        isRanked ? ' (Ranked Stack)' : ''
     }${curatorTag}\n${blurbSection}${shareLines.join('\n')}\n\nView this Curated Stack on Tracking:\n${shareUrl}`;
     const shareLinkMessage = `Check out "${decodedName}"${curatorTag} on Tracking!\n${
         meta.description ? `"${meta.description}"\n` : ''
     }${shareUrl}`;
-
-    const containerMax = Math.min(windowWidth, 1100);
-    const listRowExtraWidth = isOwner ? (meta.isRanked ? 82 : 44) : meta.isRanked ? 42 : 0;
-    const cardWidth = containerMax - 32 - listRowExtraWidth;
-
-    const gridCols = isDesktop ? 5 : 3;
-    const gridGap = 10;
-    const gridItemWidth = (containerMax - 32 - gridGap * (gridCols - 1)) / gridCols;
 
     return (
         <View className="flex-1 bg-neutral-950">
@@ -309,6 +594,80 @@ export default function CuratedStackScreen() {
                 onConfirm={doRemove}
                 onCancel={() => setConfirmRemoveIds(null)}
             />
+
+            {/* Quick Jump to Position Modal */}
+            <Modal
+                visible={jumpRankFromIndex !== null}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setJumpRankFromIndex(null)}
+            >
+                <Pressable
+                    onPress={() => setJumpRankFromIndex(null)}
+                    className="flex-1 bg-black/80 items-center justify-center px-5"
+                >
+                    <Pressable
+                        onPress={(e) => e.stopPropagation()}
+                        className="bg-neutral-950 border border-neutral-800 rounded-2xl w-full max-w-sm p-5"
+                    >
+                        <View className="flex-row items-center justify-between mb-3">
+                            <View className="flex-1 pr-2">
+                                <Text
+                                    className="text-amber-500 font-bold text-sm uppercase tracking-wider"
+                                    style={{ fontFamily: 'VCR_OSD_MONO' }}
+                                >
+                                    MOVE TO POSITION #
+                                </Text>
+                                {jumpRankFromIndex !== null && baseStacks[jumpRankFromIndex] && (
+                                    <Text className="text-neutral-400 font-mono text-xs mt-0.5" numberOfLines={1}>
+                                        {baseStacks[jumpRankFromIndex][0]?.movies?.title ||
+                                            baseStacks[jumpRankFromIndex][0]?.shows?.name}
+                                    </Text>
+                                )}
+                            </View>
+                            <Pressable
+                                onPress={() => setJumpRankFromIndex(null)}
+                                className="p-1.5 bg-neutral-900 border border-neutral-800 rounded-full"
+                            >
+                                <Ionicons name="close" size={16} color="#737373" />
+                            </Pressable>
+                        </View>
+
+                        <ScrollView style={{ maxHeight: 280 }} showsVerticalScrollIndicator={false}>
+                            <View className="flex-row flex-wrap gap-2 py-1">
+                                {baseStacks.map((_, targetIdx) => {
+                                    const isCurrent = targetIdx === jumpRankFromIndex;
+                                    return (
+                                        <Pressable
+                                            key={targetIdx}
+                                            onPress={() => {
+                                                if (jumpRankFromIndex !== null) {
+                                                    handleMoveToIndex(jumpRankFromIndex, targetIdx);
+                                                }
+                                                setJumpRankFromIndex(null);
+                                            }}
+                                            className={`px-3.5 py-2 rounded-lg border min-w-[52px] items-center ${
+                                                isCurrent
+                                                    ? 'bg-amber-500 border-amber-400'
+                                                    : 'bg-neutral-900 border-neutral-800 active:bg-neutral-800'
+                                            }`}
+                                        >
+                                            <Text
+                                                className={`font-black text-xs ${
+                                                    isCurrent ? 'text-black' : 'text-amber-400'
+                                                }`}
+                                                style={{ fontFamily: 'VCR_OSD_MONO' }}
+                                            >
+                                                #{targetIdx + 1}
+                                            </Text>
+                                        </Pressable>
+                                    );
+                                })}
+                            </View>
+                        </ScrollView>
+                    </Pressable>
+                </Pressable>
+            </Modal>
 
             {/* Edit Stack Details Modal */}
             <Modal
@@ -381,7 +740,7 @@ export default function CuratedStackScreen() {
                                         RANKED / NUMBERED LIST
                                     </Text>
                                     <Text className="text-neutral-400 font-mono text-[10px]">
-                                        Display #1, #2, #3 badges & custom rank order
+                                        Display #1, #2, #3 badges on posters
                                     </Text>
                                 </View>
                             </View>
@@ -448,6 +807,7 @@ export default function CuratedStackScreen() {
 
             <ScrollView
                 className="flex-1"
+                scrollEnabled={dragState === null && !isReorderMode}
                 contentContainerStyle={{
                     paddingBottom: 120,
                     paddingHorizontal: 16,
@@ -458,8 +818,8 @@ export default function CuratedStackScreen() {
                 }}
                 showsVerticalScrollIndicator={false}
             >
-                {/* Top Navigation & Action Bar */}
-                <View className="flex-row items-center justify-between mb-4 flex-wrap gap-2">
+                {/* ROW 1: BACK + VIEW TOGGLE (GRID / LIST) + SHARE */}
+                <View className="flex-row items-center justify-between mb-2.5 w-full">
                     <Pressable
                         onPress={() => {
                             playSound('click');
@@ -471,7 +831,7 @@ export default function CuratedStackScreen() {
                                 router.replace('/(tabs)' as any);
                             }
                         }}
-                        className="bg-[#0000FF] px-4 py-1.5 rounded-md active:opacity-80"
+                        className="bg-[#0000FF] px-3.5 py-2 rounded-lg active:opacity-80"
                     >
                         <Text
                             className="text-white text-[10px] font-bold uppercase tracking-widest"
@@ -481,37 +841,15 @@ export default function CuratedStackScreen() {
                         </Text>
                     </Pressable>
 
-                    <View className="flex-row items-center gap-2 flex-wrap">
-                        {/* View Mode Toggle (List / Grid) */}
+                    <View className="flex-row items-center gap-2">
+                        {/* View Mode Toggle (GRID first by default, then LIST) */}
                         <View className="flex-row bg-neutral-900 border border-neutral-800 rounded-lg p-0.5">
-                            <Pressable
-                                onPress={() => {
-                                    playSound('click');
-                                    setViewMode('list');
-                                }}
-                                className={`px-2.5 py-1 rounded-md flex-row items-center gap-1 ${
-                                    viewMode === 'list' ? 'bg-amber-500' : ''
-                                }`}
-                            >
-                                <Ionicons
-                                    name="list"
-                                    size={12}
-                                    color={viewMode === 'list' ? '#000' : '#a3a3a3'}
-                                />
-                                <Text
-                                    className={`font-mono text-[10px] font-bold ${
-                                        viewMode === 'list' ? 'text-black' : 'text-neutral-400'
-                                    }`}
-                                >
-                                    LIST
-                                </Text>
-                            </Pressable>
                             <Pressable
                                 onPress={() => {
                                     playSound('click');
                                     setViewMode('grid');
                                 }}
-                                className={`px-2.5 py-1 rounded-md flex-row items-center gap-1 ${
+                                className={`px-3 py-1.5 rounded-md flex-row items-center gap-1.5 ${
                                     viewMode === 'grid' ? 'bg-amber-500' : ''
                                 }`}
                             >
@@ -528,6 +866,28 @@ export default function CuratedStackScreen() {
                                     GRID
                                 </Text>
                             </Pressable>
+                            <Pressable
+                                onPress={() => {
+                                    playSound('click');
+                                    setViewMode('list');
+                                }}
+                                className={`px-3 py-1.5 rounded-md flex-row items-center gap-1.5 ${
+                                    viewMode === 'list' ? 'bg-amber-500' : ''
+                                }`}
+                            >
+                                <Ionicons
+                                    name="list"
+                                    size={12}
+                                    color={viewMode === 'list' ? '#000' : '#a3a3a3'}
+                                />
+                                <Text
+                                    className={`font-mono text-[10px] font-bold ${
+                                        viewMode === 'list' ? 'text-black' : 'text-neutral-400'
+                                    }`}
+                                >
+                                    LIST
+                                </Text>
+                            </Pressable>
                         </View>
 
                         {/* Share Button */}
@@ -536,7 +896,7 @@ export default function CuratedStackScreen() {
                                 playSound('click');
                                 setShareVisible(true);
                             }}
-                            className="bg-amber-500/15 border border-amber-500/50 px-3.5 py-1.5 rounded-lg flex-row items-center gap-1.5 active:opacity-80"
+                            className="bg-amber-500/15 border border-amber-500/50 px-3.5 py-2 rounded-lg flex-row items-center gap-1.5 active:opacity-80"
                         >
                             <Ionicons name="share-social-outline" size={13} color="#f59e0b" />
                             <Text
@@ -546,46 +906,103 @@ export default function CuratedStackScreen() {
                                 SHARE
                             </Text>
                         </Pressable>
-
-                        {isOwner && (
-                            <>
-                                <Pressable
-                                    onPress={openEditModal}
-                                    className="bg-neutral-900 border border-neutral-800 px-3 py-1.5 rounded-lg flex-row items-center gap-1.5 active:opacity-80"
-                                >
-                                    <FontAwesome name="pencil" size={11} color="#d4d4d4" />
-                                    <Text
-                                        className="text-neutral-300 text-[10px] font-bold uppercase tracking-widest"
-                                        style={{ fontFamily: 'VCR_OSD_MONO' }}
-                                    >
-                                        BLURB / RANK
-                                    </Text>
-                                </Pressable>
-
-                                <Pressable
-                                    onPress={() => {
-                                        playSound('click');
-                                        router.push(
-                                            `/create-list?existingListName=${encodeURIComponent(decodedName)}` as any
-                                        );
-                                    }}
-                                    className="bg-amber-600 px-3.5 py-1.5 rounded-lg active:opacity-80 flex-row items-center gap-1.5"
-                                >
-                                    <FontAwesome name="plus" size={11} color="#fff" />
-                                    <Text
-                                        className="text-white text-[10px] font-bold uppercase tracking-widest"
-                                        style={{ fontFamily: 'VCR_OSD_MONO' }}
-                                    >
-                                        ADD / EDIT
-                                    </Text>
-                                </Pressable>
-                            </>
-                        )}
                     </View>
                 </View>
 
+                {/* ROW 2: OWNER ACTION BAR (4 Equal-Width Buttons — Never Overflows Screen) */}
+                {isOwner && (
+                    <View className="flex-row items-center gap-1.5 mb-3.5 w-full">
+                        {stacks.length > 1 && (
+                            <Pressable
+                                onPress={() => {
+                                    playSound('click');
+                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                    setIsReorderMode((prev) => !prev);
+                                }}
+                                className={`flex-1 py-2 px-2 rounded-lg border flex-row items-center justify-center gap-1 ${
+                                    isReorderMode
+                                        ? 'bg-amber-500 border-amber-400'
+                                        : 'bg-neutral-900 border-amber-500/40'
+                                }`}
+                            >
+                                <Ionicons
+                                    name="move"
+                                    size={12}
+                                    color={isReorderMode ? '#000' : '#f59e0b'}
+                                />
+                                <Text
+                                    numberOfLines={1}
+                                    className={`text-[10px] font-bold uppercase ${
+                                        isReorderMode ? 'text-black' : 'text-amber-400'
+                                    }`}
+                                    style={{ fontFamily: 'VCR_OSD_MONO' }}
+                                >
+                                    {isReorderMode ? 'DONE' : 'REORDER'}
+                                </Text>
+                            </Pressable>
+                        )}
+
+                        <Pressable
+                            onPress={handleToggleRankedQuick}
+                            className={`flex-1 py-2 px-2 rounded-lg border flex-row items-center justify-center gap-1 ${
+                                isRanked
+                                    ? 'bg-amber-500/20 border-amber-500'
+                                    : 'bg-neutral-900 border-neutral-800'
+                            }`}
+                        >
+                            <Ionicons
+                                name="trophy"
+                                size={11}
+                                color={isRanked ? '#f59e0b' : '#737373'}
+                            />
+                            <Text
+                                numberOfLines={1}
+                                className={`text-[10px] font-bold uppercase ${
+                                    isRanked ? 'text-amber-400' : 'text-neutral-400'
+                                }`}
+                                style={{ fontFamily: 'VCR_OSD_MONO' }}
+                            >
+                                {isRanked ? 'RANKED #' : 'UNRANKED'}
+                            </Text>
+                        </Pressable>
+
+                        <Pressable
+                            onPress={openEditModal}
+                            className="flex-1 bg-neutral-900 border border-neutral-800 py-2 px-2 rounded-lg flex-row items-center justify-center gap-1 active:opacity-80"
+                        >
+                            <FontAwesome name="pencil" size={10} color="#d4d4d4" />
+                            <Text
+                                numberOfLines={1}
+                                className="text-neutral-300 text-[10px] font-bold uppercase"
+                                style={{ fontFamily: 'VCR_OSD_MONO' }}
+                            >
+                                BLURB
+                            </Text>
+                        </Pressable>
+
+                        <Pressable
+                            onPress={() => {
+                                playSound('click');
+                                router.push(
+                                    `/create-list?existingListName=${encodeURIComponent(decodedName)}` as any
+                                );
+                            }}
+                            className="flex-1 bg-amber-600 py-2 px-2 rounded-lg active:opacity-80 flex-row items-center justify-center gap-1"
+                        >
+                            <FontAwesome name="plus" size={10} color="#fff" />
+                            <Text
+                                numberOfLines={1}
+                                className="text-white text-[10px] font-bold uppercase"
+                                style={{ fontFamily: 'VCR_OSD_MONO' }}
+                            >
+                                TITLES
+                            </Text>
+                        </Pressable>
+                    </View>
+                )}
+
                 {/* Stack Hero Header Card */}
-                <View className="bg-neutral-900/90 border border-neutral-800 rounded-2xl p-5 mb-5">
+                <View className="bg-neutral-900/90 border border-neutral-800 rounded-2xl p-4 md:p-5 mb-4">
                     {/* Curator Badge */}
                     {ownerProfile?.username && (
                         <Pressable
@@ -622,7 +1039,7 @@ export default function CuratedStackScreen() {
                         >
                             {decodedName}
                         </Text>
-                        {meta.isRanked && (
+                        {isRanked && (
                             <View className="bg-amber-500/20 border border-amber-500/50 px-2.5 py-1 rounded-full flex-row items-center gap-1">
                                 <Ionicons name="trophy" size={12} color="#f59e0b" />
                                 <Text className="text-amber-400 font-mono text-[10px] font-bold uppercase">
@@ -634,15 +1051,18 @@ export default function CuratedStackScreen() {
 
                     {/* Blurb / Liner Notes */}
                     {meta.description ? (
-                        <View className="bg-neutral-950/70 border-l-2 border-amber-500 pl-3.5 pr-3 py-2.5 rounded-r-lg mb-3.5">
+                        <Pressable
+                            onPress={isOwner ? openEditModal : undefined}
+                            className="bg-neutral-950/70 border-l-2 border-amber-500 pl-3.5 pr-3 py-2.5 rounded-r-lg mb-3.5"
+                        >
                             <Text className="text-neutral-200 font-mono text-xs leading-relaxed">
                                 "{meta.description}"
                             </Text>
-                        </View>
+                        </Pressable>
                     ) : isOwner ? (
                         <Pressable onPress={openEditModal} className="mb-3 self-start">
                             <Text className="text-neutral-500 font-mono text-xs italic underline">
-                                + Add a blurb / liner notes or toggle Ranked mode...
+                                + Add a blurb / liner notes...
                             </Text>
                         </Pressable>
                     ) : null}
@@ -673,6 +1093,29 @@ export default function CuratedStackScreen() {
                         })}
                     </View>
                 </View>
+
+                {/* Active Reorder Banner */}
+                {isOwner && isReorderMode && (
+                    <View className="mb-4 px-3.5 py-2.5 rounded-xl border bg-amber-500/15 border-amber-500/60 flex-row items-center justify-between">
+                        <View className="flex-row items-center gap-2 flex-1 pr-2">
+                            <Ionicons name="move" size={14} color="#f59e0b" />
+                            <Text className="text-amber-300 font-mono text-[11px] flex-1">
+                                DRAG MODE ACTIVE: Touch & drag any poster to reorder, or tap # to jump to a position.
+                            </Text>
+                        </View>
+                        <Pressable
+                            onPress={() => {
+                                playSound('click');
+                                setIsReorderMode(false);
+                            }}
+                            className="px-3 py-1 rounded-md bg-amber-500"
+                        >
+                            <Text className="text-black font-mono text-[10px] font-bold">
+                                DONE
+                            </Text>
+                        </Pressable>
+                    </View>
+                )}
 
                 {/* Stack Contents */}
                 {isEmpty ? (
@@ -706,83 +1149,284 @@ export default function CuratedStackScreen() {
                             const isPhysical = top.format !== 'Digital';
                             const showSticker = top.is_on_display && isPhysical && top.status === 'owned';
                             const title = top.movies?.title || top.shows?.name || 'Untitled';
+                            const isDraggingThis = dragState?.activeKey === top.id;
+
+                            // Compute smooth residual translation while dragging in grid
+                            let translateX = 0;
+                            let translateY = 0;
+                            if (isDraggingThis && dragState) {
+                                const startCol = dragState.startIndex % gridCols;
+                                const startRow = Math.floor(dragState.startIndex / gridCols);
+                                const currCol = idx % gridCols;
+                                const currRow = Math.floor(idx / gridCols);
+                                translateX = dragState.dx - (currCol - startCol) * gridStepX;
+                                translateY = dragState.dy - (currRow - startRow) * gridStepY;
+                            }
+
+                            const canDragCardDirectly = isOwner && isReorderMode;
 
                             return (
-                                <Pressable
+                                <View
                                     key={top.id}
-                                    onPress={() => handleItemPress(stack)}
-                                    style={{ width: gridItemWidth, marginBottom: 8 }}
-                                    className="active:opacity-85"
+                                    onLayout={
+                                        idx === 0
+                                            ? (e) => {
+                                                  const h = e.nativeEvent.layout.height;
+                                                  if (h > 0 && Math.abs(h - measuredGridHeight) > 2) {
+                                                      setMeasuredGridHeight(h);
+                                                  }
+                                              }
+                                            : undefined
+                                    }
+                                    {...(canDragCardDirectly ? makeDragProps(top.id, idx, 'grid', false) : {})}
+                                    style={[
+                                        {
+                                            width: gridItemWidth,
+                                            marginBottom: 8,
+                                            zIndex: isDraggingThis ? 999 : 1,
+                                            transform: isDraggingThis
+                                                ? [
+                                                      { translateX },
+                                                      { translateY },
+                                                      { scale: 1.05 },
+                                                  ]
+                                                : [],
+                                        },
+                                        canDragCardDirectly && Platform.OS === 'web'
+                                            ? ({
+                                                  touchAction: 'none',
+                                                  userSelect: 'none',
+                                                  WebkitUserSelect: 'none',
+                                                  cursor: isDraggingThis ? 'grabbing' : 'grab',
+                                              } as any)
+                                            : null,
+                                    ]}
                                 >
-                                    <View style={{ aspectRatio: 2 / 3, position: 'relative' }}>
-                                        {top.format === 'VHS' ? (
-                                            <VHSCard
-                                                posterUrl={posterUrl}
-                                                isCustom={!!top.custom_poster_url}
-                                                style={{ width: '100%', height: '100%', borderRadius: 6 }}
-                                            />
-                                        ) : (
-                                            <GlossyCard
-                                                posterUrl={posterUrl}
-                                                format={top.format}
-                                                isCustom={!!top.custom_poster_url}
-                                                style={{ width: '100%', height: '100%', borderRadius: 6 }}
-                                            />
-                                        )}
+                                    <Pressable
+                                        onPress={() => {
+                                            if (canDragCardDirectly) return;
+                                            handleItemPress(stack);
+                                        }}
+                                        disabled={isDraggingThis}
+                                        className="active:opacity-90"
+                                    >
+                                        <View
+                                            style={{
+                                                aspectRatio: 2 / 3,
+                                                position: 'relative',
+                                                borderRadius: 8,
+                                                borderWidth: isDraggingThis
+                                                    ? 2.5
+                                                    : canDragCardDirectly
+                                                      ? 1.5
+                                                      : 0,
+                                                borderColor: isDraggingThis
+                                                    ? '#f59e0b'
+                                                    : canDragCardDirectly
+                                                      ? 'rgba(245, 158, 11, 0.5)'
+                                                      : 'transparent',
+                                            }}
+                                        >
+                                            {top.format === 'VHS' ? (
+                                                <VHSCard
+                                                    posterUrl={posterUrl}
+                                                    isCustom={!!top.custom_poster_url}
+                                                    style={{ width: '100%', height: '100%', borderRadius: 6 }}
+                                                />
+                                            ) : (
+                                                <GlossyCard
+                                                    posterUrl={posterUrl}
+                                                    format={top.format}
+                                                    isCustom={!!top.custom_poster_url}
+                                                    style={{ width: '100%', height: '100%', borderRadius: 6 }}
+                                                />
+                                            )}
 
-                                        {showSticker && (
-                                            <StickerOverlay
-                                                visible={true}
-                                                size={Math.max(24, gridItemWidth * 0.26)}
-                                            />
-                                        )}
+                                            {showSticker && (
+                                                <StickerOverlay
+                                                    visible={true}
+                                                    size={Math.max(24, gridItemWidth * 0.26)}
+                                                />
+                                            )}
 
-                                        {/* Ranked Badge */}
-                                        {meta.isRanked && (
-                                            <View className="absolute top-1.5 left-1.5 bg-amber-500 border-2 border-black px-2 py-0.5 rounded-md shadow">
-                                                <Text
-                                                    className="text-black font-black text-xs"
-                                                    style={{ fontFamily: 'VCR_OSD_MONO' }}
+                                            {/* Top-Left Drag Handle / Rank Badge (Shown when Ranked OR for Owner) */}
+                                            {(isRanked || isOwner) && (
+                                                <View
+                                                    {...(isOwner ? makeDragProps(top.id, idx, 'grid', true) : {})}
+                                                    style={[
+                                                        {
+                                                            position: 'absolute',
+                                                            top: 6,
+                                                            left: 6,
+                                                            zIndex: 20,
+                                                        },
+                                                        isOwner && Platform.OS === 'web'
+                                                            ? ({
+                                                                  touchAction: 'none',
+                                                                  userSelect: 'none',
+                                                                  WebkitUserSelect: 'none',
+                                                                  cursor: 'grab',
+                                                              } as any)
+                                                            : null,
+                                                    ]}
                                                 >
-                                                    #{idx + 1}
+                                                    <Pressable
+                                                        onPress={(e) => {
+                                                            e.stopPropagation();
+                                                            if (!isOwner) return;
+                                                            playSound('click');
+                                                            setJumpRankFromIndex(idx);
+                                                        }}
+                                                        className={`border-2 border-black px-2 py-1 rounded-md shadow flex-row items-center gap-1 ${
+                                                            isRanked
+                                                                ? 'bg-amber-500'
+                                                                : 'bg-black/80 border-white/25'
+                                                        }`}
+                                                    >
+                                                        {isRanked && (
+                                                            <Text
+                                                                className="text-black font-black text-xs"
+                                                                style={{ fontFamily: 'VCR_OSD_MONO' }}
+                                                            >
+                                                                #{idx + 1}
+                                                            </Text>
+                                                        )}
+                                                        {isOwner && (
+                                                            <Ionicons
+                                                                name="reorder-two"
+                                                                size={13}
+                                                                color={isRanked ? '#000' : '#f59e0b'}
+                                                            />
+                                                        )}
+                                                    </Pressable>
+                                                </View>
+                                            )}
+
+                                            {/* Remove button in top-right when in Reorder Mode */}
+                                            {isOwner && isReorderMode && (
+                                                <Pressable
+                                                    onPress={(e) => {
+                                                        e.stopPropagation();
+                                                        setConfirmRemoveIds(stack.map((i) => i.id));
+                                                    }}
+                                                    className="absolute top-1.5 right-1.5 bg-red-600/90 border border-black w-6 h-6 rounded-full items-center justify-center z-20"
+                                                >
+                                                    <Ionicons name="close" size={14} color="#fff" />
+                                                </Pressable>
+                                            )}
+
+                                            {/* Format pill */}
+                                            <View className="absolute bottom-1.5 right-1.5 bg-black/85 border border-white/20 px-1.5 py-0.5 rounded">
+                                                <Text className="text-white font-mono text-[8px] font-bold">
+                                                    {stack
+                                                        .map((i) =>
+                                                            i.format === 'BluRay' ? 'BLU' : i.format
+                                                        )
+                                                        .join('/')}
                                                 </Text>
                                             </View>
-                                        )}
-
-                                        {/* Format pill */}
-                                        <View className="absolute bottom-1.5 right-1.5 bg-black/85 border border-white/20 px-1.5 py-0.5 rounded">
-                                            <Text className="text-white font-mono text-[8px] font-bold">
-                                                {stack
-                                                    .map((i) => (i.format === 'BluRay' ? 'BLU' : i.format))
-                                                    .join('/')}
-                                            </Text>
                                         </View>
-                                    </View>
-                                    <Text
-                                        className="text-neutral-200 font-mono text-[10px] font-bold mt-1.5 text-center"
-                                        numberOfLines={1}
-                                    >
-                                        {meta.isRanked ? `${idx + 1}. ` : ''}
-                                        {title}
-                                    </Text>
-                                </Pressable>
+                                        <Text
+                                            className="text-neutral-200 font-mono text-[10px] font-bold mt-1.5 text-center"
+                                            numberOfLines={1}
+                                        >
+                                            {isRanked ? `${idx + 1}. ` : ''}
+                                            {title}
+                                        </Text>
+                                    </Pressable>
+                                </View>
                             );
                         })}
                     </View>
                 ) : (
                     stacks.map((stack, idx) => {
+                        const top = stack[0];
                         const groupIds = stack.map((i) => i.id);
+                        const isDraggingThis = dragState?.activeKey === top.id;
+                        const listStep = measuredListHeight > 0 ? measuredListHeight : 86;
+                        const translateY =
+                            isDraggingThis && dragState
+                                ? dragState.dy - (idx - dragState.startIndex) * listStep
+                                : 0;
+                        const canDragRowDirectly = isOwner && isReorderMode;
+
                         return (
-                            <View key={stack[0].id} className="flex-row items-center mb-2.5">
-                                {/* Rank Badge on the left if Ranked */}
-                                {meta.isRanked && (
-                                    <View className="w-9 h-16 mr-1.5 rounded-lg bg-neutral-900 border border-amber-500/40 items-center justify-center">
-                                        <Text
-                                            className="text-amber-400 text-sm font-black"
-                                            style={{ fontFamily: 'VCR_OSD_MONO' }}
+                            <View
+                                key={top.id}
+                                onLayout={
+                                    idx === 0
+                                        ? (e) => {
+                                              const h = e.nativeEvent.layout.height + 10;
+                                              if (h > 20 && Math.abs(h - measuredListHeight) > 2) {
+                                                  setMeasuredListHeight(h);
+                                              }
+                                          }
+                                        : undefined
+                                }
+                                {...(canDragRowDirectly ? makeDragProps(top.id, idx, 'list', false) : {})}
+                                style={[
+                                    {
+                                        zIndex: isDraggingThis ? 999 : 1,
+                                        transform: isDraggingThis
+                                            ? [{ translateY }, { scale: 1.02 }]
+                                            : [],
+                                    },
+                                    canDragRowDirectly && Platform.OS === 'web'
+                                        ? ({
+                                              touchAction: 'none',
+                                              userSelect: 'none',
+                                              WebkitUserSelect: 'none',
+                                              cursor: isDraggingThis ? 'grabbing' : 'grab',
+                                          } as any)
+                                        : null,
+                                ]}
+                                className="flex-row items-center mb-2.5"
+                            >
+                                {/* Draggable Handle on the left (always shown for Owner or Ranked) */}
+                                {(isRanked || isOwner) && (
+                                    <View
+                                        {...(isOwner ? makeDragProps(top.id, idx, 'list', true) : {})}
+                                        style={
+                                            isOwner && Platform.OS === 'web'
+                                                ? ({
+                                                      touchAction: 'none',
+                                                      userSelect: 'none',
+                                                      WebkitUserSelect: 'none',
+                                                      cursor: 'grab',
+                                                  } as any)
+                                                : undefined
+                                        }
+                                    >
+                                        <Pressable
+                                            onPress={() => {
+                                                if (!isOwner) return;
+                                                playSound('click');
+                                                setJumpRankFromIndex(idx);
+                                            }}
+                                            className={`w-10 h-16 mr-1.5 rounded-lg border items-center justify-center ${
+                                                isDraggingThis
+                                                    ? 'bg-amber-500 border-amber-300'
+                                                    : 'bg-neutral-900 border-amber-500/40'
+                                            }`}
                                         >
-                                            #{idx + 1}
-                                        </Text>
+                                            {isRanked && (
+                                                <Text
+                                                    className={`text-sm font-black ${
+                                                        isDraggingThis ? 'text-black' : 'text-amber-400'
+                                                    }`}
+                                                    style={{ fontFamily: 'VCR_OSD_MONO' }}
+                                                >
+                                                    #{idx + 1}
+                                                </Text>
+                                            )}
+                                            {isOwner && (
+                                                <Ionicons
+                                                    name="reorder-three"
+                                                    size={16}
+                                                    color={isDraggingThis ? '#000' : '#f59e0b'}
+                                                />
+                                            )}
+                                        </Pressable>
                                     </View>
                                 )}
 
@@ -794,18 +1438,21 @@ export default function CuratedStackScreen() {
                                         width={cardWidth}
                                         height={76}
                                         stackOffset={4}
-                                        onPress={() => handleItemPress(stack)}
+                                        onPress={() => {
+                                            if (canDragRowDirectly) return;
+                                            handleItemPress(stack);
+                                        }}
                                     />
                                 </View>
 
-                                {/* Owner Controls: Up/Down Rank Reorder + Remove */}
+                                {/* Owner Controls: Up/Down Nudge + Remove */}
                                 {isOwner && (
                                     <View className="flex-row items-center ml-2 gap-1">
-                                        {meta.isRanked && (
+                                        {stacks.length > 1 && (
                                             <View className="gap-1">
                                                 <Pressable
-                                                    onPress={() => handleMoveRank(idx, 'up')}
-                                                    disabled={idx === 0 || updateMetaMutation.isPending}
+                                                    onPress={() => handleMoveToIndex(idx, idx - 1)}
+                                                    disabled={idx === 0}
                                                     className={`w-8 h-8 items-center justify-center rounded bg-neutral-900 border border-neutral-800 ${
                                                         idx === 0 ? 'opacity-30' : 'active:bg-neutral-800'
                                                     }`}
@@ -813,11 +1460,8 @@ export default function CuratedStackScreen() {
                                                     <Ionicons name="chevron-up" size={14} color="#f59e0b" />
                                                 </Pressable>
                                                 <Pressable
-                                                    onPress={() => handleMoveRank(idx, 'down')}
-                                                    disabled={
-                                                        idx === stacks.length - 1 ||
-                                                        updateMetaMutation.isPending
-                                                    }
+                                                    onPress={() => handleMoveToIndex(idx, idx + 1)}
+                                                    disabled={idx === stacks.length - 1}
                                                     className={`w-8 h-8 items-center justify-center rounded bg-neutral-900 border border-neutral-800 ${
                                                         idx === stacks.length - 1
                                                             ? 'opacity-30'

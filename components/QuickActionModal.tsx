@@ -8,6 +8,7 @@ import { CelebrationOverlay } from './CelebrationOverlay';
 import { useSound } from '@/context/SoundContext';
 import { useThriftMode } from '@/context/ThriftModeContext';
 import { useAddToCollection, useDeleteCollectionItem, useUpdateCollectionItem, useLogWatchEvent, useDecrementWatchEvent } from '@/hooks/useCollection';
+import { getItemDisplayTitle } from '@/lib/collection-utils';
 import type { CollectionItemWithMedia, MovieFormat } from '@/types/database';
 
 const FORMATS: MovieFormat[] = ['VHS', 'DVD', 'BluRay', '4K', 'Digital'];
@@ -114,9 +115,9 @@ export function QuickActionModal({
   const navigateToDetail = () => {
     handleClose();
     if (isMovie) {
-      router.push({ pathname: "/movie/[id]", params: { id: item.movie_id || item.movies?.id } } as any);
+      router.push({ pathname: "/movie/[id]", params: { id: item.movie_id || item.movies?.id, itemId: liveItem.id } } as any);
     } else {
-      router.push({ pathname: "/show/[id]", params: { id: item.show_id || item.shows?.id, season: item.season_number || 1 } } as any);
+      router.push({ pathname: "/show/[id]", params: { id: item.show_id || item.shows?.id, season: item.season_number ?? 1, itemId: liveItem.id } } as any);
     }
   };
 
@@ -466,7 +467,7 @@ export function QuickActionModal({
             </Pressable>
 
             <Text className="text-white text-xl font-bold mb-1 pr-10" numberOfLines={1}>
-              {(media as any)?.title || (media as any)?.name}
+              {getItemDisplayTitle(liveItem) || (media as any)?.title || (media as any)?.name}
             </Text>
             <Text className="text-neutral-500 font-mono text-xs mb-6">
               {isWishlist ? 'THRIFT MODE' : 'THE STACKS'}

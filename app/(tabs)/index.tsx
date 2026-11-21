@@ -13,6 +13,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { OnDisplayCard } from '@/components/OnDisplayCard';
 import { ReorderShelfModal } from '@/components/ReorderShelfModal';
 import { QuickActionModal } from '@/components/QuickActionModal';
+import { MultipackModal } from '@/components/MultipackModal';
 import { StackCard } from '@/components/StackCard';
 import { RouletteModal } from '@/components/RouletteModal';
 import { ShareModal } from '@/components/ShareModal';
@@ -24,10 +25,12 @@ import { useSound } from '@/context/SoundContext';
 import { useThriftMode } from '@/context/ThriftModeContext';
 import { useCollection, useUpdateCollectionItem } from '@/hooks/useCollection';
 import { usePersistedState } from '@/hooks/usePersistedState';
-import { getGenres, getOnDisplayItems, getGrailItems, getStacks } from '@/lib/collection-utils';
+import { getGenres, getOnDisplayItems, getGrailItems, getStacks, getItemCustomTitle, getItemDisplayTitle, getItemMultipack, getStackDisplayTitle } from '@/lib/collection-utils';
 import type { CollectionItemWithMedia } from '@/types/database';
 import { getBackdropUrl, getPosterUrl } from '@/lib/dummy-data';
+import { supabase } from '@/lib/supabase';
 import { searchMedia, getPersonMovieCredits, getPersonTvCredits, searchPerson } from '@/lib/tmdb';
+import { useQueryClient } from '@tanstack/react-query';
 
 
 function getRelativeTimeString(dateString?: string | null): string {
@@ -69,7 +72,7 @@ function RecentlyWatchedCard({ item, navigateToDetail, playSound, onLongPressAct
   const media = item.movies || item.shows;
   if (!media) return null;
 
-  const title = item.media_type === 'movie' ? (media as any).title : (media as any).name;
+  const title = getItemDisplayTitle(item) || (item.media_type === 'movie' ? (media as any).title : (media as any).name);
   const tmdbBackdrop = getBackdropUrl(media.backdrop_path, 'w300');
   const backdropUrl = item.custom_backdrop_url || tmdbBackdrop || item.custom_poster_url || getPosterUrl(media.poster_path, 'w185');
   const format = item.format;
@@ -268,12 +271,15 @@ export default function HomeScreen() {
   const [formatFilter, setFormatFilter] = useState<string | null>(null);
   const [genreFilter, setGenreFilter] = useState<string | null>(null);
   const [mediaTypeFilter, setMediaTypeFilter] = useState<'movie' | 'tv' | null>(null);
+  const [hasEditionFilter, setHasEditionFilter] = useState(false);
+  const [multipackFilter, setMultipackFilter] = useState(false);
+  const [activeMultipackName, setActiveMultipackName] = useState<string | null>(null);
   const [isGenreDropdownOpen, setIsGenreDropdownOpen] = useState(false);
   const [displayLimit, setDisplayLimit] = useState(50);
 
   useEffect(() => {
     setDisplayLimit(50);
-  }, [searchQuery, formatFilter, genreFilter, mediaTypeFilter, sortBy, sortOrder, thriftMode]);
+  }, [searchQuery, formatFilter, genreFilter, mediaTypeFilter, hasEditionFilter, multipackFilter, sortBy, sortOrder, thriftMode]);
   
   const shelfRef = useRef<ScrollView>(null);
   const grailRef = useRef<ScrollView>(null);
@@ -386,10 +392,10 @@ export default function HomeScreen() {
   const navigateToDetail = (item: CollectionItemWithMedia) => {
     if (item.media_type === 'tv') {
       const showId = item.show_id || item.shows?.id;
-      if (showId) router.push({ pathname: "/show/[id]", params: { id: showId, season: item.season_number || 1 } } as any);
+      if (showId) router.push({ pathname: "/show/[id]", params: { id: showId, season: item.season_number ?? 1, itemId: item.id } } as any);
     } else {
       const movieId = item.movie_id || item.movies?.id;
-      if (movieId) router.push({ pathname: "/movie/[id]", params: { id: movieId } } as any);
+      if (movieId) router.push({ pathname: "/movie/[id]", params: { id: movieId, itemId: item.id } } as any);
     }
   };
 
@@ -404,8 +410,18 @@ export default function HomeScreen() {
         if (formatFilter === 'BOOTLEG') return item.is_bootleg;
         if (formatFilter === 'FOR SALE') return item.for_sale;
         if (formatFilter === 'FOR TRADE') return item.for_trade;
+        if (formatFilter === 'MULTI-PACK') return !!getItemMultipack(item);
+        if (formatFilter === 'HAS EDITION') return !!(item.edition && item.edition.trim().length > 0);
         return item.format === formatFilter;
       });
+    }
+
+    if (hasEditionFilter) {
+      items = items.filter((item: any) => !!(item.edition && item.edition.trim().length > 0));
+    }
+
+    if (multipackFilter) {
+      items = items.filter((item: any) => !!getItemMultipack(item));
     }
 
     if (searchQuery) {
@@ -420,7 +436,7 @@ export default function HomeScreen() {
           items = [];
         }
       } else {
-        const noiseWords = new Set(['remake', 'original', 'reboot', 'sequel', 'movie', 'tv', 'show', 'series', 'film', 'version', 'cut', 'edition']);
+        const noiseWords = new Set(['remake', 'original', 'reboot', 'sequel', 'tv', 'show', 'series', 'film']);
         const tokens = searchQuery
           .toLowerCase()
           .replace(/['’]/g, '')
@@ -434,13 +450,16 @@ export default function HomeScreen() {
             if (!m) return false;
 
             const title = (m.title || m.name || '').toLowerCase();
+            const customTitle = (getItemCustomTitle(item) || '').toLowerCase();
+            const multipack = (getItemMultipack(item) || '').toLowerCase();
             const year = (m.release_date || m.first_air_date || '').slice(0, 4);
             const format = (item.format || '').toLowerCase();
             const edition = (item.edition || '').toLowerCase();
+            const notes = (item.notes || '').toLowerCase();
             const franchise = (item.franchise || '').toLowerCase();
             const tags = (m.sorting_tags || '').toLowerCase();
             
-            const searchableTexts: string[] = [title, year, format, edition, franchise, tags];
+            const searchableTexts: string[] = [title, customTitle, multipack, year, format, edition, notes, franchise, tags];
             
             if (m.genres && Array.isArray(m.genres)) {
               m.genres.forEach((g: any) => {
@@ -465,23 +484,214 @@ export default function HomeScreen() {
     if (mediaTypeFilter) items = items.filter((item: any) => item.media_type === mediaTypeFilter);
 
     return items;
-  }, [collection, thriftMode, formatFilter, searchQuery, genreFilter, mediaTypeFilter, searchMode, creditTmdbIds]);
+  }, [collection, thriftMode, formatFilter, hasEditionFilter, multipackFilter, searchQuery, genreFilter, mediaTypeFilter, searchMode, creditTmdbIds]);
+
+  const queryClient = useQueryClient();
+  const [inlineShelfReorder, setInlineShelfReorder] = useState<'display' | 'grail' | null>(null);
+  const [shelfDrag, setShelfDrag] = useState<{
+    type: 'display' | 'grail';
+    activeId: string;
+    startIndex: number;
+    currentIndex: number;
+    dx: number;
+  } | null>(null);
+
+  const shelfDragRef = useRef<{
+    type: 'display' | 'grail';
+    activeId: string;
+    startIndex: number;
+    currentIndex: number;
+    startX: number;
+    hasMoved: boolean;
+    snapshot: any[];
+  } | null>(null);
 
   const filteredStacks = useMemo(() => {
     return getStacks(filteredCollection, thriftMode, sortBy, sortOrder, searchQuery, useFranchiseSort);
   }, [filteredCollection, thriftMode, sortBy, sortOrder, searchQuery, useFranchiseSort]);
 
-  const onDisplay = useMemo(() => {
+  const baseOnDisplay = useMemo(() => {
     const raw = getOnDisplayItems(collection);
     if (!formatFilter || formatFilter === 'ALL') return raw;
     return raw.filter((item: any) => item.format === formatFilter);
   }, [collection, formatFilter]);
 
-  const grailList = useMemo(() => {
+  const baseGrailList = useMemo(() => {
     const raw = getGrailItems(collection);
     if (!formatFilter || formatFilter === 'ALL') return raw;
     return raw.filter((item: any) => item.format === formatFilter);
   }, [collection, formatFilter]);
+
+  const onDisplay = useMemo(() => {
+    if (!shelfDrag || shelfDrag.type !== 'display') return baseOnDisplay;
+    const { startIndex, currentIndex } = shelfDrag;
+    if (startIndex === currentIndex || startIndex < 0 || currentIndex < 0 || startIndex >= baseOnDisplay.length || currentIndex >= baseOnDisplay.length) {
+      return baseOnDisplay;
+    }
+    const copy = [...baseOnDisplay];
+    const [moved] = copy.splice(startIndex, 1);
+    copy.splice(currentIndex, 0, moved);
+    return copy;
+  }, [baseOnDisplay, shelfDrag]);
+
+  const grailList = useMemo(() => {
+    if (!shelfDrag || shelfDrag.type !== 'grail') return baseGrailList;
+    const { startIndex, currentIndex } = shelfDrag;
+    if (startIndex === currentIndex || startIndex < 0 || currentIndex < 0 || startIndex >= baseGrailList.length || currentIndex >= baseGrailList.length) {
+      return baseGrailList;
+    }
+    const copy = [...baseGrailList];
+    const [moved] = copy.splice(startIndex, 1);
+    copy.splice(currentIndex, 0, moved);
+    return copy;
+  }, [baseGrailList, shelfDrag]);
+
+  const commitShelfOrder = useCallback(async (type: 'display' | 'grail', reordered: any[]) => {
+    if (!userId) return;
+    const itemIds = reordered.map((i) => i.id);
+    const orderField = type === 'display' ? 'display_order' : 'grail_order';
+    const rankMap = new Map<string, number>();
+    itemIds.forEach((id, idx) => rankMap.set(id, idx + 1));
+
+    queryClient.setQueryData(['collection', userId], (old: any) => {
+      if (!Array.isArray(old)) return old;
+      return old.map((item: any) => {
+        if (!rankMap.has(item.id)) return item;
+        return { ...item, [orderField]: rankMap.get(item.id) };
+      });
+    });
+
+    playSound('click');
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+    try {
+      await (supabase.rpc as any)('update_collection_order', {
+        item_ids: itemIds,
+        order_type: type,
+      });
+      queryClient.invalidateQueries({ queryKey: ['collection', userId] });
+    } catch (err) {
+      console.error('Failed to save shelf order:', err);
+    }
+  }, [userId, queryClient, playSound]);
+
+  const updateShelfDrag = useCallback((clientX: number) => {
+    const ref = shelfDragRef.current;
+    if (!ref) return;
+    const dx = clientX - ref.startX;
+    if (!ref.hasMoved && Math.abs(dx) < 5) return;
+    ref.hasMoved = true;
+
+    const stepX = 164; // OnDisplayCard width (160) + horizontal margin (4)
+    const nextIndex = Math.max(
+      0,
+      Math.min(ref.snapshot.length - 1, Math.round((ref.startIndex * stepX + dx) / stepX))
+    );
+    if (nextIndex !== ref.currentIndex) {
+      ref.currentIndex = nextIndex;
+      Haptics.selectionAsync();
+    }
+    setShelfDrag({
+      type: ref.type,
+      activeId: ref.activeId,
+      startIndex: ref.startIndex,
+      currentIndex: ref.currentIndex,
+      dx,
+    });
+  }, []);
+
+  const finishShelfDrag = useCallback(() => {
+    const ref = shelfDragRef.current;
+    if (!ref) return;
+    shelfDragRef.current = null;
+    setShelfDrag(null);
+    if (ref.hasMoved && ref.currentIndex !== ref.startIndex) {
+      const copy = [...ref.snapshot];
+      const [moved] = copy.splice(ref.startIndex, 1);
+      copy.splice(ref.currentIndex, 0, moved);
+      commitShelfOrder(ref.type, copy);
+    }
+  }, [commitShelfOrder]);
+
+  const beginShelfDrag = useCallback((clientX: number, type: 'display' | 'grail', id: string, index: number, immediate = false) => {
+    const snapshot = type === 'display' ? baseOnDisplay : baseGrailList;
+    shelfDragRef.current = {
+      type,
+      activeId: id,
+      startIndex: index,
+      currentIndex: index,
+      startX: clientX,
+      hasMoved: immediate,
+      snapshot,
+    };
+    if (immediate) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      setShelfDrag({ type, activeId: id, startIndex: index, currentIndex: index, dx: 0 });
+    }
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const onMouseMove = (ev: MouseEvent) => {
+        if (shelfDragRef.current?.hasMoved) ev.preventDefault();
+        updateShelfDrag(ev.clientX);
+      };
+      const onTouchMove = (ev: TouchEvent) => {
+        if (!shelfDragRef.current) return;
+        const t = ev.touches[0];
+        if (!t) return;
+        if (ev.cancelable) ev.preventDefault();
+        updateShelfDrag(t.clientX);
+      };
+      const onUp = () => {
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', onUp);
+        window.removeEventListener('touchmove', onTouchMove);
+        window.removeEventListener('touchend', onUp);
+        window.removeEventListener('touchcancel', onUp);
+        finishShelfDrag();
+      };
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onUp);
+      window.addEventListener('touchmove', onTouchMove, { passive: false });
+      window.addEventListener('touchend', onUp);
+      window.addEventListener('touchcancel', onUp);
+    }
+  }, [baseOnDisplay, baseGrailList, updateShelfDrag, finishShelfDrag]);
+
+  const makeShelfDragProps = useCallback(
+    (type: 'display' | 'grail', id: string, idx: number, stopProp = false) => {
+      if (Platform.OS === 'web') {
+        return {
+          onMouseDown: (e: any) => {
+            if (stopProp) e.stopPropagation();
+            if (e.button !== undefined && e.button !== 0) return;
+            beginShelfDrag(e.clientX, type, id, idx, false);
+          },
+          onTouchStart: (e: any) => {
+            if (stopProp) e.stopPropagation();
+            const t = e.nativeEvent?.touches?.[0] || e.touches?.[0] || e.nativeEvent;
+            const cx = t?.clientX ?? t?.pageX ?? 0;
+            beginShelfDrag(cx, type, id, idx, true);
+          },
+          onDragStart: (e: any) => e.preventDefault(),
+        } as any;
+      }
+      return {
+        onTouchStart: (e: any) => {
+          if (stopProp) e.stopPropagation();
+          beginShelfDrag(e.nativeEvent.pageX, type, id, idx, true);
+        },
+        onTouchMove: (e: any) => {
+          if (stopProp) e.stopPropagation();
+          updateShelfDrag(e.nativeEvent.pageX);
+        },
+        onTouchEnd: (e: any) => {
+          if (stopProp) e.stopPropagation();
+          finishShelfDrag();
+        },
+        onTouchCancel: () => finishShelfDrag(),
+      };
+    },
+    [beginShelfDrag, updateShelfDrag, finishShelfDrag]
+  );
 
   const recentlyWatched = useMemo(() => {
     if (!collection) return [];
@@ -501,6 +711,8 @@ export default function HomeScreen() {
     if (fmt === 'BluRay') return { container: 'bg-blue-500/5 border-blue-500/30', text: baseText };
     if (fmt === '4K') return { container: 'bg-yellow-400/5 border-yellow-400/30', text: baseText };
     if (fmt === 'Digital') return { container: 'bg-green-500/5 border-green-500/30', text: baseText };
+    if (fmt === 'MULTI-PACK') return { container: 'bg-amber-500/10 border-amber-500/40', text: baseText };
+    if (fmt === 'HAS EDITION') return { container: 'bg-indigo-500/10 border-indigo-500/40', text: baseText };
     if (fmt === 'BOOTLEG') return { container: 'bg-orange-600/10 border-orange-600/40', text: baseText };
     if (fmt === 'FOR SALE') return { container: 'bg-red-600/10 border-red-600/40', text: baseText };
     if (fmt === 'FOR TRADE') return { container: 'bg-sky-600/10 border-sky-600/40', text: baseText };
@@ -514,11 +726,12 @@ export default function HomeScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <StatusBar style="light" />
 
-      <ScrollView
-        className="flex-1"
-        contentContainerStyle={{ paddingBottom: 160 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#f59e0b" />}
-      >
+          <ScrollView
+            className="flex-1"
+            scrollEnabled={shelfDrag === null}
+            contentContainerStyle={{ paddingBottom: 160 }}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#f59e0b" />}
+          >
         <DesktopContainer>
           <View>
           {/* ON DISPLAY SECTION (OWNED) - ONLY IN STACKS MODE */}
@@ -554,13 +767,27 @@ export default function HomeScreen() {
                     <Ionicons name="share-outline" size={14} color="#f59e0b" />
                   </Pressable>
                   {onDisplay.length > 1 && !isGuest && (
-                    <Pressable 
-                      onPress={() => { setReorderType('display'); setReorderModalVisible(true); }}
-                      className="ml-3 px-2 py-1 bg-neutral-900 border border-neutral-800 rounded flex-row items-center"
-                    >
-                      <Ionicons name="list" size={10} color="#f59e0b" style={{ marginRight: 4 }} />
-                      <Text className="text-amber-500 font-mono text-[10px] font-bold">REORDER</Text>
-                    </Pressable>
+                    <View className="flex-row items-center gap-1.5 ml-2">
+                      <Pressable 
+                        onPress={() => {
+                          playSound('click');
+                          setInlineShelfReorder(prev => prev === 'display' ? null : 'display');
+                        }}
+                        className={`px-2 py-1 border rounded flex-row items-center ${inlineShelfReorder === 'display' ? 'bg-amber-500 border-amber-400' : 'bg-neutral-900 border-neutral-800'}`}
+                      >
+                        <Ionicons name="move" size={10} color={inlineShelfReorder === 'display' ? '#000' : '#f59e0b'} style={{ marginRight: 4 }} />
+                        <Text className={`font-mono text-[10px] font-bold ${inlineShelfReorder === 'display' ? 'text-black' : 'text-amber-500'}`}>
+                          {inlineShelfReorder === 'display' ? 'DONE DRAGGING' : 'DRAG SHELF'}
+                        </Text>
+                      </Pressable>
+                      <Pressable 
+                        onPress={() => { setReorderType('display'); setReorderModalVisible(true); }}
+                        className="px-2 py-1 bg-neutral-900 border border-neutral-800 rounded flex-row items-center"
+                      >
+                        <Ionicons name="grid-outline" size={10} color="#f59e0b" style={{ marginRight: 4 }} />
+                        <Text className="text-amber-500 font-mono text-[10px] font-bold">REORDER</Text>
+                      </Pressable>
+                    </View>
                   )}
                 </View>
                 <View className="flex-row items-center gap-2">
@@ -570,10 +797,67 @@ export default function HomeScreen() {
               </View>
               <View className="relative">
                 <Image source={require('@/assets/images/shelf_background.png')} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.8 }} contentFit="cover" />
-                <ScrollView ref={shelfRef} horizontal showsHorizontalScrollIndicator={false} style={{ height: 366 }} contentContainerStyle={{ paddingLeft: 24, paddingRight: 40 }} className="py-12">
-                  {onDisplay.map((item: any) => (
-                    <OnDisplayCard key={item.id} item={item} onSingleTapAction={() => navigateToDetail(item)} onLongPressAction={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); setQuickActionItem(item); }} onToggleFavorite={toggleFavorite} onRatePress={(rating) => handleGridRate(item, rating)} />
-                  ))}
+                <ScrollView ref={shelfRef} horizontal scrollEnabled={shelfDrag === null && inlineShelfReorder !== 'display'} showsHorizontalScrollIndicator={false} style={{ height: 366 }} contentContainerStyle={{ paddingLeft: 24, paddingRight: 40 }} className="py-12">
+                  {onDisplay.map((item: any, idx: number) => {
+                    const isDraggingThis = shelfDrag?.type === 'display' && shelfDrag.activeId === item.id;
+                    const translateX = isDraggingThis && shelfDrag ? shelfDrag.dx - (idx - shelfDrag.startIndex) * 164 : 0;
+                    const canDragWholeCard = inlineShelfReorder === 'display';
+
+                    return (
+                      <View
+                        key={item.id}
+                        {...(canDragWholeCard ? makeShelfDragProps('display', item.id, idx, false) : {})}
+                        style={[
+                          {
+                            position: 'relative',
+                            zIndex: isDraggingThis ? 999 : 1,
+                            transform: isDraggingThis ? [{ translateX }, { scale: 1.05 }] : [],
+                          },
+                          canDragWholeCard && Platform.OS === 'web'
+                            ? ({ touchAction: 'none', userSelect: 'none', cursor: isDraggingThis ? 'grabbing' : 'grab' } as any)
+                            : null,
+                        ]}
+                      >
+                        {!isGuest && onDisplay.length > 1 && (
+                          <View
+                            {...makeShelfDragProps('display', item.id, idx, true)}
+                            style={[
+                              {
+                                position: 'absolute',
+                                top: -8,
+                                left: 10,
+                                zIndex: 50,
+                              },
+                              Platform.OS === 'web'
+                                ? ({ touchAction: 'none', userSelect: 'none', cursor: 'grab' } as any)
+                                : null,
+                            ]}
+                          >
+                            <View className="bg-amber-500 border-2 border-black px-2 py-0.5 rounded-md shadow flex-row items-center gap-1">
+                              <Text className="text-black font-black text-[10px]" style={{ fontFamily: 'VCR_OSD_MONO' }}>
+                                #{idx + 1}
+                              </Text>
+                              <Ionicons name="reorder-two" size={11} color="#000" />
+                            </View>
+                          </View>
+                        )}
+                        <OnDisplayCard
+                          item={item}
+                          onSingleTapAction={() => {
+                            if (canDragWholeCard || isDraggingThis) return;
+                            navigateToDetail(item);
+                          }}
+                          onLongPressAction={() => {
+                            if (canDragWholeCard) return;
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                            setQuickActionItem(item);
+                          }}
+                          onToggleFavorite={toggleFavorite}
+                          onRatePress={(rating) => handleGridRate(item, rating)}
+                        />
+                      </View>
+                    );
+                  })}
                 </ScrollView>
               </View>
             </View>
@@ -651,13 +935,27 @@ export default function HomeScreen() {
                     <Ionicons name="share-outline" size={14} color="#f59e0b" />
                   </Pressable>
                   {grailList.length > 1 && !isGuest && (
-                    <Pressable 
-                      onPress={() => { setReorderType('grail'); setReorderModalVisible(true); }}
-                      className="ml-3 px-2 py-1 bg-neutral-900 border border-neutral-800 rounded flex-row items-center"
-                    >
-                      <Ionicons name="list" size={10} color="#f59e0b" style={{ marginRight: 4 }} />
-                      <Text className="text-amber-500 font-mono text-[10px] font-bold">REORDER</Text>
-                    </Pressable>
+                    <View className="flex-row items-center gap-1.5 ml-2">
+                      <Pressable 
+                        onPress={() => {
+                          playSound('click');
+                          setInlineShelfReorder(prev => prev === 'grail' ? null : 'grail');
+                        }}
+                        className={`px-2 py-1 border rounded flex-row items-center ${inlineShelfReorder === 'grail' ? 'bg-amber-500 border-amber-400' : 'bg-neutral-900 border-neutral-800'}`}
+                      >
+                        <Ionicons name="move" size={10} color={inlineShelfReorder === 'grail' ? '#000' : '#f59e0b'} style={{ marginRight: 4 }} />
+                        <Text className={`font-mono text-[10px] font-bold ${inlineShelfReorder === 'grail' ? 'text-black' : 'text-amber-500'}`}>
+                          {inlineShelfReorder === 'grail' ? 'DONE DRAGGING' : 'DRAG SHELF'}
+                        </Text>
+                      </Pressable>
+                      <Pressable 
+                        onPress={() => { setReorderType('grail'); setReorderModalVisible(true); }}
+                        className="px-2 py-1 bg-neutral-900 border border-neutral-800 rounded flex-row items-center"
+                      >
+                        <Ionicons name="grid-outline" size={10} color="#f59e0b" style={{ marginRight: 4 }} />
+                        <Text className="text-amber-500 font-mono text-[10px] font-bold">REORDER</Text>
+                      </Pressable>
+                    </View>
                   )}
                 </View>
                 <View className="flex-row items-center gap-2">
@@ -667,10 +965,67 @@ export default function HomeScreen() {
               </View>
               <View className="relative">
                 <Image source={require('@/assets/images/thrift_background.png')} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.8 }} contentFit="cover" />
-                <ScrollView ref={grailRef} horizontal showsHorizontalScrollIndicator={false} style={{ height: 366 }} contentContainerStyle={{ paddingLeft: 24, paddingRight: 40 }} className="py-12">
-                  {grailList.map((item: any) => (
-                    <OnDisplayCard key={item.id} item={item} onSingleTapAction={() => navigateToDetail(item)} onLongPressAction={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); setQuickActionItem(item); }} onToggleFavorite={toggleFavorite} onRatePress={(rating) => handleGridRate(item, rating)} />
-                  ))}
+                <ScrollView ref={grailRef} horizontal scrollEnabled={shelfDrag === null && inlineShelfReorder !== 'grail'} showsHorizontalScrollIndicator={false} style={{ height: 366 }} contentContainerStyle={{ paddingLeft: 24, paddingRight: 40 }} className="py-12">
+                  {grailList.map((item: any, idx: number) => {
+                    const isDraggingThis = shelfDrag?.type === 'grail' && shelfDrag.activeId === item.id;
+                    const translateX = isDraggingThis && shelfDrag ? shelfDrag.dx - (idx - shelfDrag.startIndex) * 164 : 0;
+                    const canDragWholeCard = inlineShelfReorder === 'grail';
+
+                    return (
+                      <View
+                        key={item.id}
+                        {...(canDragWholeCard ? makeShelfDragProps('grail', item.id, idx, false) : {})}
+                        style={[
+                          {
+                            position: 'relative',
+                            zIndex: isDraggingThis ? 999 : 1,
+                            transform: isDraggingThis ? [{ translateX }, { scale: 1.05 }] : [],
+                          },
+                          canDragWholeCard && Platform.OS === 'web'
+                            ? ({ touchAction: 'none', userSelect: 'none', cursor: isDraggingThis ? 'grabbing' : 'grab' } as any)
+                            : null,
+                        ]}
+                      >
+                        {!isGuest && grailList.length > 1 && (
+                          <View
+                            {...makeShelfDragProps('grail', item.id, idx, true)}
+                            style={[
+                              {
+                                position: 'absolute',
+                                top: -8,
+                                left: 10,
+                                zIndex: 50,
+                              },
+                              Platform.OS === 'web'
+                                ? ({ touchAction: 'none', userSelect: 'none', cursor: 'grab' } as any)
+                                : null,
+                            ]}
+                          >
+                            <View className="bg-amber-500 border-2 border-black px-2 py-0.5 rounded-md shadow flex-row items-center gap-1">
+                              <Text className="text-black font-black text-[10px]" style={{ fontFamily: 'VCR_OSD_MONO' }}>
+                                #{idx + 1}
+                              </Text>
+                              <Ionicons name="reorder-two" size={11} color="#000" />
+                            </View>
+                          </View>
+                        )}
+                        <OnDisplayCard
+                          item={item}
+                          onSingleTapAction={() => {
+                            if (canDragWholeCard || isDraggingThis) return;
+                            navigateToDetail(item);
+                          }}
+                          onLongPressAction={() => {
+                            if (canDragWholeCard) return;
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                            setQuickActionItem(item);
+                          }}
+                          onToggleFavorite={toggleFavorite}
+                          onRatePress={(rating) => handleGridRate(item, rating)}
+                        />
+                      </View>
+                    );
+                  })}
                 </ScrollView>
               </View>
             </View>
@@ -775,7 +1130,7 @@ export default function HomeScreen() {
               </View>
 
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }} className="mb-4">
-                {['ALL', 'VHS', 'DVD', 'BluRay', '4K', 'Digital', 'BOOTLEG', 'FOR SALE', 'FOR TRADE'].map(f => {
+                {['ALL', 'VHS', 'DVD', 'BluRay', '4K', 'Digital', 'MULTI-PACK', 'HAS EDITION', 'BOOTLEG', 'FOR SALE', 'FOR TRADE'].map(f => {
                   const isSelected = f === 'ALL' ? formatFilter === null : formatFilter === f;
                   const styles = getFormatPillStyles(f, isSelected);
                   return (
@@ -812,6 +1167,22 @@ export default function HomeScreen() {
                     <Pressable onPress={() => { setMediaTypeFilter('movie'); playSound('click'); }} className={`px-2.5 py-1 rounded ${mediaTypeFilter === 'movie' ? 'bg-neutral-800' : ''}`}><Text className={`font-mono text-[10px] font-bold ${mediaTypeFilter === 'movie' ? 'text-amber-500' : 'text-neutral-500'}`}>FILM</Text></Pressable>
                     <Pressable onPress={() => { setMediaTypeFilter('tv'); playSound('click'); }} className={`px-2.5 py-1 rounded ${mediaTypeFilter === 'tv' ? 'bg-neutral-800' : ''}`}><Text className={`font-mono text-[10px] font-bold ${mediaTypeFilter === 'tv' ? 'text-amber-500' : 'text-neutral-500'}`}>TV</Text></Pressable>
                   </View>
+
+                  <Pressable
+                    onPress={() => { setHasEditionFilter(prev => !prev); playSound('click'); }}
+                    className={`px-2.5 py-1.5 rounded border flex-row items-center gap-1 ${hasEditionFilter || formatFilter === 'HAS EDITION' ? 'bg-amber-500/20 border-amber-500/50' : 'bg-neutral-950 border-neutral-800'}`}
+                  >
+                    <Ionicons name="pricetag-outline" size={10} color={hasEditionFilter || formatFilter === 'HAS EDITION' ? '#f59e0b' : '#666'} />
+                    <Text className={`font-mono text-[10px] font-bold ${hasEditionFilter || formatFilter === 'HAS EDITION' ? 'text-amber-500' : 'text-neutral-500'}`}>HAS EDITION</Text>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={() => { setMultipackFilter(prev => !prev); playSound('click'); }}
+                    className={`px-2.5 py-1.5 rounded border flex-row items-center gap-1 ${multipackFilter || formatFilter === 'MULTI-PACK' ? 'bg-amber-500/20 border-amber-500/50' : 'bg-neutral-950 border-neutral-800'}`}
+                  >
+                    <Ionicons name="albums-outline" size={10} color={multipackFilter || formatFilter === 'MULTI-PACK' ? '#f59e0b' : '#666'} />
+                    <Text className={`font-mono text-[10px] font-bold ${multipackFilter || formatFilter === 'MULTI-PACK' ? 'text-amber-500' : 'text-neutral-500'}`}>MULTI-PACKS</Text>
+                  </Pressable>
 
                   <View className="h-4 w-[1px] bg-neutral-800 mx-1" />
                   
@@ -926,11 +1297,40 @@ export default function HomeScreen() {
             ) : (
                 <View>
                   <View className="flex-row flex-wrap" style={{ marginHorizontal: -(CARD_GAP / 2) }}>
-                    {filteredStacks.slice(0, displayLimit).map((stack: any) => (
-                      <View key={stack[0]?.id} style={{ width: `${100 / resolvedColumns}%`, paddingHorizontal: CARD_GAP / 2, marginBottom: 20, alignItems: 'center' }}>
-                        <StackCard stack={stack} onPress={() => navigateToDetail(stack[0])} onToggleFavorite={toggleFavorite} onLongPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); setQuickActionItem(stack[0]); }} onRatePress={(rating) => handleGridRate(stack[0], rating)} width={calculatedCardWidth} mode={viewMode === 'list' ? 'list' : 'grid'} activeFormatFilter={formatFilter} />
-                      </View>
-                    ))}
+                    {filteredStacks.slice(0, displayLimit).map((stack: any) => {
+                      const isPack = !!(stack[0] as any)?.__isMultipackStack;
+                      const stackKey = isPack
+                        ? `pack-${(stack[0] as any).__multipackTitle}`
+                        : `item-${stack[0]?.id}`;
+                      return (
+                        <View key={stackKey} style={{ width: `${100 / resolvedColumns}%`, paddingHorizontal: CARD_GAP / 2, marginBottom: 20, alignItems: 'center' }}>
+                          <StackCard
+                            stack={stack}
+                            onPress={() => {
+                              if (isPack) {
+                                playSound('click');
+                                setActiveMultipackName((stack[0] as any).__multipackTitle);
+                              } else {
+                                navigateToDetail(stack[0]);
+                              }
+                            }}
+                            onToggleFavorite={toggleFavorite}
+                            onLongPress={() => {
+                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                              if (isPack) {
+                                setActiveMultipackName((stack[0] as any).__multipackTitle);
+                              } else {
+                                setQuickActionItem(stack[0]);
+                              }
+                            }}
+                            onRatePress={(rating) => handleGridRate(stack[0], rating)}
+                            width={calculatedCardWidth}
+                            mode={viewMode === 'list' ? 'list' : 'grid'}
+                            activeFormatFilter={formatFilter}
+                          />
+                        </View>
+                      );
+                    })}
                   </View>
                   {displayLimit < filteredStacks.length && (
                     <Pressable 
@@ -980,6 +1380,16 @@ export default function HomeScreen() {
         onClose={() => setShowWatchLogModal(false)}
         collection={collection || []}
         navigateToDetail={navigateToDetail}
+      />
+
+      <MultipackModal
+        visible={!!activeMultipackName}
+        packName={activeMultipackName}
+        items={collection || []}
+        userId={userId || undefined}
+        isReadOnly={isGuest}
+        onClose={() => setActiveMultipackName(null)}
+        onSelectItem={(item) => navigateToDetail(item)}
       />
 
       {showRewind && (

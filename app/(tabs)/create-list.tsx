@@ -12,8 +12,9 @@ import { Ionicons } from '@expo/vector-icons';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import Slider from '@react-native-community/slider';
 import * as Haptics from 'expo-haptics';
+import { Image } from 'expo-image';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
     Alert,
     FlatList,
@@ -106,6 +107,125 @@ export default function CreateListScreen() {
 
     const selectedSet = useMemo(() => new Set(selectedOrder), [selectedOrder]);
 
+    const collectionMap = useMemo(() => {
+        const map = new Map<string, CollectionItemWithMedia>();
+        (collection || []).forEach((item: CollectionItemWithMedia) => {
+            if (item?.id) map.set(item.id, item);
+        });
+        return map;
+    }, [collection]);
+
+    const [trayDrag, setTrayDrag] = useState<{
+        id: string;
+        startIndex: number;
+        currentIndex: number;
+        dx: number;
+    } | null>(null);
+
+    const trayDragRef = useRef<{
+        id: string;
+        startIndex: number;
+        currentIndex: number;
+        startX: number;
+        baseOrder: string[];
+    } | null>(null);
+
+    const displayedSelectedOrder = useMemo(() => {
+        if (!trayDrag) return selectedOrder;
+        const { startIndex, currentIndex } = trayDrag;
+        if (
+            startIndex < 0 ||
+            startIndex >= selectedOrder.length ||
+            currentIndex < 0 ||
+            currentIndex >= selectedOrder.length ||
+            startIndex === currentIndex
+        ) {
+            return selectedOrder;
+        }
+        const copy = [...selectedOrder];
+        const [moved] = copy.splice(startIndex, 1);
+        copy.splice(currentIndex, 0, moved);
+        return copy;
+    }, [selectedOrder, trayDrag]);
+
+    const updateTrayDrag = useCallback((clientX: number) => {
+        const ref = trayDragRef.current;
+        if (!ref) return;
+        const dx = clientX - ref.startX;
+        const stepX = 64; // 56px card + 8px gap
+        const nextIndex = Math.max(
+            0,
+            Math.min(ref.baseOrder.length - 1, Math.round((ref.startIndex * stepX + dx) / stepX))
+        );
+        if (nextIndex !== ref.currentIndex) {
+            ref.currentIndex = nextIndex;
+            Haptics.selectionAsync();
+        }
+        setTrayDrag({
+            id: ref.id,
+            startIndex: ref.startIndex,
+            currentIndex: ref.currentIndex,
+            dx,
+        });
+    }, []);
+
+    const finishTrayDrag = useCallback(() => {
+        const ref = trayDragRef.current;
+        if (!ref) return;
+        trayDragRef.current = null;
+        setTrayDrag(null);
+        if (ref.currentIndex !== ref.startIndex) {
+            const copy = [...ref.baseOrder];
+            const [moved] = copy.splice(ref.startIndex, 1);
+            copy.splice(ref.currentIndex, 0, moved);
+            setSelectedOrder(copy);
+            playSound('click');
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
+    }, [playSound]);
+
+    const beginTrayDrag = useCallback(
+        (clientX: number, id: string, index: number) => {
+            trayDragRef.current = {
+                id,
+                startIndex: index,
+                currentIndex: index,
+                startX: clientX,
+                baseOrder: selectedOrder,
+            };
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            setTrayDrag({ id, startIndex: index, currentIndex: index, dx: 0 });
+
+            if (Platform.OS === 'web' && typeof window !== 'undefined') {
+                const onMouseMove = (ev: MouseEvent) => {
+                    ev.preventDefault();
+                    updateTrayDrag(ev.clientX);
+                };
+                const onTouchMove = (ev: TouchEvent) => {
+                    if (!trayDragRef.current) return;
+                    const t = ev.touches[0];
+                    if (!t) return;
+                    if (ev.cancelable) ev.preventDefault();
+                    updateTrayDrag(t.clientX);
+                };
+                const onUp = () => {
+                    window.removeEventListener('mousemove', onMouseMove);
+                    window.removeEventListener('mouseup', onUp);
+                    window.removeEventListener('touchmove', onTouchMove);
+                    window.removeEventListener('touchend', onUp);
+                    window.removeEventListener('touchcancel', onUp);
+                    finishTrayDrag();
+                };
+                window.addEventListener('mousemove', onMouseMove);
+                window.addEventListener('mouseup', onUp);
+                window.addEventListener('touchmove', onTouchMove, { passive: false });
+                window.addEventListener('touchend', onUp);
+                window.addEventListener('touchcancel', onUp);
+            }
+        },
+        [selectedOrder, updateTrayDrag, finishTrayDrag]
+    );
+
     if (collectionLoading) {
         return (
             <View className="flex-1 bg-neutral-950 items-center justify-center">
@@ -187,10 +307,13 @@ export default function CreateListScreen() {
         let items = collection || [];
 
         if (statusFilter !== 'all') {
-            items = items.filter((item: CollectionItemWithMedia) => item.status === statusFilter);
+            items = items.filter(
+                (item: CollectionItemWithMedia) =>
+                    item.status === statusFilter || selectedSet.has(item.id)
+            );
         }
 
-        return items.filter((item: CollectionItemWithMedia) => {
+        const matched = items.filter((item: CollectionItemWithMedia) => {
             const media = item.movies || item.shows;
             if (!media) return false;
 
@@ -242,7 +365,21 @@ export default function CreateListScreen() {
 
             return true;
         });
-    }, [collection, statusFilter, searchQuery, formatFilter, genreFilter, decadeFilter, minRatingFilter]);
+
+        const orderMap = new Map<string, number>();
+        selectedOrder.forEach((id, idx) => orderMap.set(id, idx));
+
+        return [...matched].sort((a, b) => {
+            const aSelected = orderMap.has(a.id);
+            const bSelected = orderMap.has(b.id);
+            if (aSelected && !bSelected) return -1;
+            if (!aSelected && bSelected) return 1;
+            if (aSelected && bSelected) {
+                return orderMap.get(a.id)! - orderMap.get(b.id)!;
+            }
+            return 0;
+        });
+    }, [collection, statusFilter, searchQuery, formatFilter, genreFilter, decadeFilter, minRatingFilter, selectedOrder]);
 
     const containerWidth = Math.min(windowWidth, 1200);
     const gap = 8;
@@ -455,6 +592,130 @@ export default function CreateListScreen() {
                     numberOfLines={2}
                     className="bg-neutral-900/70 border border-neutral-800 text-neutral-200 font-mono rounded-lg px-3.5 py-2 mb-2.5 text-xs"
                 />
+
+                {/* Draggable Ranked Lineup Tray */}
+                {isRanked && displayedSelectedOrder.length > 0 && (
+                    <View className="bg-neutral-900/80 border border-amber-500/40 rounded-xl p-2.5 mb-2.5">
+                        <View className="flex-row items-center justify-between mb-1.5">
+                            <View className="flex-row items-center gap-1.5">
+                                <Ionicons name="move" size={12} color="#f59e0b" />
+                                <Text
+                                    className="text-amber-400 text-[10px] font-bold uppercase tracking-wider"
+                                    style={{ fontFamily: 'VCR_OSD_MONO' }}
+                                >
+                                    RANK ORDER — DRAG POSTERS TO REORDER ({displayedSelectedOrder.length})
+                                </Text>
+                            </View>
+                        </View>
+                        <ScrollView
+                            horizontal
+                            scrollEnabled={trayDrag === null}
+                            showsHorizontalScrollIndicator={false}
+                            contentContainerStyle={{ gap: 8, paddingVertical: 2 }}
+                        >
+                            {displayedSelectedOrder.map((id, idx) => {
+                                const item = collectionMap.get(id);
+                                if (!item) return null;
+                                const posterPath =
+                                    item.movies?.poster_path || item.shows?.poster_path || null;
+                                const posterUrl =
+                                    item.custom_poster_url || getPosterUrl(posterPath, 'w185');
+                                const isDraggingThis = trayDrag?.id === id;
+                                const translateX =
+                                    isDraggingThis && trayDrag
+                                        ? trayDrag.dx - (idx - trayDrag.startIndex) * 64
+                                        : 0;
+
+                                return (
+                                    <View
+                                        key={id}
+                                        {...(Platform.OS === 'web'
+                                            ? ({
+                                                  onMouseDown: (e: any) => {
+                                                      if (e.button !== undefined && e.button !== 0)
+                                                          return;
+                                                      beginTrayDrag(e.clientX, id, idx);
+                                                  },
+                                                  onTouchStart: (e: any) => {
+                                                      const t =
+                                                          e.nativeEvent?.touches?.[0] ||
+                                                          e.touches?.[0] ||
+                                                          e.nativeEvent;
+                                                      const cx = t?.clientX ?? t?.pageX ?? 0;
+                                                      beginTrayDrag(cx, id, idx);
+                                                  },
+                                                  onDragStart: (e: any) => e.preventDefault(),
+                                              } as any)
+                                            : {
+                                                  onTouchStart: (e) =>
+                                                      beginTrayDrag(e.nativeEvent.pageX, id, idx),
+                                                  onTouchMove: (e) =>
+                                                      updateTrayDrag(e.nativeEvent.pageX),
+                                                  onTouchEnd: () => finishTrayDrag(),
+                                                  onTouchCancel: () => finishTrayDrag(),
+                                              })}
+                                        style={[
+                                            {
+                                                width: 56,
+                                                zIndex: isDraggingThis ? 999 : 1,
+                                                transform: isDraggingThis
+                                                    ? [{ translateX }, { scale: 1.08 }]
+                                                    : [],
+                                            },
+                                            Platform.OS === 'web'
+                                                ? ({
+                                                      touchAction: 'none',
+                                                      userSelect: 'none',
+                                                      cursor: isDraggingThis ? 'grabbing' : 'grab',
+                                                  } as any)
+                                                : null,
+                                        ]}
+                                    >
+                                        <View
+                                            style={{
+                                                width: 56,
+                                                height: 80,
+                                                borderRadius: 6,
+                                                overflow: 'hidden',
+                                                borderWidth: isDraggingThis ? 2 : 1,
+                                                borderColor: isDraggingThis ? '#f59e0b' : '#404040',
+                                                backgroundColor: '#171717',
+                                            }}
+                                        >
+                                            {posterUrl ? (
+                                                <Image
+                                                    source={{ uri: posterUrl }}
+                                                    style={{ width: '100%', height: '100%' }}
+                                                    contentFit="cover"
+                                                />
+                                            ) : null}
+                                            <View className="absolute top-1 left-1 bg-amber-500 border border-black px-1.5 py-0.5 rounded">
+                                                <Text
+                                                    className="text-black font-black text-[9px]"
+                                                    style={{ fontFamily: 'VCR_OSD_MONO' }}
+                                                >
+                                                    #{idx + 1}
+                                                </Text>
+                                            </View>
+                                            <Pressable
+                                                onPress={(e) => {
+                                                    e.stopPropagation();
+                                                    playSound('click');
+                                                    setSelectedOrder((prev) =>
+                                                        prev.filter((x) => x !== id)
+                                                    );
+                                                }}
+                                                className="absolute top-1 right-1 bg-black/80 w-4 h-4 rounded-full items-center justify-center"
+                                            >
+                                                <Ionicons name="close" size={10} color="#ef4444" />
+                                            </Pressable>
+                                        </View>
+                                    </View>
+                                );
+                            })}
+                        </ScrollView>
+                    </View>
+                )}
 
                 {/* Search + Status + Filter Toggle Row */}
                 <View className="flex-row items-center gap-2 mb-2 flex-wrap">

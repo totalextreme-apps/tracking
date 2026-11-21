@@ -1,4 +1,4 @@
-import { CuratedStackMeta, isStackMetaEntry, serializeStackMeta, STACK_META_PREFIX } from '@/lib/collection-utils';
+import { CuratedStackMeta, isStackMetaEntry, serializeStackMeta, STACK_META_PREFIX, withItemMetadata } from '@/lib/collection-utils';
 import { supabase } from '@/lib/supabase';
 import { getMovieById, getTvShowById, type TmdbMediaResult } from '@/lib/tmdb';
 import type { CollectionItemWithMedia, MovieFormat } from '@/types/database';
@@ -122,6 +122,10 @@ export function useAddToCollection(userId: string | undefined) {
       edition = null,
       seasonNumber = null,
       isBootleg = false,
+      customTitle = null,
+      multipack = null,
+      customPosterUrl = null,
+      customBackdropUrl = null,
     }: {
       tmdbItem: TmdbMediaResult;
       formats: MovieFormat[];
@@ -129,6 +133,10 @@ export function useAddToCollection(userId: string | undefined) {
       edition?: string | null;
       seasonNumber?: number | null;
       isBootleg?: boolean;
+      customTitle?: string | null;
+      multipack?: string | null;
+      customPosterUrl?: string | null;
+      customBackdropUrl?: string | null;
     }) => {
       if (!userId) {
         console.error('useAddToCollection: No userId provided');
@@ -258,6 +266,8 @@ export function useAddToCollection(userId: string | undefined) {
         console.warn('Failed to inherit franchise info:', e);
       }
 
+      const metaLists = withItemMetadata([], { customTitle, multipack });
+
       const itemsToInsert = formats.map((format) => ({
         user_id: userId,
         media_type: mediaType,
@@ -270,12 +280,32 @@ export function useAddToCollection(userId: string | undefined) {
         is_bootleg: !!isBootleg,
         franchise: inheritedFranchise,
         franchise_order: inheritedFranchiseOrder,
+        ...(metaLists.length > 0 ? { custom_lists: metaLists } : {}),
+        ...(customPosterUrl ? { custom_poster_url: customPosterUrl } : {}),
+        ...(customBackdropUrl ? { custom_backdrop_url: customBackdropUrl } : {}),
       }));
 
-      const { data: insertedItems, error: itemError } = await supabase
+      let { data: insertedItems, error: itemError } = await supabase
         .from('collection_items')
         .insert(itemsToInsert as any)
         .select('id');
+
+      if (itemError && itemError.code === '23505' && !edition && (customTitle || multipack)) {
+        // Auto-disambiguate edition using customTitle or multipack so multiple Specials/Volumes in the same format never collide
+        const fallbackEdition = (customTitle || multipack || '').trim();
+        if (fallbackEdition) {
+          const retryPayload = itemsToInsert.map((item) => ({
+            ...item,
+            edition: fallbackEdition,
+          }));
+          const retryRes = await supabase
+            .from('collection_items')
+            .insert(retryPayload as any)
+            .select('id');
+          insertedItems = retryRes.data;
+          itemError = retryRes.error;
+        }
+      }
 
       if (itemError) {
         if (itemError.code === '23505') {
@@ -295,7 +325,7 @@ export function useAddToCollection(userId: string | undefined) {
                  throw new Error(`WISHLIST_CONFLICT:::${wishlistMatch.id}:::${wishlistMatch.format}`);
               }
           }
-          throw new Error('You already own this format/season. Fill in the Edition field to add another copy.');
+          throw new Error('You already own this format/season. Fill in the Edition or Custom Title field to add another copy.');
         }
         throw itemError;
       }
@@ -532,7 +562,30 @@ export function useUpdateStackMeta(userId: string | undefined) {
       const firstError = results.find((r: any) => r.error)?.error;
       if (firstError) throw firstError;
     },
-    onSuccess: async () => {
+    onMutate: async ({ listName, meta }) => {
+      if (!userId) return;
+      await queryClient.cancelQueries({ queryKey: ['collection', userId] });
+      const previous = queryClient.getQueryData(['collection', userId]);
+      const encodedMeta = serializeStackMeta(listName, { ...meta, updatedAt: Date.now() });
+
+      queryClient.setQueryData(['collection', userId], (old: any) => {
+        if (!Array.isArray(old)) return old;
+        return old.map((item: any) => {
+          if (!item?.custom_lists?.includes(listName)) return item;
+          const cleaned = item.custom_lists.filter((l: string) => !isStackMetaEntry(l, listName));
+          cleaned.push(encodedMeta);
+          return { ...item, custom_lists: cleaned };
+        });
+      });
+
+      return { previous };
+    },
+    onError: (_err, _vars, context: any) => {
+      if (context?.previous && userId) {
+        queryClient.setQueryData(['collection', userId], context.previous);
+      }
+    },
+    onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: ['collection'] });
       await queryClient.invalidateQueries({ queryKey: ['custom_list_preview'] });
     },

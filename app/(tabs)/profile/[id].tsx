@@ -15,7 +15,7 @@ import { StatusBar } from 'expo-status-bar';
 import { OnDisplayCard } from '@/components/OnDisplayCard';
 import { ReorderShelfModal } from '@/components/ReorderShelfModal';
 import { ShareModal } from '@/components/ShareModal';
-import { getCustomLists, getGenres, getStackMeta, getStacks } from '@/lib/collection-utils';
+import { getCustomLists, getGenres, getStackMeta, getStacks, getItemCustomTitle, getItemDisplayTitle, getItemMultipack } from '@/lib/collection-utils';
 
 import { CommunityHeaderNav } from '@/components/CommunityHeaderNav';
 import { DesktopContainer } from '@/components/DesktopContainer';
@@ -99,7 +99,7 @@ export default function UserProfileScreen() {
     let result = [...(items || [])];
 
     if (searchQuery) {
-      const noiseWords = new Set(['remake', 'original', 'reboot', 'sequel', 'movie', 'tv', 'show', 'series', 'film', 'version', 'cut', 'edition']);
+      const noiseWords = new Set(['remake', 'original', 'reboot', 'sequel', 'tv', 'show', 'series', 'film']);
       const tokens = searchQuery
         .toLowerCase()
         .split(/[\s,()]+/)
@@ -112,13 +112,16 @@ export default function UserProfileScreen() {
           if (!m) return false;
 
           const title = (m.title || m.name || '').toLowerCase();
+          const customTitle = (getItemCustomTitle(item) || '').toLowerCase();
+          const multipack = (getItemMultipack(item) || '').toLowerCase();
           const year = (m.release_date || m.first_air_date || '').slice(0, 4);
           const format = (item.format || '').toLowerCase();
           const edition = (item.edition || '').toLowerCase();
+          const notes = (item.notes || '').toLowerCase();
           const franchise = (item.franchise || '').toLowerCase();
           const tags = (m.sorting_tags || '').toLowerCase();
           
-          const searchableTexts: string[] = [title, year, format, edition, franchise, tags];
+          const searchableTexts: string[] = [title, customTitle, multipack, year, format, edition, notes, franchise, tags];
           
           if (m.genres && Array.isArray(m.genres)) {
             m.genres.forEach((g: any) => {
@@ -144,6 +147,8 @@ export default function UserProfileScreen() {
     if (formatFilter && formatFilter !== 'ALL') {
       result = result.filter(item => {
         if (formatFilter === 'BOOTLEG') return item.is_bootleg;
+        if (formatFilter === 'MULTI-PACK') return !!getItemMultipack(item);
+        if (formatFilter === 'HAS EDITION') return !!(item.edition && item.edition.trim().length > 0);
         return item.format === formatFilter;
       });
     }
@@ -665,13 +670,13 @@ export default function UserProfileScreen() {
             <>
               <View className="mb-4">
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-                {['ALL', 'VHS', 'DVD', 'BluRay', '4K', 'Digital', 'BOOTLEG'].map(f => {
+                {['ALL', 'VHS', 'DVD', 'BluRay', '4K', 'Digital', 'MULTI-PACK', 'HAS EDITION', 'BOOTLEG'].map(f => {
                    const isSelected = f === 'ALL' ? formatFilter === null : formatFilter === f;
                    const labelText = f === 'BluRay' ? 'BLU-RAY' : f.toUpperCase();
                    return (
                      <Pressable 
                        key={f} 
-                       onPress={() => setFormatFilter(f === 'ALL' ? null : f)} 
+                       onPress={() => setFormatFilter(f === 'ALL' ? null : (isSelected ? null : f))} 
                        className={`px-3 py-1 rounded-full border ${isSelected ? 'bg-amber-500/20 border-amber-500/50' : 'bg-neutral-900 border-neutral-800'}`}
                      >
                        <Text className={`font-mono text-[10px] uppercase font-bold ${isSelected ? 'text-amber-500' : 'text-neutral-500'}`}>{labelText}</Text>

@@ -14,6 +14,7 @@ import { NoPosterPlaceholder } from '@/components/NoPosterPlaceholder';
 import { VHSCard } from '@/components/VHSCard';
 
 import { ImageCropModal } from '@/components/ImageCropModal';
+import { MultipackModal } from '@/components/MultipackModal';
 import { ShareableCard } from '@/components/ShareableCard';
 import { useAuth } from '@/context/AuthContext';
 import { useSound } from '@/context/SoundContext';
@@ -24,7 +25,7 @@ import { ReviewSection } from '@/components/ReviewSection';
 import { CommentSection } from '@/components/CommentSection';
 import { CelebrationOverlay } from '@/components/CelebrationOverlay';
 import { deleteFromCloudinary, uploadToCloudinary } from '@/lib/cloudinary';
-import { getCustomLists } from '@/lib/collection-utils';
+import { getCustomLists, getExistingMultipacks, getItemCustomTitle, getItemDisplayTitle, getItemMultipack, withItemMetadata } from '@/lib/collection-utils';
 import { supabase } from '@/lib/supabase';
 import { fetchEbaySoldValue, getEbaySearchUrl, isErrantShippingPrice } from '@/lib/pricing';
 import { useReactions } from '@/hooks/useReactions';
@@ -91,7 +92,7 @@ function MovieDetailReactionSection({ collectionItemId, userId }: { collectionIt
 }
 
 export default function MovieDetailScreen() {
-    const { id, fromStack, ownerId, from } = useLocalSearchParams<{ id: string; fromStack?: string; ownerId?: string; from?: string }>();
+    const { id, itemId: paramItemId, fromStack, ownerId, from } = useLocalSearchParams<{ id: string; itemId?: string; fromStack?: string; ownerId?: string; from?: string }>();
     const router = useRouter();
     const { userId } = useAuth();
     const { thriftMode } = useThriftMode();
@@ -99,11 +100,14 @@ export default function MovieDetailScreen() {
     const { width: windowWidth } = useWindowDimensions();
     const isDesktop = Platform.OS === 'web' && windowWidth >= 768;
     const insets = useSafeAreaInsets();
-    const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+    const [selectedItemId, setSelectedItemId] = useState<string | null>(paramItemId || null);
     const [ejecting, setEjecting] = useState(false);
     const [showShareModal, setShowShareModal] = useState(false);
     const [localNotes, setLocalNotes] = useState<Record<string, string>>({});
     const [localEditions, setLocalEditions] = useState<Record<string, string>>({});
+    const [localCustomTitles, setLocalCustomTitles] = useState<Record<string, string>>({});
+    const [localIsMultipack, setLocalIsMultipack] = useState<Record<string, boolean>>({});
+    const [localMultipacks, setLocalMultipacks] = useState<Record<string, string>>({});
     const [localBootlegs, setLocalBootlegs] = useState<Record<string, boolean>>({});
     const [localValues, setLocalValues] = useState<Record<string, string>>({});
     const [localForSale, setLocalForSale] = useState<Record<string, boolean>>({});
@@ -126,6 +130,10 @@ export default function MovieDetailScreen() {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [pendingFormat, setPendingFormat] = useState<string | null>(null);
     const [editionInput, setEditionInput] = useState('');
+    const [modalCustomTitle, setModalCustomTitle] = useState('');
+    const [modalIsMultipack, setModalIsMultipack] = useState(false);
+    const [modalMultipackName, setModalMultipackName] = useState('');
+    const [activeMultipackModalName, setActiveMultipackModalName] = useState<string | null>(null);
     const [editNoteModalVisible, setEditNoteModalVisible] = useState(false);
     const [editingNoteForFormat, setEditingNoteForFormat] = useState<string | null>(null);
     const [noteDraft, setNoteDraft] = useState('');
@@ -345,7 +353,10 @@ export default function MovieDetailScreen() {
         setLocalFranchiseOrder(undefined);
         setLocalSortingTags(undefined);
         setLocalCustomGenre(undefined);
-    }, [movieId]);
+        if (paramItemId) {
+            setSelectedItemId(paramItemId);
+        }
+    }, [movieId, paramItemId]);
 
     useEffect(() => {
         if (isReadOnly || !movie || !movie.title || movieItems.length === 0) return;
@@ -739,11 +750,16 @@ export default function MovieDetailScreen() {
         }
     };
 
+    const existingMultipacks = useMemo(() => getExistingMultipacks(collection), [collection]);
+
     // Play sound when toggling format
     const handleFormatPress = async (fmt: MovieFormat) => {
         // Show edition modal for adding format
         setPendingFormat(fmt);
         setEditionInput('');
+        setModalCustomTitle('');
+        setModalIsMultipack(false);
+        setModalMultipackName('');
         setModalStatus(thriftMode ? 'wishlist' : 'owned');
         setShowEditionModal(true);
         playSound('click');
@@ -754,14 +770,14 @@ export default function MovieDetailScreen() {
 
         const isDuplicate = movieItems.some((item: any) => item.format === pendingFormat);
 
-        // Validate: Edition required if duplicate
-        if (isDuplicate && !editionInput.trim()) {
-            Alert.alert('Edition Required', 'Please enter an edition name for this duplicate format.');
+        // Validate: Edition or Custom Title required if duplicate
+        if (isDuplicate && !editionInput.trim() && !modalCustomTitle.trim() && !(modalIsMultipack && modalMultipackName.trim())) {
+            Alert.alert('Edition or Custom Title Required', 'Please enter an edition name, custom title, or multi-pack name for this duplicate format.');
             return;
         }
 
         try {
-            // Add the format with edition
+            // Add the format with edition, custom title, and multipack
             const result = await addMutation.mutateAsync({
                 tmdbItem: {
                     id: activeMovie.tmdb_id,
@@ -774,7 +790,9 @@ export default function MovieDetailScreen() {
                 } as any,
                 formats: [pendingFormat as MovieFormat],
                 status: modalStatus,
-                edition: editionInput.trim() || null
+                edition: editionInput.trim() || null,
+                customTitle: modalCustomTitle.trim() || null,
+                multipack: modalIsMultipack && modalMultipackName.trim() ? modalMultipackName.trim() : null,
             });
 
             // Play sound
@@ -796,6 +814,9 @@ export default function MovieDetailScreen() {
             setEditingNoteForFormat(null);
             setPendingFormat(null);
             setEditionInput('');
+            setModalCustomTitle('');
+            setModalIsMultipack(false);
+            setModalMultipackName('');
         } catch (e: any) {
             const msg = e?.message || String(e);
             if (msg.startsWith('WISHLIST_CONFLICT:::')) {
@@ -1055,8 +1076,27 @@ export default function MovieDetailScreen() {
                             )}
 
                             <Text className="text-white font-bold text-xl leading-6 mb-0.5">
-                                {displayMovie.title} {displayMovie.release_date ? `(${displayMovie.release_date.slice(0, 4)})` : ''}
+                                {getItemCustomTitle(activeItem) || displayMovie.title} {displayMovie.release_date ? `(${displayMovie.release_date.slice(0, 4)})` : ''}
                             </Text>
+                            {getItemCustomTitle(activeItem) && displayMovie.title && getItemCustomTitle(activeItem)?.toLowerCase() !== displayMovie.title.toLowerCase() && (
+                                <Text className="text-neutral-400 font-mono text-[10px] mb-0.5">
+                                    Original Title: {displayMovie.title}
+                                </Text>
+                            )}
+                            {getItemMultipack(activeItem) && (
+                                <Pressable
+                                    onPress={() => {
+                                        playSound('click');
+                                        setActiveMultipackModalName(getItemMultipack(activeItem));
+                                    }}
+                                    className="bg-amber-500/15 border border-amber-500/40 px-2.5 py-1 rounded-md self-start flex-row items-center mt-1 mb-0.5 active:bg-amber-500/25"
+                                >
+                                    <Ionicons name="albums-outline" size={11} color="#f59e0b" style={{ marginRight: 5 }} />
+                                    <Text className="text-amber-400 font-mono text-[9px] font-bold uppercase">
+                                        MULTI-PACK: {getItemMultipack(activeItem)} ›
+                                    </Text>
+                                </Pressable>
+                            )}
                             {/* Franchise Tag Badge */}
                             {movieItems[0]?.franchise ? (
                                 <View className="bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-md self-start flex-row items-center mt-1 mb-0.5">
@@ -1450,14 +1490,21 @@ export default function MovieDetailScreen() {
                         </View>
                     )}
 
-                    {/* Format Notes Section */}
+                    {/* Format Notes & Release Customization Section */}
                     {
-                        ownedFormats.length > 0 && (
+                        movieItems.length > 0 && !isReadOnly && (
                             <View className="mt-6">
-                                <Text className="text-white font-bold mb-2">Format Notes</Text>
-                                {movieItems.filter((i: any) => i.status === 'owned').map((item: any) => (
-                                    <View key={item.id} className="mb-4">
-                                        <View className="flex-row items-center flex-wrap mb-2">
+                                <Text className="text-white font-bold mb-2">Release Details & Format Notes</Text>
+                                {movieItems.map((item: any) => {
+                                    const currentCustomTitle = localCustomTitles[item.id] !== undefined ? localCustomTitles[item.id] : (getItemCustomTitle(item) || '');
+                                    const savedMultipack = getItemMultipack(item);
+                                    const isPackChecked = localIsMultipack[item.id] !== undefined ? localIsMultipack[item.id] : !!savedMultipack;
+                                    const currentMultipackName = localMultipacks[item.id] !== undefined ? localMultipacks[item.id] : (savedMultipack || '');
+                                    const currentEdition = localEditions[item.id] !== undefined ? localEditions[item.id] : (item.edition || '');
+
+                                    return (
+                                    <View key={item.id} className="mb-5 bg-neutral-900/40 border border-neutral-800/80 rounded-xl p-3">
+                                        <View className="flex-row items-center flex-wrap mb-2.5">
                                             <Pressable 
                                                 onPress={() => {
                                                     setSelectedItemId(item.id);
@@ -1467,6 +1514,11 @@ export default function MovieDetailScreen() {
                                             >
                                                 <Text className="text-white font-mono text-xs font-bold">{item.format === 'BluRay' ? 'Blu-ray' : item.format}</Text>
                                             </Pressable>
+                                            {item.status === 'wishlist' && (
+                                                <View className="border border-dashed border-neutral-500 px-1.5 py-0.5 rounded-sm ml-2">
+                                                    <Text className="text-neutral-400 font-mono text-[9px] font-bold uppercase tracking-wider">WISHLIST</Text>
+                                                </View>
+                                            )}
                                             {item.value_estimate !== null && item.value_estimate !== undefined && !isErrantShippingPrice(item.value_estimate) && (
                                                 <View className="bg-neutral-800 border border-neutral-700/50 px-2 py-0.5 rounded ml-2">
                                                     <Text className="text-amber-400 font-mono text-[10px] font-bold">
@@ -1493,15 +1545,107 @@ export default function MovieDetailScreen() {
                                                 Added: {new Date(item.created_at).toLocaleDateString()} {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                             </Text>
                                         </View>
+
+                                        <Text className="text-neutral-500 font-mono text-[10px] font-bold uppercase mb-1">
+                                            Custom Display Title (Overrides TMDB Title for this copy)
+                                        </Text>
+                                        <TextInput
+                                            className="bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm mb-2"
+                                            placeholder={`Custom Title (e.g. Dead Alive, ${displayMovie.title || 'Alternate Title'})`}
+                                            placeholderTextColor="#525252"
+                                            value={currentCustomTitle}
+                                            onChangeText={(text) => setLocalCustomTitles(prev => ({ ...prev, [item.id]: text }))}
+                                            autoCapitalize="words"
+                                            autoCorrect={false}
+                                        />
+
+                                        <Text className="text-neutral-500 font-mono text-[10px] font-bold uppercase mb-1">
+                                            Edition / Format Text
+                                        </Text>
                                         <TextInput
                                              className="bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm mb-2"
                                              placeholder="Edition (Theatrical, Unrated, Director's Cut, etc.)"
                                              placeholderTextColor="#525252"
-                                             value={localEditions[item.id] !== undefined ? localEditions[item.id] : (item.edition || '')}
+                                             value={currentEdition}
                                              onChangeText={(text) => setLocalEditions(prev => ({ ...prev, [item.id]: text }))}
                                              autoCapitalize="words"
                                              autoCorrect={false}
                                          />
+
+                                        {/* Multi-pack / Compilation Checkbox & Input */}
+                                        <View className="bg-neutral-900 border border-neutral-800 rounded-lg p-3 mb-2">
+                                            <Pressable
+                                                onPress={() => {
+                                                    playSound('click');
+                                                    setLocalIsMultipack(prev => ({ ...prev, [item.id]: !isPackChecked }));
+                                                }}
+                                                className="flex-row items-center justify-between"
+                                            >
+                                                <View className="flex-row items-center gap-2 flex-1 pr-2">
+                                                    <View className={`w-5 h-5 rounded border items-center justify-center ${isPackChecked ? 'bg-amber-500 border-amber-400' : 'bg-neutral-950 border-neutral-700'}`}>
+                                                        {isPackChecked && <Ionicons name="checkmark" size={14} color="#000" />}
+                                                    </View>
+                                                    <View className="flex-1">
+                                                        <Text className="text-white font-mono text-xs font-bold">
+                                                            PART OF A COMPILATION / MULTI-PACK
+                                                        </Text>
+                                                        <Text className="text-neutral-500 font-mono text-[9px]">
+                                                            Displays a stacked Multi-pack card in your collection
+                                                        </Text>
+                                                    </View>
+                                                </View>
+                                                {currentEdition.trim().length > 0 && (!isPackChecked || !currentMultipackName.trim()) && (
+                                                    <Pressable
+                                                        onPress={() => {
+                                                            playSound('click');
+                                                            setLocalIsMultipack(prev => ({ ...prev, [item.id]: true }));
+                                                            setLocalMultipacks(prev => ({ ...prev, [item.id]: currentEdition.trim() }));
+                                                        }}
+                                                        className="bg-amber-500/15 border border-amber-500/40 px-2 py-1 rounded"
+                                                    >
+                                                        <Text className="text-amber-400 font-mono text-[8px] font-bold">USE EDITION</Text>
+                                                    </Pressable>
+                                                )}
+                                            </Pressable>
+
+                                            {isPackChecked && (
+                                                <View className="mt-3 pt-2.5 border-t border-neutral-800">
+                                                    <TextInput
+                                                        className="bg-neutral-950 text-white p-2.5 rounded-lg border border-neutral-800 font-mono text-xs"
+                                                        placeholder="Multi-pack Name (e.g. 4 Movie Midnight Marathon Pack: Aliens)"
+                                                        placeholderTextColor="#525252"
+                                                        value={currentMultipackName}
+                                                        onChangeText={(text) => setLocalMultipacks(prev => ({ ...prev, [item.id]: text }))}
+                                                        autoCapitalize="words"
+                                                        autoCorrect={false}
+                                                    />
+                                                    {existingMultipacks.length > 0 && (
+                                                        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mt-2">
+                                                            <View className="flex-row gap-1.5">
+                                                                {existingMultipacks.map((pack) => {
+                                                                    const isSelected = currentMultipackName.trim().toLowerCase() === pack.toLowerCase();
+                                                                    return (
+                                                                        <Pressable
+                                                                            key={pack}
+                                                                            onPress={() => {
+                                                                                playSound('click');
+                                                                                setLocalMultipacks(prev => ({ ...prev, [item.id]: pack }));
+                                                                            }}
+                                                                            className={`px-2.5 py-1 rounded-full border ${isSelected ? 'bg-amber-500/20 border-amber-500' : 'bg-neutral-950 border-neutral-800'}`}
+                                                                        >
+                                                                            <Text className={`font-mono text-[9px] ${isSelected ? 'text-amber-400 font-bold' : 'text-neutral-400'}`}>
+                                                                                📦 {pack}
+                                                                            </Text>
+                                                                        </Pressable>
+                                                                    );
+                                                                })}
+                                                            </View>
+                                                        </ScrollView>
+                                                    )}
+                                                </View>
+                                            )}
+                                        </View>
+
                                         <TextInput
                                             className="bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm"
                                             placeholder={`Add notes for your ${item.format === 'BluRay' ? 'Blu-ray' : item.format} copy...`}
@@ -1608,9 +1752,17 @@ export default function MovieDetailScreen() {
                                             onPress={async () => {
                                                 const noteToSave = localNotes[item.id] !== undefined ? localNotes[item.id] : (item.notes || '');
                                                 const editionToSave = localEditions[item.id] !== undefined ? localEditions[item.id] : (item.edition || '');
+                                                const customTitleToSave = (localCustomTitles[item.id] !== undefined ? localCustomTitles[item.id] : (getItemCustomTitle(item) || '')).trim();
+                                                const multipackToSave = isPackChecked
+                                                    ? (localMultipacks[item.id] !== undefined ? localMultipacks[item.id] : (savedMultipack || '')).trim()
+                                                    : '';
                                                 const bootToSave = localBootlegs[item.id] !== undefined ? localBootlegs[item.id] : (item.is_bootleg || false);
                                                 const valRaw = localValues[item.id] !== undefined ? localValues[item.id] : (item.value_estimate?.toString() || '');
                                                 const valToSave = valRaw.trim() === '' ? null : parseFloat(valRaw);
+                                                const updatedLists = withItemMetadata(item.custom_lists, {
+                                                    customTitle: customTitleToSave || null,
+                                                    multipack: multipackToSave || null,
+                                                });
                                                 // Save copy specific updates
                                                 await updateMutation.mutateAsync({
                                                     itemId: item.id,
@@ -1618,7 +1770,8 @@ export default function MovieDetailScreen() {
                                                         notes: noteToSave,
                                                         edition: editionToSave || null,
                                                         is_bootleg: bootToSave,
-                                                        value_estimate: isNaN(valToSave as any) ? null : valToSave
+                                                        value_estimate: isNaN(valToSave as any) ? null : valToSave,
+                                                        custom_lists: updatedLists,
                                                     }
                                                 });
 
@@ -1635,7 +1788,8 @@ export default function MovieDetailScreen() {
                                             </Text>
                                         </Pressable>
                                     </View>
-                                ))}
+                                    );
+                                })}
                             </View>
                         )
                     }
@@ -1750,8 +1904,26 @@ export default function MovieDetailScreen() {
                                                             </Text>
                                                         </View>
                                                     )}
+                                                    {getItemCustomTitle(item) && (
+                                                        <Text className="text-white font-mono text-xs font-bold" numberOfLines={1}>
+                                                            "{getItemCustomTitle(item)}"
+                                                        </Text>
+                                                    )}
                                                     {item.edition && (
                                                         <Text className="text-neutral-400 font-mono text-sm flex-1" numberOfLines={2}>({item.edition})</Text>
+                                                    )}
+                                                    {getItemMultipack(item) && (
+                                                        <Pressable
+                                                            onPress={() => {
+                                                                playSound('click');
+                                                                setActiveMultipackModalName(getItemMultipack(item));
+                                                            }}
+                                                            className="bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded"
+                                                        >
+                                                            <Text className="text-amber-400 font-mono text-[9px] font-bold">
+                                                                📦 {getItemMultipack(item)}
+                                                            </Text>
+                                                        </Pressable>
                                                     )}
                                                 </View>
                                                 {!isReadOnly && (
@@ -2114,9 +2286,20 @@ export default function MovieDetailScreen() {
                         </View>
 
                         <TextInput
+                            nativeID="modal-custom-title-input"
+                            className="bg-neutral-800 text-white p-3 rounded-lg border border-neutral-700 font-mono text-sm mb-2"
+                            placeholder="Custom Display Title (optional, e.g., Dead Alive)"
+                            placeholderTextColor="#525252"
+                            value={modalCustomTitle}
+                            onChangeText={setModalCustomTitle}
+                            autoCapitalize="words"
+                            autoCorrect={false}
+                        />
+
+                        <TextInput
                             nativeID="modal-edition-input"
                             {...({ name: 'modal-edition' } as any)}
-                            className="bg-neutral-800 text-white p-3 rounded-lg border border-neutral-700 font-mono text-sm mb-4"
+                            className="bg-neutral-800 text-white p-3 rounded-lg border border-neutral-700 font-mono text-sm mb-3"
                             placeholder="Edition (e.g., Theatrical, Unrated)"
                             placeholderTextColor="#525252"
                             value={editionInput}
@@ -2126,12 +2309,69 @@ export default function MovieDetailScreen() {
                             autoFocus
                         />
 
+                        {/* Multi-pack checkbox inside Add Format Modal */}
+                        <View className="bg-neutral-800/80 border border-neutral-700 rounded-lg p-3 mb-4">
+                            <Pressable
+                                onPress={() => {
+                                    playSound('click');
+                                    setModalIsMultipack(!modalIsMultipack);
+                                }}
+                                className="flex-row items-center gap-2"
+                            >
+                                <View className={`w-5 h-5 rounded border items-center justify-center ${modalIsMultipack ? 'bg-amber-500 border-amber-400' : 'bg-neutral-900 border-neutral-600'}`}>
+                                    {modalIsMultipack && <Ionicons name="checkmark" size={14} color="#000" />}
+                                </View>
+                                <Text className="text-white font-mono text-xs font-bold">
+                                    PART OF A COMPILATION / MULTI-PACK
+                                </Text>
+                            </Pressable>
+                            {modalIsMultipack && (
+                                <View className="mt-2.5 pt-2.5 border-t border-neutral-700">
+                                    <TextInput
+                                        className="bg-neutral-900 text-white p-2.5 rounded-lg border border-neutral-700 font-mono text-xs"
+                                        placeholder="Multi-pack Name (e.g. 4 Movie Midnight Marathon Pack)"
+                                        placeholderTextColor="#525252"
+                                        value={modalMultipackName}
+                                        onChangeText={setModalMultipackName}
+                                        autoCapitalize="words"
+                                        autoCorrect={false}
+                                    />
+                                    {existingMultipacks.length > 0 && (
+                                        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mt-2">
+                                            <View className="flex-row gap-1.5">
+                                                {existingMultipacks.map((pack) => {
+                                                    const isSelected = modalMultipackName.trim().toLowerCase() === pack.toLowerCase();
+                                                    return (
+                                                        <Pressable
+                                                            key={pack}
+                                                            onPress={() => {
+                                                                playSound('click');
+                                                                setModalMultipackName(pack);
+                                                            }}
+                                                            className={`px-2.5 py-1 rounded-full border ${isSelected ? 'bg-amber-500/20 border-amber-500' : 'bg-neutral-950 border-neutral-700'}`}
+                                                        >
+                                                            <Text className={`font-mono text-[9px] ${isSelected ? 'text-amber-400 font-bold' : 'text-neutral-300'}`}>
+                                                                📦 {pack}
+                                                            </Text>
+                                                        </Pressable>
+                                                    );
+                                                })}
+                                            </View>
+                                        </ScrollView>
+                                    )}
+                                </View>
+                            )}
+                        </View>
+
                         <View className="flex-row gap-2">
                             <Pressable
                                 onPress={() => {
                                     setShowEditionModal(false);
                                     setPendingFormat(null);
                                     setEditionInput('');
+                                    setModalCustomTitle('');
+                                    setModalIsMultipack(false);
+                                    setModalMultipackName('');
                                 }}
                                 className="flex-1 bg-neutral-800 py-3 rounded-lg items-center"
                             >
@@ -2239,6 +2479,23 @@ export default function MovieDetailScreen() {
                     }}
                 />
             )}
+            <MultipackModal
+                visible={!!activeMultipackModalName}
+                packName={activeMultipackModalName}
+                items={collection || []}
+                userId={userId}
+                isReadOnly={isReadOnly}
+                onClose={() => setActiveMultipackModalName(null)}
+                onSelectItem={(selected) => {
+                    if (selected.media_type === 'tv') {
+                        const showId = selected.show_id || selected.shows?.id;
+                        if (showId) router.push({ pathname: '/show/[id]', params: { id: showId, season: selected.season_number ?? 1, itemId: selected.id } } as any);
+                    } else {
+                        const mId = selected.movie_id || selected.movies?.id;
+                        if (mId) router.push({ pathname: '/movie/[id]', params: { id: mId, itemId: selected.id } } as any);
+                    }
+                }}
+            />
         </View >
     );
 }

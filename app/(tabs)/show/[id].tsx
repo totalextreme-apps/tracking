@@ -15,6 +15,7 @@ import { NoPosterPlaceholder } from '@/components/NoPosterPlaceholder';
 import { VHSCard } from '@/components/VHSCard';
 
 import { ImageCropModal } from '@/components/ImageCropModal';
+import { MultipackModal } from '@/components/MultipackModal';
 import { useAuth } from '@/context/AuthContext';
 import { useSound } from '@/context/SoundContext';
 import { useThriftMode } from '@/context/ThriftModeContext';
@@ -24,7 +25,7 @@ import { ReviewSection } from '@/components/ReviewSection';
 import { CommentSection } from '@/components/CommentSection';
 import { CelebrationOverlay } from '@/components/CelebrationOverlay';
 import { deleteFromCloudinary, uploadToCloudinary } from '@/lib/cloudinary';
-import { getCustomLists } from '@/lib/collection-utils';
+import { getCustomLists, getExistingMultipacks, getItemCustomTitle, getItemDisplayTitle, getItemMultipack, withItemMetadata } from '@/lib/collection-utils';
 import { supabase } from '@/lib/supabase';
 import { fetchEbaySoldValue, getEbaySearchUrl, isErrantShippingPrice } from '@/lib/pricing';
 import { useReactions } from '@/hooks/useReactions';
@@ -91,7 +92,7 @@ function ShowDetailReactionSection({ collectionItemId, userId }: { collectionIte
 }
 
 export default function ShowDetailScreen() {
-    const { id, fromStack, ownerId, from } = useLocalSearchParams<{ id: string; fromStack?: string; ownerId?: string; from?: string }>();
+    const { id, itemId: paramItemId, fromStack, ownerId, from } = useLocalSearchParams<{ id: string; itemId?: string; fromStack?: string; ownerId?: string; from?: string }>();
     const router = useRouter();
     const { userId } = useAuth();
     const { thriftMode } = useThriftMode();
@@ -104,6 +105,10 @@ export default function ShowDetailScreen() {
     const [showShareModal, setShowShareModal] = useState(false);
     const [localNotes, setLocalNotes] = useState<Record<string, string>>({});
     const [localEditions, setLocalEditions] = useState<Record<string, string>>({});
+    const [localCustomTitles, setLocalCustomTitles] = useState<Record<string, string>>({});
+    const [localIsMultipack, setLocalIsMultipack] = useState<Record<string, boolean>>({});
+    const [localMultipacks, setLocalMultipacks] = useState<Record<string, string>>({});
+    const [localSeasons, setLocalSeasons] = useState<Record<string, string>>({});
     const [localBootlegs, setLocalBootlegs] = useState<Record<string, boolean>>({});
     const [localValues, setLocalValues] = useState<Record<string, string>>({});
     const [localForSale, setLocalForSale] = useState<Record<string, boolean>>({});
@@ -128,8 +133,13 @@ export default function ShowDetailScreen() {
     const [pendingFormat, setPendingFormat] = useState<string | null>(null);
     const [editionInput, setEditionInput] = useState('');
     const [seasonInput, setSeasonInput] = useState('');
+    const [modalIsSpecial, setModalIsSpecial] = useState(false);
+    const [modalCustomTitle, setModalCustomTitle] = useState('');
+    const [modalIsMultipack, setModalIsMultipack] = useState(false);
+    const [modalMultipackName, setModalMultipackName] = useState('');
+    const [activeMultipackModalName, setActiveMultipackModalName] = useState<string | null>(null);
     const [isGeneratingValue, setIsGeneratingValue] = useState<Record<string, boolean>>({});
-    const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+    const [selectedItemId, setSelectedItemId] = useState<string | null>(paramItemId || null);
 
     // Curated Stacks State
     const [showNewStackInput, setShowNewStackInput] = useState(false);
@@ -293,12 +303,24 @@ export default function ShowDetailScreen() {
 
     const FORMAT_PRIORITY = ['4K', 'BluRay', 'DVD', 'VHS', 'Digital'];
 
-    // Derive activeItem and activeFormat
-    const activeItem = (selectedItemId && showItems.some((i: any) => i.id === selectedItemId))
-        ? showItems.find((i: any) => i.id === selectedItemId)
-        : (showItems.length > 0
+    // Derive activeItem and activeFormat (respecting selectedItemId, paramItemId, or seasonQuery)
+    const activeItem = useMemo(() => {
+        if (selectedItemId && showItems.some((i: any) => i.id === selectedItemId)) {
+            return showItems.find((i: any) => i.id === selectedItemId);
+        }
+        if (paramItemId && showItems.some((i: any) => i.id === paramItemId)) {
+            return showItems.find((i: any) => i.id === paramItemId);
+        }
+        if (seasonQuery !== undefined && seasonQuery !== 'undefined' && seasonQuery !== 'null') {
+            const matchingSeasonItems = showItems.filter((i: any) => (i.season_number ?? 1) === seasonNumber);
+            if (matchingSeasonItems.length > 0) {
+                return [...matchingSeasonItems].sort((a, b) => FORMAT_PRIORITY.indexOf(a.format) - FORMAT_PRIORITY.indexOf(b.format))[0];
+            }
+        }
+        return showItems.length > 0
             ? [...showItems].sort((a, b) => FORMAT_PRIORITY.indexOf(a.format) - FORMAT_PRIORITY.indexOf(b.format))[0]
-            : null);
+            : null;
+    }, [selectedItemId, paramItemId, seasonQuery, seasonNumber, showItems]);
 
     const activeFormat: string | null = activeItem ? activeItem.format : null;
     const commentActiveItem = activeItem || showItems[0] || (itemUuid ? { id: itemUuid } : null);
@@ -348,7 +370,10 @@ export default function ShowDetailScreen() {
         setLocalFranchiseOrder(undefined);
         setLocalSortingTags(undefined);
         setLocalCustomGenre(undefined);
-    }, [id, seasonQuery]);
+        if (paramItemId) {
+            setSelectedItemId(paramItemId);
+        }
+    }, [id, seasonQuery, paramItemId]);
 
     useEffect(() => {
         if (show && !persistedShow) {
@@ -392,12 +417,12 @@ export default function ShowDetailScreen() {
     }, [showItems, activeShow?.name, isReadOnly]);
 
 
-    const seasonPosterPath = activeItem?.season_number && tmdbShow?.seasons 
+    const seasonPosterPath = activeItem?.season_number !== null && activeItem?.season_number !== undefined && tmdbShow?.seasons 
         ? tmdbShow.seasons.find((s: any) => s.season_number === activeItem.season_number)?.poster_path 
         : undefined;
 
-    const customArtUrl = activeItem?.custom_poster_url || showItems.find((i: any) => i.custom_poster_url)?.custom_poster_url;
-    const customBackdropUrl = activeItem?.custom_backdrop_url || showItems.find((i: any) => i.custom_backdrop_url)?.custom_backdrop_url;
+    const customArtUrl = activeItem?.custom_poster_url;
+    const customBackdropUrl = activeItem?.custom_backdrop_url;
 
     const launchLibrary = async (type: 'poster' | 'backdrop') => {
         try {
@@ -470,7 +495,8 @@ export default function ShowDetailScreen() {
     // Removed handleWebFileChange as we now use ImagePicker for web too
 
     const handleSaveCustomArt = async (croppedDataUrl: string) => {
-        if (!showItems[0]?.id) {
+        const targetItemId = activeItem?.id || showItems[0]?.id;
+        if (!targetItemId) {
             Alert.alert('Error', 'Could not find collection item for upload');
             return;
         }
@@ -481,7 +507,7 @@ export default function ShowDetailScreen() {
             if (customArtType === 'poster') updates.custom_poster_url = uploadUrl;
             else updates.custom_backdrop_url = uploadUrl;
 
-            await updateMutation.mutateAsync({ itemId: showItems[0].id, updates });
+            await updateMutation.mutateAsync({ itemId: targetItemId, updates });
             if (oldUrl) deleteFromCloudinary(oldUrl);
 
             setCropModalVisible(false);
@@ -494,13 +520,14 @@ export default function ShowDetailScreen() {
     };
 
     const handleRemoveCustomArt = async (type: 'poster' | 'backdrop' = 'poster') => {
-        if (!showItems[0]?.id) return;
+        const targetItemId = activeItem?.id || showItems[0]?.id;
+        if (!targetItemId) return;
         const confirmRemove = async () => {
             const oldUrl = type === 'poster' ? customArtUrl : customBackdropUrl;
             const updates: any = {};
             if (type === 'poster') updates.custom_poster_url = null;
             else updates.custom_backdrop_url = null;
-            await updateMutation.mutateAsync({ itemId: showItems[0].id, updates });
+            await updateMutation.mutateAsync({ itemId: targetItemId, updates });
             if (oldUrl) deleteFromCloudinary(oldUrl);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         };
@@ -702,22 +729,35 @@ export default function ShowDetailScreen() {
         }
     };
 
+    const existingMultipacks = useMemo(() => getExistingMultipacks(collection), [collection]);
+
     const handleConfirmAddFormat = async () => {
         if (!pendingFormat || !activeShow) return;
+        const parsedSeason = modalIsSpecial ? 0 : parseInt(seasonInput, 10);
+        const resolvedSeason = !isNaN(parsedSeason) ? parsedSeason : 1;
         try {
-            await addMutation.mutateAsync({
-                tmdbItem: activeShow,
+            const result = await addMutation.mutateAsync({
+                tmdbItem: { ...activeShow, media_type: 'tv' },
                 formats: [pendingFormat as MovieFormat],
                 status: modalStatus,
                 edition: editionInput.trim() || null,
-                seasonNumber: parseInt(seasonInput, 10) || 1
+                seasonNumber: resolvedSeason,
+                customTitle: modalCustomTitle.trim() || null,
+                multipack: modalIsMultipack && modalMultipackName.trim() ? modalMultipackName.trim() : null,
             });
             playSound(pendingFormat === 'VHS' ? 'insert' : 'click');
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            if (result?.insertedIds && result.insertedIds.length > 0) {
+                setSelectedItemId(result.insertedIds[0]);
+            }
             setShowEditionModal(false);
             setPendingFormat(null);
             setEditionInput('');
             setSeasonInput('');
+            setModalIsSpecial(false);
+            setModalCustomTitle('');
+            setModalIsMultipack(false);
+            setModalMultipackName('');
         } catch (e: any) {
             const msg = e?.message || String(e);
             if (msg.startsWith('WISHLIST_CONFLICT:::')) {
@@ -928,8 +968,27 @@ return (
                             )}
 
                             <Text className="text-white font-bold text-xl leading-6 mb-0.5">
-                                {displayShow.title} {displayShow.release_date ? `(${displayShow.release_date.slice(0, 4)})` : ''}
+                                {getItemCustomTitle(activeItem) || displayShow.name || displayShow.title} {(displayShow.first_air_date || displayShow.release_date) ? `(${(displayShow.first_air_date || displayShow.release_date).slice(0, 4)})` : ''}
                             </Text>
+                            {getItemCustomTitle(activeItem) && (displayShow.name || displayShow.title) && getItemCustomTitle(activeItem)?.toLowerCase() !== (displayShow.name || displayShow.title || '').toLowerCase() && (
+                                <Text className="text-neutral-400 font-mono text-[10px] mb-0.5">
+                                    Series: {displayShow.name || displayShow.title} • {activeItem?.season_number === 0 ? 'Special / Volume' : `Season ${activeItem?.season_number ?? 1}`}
+                                </Text>
+                            )}
+                            {getItemMultipack(activeItem) && (
+                                <Pressable
+                                    onPress={() => {
+                                        playSound('click');
+                                        setActiveMultipackModalName(getItemMultipack(activeItem));
+                                    }}
+                                    className="bg-amber-500/15 border border-amber-500/40 px-2.5 py-1 rounded-md self-start flex-row items-center mt-1 mb-0.5 active:bg-amber-500/25"
+                                >
+                                    <Ionicons name="albums-outline" size={11} color="#f59e0b" style={{ marginRight: 5 }} />
+                                    <Text className="text-amber-400 font-mono text-[9px] font-bold uppercase">
+                                        MULTI-PACK: {getItemMultipack(activeItem)} ›
+                                    </Text>
+                                </Pressable>
+                            )}
                             {/* Franchise Tag Badge */}
                             {showItems[0]?.franchise ? (
                                 <View className="bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-md self-start flex-row items-center mt-1 mb-0.5">
@@ -1312,14 +1371,24 @@ return (
                         </View>
                     )}
 
-                    {/* Format Notes Section */}
+                    {/* Format Notes & Release Customization Section */}
                     {
-                        ownedFormats.length > 0 && (
+                        showItems.length > 0 && !isReadOnly && (
                             <View className="mt-6">
-                                <Text className="text-white font-bold mb-2">Format Notes</Text>
-                                {showItems.filter((i: any) => i.status === 'owned').map((item: any) => (
-                                    <View key={item.id} className="mb-4">
-                                        <View className="flex-row items-center flex-wrap mb-2">
+                                <Text className="text-white font-bold mb-2">Release Details, VHS Volumes & Format Notes</Text>
+                                {showItems.map((item: any) => {
+                                    const currentCustomTitle = localCustomTitles[item.id] !== undefined ? localCustomTitles[item.id] : (getItemCustomTitle(item) || '');
+                                    const savedMultipack = getItemMultipack(item);
+                                    const isPackChecked = localIsMultipack[item.id] !== undefined ? localIsMultipack[item.id] : !!savedMultipack;
+                                    const currentMultipackName = localMultipacks[item.id] !== undefined ? localMultipacks[item.id] : (savedMultipack || '');
+                                    const currentEdition = localEditions[item.id] !== undefined ? localEditions[item.id] : (item.edition || '');
+                                    const currentSeasonStr = localSeasons[item.id] !== undefined ? localSeasons[item.id] : String(item.season_number ?? 1);
+                                    const isSpecialCopy = currentSeasonStr === '0';
+                                    const seasonLabel = item.season_number === 0 ? 'SPECIAL / VOL' : `S${item.season_number || 1}`;
+
+                                    return (
+                                    <View key={item.id} className="mb-5 bg-neutral-900/40 border border-neutral-800/80 rounded-xl p-3">
+                                        <View className="flex-row items-center flex-wrap mb-2.5">
                                             <Pressable 
                                                 onPress={() => {
                                                     setSelectedItemId(item.id);
@@ -1327,8 +1396,13 @@ return (
                                                 }}
                                                 className={`px-2 py-1 rounded shrink-0 ${FORMAT_COLORS[item.format] || 'bg-neutral-800'}`}
                                             >
-                                                <Text className="text-white font-mono text-xs font-bold">{`S${item.season_number || 1} • ${item.format === 'BluRay' ? 'Blu-ray' : item.format}`}</Text>
+                                                <Text className="text-white font-mono text-xs font-bold">{`${seasonLabel} • ${item.format === 'BluRay' ? 'Blu-ray' : item.format}`}</Text>
                                             </Pressable>
+                                            {item.status === 'wishlist' && (
+                                                <View className="border border-dashed border-neutral-500 px-1.5 py-0.5 rounded-sm ml-2">
+                                                    <Text className="text-neutral-400 font-mono text-[9px] font-bold uppercase tracking-wider">WISHLIST</Text>
+                                                </View>
+                                            )}
                                             {item.value_estimate !== null && item.value_estimate !== undefined && !isErrantShippingPrice(item.value_estimate) && (
                                                 <View className="bg-neutral-800 border border-neutral-700/50 px-2 py-0.5 rounded ml-2">
                                                     <Text className="text-amber-400 font-mono text-[10px] font-bold">
@@ -1351,22 +1425,162 @@ return (
                                             >
                                                 <Text className="text-white font-mono text-[10px] font-bold">BOOT</Text>
                                             </Pressable>
+                                            <Pressable
+                                                onPress={() => {
+                                                    setSelectedItemId(item.id);
+                                                    setTimeout(() => handleUploadCustomArt('poster'), 50);
+                                                }}
+                                                className="ml-2 px-2 py-1 rounded border bg-amber-600/15 border-amber-500/40 flex-row items-center gap-1"
+                                            >
+                                                <Ionicons name="image-outline" size={11} color="#f59e0b" />
+                                                <Text className="text-amber-400 font-mono text-[9px] font-bold">
+                                                    {item.custom_poster_url ? 'CHANGE COVER' : 'CUSTOM COVER'}
+                                                </Text>
+                                            </Pressable>
                                             <Text className="text-neutral-500 font-mono text-[9px] ml-auto uppercase font-bold">
-                                                Added: {new Date(item.created_at).toLocaleDateString()} {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                Added: {new Date(item.created_at).toLocaleDateString()}
                                             </Text>
                                         </View>
+
+                                        {/* Season vs Special / VHS Volume Toggle */}
+                                        <View className="flex-row items-center gap-2 mb-2">
+                                            <Pressable
+                                                onPress={() => {
+                                                    playSound('click');
+                                                    setLocalSeasons(prev => ({ ...prev, [item.id]: isSpecialCopy ? '1' : currentSeasonStr }));
+                                                }}
+                                                className={`flex-1 py-2 px-3 rounded-lg border items-center ${!isSpecialCopy ? 'bg-amber-500/20 border-amber-500/50' : 'bg-neutral-900 border-neutral-800'}`}
+                                            >
+                                                <Text className={`font-mono text-[10px] font-bold ${!isSpecialCopy ? 'text-amber-400' : 'text-neutral-500'}`}>
+                                                    STANDARD SEASON
+                                                </Text>
+                                            </Pressable>
+                                            <Pressable
+                                                onPress={() => {
+                                                    playSound('click');
+                                                    setLocalSeasons(prev => ({ ...prev, [item.id]: '0' }));
+                                                }}
+                                                className={`flex-1 py-2 px-3 rounded-lg border items-center ${isSpecialCopy ? 'bg-amber-500/20 border-amber-500/50' : 'bg-neutral-900 border-neutral-800'}`}
+                                            >
+                                                <Text className={`font-mono text-[10px] font-bold ${isSpecialCopy ? 'text-amber-400' : 'text-neutral-500'}`}>
+                                                    SPECIAL / VHS VOLUME
+                                                </Text>
+                                            </Pressable>
+                                            {!isSpecialCopy && (
+                                                <TextInput
+                                                    className="bg-neutral-900 text-white px-3 py-1.5 rounded-lg border border-neutral-800 font-mono text-xs w-20 text-center"
+                                                    placeholder="S#"
+                                                    placeholderTextColor="#525252"
+                                                    keyboardType="numeric"
+                                                    value={currentSeasonStr}
+                                                    onChangeText={(text) => setLocalSeasons(prev => ({ ...prev, [item.id]: text }))}
+                                                />
+                                            )}
+                                        </View>
+
+                                        <Text className="text-neutral-500 font-mono text-[10px] font-bold uppercase mb-1">
+                                            Custom Release Title (Displays as its own title on your shelf)
+                                        </Text>
+                                        <TextInput
+                                            className="bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm mb-2"
+                                            placeholder={`e.g. ${displayShow.name || displayShow.title || 'Show'}: Vol. 1`}
+                                            placeholderTextColor="#525252"
+                                            value={currentCustomTitle}
+                                            onChangeText={(text) => setLocalCustomTitles(prev => ({ ...prev, [item.id]: text }))}
+                                            autoCapitalize="words"
+                                            autoCorrect={false}
+                                        />
+
+                                        <Text className="text-neutral-500 font-mono text-[10px] font-bold uppercase mb-1">
+                                            Edition / Format Text
+                                        </Text>
                                         <TextInput
                                              className="bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm mb-2"
-                                             placeholder="Edition (Theatrical, Unrated, Director's Cut, etc.)"
+                                             placeholder="Edition (Collector's Edition, Box Set, Volume #, etc.)"
                                              placeholderTextColor="#525252"
-                                             value={localEditions[item.id] !== undefined ? localEditions[item.id] : (item.edition || '')}
+                                             value={currentEdition}
                                              onChangeText={(text) => setLocalEditions(prev => ({ ...prev, [item.id]: text }))}
                                              autoCapitalize="words"
                                              autoCorrect={false}
                                          />
+
+                                        {/* Multi-pack / Compilation Checkbox & Input */}
+                                        <View className="bg-neutral-900 border border-neutral-800 rounded-lg p-3 mb-2">
+                                            <Pressable
+                                                onPress={() => {
+                                                    playSound('click');
+                                                    setLocalIsMultipack(prev => ({ ...prev, [item.id]: !isPackChecked }));
+                                                }}
+                                                className="flex-row items-center justify-between"
+                                            >
+                                                <View className="flex-row items-center gap-2 flex-1 pr-2">
+                                                    <View className={`w-5 h-5 rounded border items-center justify-center ${isPackChecked ? 'bg-amber-500 border-amber-400' : 'bg-neutral-950 border-neutral-700'}`}>
+                                                        {isPackChecked && <Ionicons name="checkmark" size={14} color="#000" />}
+                                                    </View>
+                                                    <View className="flex-1">
+                                                        <Text className="text-white font-mono text-xs font-bold">
+                                                            PART OF A COMPILATION / MULTI-PACK
+                                                        </Text>
+                                                        <Text className="text-neutral-500 font-mono text-[9px]">
+                                                            Displays a stacked Multi-pack card in your collection
+                                                        </Text>
+                                                    </View>
+                                                </View>
+                                                {currentEdition.trim().length > 0 && (!isPackChecked || !currentMultipackName.trim()) && (
+                                                    <Pressable
+                                                        onPress={() => {
+                                                            playSound('click');
+                                                            setLocalIsMultipack(prev => ({ ...prev, [item.id]: true }));
+                                                            setLocalMultipacks(prev => ({ ...prev, [item.id]: currentEdition.trim() }));
+                                                        }}
+                                                        className="bg-amber-500/15 border border-amber-500/40 px-2 py-1 rounded"
+                                                    >
+                                                        <Text className="text-amber-400 font-mono text-[8px] font-bold">USE EDITION</Text>
+                                                    </Pressable>
+                                                )}
+                                            </Pressable>
+
+                                            {isPackChecked && (
+                                                <View className="mt-3 pt-2.5 border-t border-neutral-800">
+                                                    <TextInput
+                                                        className="bg-neutral-950 text-white p-2.5 rounded-lg border border-neutral-800 font-mono text-xs"
+                                                        placeholder="Multi-pack Name (e.g. South Park VHS 3-Pack)"
+                                                        placeholderTextColor="#525252"
+                                                        value={currentMultipackName}
+                                                        onChangeText={(text) => setLocalMultipacks(prev => ({ ...prev, [item.id]: text }))}
+                                                        autoCapitalize="words"
+                                                        autoCorrect={false}
+                                                    />
+                                                    {existingMultipacks.length > 0 && (
+                                                        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mt-2">
+                                                            <View className="flex-row gap-1.5">
+                                                                {existingMultipacks.map((pack) => {
+                                                                    const isSelected = currentMultipackName.trim().toLowerCase() === pack.toLowerCase();
+                                                                    return (
+                                                                        <Pressable
+                                                                            key={pack}
+                                                                            onPress={() => {
+                                                                                playSound('click');
+                                                                                setLocalMultipacks(prev => ({ ...prev, [item.id]: pack }));
+                                                                            }}
+                                                                            className={`px-2.5 py-1 rounded-full border ${isSelected ? 'bg-amber-500/20 border-amber-500' : 'bg-neutral-950 border-neutral-800'}`}
+                                                                        >
+                                                                            <Text className={`font-mono text-[9px] ${isSelected ? 'text-amber-400 font-bold' : 'text-neutral-400'}`}>
+                                                                                📦 {pack}
+                                                                            </Text>
+                                                                        </Pressable>
+                                                                    );
+                                                                })}
+                                                            </View>
+                                                        </ScrollView>
+                                                    )}
+                                                </View>
+                                            )}
+                                        </View>
+
                                         <TextInput
                                             className="bg-neutral-900 text-white p-3 rounded-lg border border-neutral-800 font-mono text-sm"
-                                            placeholder={`Add notes for your ${`S${item.season_number || 1} • ${item.format === 'BluRay' ? 'Blu-ray' : item.format}`} copy...`}
+                                            placeholder={`Add notes or episode list for your ${`${seasonLabel} • ${item.format === 'BluRay' ? 'Blu-ray' : item.format}`} copy...`}
                                             placeholderTextColor="#525252"
                                             multiline
                                             value={localNotes[item.id] !== undefined ? localNotes[item.id] : (item.notes || '')}
@@ -1470,17 +1684,29 @@ return (
                                             onPress={async () => {
                                                 const noteToSave = localNotes[item.id] !== undefined ? localNotes[item.id] : (item.notes || '');
                                                 const editionToSave = localEditions[item.id] !== undefined ? localEditions[item.id] : (item.edition || '');
+                                                const customTitleToSave = (localCustomTitles[item.id] !== undefined ? localCustomTitles[item.id] : (getItemCustomTitle(item) || '')).trim();
+                                                const multipackToSave = isPackChecked
+                                                    ? (localMultipacks[item.id] !== undefined ? localMultipacks[item.id] : (savedMultipack || '')).trim()
+                                                    : '';
+                                                const parsedSeason = parseInt(currentSeasonStr, 10);
+                                                const seasonToSave = !isNaN(parsedSeason) ? parsedSeason : (item.season_number ?? 1);
                                                 const bootToSave = localBootlegs[item.id] !== undefined ? localBootlegs[item.id] : (item.is_bootleg || false);
                                                 const valRaw = localValues[item.id] !== undefined ? localValues[item.id] : (item.value_estimate?.toString() || '');
                                                 const valToSave = valRaw.trim() === '' ? null : parseFloat(valRaw);
+                                                const updatedLists = withItemMetadata(item.custom_lists, {
+                                                    customTitle: customTitleToSave || null,
+                                                    multipack: multipackToSave || null,
+                                                });
                                                 // Save copy specific updates
                                                 await updateMutation.mutateAsync({
                                                     itemId: item.id,
                                                     updates: {
                                                         notes: noteToSave,
                                                         edition: editionToSave || null,
+                                                        season_number: seasonToSave,
                                                         is_bootleg: bootToSave,
-                                                        value_estimate: isNaN(valToSave as any) ? null : valToSave
+                                                        value_estimate: isNaN(valToSave as any) ? null : valToSave,
+                                                        custom_lists: updatedLists,
                                                     }
                                                 });
 
@@ -1493,11 +1719,12 @@ return (
                                                 <ActivityIndicator size="small" color="#f59e0b" style={{ marginRight: 8, transform: [{ scale: 0.8 }] }} />
                                             ) : null}
                                             <Text className="text-amber-500 font-mono text-xs font-bold">
-                                                {updateMutation.isPending ? 'SAVING...' : `SAVE ${`S${item.season_number || 1} • ${item.format === 'BluRay' ? 'Blu-ray' : item.format}`}`}
+                                                {updateMutation.isPending ? 'SAVING...' : `SAVE ${`${seasonLabel} • ${item.format === 'BluRay' ? 'Blu-ray' : item.format}`}`}
                                             </Text>
                                         </Pressable>
                                     </View>
-                                ))}
+                                    );
+                                })}
                             </View>
                         )
                     }
@@ -1579,6 +1806,7 @@ return (
                                 <View className="gap-2">
                                     {showItems.map((item: any) => {
                                         const isLoaded = activeItem?.id === item.id;
+                                        const seasonBadge = item.season_number === 0 ? 'SPECIAL / VOL' : `S${item.season_number || 1}`;
                                         return (
                                             <View key={item.id} className={`flex-row items-center justify-between p-3 rounded-lg border ${isLoaded ? 'border-amber-500 bg-neutral-900' : 'border-neutral-800 bg-neutral-900'}`}>
                                                 <View className="flex-1 flex-row items-center flex-wrap gap-2 mr-2">
@@ -1596,7 +1824,7 @@ return (
                                                             padding: isLoaded ? 1 : 0,
                                                         }}>
                                                             <View className={`px-2 py-1 rounded shrink-0 ${FORMAT_COLORS[item.format] || 'bg-neutral-800'}`}>
-                                                                <Text className="text-white font-mono text-xs font-bold">{`S${item.season_number || 1} • ${item.format === 'BluRay' ? 'Blu-ray' : item.format}`}</Text>
+                                                                <Text className="text-white font-mono text-xs font-bold">{`${seasonBadge} • ${item.format === 'BluRay' ? 'Blu-ray' : item.format}`}</Text>
                                                             </View>
                                                         </View>
                                                     </Pressable>
@@ -1612,8 +1840,26 @@ return (
                                                             </Text>
                                                         </View>
                                                     )}
+                                                    {getItemCustomTitle(item) && (
+                                                        <Text className="text-white font-mono text-xs font-bold" numberOfLines={1}>
+                                                            "{getItemCustomTitle(item)}"
+                                                        </Text>
+                                                    )}
                                                     {item.edition && (
                                                         <Text className="text-neutral-400 font-mono text-sm flex-1" numberOfLines={2}>({item.edition})</Text>
+                                                    )}
+                                                    {getItemMultipack(item) && (
+                                                        <Pressable
+                                                            onPress={() => {
+                                                                playSound('click');
+                                                                setActiveMultipackModalName(getItemMultipack(item));
+                                                            }}
+                                                            className="bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded"
+                                                        >
+                                                            <Text className="text-amber-400 font-mono text-[9px] font-bold">
+                                                                📦 {getItemMultipack(item)}
+                                                            </Text>
+                                                        </Pressable>
                                                     )}
                                                 </View>
                                                 {!isReadOnly && (
@@ -1651,7 +1897,10 @@ return (
                     {/* Add Format Section */}
                     {!isReadOnly && (
                         <View className="mt-8">
-                            <Text className="text-white font-bold mb-3">Add Season / Format</Text>
+                            <Text className="text-white font-bold mb-1">Add Season, Special, or VHS Volume</Text>
+                            <Text className="text-neutral-500 font-mono text-[10px] mb-3">
+                                Tap a format to log another season or a standalone episode compilation (e.g. VHS Vol. 1, Vol. 2)
+                            </Text>
                         <View className="flex-row flex-wrap gap-2">
                             {FORMATS.map(fmt => {
                                 const isOwned = ownedFormats.includes(fmt);
@@ -1660,7 +1909,17 @@ return (
                                 return (
                                     <Pressable
                                         key={fmt}
-                                        onPress={() => { setPendingFormat(fmt); setEditionInput(''); setSeasonInput(''); setModalStatus(thriftMode ? 'wishlist' : 'owned'); setShowEditionModal(true); }}
+                                        onPress={() => {
+                                            setPendingFormat(fmt);
+                                            setEditionInput('');
+                                            setSeasonInput('');
+                                            setModalIsSpecial(fmt === 'VHS');
+                                            setModalCustomTitle('');
+                                            setModalIsMultipack(false);
+                                            setModalMultipackName('');
+                                            setModalStatus(thriftMode ? 'wishlist' : 'owned');
+                                            setShowEditionModal(true);
+                                        }}
                                         className={`px-4 py-2 border rounded-full ${baseColor} border-neutral-700`}
                                     >
                                         <Text className="text-white font-mono font-bold">
@@ -1947,16 +2206,14 @@ return (
                 <View className="flex-1 bg-black/80 items-center justify-center p-4">
                     <View className="bg-neutral-900 rounded-lg p-6 w-full max-w-md border border-neutral-800">
                         <Text className="text-white font-bold text-lg mb-2">
-                            Add {pendingFormat}
+                            Add {pendingFormat} Release
                         </Text>
                         <Text className="text-neutral-400 font-mono text-xs mb-4">
-                            {showItems.some((i: any) => i.format === pendingFormat)
-                                ? '⚠️ Edition required (duplicate format)'
-                                : 'Edition optional (e.g., Theatrical, Unrated, Box Set)'}
+                            Log a full season or an individual VHS / episode compilation
                         </Text>
 
                         {/* Owned / Wishlist Selection inside Modal */}
-                        <View className="flex-row gap-2 mb-4">
+                        <View className="flex-row gap-2 mb-3">
                             <Pressable
                                 onPress={() => setModalStatus('owned')}
                                 className={`flex-1 py-2 rounded ${modalStatus === 'owned' ? 'bg-amber-600' : 'bg-neutral-800'}`}
@@ -1975,28 +2232,117 @@ return (
                             </Pressable>
                         </View>
 
+                        {/* Season vs Special / VHS Volume Toggle */}
+                        <View className="flex-row gap-2 mb-3">
+                            <Pressable
+                                onPress={() => setModalIsSpecial(false)}
+                                className={`flex-1 py-2 rounded border ${!modalIsSpecial ? 'bg-amber-500/20 border-amber-500' : 'bg-neutral-800 border-neutral-700'}`}
+                            >
+                                <Text className={`font-mono text-xs font-bold text-center ${!modalIsSpecial ? 'text-amber-400' : 'text-neutral-400'}`}>
+                                    STANDARD SEASON
+                                </Text>
+                            </Pressable>
+                            <Pressable
+                                onPress={() => {
+                                    setModalIsSpecial(true);
+                                    setSeasonInput('0');
+                                }}
+                                className={`flex-1 py-2 rounded border ${modalIsSpecial ? 'bg-amber-500/20 border-amber-500' : 'bg-neutral-800 border-neutral-700'}`}
+                            >
+                                <Text className={`font-mono text-xs font-bold text-center ${modalIsSpecial ? 'text-amber-400' : 'text-neutral-400'}`}>
+                                    SPECIAL / VHS VOLUME
+                                </Text>
+                            </Pressable>
+                        </View>
+
+                        {!modalIsSpecial && (
+                            <TextInput
+                                nativeID="modal-season-input"
+                                className="bg-neutral-800 text-white p-3 rounded-lg border border-neutral-700 font-mono text-sm mb-2"
+                                placeholder="Season Number (e.g., 1)"
+                                placeholderTextColor="#525252"
+                                keyboardType="numeric"
+                                value={seasonInput}
+                                onChangeText={setSeasonInput}
+                            />
+                        )}
+
+                        <TextInput
+                            nativeID="modal-custom-title-input"
+                            className="bg-neutral-800 text-white p-3 rounded-lg border border-neutral-700 font-mono text-sm mb-2"
+                            placeholder={`Custom Release Title (e.g. ${displayShow.name || displayShow.title || 'South Park'}: Vol. 1)`}
+                            placeholderTextColor="#525252"
+                            value={modalCustomTitle}
+                            onChangeText={setModalCustomTitle}
+                            autoCapitalize="words"
+                            autoCorrect={false}
+                        />
+
                         <TextInput
                             nativeID="modal-edition-input"
                             {...({ name: 'modal-edition' } as any)}
-                            className="bg-neutral-800 text-white p-3 rounded-lg border border-neutral-700 font-mono text-sm mb-2"
-                            placeholder="Edition (e.g., Theatrical, Unrated)"
+                            className="bg-neutral-800 text-white p-3 rounded-lg border border-neutral-700 font-mono text-sm mb-3"
+                            placeholder="Edition / Format Notes (optional)"
                             placeholderTextColor="#525252"
                             value={editionInput}
                             onChangeText={setEditionInput}
                             autoCapitalize="words"
                             autoCorrect={false}
-                            autoFocus
                         />
 
-                        <TextInput
-                            nativeID="modal-season-input"
-                            className="bg-neutral-800 text-white p-3 rounded-lg border border-neutral-700 font-mono text-sm mb-4"
-                            placeholder="Season Number (e.g., 1)"
-                            placeholderTextColor="#525252"
-                            keyboardType="numeric"
-                            value={seasonInput}
-                            onChangeText={setSeasonInput}
-                        />
+                        {/* Multi-pack checkbox inside Add Format Modal */}
+                        <View className="bg-neutral-800/80 border border-neutral-700 rounded-lg p-3 mb-4">
+                            <Pressable
+                                onPress={() => {
+                                    playSound('click');
+                                    setModalIsMultipack(!modalIsMultipack);
+                                }}
+                                className="flex-row items-center gap-2"
+                            >
+                                <View className={`w-5 h-5 rounded border items-center justify-center ${modalIsMultipack ? 'bg-amber-500 border-amber-400' : 'bg-neutral-900 border-neutral-600'}`}>
+                                    {modalIsMultipack && <Ionicons name="checkmark" size={14} color="#000" />}
+                                </View>
+                                <Text className="text-white font-mono text-xs font-bold">
+                                    PART OF A COMPILATION / MULTI-PACK
+                                </Text>
+                            </Pressable>
+                            {modalIsMultipack && (
+                                <View className="mt-2.5 pt-2.5 border-t border-neutral-700">
+                                    <TextInput
+                                        className="bg-neutral-900 text-white p-2.5 rounded-lg border border-neutral-700 font-mono text-xs"
+                                        placeholder="Multi-pack Name (e.g. South Park VHS 3-Pack)"
+                                        placeholderTextColor="#525252"
+                                        value={modalMultipackName}
+                                        onChangeText={setModalMultipackName}
+                                        autoCapitalize="words"
+                                        autoCorrect={false}
+                                    />
+                                    {existingMultipacks.length > 0 && (
+                                        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mt-2">
+                                            <View className="flex-row gap-1.5">
+                                                {existingMultipacks.map((pack) => {
+                                                    const isSelected = modalMultipackName.trim().toLowerCase() === pack.toLowerCase();
+                                                    return (
+                                                        <Pressable
+                                                            key={pack}
+                                                            onPress={() => {
+                                                                playSound('click');
+                                                                setModalMultipackName(pack);
+                                                            }}
+                                                            className={`px-2.5 py-1 rounded-full border ${isSelected ? 'bg-amber-500/20 border-amber-500' : 'bg-neutral-950 border-neutral-700'}`}
+                                                        >
+                                                            <Text className={`font-mono text-[9px] ${isSelected ? 'text-amber-400 font-bold' : 'text-neutral-300'}`}>
+                                                                📦 {pack}
+                                                            </Text>
+                                                        </Pressable>
+                                                    );
+                                                })}
+                                            </View>
+                                        </ScrollView>
+                                    )}
+                                </View>
+                            )}
+                        </View>
 
                         <View className="flex-row gap-2">
                             <Pressable
@@ -2004,6 +2350,11 @@ return (
                                     setShowEditionModal(false);
                                     setPendingFormat(null);
                                     setEditionInput('');
+                                    setSeasonInput('');
+                                    setModalIsSpecial(false);
+                                    setModalCustomTitle('');
+                                    setModalIsMultipack(false);
+                                    setModalMultipackName('');
                                 }}
                                 className="flex-1 bg-neutral-800 py-3 rounded-lg items-center"
                             >
@@ -2055,6 +2406,23 @@ return (
                     }}
                 />
             )}
+            <MultipackModal
+                visible={!!activeMultipackModalName}
+                packName={activeMultipackModalName}
+                items={collection || []}
+                userId={userId}
+                isReadOnly={isReadOnly}
+                onClose={() => setActiveMultipackModalName(null)}
+                onSelectItem={(selected) => {
+                    if (selected.media_type === 'tv') {
+                        const sId = selected.show_id || selected.shows?.id;
+                        if (sId) router.push({ pathname: '/show/[id]', params: { id: sId, season: selected.season_number ?? 1, itemId: selected.id } } as any);
+                    } else {
+                        const mId = selected.movie_id || selected.movies?.id;
+                        if (mId) router.push({ pathname: '/movie/[id]', params: { id: mId, itemId: selected.id } } as any);
+                    }
+                }}
+            />
         </View >
     );
 

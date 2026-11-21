@@ -5,6 +5,7 @@ import { useReactions } from '@/hooks/useReactions';
 import { ReactionSummary } from './ReactionSummary';
 import { ReactionPicker } from './ReactionPicker';
 import { getPosterUrl } from '@/lib/dummy-data';
+import { getItemCustomTitle, getItemDisplayTitle, getItemMultipack, getStackDisplayTitle } from '@/lib/collection-utils';
 import type { CollectionItemWithMedia } from '@/types/database';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
@@ -122,7 +123,7 @@ function SeasonSticker({ season, size = 30 }: { season: number; size?: number })
           letterSpacing: -0.4,
         }}
       >
-        S{season}
+        {season === 0 ? 'SP' : `S${season}`}
       </Text>
     </View>
   );
@@ -143,8 +144,10 @@ export function StackCard({
   isReadOnly = false,
   showReactions = false,
 }: StackCardProps) {
+  const isMultipack = !!(stack[0] as any)?.__isMultipackStack;
+
   const defaultSorted = useMemo(() => {
-    const qualitySorted = sortByQuality(stack);
+    const qualitySorted = isMultipack ? [...stack] : sortByQuality(stack);
     if (!activeFormatFilter) return qualitySorted;
 
     const matching = [];
@@ -161,7 +164,7 @@ export function StackCard({
       }
     }
     return [...matching, ...others];
-  }, [stack, activeFormatFilter]);
+  }, [stack, activeFormatFilter, isMultipack]);
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const lastTapRef = useRef<number>(0);
@@ -170,10 +173,6 @@ export function StackCard({
   const [customArtUri, setCustomArtUri] = useState<string | null>(null);
 
   const sorted = useMemo(() => {
-    // Deduplicate "Digital" formats - only keep the first one
-    const uniqueItems: CollectionItemWithMedia[] = [];
-    const hasDigital = false;
-
     // First, get the sorted list as usual
     let items = [...defaultSorted];
 
@@ -185,7 +184,18 @@ export function StackCard({
       }
     }
 
-    // Aggressive deduplication: One coin per unique "Format + Edition" combo
+    // For a multi-pack stack, every item is a distinct movie/title in the pack—keep them all stacked!
+    if (isMultipack) {
+      return items.map((originalItem) => {
+        const item = { ...originalItem };
+        if (item.format.trim().toLowerCase().includes('digital')) {
+          item.format = 'Digital';
+        }
+        return item;
+      });
+    }
+
+    // Aggressive deduplication: One coin per unique "Format + Edition + CustomTitle + Season" combo
     const seenKeys = new Set();
     const result: CollectionItemWithMedia[] = [];
 
@@ -196,24 +206,26 @@ export function StackCard({
       let fmt = item.format.trim();
 
       // Normalize ANY string containing "digital" to exactly "Digital"
-      // This works for "Digital 4K", "Digital HD", "Digital Copy", etc.
-      // FORCE the format to 'Digital' so it gets generic Green color lookup
       if (fmt.toLowerCase().includes('digital')) {
         fmt = 'Digital';
         item.format = 'Digital';
       }
 
-      // Key off Normalized Format + Edition + Season (if TV show)
+      // Key off Normalized Format + Edition + CustomTitle + Season (if TV show)
       const edition = (item.edition || '').trim().toLowerCase();
-      const seasonKey = item.media_type === 'tv' ? `|s${item.season_number}` : '';
-      const key = `${fmt}|${edition}${seasonKey}`;
+      const customTitle = (getItemCustomTitle(item) || '').trim().toLowerCase();
+      const seasonKey = item.media_type === 'tv' ? `|s${item.season_number ?? 1}` : '';
+      const key = `${fmt}|${edition}|${customTitle}${seasonKey}`;
 
       if (!seenKeys.has(key)) {
         seenKeys.add(key);
         result.push(item);
       } else {
         // If we already added this format/edition, but THIS duplicate is a bootleg, tag the coin so the sticker appears!
-        const existing = result.find(i => `${i.format.trim()}|${(i.edition || '').trim().toLowerCase()}` === key || (`Digital|${(i.edition || '').trim().toLowerCase()}` === key && i.format.toLowerCase().includes('digital')));
+        const existing = result.find(
+          (i) =>
+            `${i.format.trim()}|${(i.edition || '').trim().toLowerCase()}|${(getItemCustomTitle(i) || '').trim().toLowerCase()}${i.media_type === 'tv' ? `|s${i.season_number ?? 1}` : ''}` === key
+        );
         if (existing && item.is_bootleg) {
           existing.is_bootleg = true;
         }
@@ -221,7 +233,7 @@ export function StackCard({
     }
 
     return result;
-  }, [defaultSorted, activeId]);
+  }, [defaultSorted, activeId, isMultipack]);
 
   const topItem = sorted[0];
   const media = topItem.movies || topItem.shows;
@@ -235,8 +247,21 @@ export function StackCard({
   const isGrail = topItem.is_grail;
   const isOnDisplay = topItem.is_on_display;
   const tmdbPosterUrl = media ? getPosterUrl(media.poster_path) : null;
-  const hasCustomPoster = sorted.some(i => !!i.custom_poster_url);
-  const posterUrl = sorted.find(i => !!i.custom_poster_url)?.custom_poster_url || tmdbPosterUrl;
+  const topCustomTitle = getItemCustomTitle(topItem);
+  const resolvedCustomPoster = isMultipack
+    ? topItem.custom_poster_url
+    : (topItem.custom_poster_url ||
+        sorted.find(
+          (i) =>
+            !!i.custom_poster_url &&
+            i.season_number === topItem.season_number &&
+            getItemCustomTitle(i) === topCustomTitle
+        )?.custom_poster_url ||
+        null);
+  const hasCustomPoster = !!resolvedCustomPoster;
+  const posterUrl = resolvedCustomPoster || tmdbPosterUrl;
+  const displayTitle = getStackDisplayTitle(topItem) || `ID: ${topItem.movie_id || topItem.show_id}`;
+  const itemMultipackName = !isMultipack ? getItemMultipack(topItem) : null;
 
   // Calculate Aspect Ratio based on Top Item
   const isBluRay = topItem.format === 'BluRay' || topItem.format === '4K';
@@ -254,54 +279,79 @@ export function StackCard({
   const renderInfoBox = () => {
     return (
       <View 
-        className="bg-neutral-900/60 border border-neutral-800/60 rounded-xl p-2 mt-1.5 w-full"
+        className={`border rounded-xl p-2 mt-1.5 w-full ${isMultipack ? 'bg-amber-950/30 border-amber-500/40' : 'bg-neutral-900/60 border-neutral-800/60'}`}
         style={{ minHeight: 52, justifyContent: 'space-between', alignItems: 'center' }}
       >
+        {isMultipack && (
+          <View className="bg-amber-500/20 border border-amber-500/40 px-1.5 py-0.5 rounded mb-1 flex-row items-center gap-1">
+            <FontAwesome name="archive" size={7} color="#f59e0b" />
+            <Text className="text-amber-400 font-mono text-[7px] font-bold uppercase tracking-wider">
+              {sorted.length}-TITLE MULTI-PACK
+            </Text>
+          </View>
+        )}
+
         {/* Title */}
         <Text 
-          className="text-white font-mono text-[9px] font-bold text-center" 
+          className={`font-mono text-[9px] font-bold text-center ${isMultipack ? 'text-amber-300' : 'text-white'}`} 
           numberOfLines={2} 
           style={{ minHeight: 20, width: '100%', lineHeight: 11 }}
         >
-          {media 
-            ? ((media as any).title || (media as any).name)
-            : `ID: ${topItem.movie_id || topItem.show_id}`}
+          {displayTitle}
         </Text>
+
+        {itemMultipackName && (
+          <Text className="text-amber-500/80 font-mono text-[7px] text-center mt-0.5" numberOfLines={1}>
+            📦 {itemMultipackName}
+          </Text>
+        )}
 
         {/* Format & Rating row */}
         <View className="flex-row w-full justify-center items-center mt-1 gap-1 flex-wrap">
           {(() => {
-            const maxCoins = 3;
+            const maxCoins = isMultipack ? 4 : 3;
             const showMore = sorted.length > maxCoins + 1;
             const displayCoins = showMore ? sorted.slice(0, maxCoins) : sorted;
             const remaining = sorted.length - maxCoins;
 
             return (
               <>
-                {displayCoins.map((item) => (
-                  <Pressable
-                    key={item.id}
-                    onPress={(e) => {
-                      e.stopPropagation();
-                      if (!isReadOnly) playSound('click');
-                      setActiveId(item.id);
-                    }}
-                    className={`px-1.5 py-0.5 rounded flex-row items-center gap-1 ${FORMAT_COLORS[item.format] || 'bg-neutral-700'}`}
-                    style={{
-                      shadowColor: '#000',
-                      shadowOffset: { width: 0, height: 1 },
-                      shadowOpacity: 0.3,
-                      shadowRadius: 1,
-                    }}
-                  >
-                    <Text className="text-white font-mono text-[8px] font-bold">
-                      {item.media_type === 'tv' && item.season_number ? `S${item.season_number} ` : ''}{item.format === 'BluRay' ? 'Blu-ray' : item.format}
-                    </Text>
-                    {item.is_bootleg && (
-                      <Image source={require('@/assets/images/overlays/boot_sticker.png')} style={{ width: 10, height: 10 }} contentFit="contain" />
-                    )}
-                  </Pressable>
-                ))}
+                {displayCoins.map((item, coinIdx) => {
+                  const seasonLabel =
+                    item.media_type === 'tv' && item.season_number !== null && item.season_number !== undefined
+                      ? item.season_number === 0
+                        ? 'SP '
+                        : `S${item.season_number} `
+                      : '';
+                  const coinText = isMultipack
+                    ? `#${coinIdx + 1} ${getItemDisplayTitle(item).slice(0, 8)}`
+                    : `${seasonLabel}${item.format === 'BluRay' ? 'Blu-ray' : item.format}`;
+
+                  return (
+                    <Pressable
+                      key={`${item.id}-${coinIdx}`}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        if (!isReadOnly) playSound('click');
+                        setActiveId(item.id);
+                      }}
+                      className={`px-1.5 py-0.5 rounded flex-row items-center gap-1 ${FORMAT_COLORS[item.format] || 'bg-neutral-700'}`}
+                      style={{
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: 1 },
+                        shadowOpacity: 0.3,
+                        shadowRadius: 1,
+                      }}
+                    >
+                      <Text className="text-white font-mono text-[8px] font-bold" numberOfLines={1}>
+                        {coinText}
+                      </Text>
+                      {item.is_bootleg && (
+                        <Image source={require('@/assets/images/overlays/boot_sticker.png')} style={{ width: 10, height: 10 }} contentFit="contain" />
+                      )}
+                    </Pressable>
+                  );
+                })}
                 {showMore && (
                   <View 
                     className="px-1.5 py-0.5 rounded flex-row items-center justify-center bg-neutral-800"
@@ -320,7 +370,7 @@ export function StackCard({
               </>
             );
           })()}
-          {topItem.rating && (
+          {topItem.rating && !isMultipack && (
             <View className="flex-row items-center bg-black/60 px-1 py-0.5 rounded-sm border border-neutral-800">
                <FontAwesome name="star" size={8} color="#f59e0b" />
                <Text className="text-amber-500 font-mono text-[8px] font-bold ml-0.5">{topItem.rating}</Text>
@@ -448,18 +498,25 @@ export function StackCard({
           ) : (
             <View className="flex-1 items-center justify-center">
               <Text className="text-neutral-600 text-[10px] font-mono p-1 text-center">
-                {topItem.movies?.title || topItem.shows?.name}
+                {displayTitle}
               </Text>
             </View>
           )}
         </View>
         {/* Info Section */}
         <View className="flex-1 px-3 py-1 justify-center">
-          <Text className="text-white font-bold text-sm leading-tight" numberOfLines={2}>
-            {media 
-              ? ((media as any).title || (media as any).name)
-              : `ID: ${topItem.movie_id || topItem.show_id}`}
-          </Text>
+          <View className="flex-row items-center gap-1.5 flex-wrap">
+            {isMultipack && (
+              <View className="bg-amber-500/20 border border-amber-500/40 px-1.5 py-0.5 rounded">
+                <Text className="text-amber-400 font-mono text-[8px] font-bold uppercase">
+                  {sorted.length}-PACK
+                </Text>
+              </View>
+            )}
+            <Text className={`font-bold text-sm leading-tight flex-1 ${isMultipack ? 'text-amber-300' : 'text-white'}`} numberOfLines={2}>
+              {displayTitle}
+            </Text>
+          </View>
           <View className="flex-row my-1">
               {topItem.rating ? (
                 [...Array(5)].map((_, i) => (
@@ -476,8 +533,15 @@ export function StackCard({
               )}
           </View>
           <Text className="text-neutral-500 font-mono text-[10px] my-0.5">
-            {topItem.movies?.release_date?.substring(0, 4) || topItem.shows?.first_air_date?.substring(0, 4) || '????'}
-            {topItem.media_type === 'tv' && ` • S${topItem.season_number}`}
+            {isMultipack
+              ? `${sorted.length} TITLES • ${topItem.format === 'BluRay' ? 'Blu-ray' : topItem.format}`
+              : `${topItem.movies?.release_date?.substring(0, 4) || topItem.shows?.first_air_date?.substring(0, 4) || '????'}${
+                  topItem.media_type === 'tv' && topItem.season_number !== null && topItem.season_number !== undefined
+                    ? topItem.season_number === 0
+                      ? ' • Special'
+                      : ` • S${topItem.season_number}`
+                    : ''
+                }${itemMultipackName ? ` • 📦 ${itemMultipackName}` : ''}`}
           </Text>
 
           {/* Format Coins */}
@@ -490,29 +554,41 @@ export function StackCard({
 
               return (
                 <>
-                  {displayCoins.map(item => (
-                    <View key={item.id} className="items-center">
-                      <View
-                        className={`px-1.5 h-4 rounded items-center justify-center ${FORMAT_COLORS[item.format] || 'bg-neutral-700'}`}
-                        style={{
-                          shadowColor: '#000',
-                          shadowOffset: { width: 0, height: 1 },
-                          shadowOpacity: 0.3,
-                          shadowRadius: 1,
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          gap: 2
-                        }}
-                      >
-                        <Text style={{ fontSize: 7, fontWeight: 'bold', color: 'white', fontFamily: 'SpaceMono' }}>
-                          {item.media_type === 'tv' && item.season_number ? `S${item.season_number} ` : ''}{item.format === 'BluRay' ? 'Blu-ray' : item.format}
-                        </Text>
-                        {item.is_bootleg && (
-                          <Image source={require('@/assets/images/overlays/boot_sticker.png')} style={{ width: 10, height: 10, marginLeft: 2 }} contentFit="contain" />
-                        )}
+                  {displayCoins.map((item, coinIdx) => {
+                    const seasonLabel =
+                      item.media_type === 'tv' && item.season_number !== null && item.season_number !== undefined
+                        ? item.season_number === 0
+                          ? 'SP '
+                          : `S${item.season_number} `
+                        : '';
+                    const coinText = isMultipack
+                      ? `#${coinIdx + 1} ${getItemDisplayTitle(item)}`
+                      : `${seasonLabel}${item.format === 'BluRay' ? 'Blu-ray' : item.format}`;
+
+                    return (
+                      <View key={`${item.id}-${coinIdx}`} className="items-center">
+                        <View
+                          className={`px-1.5 h-4 rounded items-center justify-center ${FORMAT_COLORS[item.format] || 'bg-neutral-700'}`}
+                          style={{
+                            shadowColor: '#000',
+                            shadowOffset: { width: 0, height: 1 },
+                            shadowOpacity: 0.3,
+                            shadowRadius: 1,
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 2
+                          }}
+                        >
+                          <Text style={{ fontSize: 7, fontWeight: 'bold', color: 'white', fontFamily: 'SpaceMono' }} numberOfLines={1}>
+                            {coinText}
+                          </Text>
+                          {item.is_bootleg && (
+                            <Image source={require('@/assets/images/overlays/boot_sticker.png')} style={{ width: 10, height: 10, marginLeft: 2 }} contentFit="contain" />
+                          )}
+                        </View>
                       </View>
-                    </View>
-                  ))}
+                    );
+                  })}
                   {showMore && (
                     <View className="items-center">
                       <View
@@ -593,7 +669,7 @@ export function StackCard({
               <View className="relative" style={{ width: width, height: containerHeight }}>
                 {/* Sticker Overlays */}
                 {primaryGenre && genreStickersEnabled && <GenreSticker genre={primaryGenre} />}
-                {topItem.media_type === 'tv' && topItem.season_number && <SeasonSticker season={topItem.season_number} />}
+                {!isMultipack && topItem.media_type === 'tv' && topItem.season_number !== null && topItem.season_number !== undefined && <SeasonSticker season={topItem.season_number} />}
                 {isOnDisplay && !isWishlist && <StickerOverlay visible={isOnDisplay} size={40} />}
                 {topItem.for_sale && <SaleSticker visible={true} size={40} />}
                 {topItem.for_trade && <TradeSticker visible={true} size={40} />}
@@ -681,7 +757,7 @@ export function StackCard({
           <View style={{ width: width, height: posterContainerHeight, justifyContent: 'flex-end', alignItems: 'center' }}>
             <View className="relative" style={{ width: width, height: width / aspectRatio }}>
               {primaryGenre && genreStickersEnabled && <GenreSticker genre={primaryGenre} />}
-              {topItem.media_type === 'tv' && topItem.season_number && <SeasonSticker season={topItem.season_number} />}
+              {!isMultipack && topItem.media_type === 'tv' && topItem.season_number !== null && topItem.season_number !== undefined && <SeasonSticker season={topItem.season_number} />}
               {isOnDisplay && !isWishlist && <StickerOverlay visible={isOnDisplay} size={40} />}
               {topItem.for_sale && <SaleSticker visible={true} size={40} />}
               {topItem.for_trade && <TradeSticker visible={true} size={40} />}
@@ -710,11 +786,7 @@ export function StackCard({
                     <View className="flex-1 items-center justify-center p-2">
                       <FontAwesome name="film" size={width * 0.4} color="#333" />
                       <Text className="text-[10px] font-mono text-neutral-500 text-center mt-2 uppercase px-4 truncate">
-                        {media 
-                          ? (topItem.media_type === 'tv' && topItem.season_number 
-                              ? `${(media as any).name} (Season ${topItem.season_number})`
-                              : ((media as any).title || (media as any).name))
-                          : `ID: ${topItem.movie_id || topItem.show_id}`}
+                        {displayTitle}
                       </Text>
                     </View>
                   )}
@@ -775,7 +847,7 @@ export function StackCard({
         <View style={{ width: width, height: posterContainerHeight, justifyContent: 'flex-end', alignItems: 'center' }}>
           <View style={{ position: 'relative' }}>
             {primaryGenre && genreStickersEnabled && <GenreSticker genre={primaryGenre} />}
-            {topItem.media_type === 'tv' && topItem.season_number && <SeasonSticker season={topItem.season_number} />}
+            {!isMultipack && topItem.media_type === 'tv' && topItem.season_number !== null && topItem.season_number !== undefined && <SeasonSticker season={topItem.season_number} />}
 
             <View
               className="rounded-xl overflow-hidden relative"
