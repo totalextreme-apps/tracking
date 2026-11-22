@@ -797,7 +797,7 @@ export default function ShowDetailScreen() {
     };
 
     
-    const resolvedCast = displayShow?.shows_cast || [];
+    const resolvedCast = resolvedShowCast;
 return (
         <View className="flex-1 bg-neutral-950">
             <StatusBar style="light" />
@@ -1227,31 +1227,50 @@ return (
                     {/* Cast Section */}
                     {resolvedCast && resolvedCast.length > 0 && (
                         <View className="mt-4 mb-2 px-4 md:px-8">
-                            <Text className="text-amber-500 font-bold text-xl mb-3 font-mono uppercase tracking-widest" style={{ fontFamily: 'VCR_OSD_MONO' }}>STARRING</Text>
+                            <View className="flex-row items-center justify-between mb-3">
+                                <Text className="text-amber-500 font-bold text-xl font-mono uppercase tracking-widest" style={{ fontFamily: 'VCR_OSD_MONO' }}>STARRING</Text>
+                                <Text className="text-neutral-500 font-mono text-[9px] uppercase tracking-wider">TAP TO VIEW IN COLLECTION</Text>
+                            </View>
                             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                                {resolvedCast.map((member: any) => (
-                                    <View key={member.id} className="mr-4 items-center w-20">
-                                        <View className="w-16 h-16 rounded-full overflow-hidden bg-neutral-800 mb-2 border border-neutral-700">
-                                            {member.profile_path ? (
-                                                <Image
-                                                    source={{ uri: `https://image.tmdb.org/t/p/w185${member.profile_path}` }}
-                                                    style={{ width: '100%', height: '100%' }}
-                                                    contentFit="cover"
-                                                />
-                                            ) : (
-                                                <View className="flex-1 items-center justify-center">
-                                                    <Ionicons name="person" size={24} color="#525252" />
-                                                </View>
-                                            )}
-                                        </View>
-                                        <Text className="text-white text-[10px] text-center font-bold leading-3 mb-0.5" numberOfLines={2}>
-                                            {member.name}
-                                        </Text>
-                                        <Text className="text-neutral-500 text-[9px] text-center leading-3" numberOfLines={2}>
-                                            {member.character}
-                                        </Text>
-                                    </View>
-                                ))}
+                                {resolvedCast.map((member: any, idx: number) => {
+                                    const isDirector = (member.character || '').toLowerCase() === 'director';
+                                    return (
+                                        <Pressable
+                                            key={`${member.id || member.name}-${idx}`}
+                                            onPress={() => {
+                                                playSound('click');
+                                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                                router.push({
+                                                    pathname: '/',
+                                                    params: isDirector
+                                                        ? { director: member.name, ...(member.id ? { personId: String(member.id) } : {}) }
+                                                        : { actor: member.name, ...(member.id ? { personId: String(member.id) } : {}) },
+                                                } as any);
+                                            }}
+                                            className="mr-4 items-center w-20 active:opacity-75"
+                                        >
+                                            <View className="w-16 h-16 rounded-full overflow-hidden bg-neutral-800 mb-2 border border-neutral-700">
+                                                {member.profile_path ? (
+                                                    <Image
+                                                        source={{ uri: `https://image.tmdb.org/t/p/w185${member.profile_path}` }}
+                                                        style={{ width: '100%', height: '100%' }}
+                                                        contentFit="cover"
+                                                    />
+                                                ) : (
+                                                    <View className="flex-1 items-center justify-center">
+                                                        <Ionicons name="person" size={24} color="#525252" />
+                                                    </View>
+                                                )}
+                                            </View>
+                                            <Text className="text-amber-400 text-[10px] text-center font-bold leading-3 mb-0.5 underline" numberOfLines={2}>
+                                                {member.name}
+                                            </Text>
+                                            <Text className="text-neutral-500 text-[9px] text-center leading-3" numberOfLines={2}>
+                                                {member.character}
+                                            </Text>
+                                        </Pressable>
+                                    );
+                                })}
                             </ScrollView>
                         </View>
                     )}

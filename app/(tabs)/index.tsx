@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Slider from '@react-native-community/slider';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
-import { router, Stack, useFocusEffect } from 'expo-router';
+import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, Platform, Pressable, RefreshControl, ScrollView, Text, TextInput, useWindowDimensions, View } from 'react-native';
@@ -169,8 +169,9 @@ function RecentlyWatchedCard({ item, navigateToDetail, playSound, onLongPressAct
 export default function HomeScreen() {
   const { userId, session, isLoading: authLoading, authPhase, showCaptcha, onCaptchaSuccess } = useAuth();
   const isGuest = !userId || session?.user?.is_anonymous;
-  const { thriftMode } = useThriftMode();
+  const { thriftMode, setThriftMode } = useThriftMode();
   const { playSound } = useSound();
+  const params = useLocalSearchParams<{ actor?: string; director?: string; personId?: string }>();
 
   const { data: collection, isLoading: collectionLoading, isError: collectionError, refetch } = useCollection(userId) as any;
   const updateMutation = useUpdateCollectionItem(userId);
@@ -214,8 +215,34 @@ export default function HomeScreen() {
   const calculatedCardWidth = getCardWidth(resolvedColumns, effectiveContainerWidth);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchMode, setSearchMode] = useState<'title' | 'actor' | 'director'>('title');
+  const [selectedPersonId, setSelectedPersonId] = useState<number | null>(null);
   const [creditTmdbIds, setCreditTmdbIds] = useState<Set<string> | null>(null);
   const [isSearchingCredits, setIsSearchingCredits] = useState(false);
+  const mainScrollRef = useRef<ScrollView>(null);
+  const [stacksSectionY, setStacksSectionY] = useState<number>(0);
+
+  useEffect(() => {
+    const incomingActor = typeof params.actor === 'string' && params.actor.trim() ? params.actor.trim() : null;
+    const incomingDirector = typeof params.director === 'string' && params.director.trim() ? params.director.trim() : null;
+    const incomingPersonId = typeof params.personId === 'string' && /^\d+$/.test(params.personId) ? parseInt(params.personId, 10) : null;
+
+    if (incomingActor || incomingDirector) {
+      if (thriftMode) setThriftMode(false);
+      setFormatFilter(null);
+      setGenreFilter(null);
+      setMediaTypeFilter(null);
+      setHasEditionFilter(false);
+      setMultipackFilter(false);
+      setSearchMode(incomingDirector ? 'director' : 'actor');
+      setSearchQuery(incomingDirector || incomingActor || '');
+      setSelectedPersonId(incomingPersonId);
+      setTimeout(() => {
+        if (mainScrollRef.current && stacksSectionY > 0) {
+          mainScrollRef.current.scrollTo({ y: Math.max(0, stacksSectionY - 16), animated: true });
+        }
+      }, 150);
+    }
+  }, [params.actor, params.director, params.personId]);
 
   useEffect(() => {
     if (searchQuery.trim().length < 2 || searchMode === 'title') {
@@ -223,15 +250,21 @@ export default function HomeScreen() {
       return;
     }
 
+    const delay = selectedPersonId ? 0 : 400;
     const timer = setTimeout(async () => {
       setIsSearchingCredits(true);
       try {
-        const personRes = await searchPerson(searchQuery, 1);
-        const person = personRes.results?.[0];
-        if (person) {
-          const personId = person.id;
-          const movieCredits = await getPersonMovieCredits(personId);
-          const tvCredits = await getPersonTvCredits(personId);
+        let personId = selectedPersonId;
+        if (!personId) {
+          const personRes = await searchPerson(searchQuery, 1);
+          const person = personRes.results?.[0];
+          personId = person?.id ?? null;
+        }
+        if (personId) {
+          const [movieCredits, tvCredits] = await Promise.all([
+            getPersonMovieCredits(personId),
+            getPersonTvCredits(personId),
+          ]);
 
           const ids = new Set<string>();
           if (searchMode === 'actor') {
@@ -263,10 +296,10 @@ export default function HomeScreen() {
       } finally {
         setIsSearchingCredits(false);
       }
-    }, 500);
+    }, delay);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, searchMode]);
+  }, [searchQuery, searchMode, selectedPersonId]);
 
   const [formatFilter, setFormatFilter] = useState<string | null>(null);
   const [genreFilter, setGenreFilter] = useState<string | null>(null);
@@ -426,15 +459,27 @@ export default function HomeScreen() {
 
     if (searchQuery) {
       if (searchMode === 'actor' || searchMode === 'director') {
-        if (creditTmdbIds) {
-          items = items.filter((item: any) => {
-            const m = item.movies || item.shows;
-            const type = item.movies ? 'movie' : 'tv';
-            return m?.tmdb_id && creditTmdbIds.has(`${type}-${m.tmdb_id}`);
-          });
-        } else {
-          items = [];
-        }
+        const qLower = searchQuery.toLowerCase().trim();
+        items = items.filter((item: any) => {
+          const m = item.movies || item.shows;
+          if (!m) return false;
+          const type = item.movies ? 'movie' : 'tv';
+          if (creditTmdbIds && m.tmdb_id && creditTmdbIds.has(`${type}-${m.tmdb_id}`)) {
+            return true;
+          }
+          const castList = (m as any).movie_cast || (m as any).show_cast;
+          if (Array.isArray(castList)) {
+            return castList.some((c: any) => {
+              if (!c?.name) return false;
+              const isDirectorEntry = (c.character || '').toLowerCase() === 'director';
+              if (searchMode === 'director' && !isDirectorEntry) return false;
+              if (searchMode === 'actor' && isDirectorEntry) return false;
+              if (selectedPersonId && c.id === selectedPersonId) return true;
+              return c.name.toLowerCase().includes(qLower);
+            });
+          }
+          return false;
+        });
       } else {
         const noiseWords = new Set(['remake', 'original', 'reboot', 'sequel', 'tv', 'show', 'series', 'film']);
         const tokens = searchQuery
@@ -505,7 +550,7 @@ export default function HomeScreen() {
     }
 
     return items;
-  }, [collection, thriftMode, formatFilter, hasEditionFilter, multipackFilter, searchQuery, genreFilter, mediaTypeFilter, searchMode, creditTmdbIds]);
+  }, [collection, thriftMode, formatFilter, hasEditionFilter, multipackFilter, searchQuery, genreFilter, mediaTypeFilter, searchMode, creditTmdbIds, selectedPersonId]);
 
   const queryClient = useQueryClient();
   const [inlineShelfReorder, setInlineShelfReorder] = useState<'display' | 'grail' | null>(null);
@@ -748,6 +793,7 @@ export default function HomeScreen() {
       <StatusBar style="light" />
 
           <ScrollView
+            ref={mainScrollRef}
             className="flex-1"
             scrollEnabled={shelfDrag === null}
             contentContainerStyle={{ paddingBottom: 160 }}
@@ -1052,7 +1098,16 @@ export default function HomeScreen() {
             </View>
           )}
 
-          <View className="px-4 md:px-8 pb-4 max-w-7xl mx-auto w-full">
+          <View
+            className="px-4 md:px-8 pb-4 max-w-7xl mx-auto w-full"
+            onLayout={(e) => {
+              const y = e.nativeEvent.layout.y;
+              setStacksSectionY(y);
+              if ((params.actor || params.director) && mainScrollRef.current && y > 0) {
+                mainScrollRef.current.scrollTo({ y: Math.max(0, y - 16), animated: true });
+              }
+            }}
+          >
             <View className="flex-row items-center justify-between mb-6 flex-wrap gap-4">
               <View className="flex-row items-center gap-4 flex-wrap flex-1 min-w-[200px]">
                 <View>
@@ -1119,7 +1174,10 @@ export default function HomeScreen() {
                     placeholder={`SEARCH ${thriftMode ? 'WISH LIST BY ' : ''}${searchMode === 'title' ? 'TITLE' : (searchMode === 'actor' ? 'ACTOR' : 'DIRECTOR')}...`} 
                     placeholderTextColor="#444" 
                     value={searchQuery} 
-                    onChangeText={setSearchQuery} 
+                    onChangeText={(text) => {
+                      setSelectedPersonId(null);
+                      setSearchQuery(text);
+                    }} 
                     className="flex-1 text-white font-mono text-xs" 
                     autoCapitalize="none" 
                     style={{ padding: 0 }} 
@@ -1128,7 +1186,7 @@ export default function HomeScreen() {
                     <ActivityIndicator size="small" color="#f59e0b" style={{ marginRight: 8 }} />
                   )}
                   {searchQuery.length > 0 && (
-                    <Pressable onPress={() => { setSearchQuery(''); playSound('click'); }} className="p-1 -mr-2">
+                    <Pressable onPress={() => { setSelectedPersonId(null); setSearchQuery(''); playSound('click'); }} className="p-1 -mr-2">
                       <Ionicons name="close-circle" size={16} color="#444" />
                     </Pressable>
                   )}
@@ -1140,7 +1198,7 @@ export default function HomeScreen() {
                 {(['title', 'actor', 'director'] as const).map(mode => (
                   <Pressable
                     key={mode}
-                    onPress={() => { setSearchMode(mode); setSearchQuery(''); setCreditTmdbIds(null); playSound('click'); }}
+                    onPress={() => { setSearchMode(mode); setSelectedPersonId(null); setSearchQuery(''); setCreditTmdbIds(null); playSound('click'); }}
                     className={`flex-1 py-1.5 rounded-md items-center justify-center ${searchMode === mode ? 'bg-amber-500/10 border border-amber-500/30' : 'border border-transparent'}`}
                   >
                     <Text className={`font-mono text-[9px] font-bold uppercase tracking-widest ${searchMode === mode ? 'text-amber-500' : 'text-neutral-500'}`}>
