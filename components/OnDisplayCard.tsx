@@ -1,7 +1,7 @@
 import { useSound } from '@/context/SoundContext';
 import { useSettings } from '@/context/SettingsContext';
 import { getPosterUrl } from '@/lib/dummy-data';
-import { getItemDisplayTitle } from '@/lib/collection-utils';
+import { getItemDisplayTitle, isSpecialSeason } from '@/lib/collection-utils';
 import type { CollectionItemWithMedia } from '@/types/database';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
@@ -259,7 +259,7 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
             {item.media_type === 'tv' && (
               <View className="px-1 py-0.5 rounded bg-blue-900/80">
                 <Text className="font-mono text-[7px] text-blue-200 whitespace-nowrap" numberOfLines={1}>
-                  {item.season_number === 0 ? 'SP' : `S${item.season_number ?? 1}`}
+                  {isSpecialSeason(item.season_number) ? 'SP' : `S${item.season_number ?? 1}`}
                 </Text>
               </View>
             )}

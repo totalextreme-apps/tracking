@@ -5,7 +5,7 @@ import { useReactions } from '@/hooks/useReactions';
 import { ReactionSummary } from './ReactionSummary';
 import { ReactionPicker } from './ReactionPicker';
 import { getPosterUrl } from '@/lib/dummy-data';
-import { getItemCustomTitle, getItemDisplayTitle, getItemMultipack, getStackDisplayTitle } from '@/lib/collection-utils';
+import { getItemCustomTitle, getItemDisplayTitle, getItemMultipack, getStackDisplayTitle, isSpecialSeason } from '@/lib/collection-utils';
 import type { CollectionItemWithMedia } from '@/types/database';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
@@ -123,7 +123,7 @@ function SeasonSticker({ season, size = 30 }: { season: number; size?: number })
           letterSpacing: -0.4,
         }}
       >
-        {season === 0 ? 'SP' : `S${season}`}
+        {isSpecialSeason(season) ? 'SP' : `S${season}`}
       </Text>
     </View>
   );
@@ -249,18 +249,21 @@ export function StackCard({
   const tmdbPosterUrl = media ? getPosterUrl(media.poster_path) : null;
   const topCustomTitle = getItemCustomTitle(topItem);
   const resolvedCustomPoster = isMultipack
-    ? topItem.custom_poster_url
+    ? (topItem.custom_poster_url || sorted.find((i) => !!i.custom_poster_url)?.custom_poster_url || null)
     : (topItem.custom_poster_url ||
         sorted.find(
           (i) =>
             !!i.custom_poster_url &&
-            i.season_number === topItem.season_number &&
+            (isSpecialSeason(i.season_number)
+              ? isSpecialSeason(topItem.season_number)
+              : i.season_number === topItem.season_number) &&
             getItemCustomTitle(i) === topCustomTitle
         )?.custom_poster_url ||
         null);
-  const hasCustomPoster = !!resolvedCustomPoster;
+  const hasCustomPoster = !!resolvedCustomPoster || (isMultipack && sorted.some((i) => !!i.custom_poster_url));
   const posterUrl = resolvedCustomPoster || tmdbPosterUrl;
   const displayTitle = getStackDisplayTitle(topItem) || `ID: ${topItem.movie_id || topItem.show_id}`;
+  const activeItemTitle = isMultipack ? getItemDisplayTitle(topItem) : null;
   const itemMultipackName = !isMultipack ? getItemMultipack(topItem) : null;
 
   // Calculate Aspect Ratio based on Top Item
@@ -295,10 +298,16 @@ export function StackCard({
         <Text 
           className={`font-mono text-[9px] font-bold text-center ${isMultipack ? 'text-amber-300' : 'text-white'}`} 
           numberOfLines={2} 
-          style={{ minHeight: 20, width: '100%', lineHeight: 11 }}
+          style={{ minHeight: isMultipack && activeItemTitle ? 14 : 20, width: '100%', lineHeight: 11 }}
         >
           {displayTitle}
         </Text>
+
+        {isMultipack && activeItemTitle && activeItemTitle.toLowerCase() !== displayTitle.toLowerCase() && (
+          <Text className="text-white font-mono text-[8px] font-bold text-center mt-0.5" numberOfLines={1}>
+            ▶ {activeItemTitle}
+          </Text>
+        )}
 
         {itemMultipackName && (
           <Text className="text-amber-500/80 font-mono text-[7px] text-center mt-0.5" numberOfLines={1}>
@@ -319,12 +328,16 @@ export function StackCard({
                 {displayCoins.map((item, coinIdx) => {
                   const seasonLabel =
                     item.media_type === 'tv' && item.season_number !== null && item.season_number !== undefined
-                      ? item.season_number === 0
+                      ? isSpecialSeason(item.season_number)
                         ? 'SP '
                         : `S${item.season_number} `
                       : '';
+                  const rawItemTitle = getItemDisplayTitle(item);
+                  const shortPackItemTitle = rawItemTitle.includes(':')
+                    ? rawItemTitle.split(':').slice(1).join(':').trim()
+                    : rawItemTitle;
                   const coinText = isMultipack
-                    ? `#${coinIdx + 1} ${getItemDisplayTitle(item).slice(0, 8)}`
+                    ? `#${coinIdx + 1} ${(shortPackItemTitle || rawItemTitle).slice(0, 10)}`
                     : `${seasonLabel}${item.format === 'BluRay' ? 'Blu-ray' : item.format}`;
 
                   return (
@@ -537,7 +550,7 @@ export function StackCard({
               ? `${sorted.length} TITLES • ${topItem.format === 'BluRay' ? 'Blu-ray' : topItem.format}`
               : `${topItem.movies?.release_date?.substring(0, 4) || topItem.shows?.first_air_date?.substring(0, 4) || '????'}${
                   topItem.media_type === 'tv' && topItem.season_number !== null && topItem.season_number !== undefined
-                    ? topItem.season_number === 0
+                    ? isSpecialSeason(topItem.season_number)
                       ? ' • Special'
                       : ` • S${topItem.season_number}`
                     : ''
@@ -557,7 +570,7 @@ export function StackCard({
                   {displayCoins.map((item, coinIdx) => {
                     const seasonLabel =
                       item.media_type === 'tv' && item.season_number !== null && item.season_number !== undefined
-                        ? item.season_number === 0
+                        ? isSpecialSeason(item.season_number)
                           ? 'SP '
                           : `S${item.season_number} `
                         : '';

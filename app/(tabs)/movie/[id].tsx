@@ -1750,33 +1750,55 @@ export default function MovieDetailScreen() {
                                         <Pressable
                                             disabled={updateMutation.isPending || updateMovieFranchiseMutation.isPending}
                                             onPress={async () => {
-                                                const noteToSave = localNotes[item.id] !== undefined ? localNotes[item.id] : (item.notes || '');
-                                                const editionToSave = localEditions[item.id] !== undefined ? localEditions[item.id] : (item.edition || '');
-                                                const customTitleToSave = (localCustomTitles[item.id] !== undefined ? localCustomTitles[item.id] : (getItemCustomTitle(item) || '')).trim();
-                                                const multipackToSave = isPackChecked
-                                                    ? (localMultipacks[item.id] !== undefined ? localMultipacks[item.id] : (savedMultipack || '')).trim()
-                                                    : '';
-                                                const bootToSave = localBootlegs[item.id] !== undefined ? localBootlegs[item.id] : (item.is_bootleg || false);
-                                                const valRaw = localValues[item.id] !== undefined ? localValues[item.id] : (item.value_estimate?.toString() || '');
-                                                const valToSave = valRaw.trim() === '' ? null : parseFloat(valRaw);
-                                                const updatedLists = withItemMetadata(item.custom_lists, {
-                                                    customTitle: customTitleToSave || null,
-                                                    multipack: multipackToSave || null,
-                                                });
-                                                // Save copy specific updates
-                                                await updateMutation.mutateAsync({
-                                                    itemId: item.id,
-                                                    updates: {
-                                                        notes: noteToSave,
-                                                        edition: editionToSave || null,
-                                                        is_bootleg: bootToSave,
-                                                        value_estimate: isNaN(valToSave as any) ? null : valToSave,
-                                                        custom_lists: updatedLists,
-                                                    }
-                                                });
+                                                try {
+                                                    for (const copy of movieItems) {
+                                                        const copyNote = localNotes[copy.id] !== undefined ? localNotes[copy.id] : (copy.notes || '');
+                                                        const copyEdition = localEditions[copy.id] !== undefined ? localEditions[copy.id] : (copy.edition || '');
+                                                        const copyCustomTitle = (localCustomTitles[copy.id] !== undefined ? localCustomTitles[copy.id] : (getItemCustomTitle(copy) || '')).trim();
+                                                        const copySavedMultipack = getItemMultipack(copy);
+                                                        const copyPackChecked = localIsMultipack[copy.id] !== undefined ? localIsMultipack[copy.id] : !!copySavedMultipack;
+                                                        const copyMultipack = copyPackChecked
+                                                            ? (localMultipacks[copy.id] !== undefined ? localMultipacks[copy.id] : (copySavedMultipack || '')).trim()
+                                                            : '';
+                                                        const bootToSave = localBootlegs[copy.id] !== undefined ? localBootlegs[copy.id] : (copy.is_bootleg || false);
+                                                        const valRaw = localValues[copy.id] !== undefined ? localValues[copy.id] : (copy.value_estimate?.toString() || '');
+                                                        const valToSave = valRaw.trim() === '' ? null : parseFloat(valRaw);
+                                                        const updatedLists = withItemMetadata(copy.custom_lists, {
+                                                            customTitle: copyCustomTitle || null,
+                                                            multipack: copyMultipack || null,
+                                                        });
 
-                                                playSound('click');
-                                                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                                                        const isTargetCopy = copy.id === item.id;
+                                                        const hasUnsavedChanges =
+                                                            localNotes[copy.id] !== undefined ||
+                                                            localEditions[copy.id] !== undefined ||
+                                                            localCustomTitles[copy.id] !== undefined ||
+                                                            localIsMultipack[copy.id] !== undefined ||
+                                                            localMultipacks[copy.id] !== undefined ||
+                                                            localBootlegs[copy.id] !== undefined ||
+                                                            localValues[copy.id] !== undefined;
+
+                                                        if (isTargetCopy || hasUnsavedChanges) {
+                                                            await updateMutation.mutateAsync({
+                                                                itemId: copy.id,
+                                                                updates: {
+                                                                    notes: copyNote,
+                                                                    edition: copyEdition || null,
+                                                                    is_bootleg: bootToSave,
+                                                                    value_estimate: isNaN(valToSave as any) ? null : valToSave,
+                                                                    custom_lists: updatedLists,
+                                                                }
+                                                            });
+                                                        }
+                                                    }
+
+                                                    if (refetch) await refetch();
+                                                    playSound('click');
+                                                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                                                } catch (e: any) {
+                                                    console.error('Failed to save release details:', e);
+                                                    Alert.alert('Save Error', e?.message || 'Could not save release details.');
+                                                }
                                             }}
                                             className={`mt-2 self-end px-4 py-2 rounded-lg border flex-row items-center ${updateMutation.isPending ? 'bg-neutral-800 border-neutral-700' : 'bg-amber-600/10 border-amber-600/50'}`}
                                         >

@@ -161,6 +161,26 @@ export default function UserProfileScreen() {
       result = result.filter(item => item.media_type === mediaTypeFilter);
     }
 
+    // Include all sibling items of any matched Multi-pack so multi-pack cards always render completely stacked
+    if (result.length > 0 && items && items.length > 0) {
+      const matchedPackKeys = new Set<string>();
+      for (const item of result) {
+        const pack = getItemMultipack(item);
+        if (pack) matchedPackKeys.add(pack.toLowerCase());
+      }
+      if (matchedPackKeys.size > 0) {
+        const includedIds = new Set(result.map((i: any) => i.id));
+        const siblings = items.filter((i: any) => {
+          if (includedIds.has(i.id)) return false;
+          const pack = getItemMultipack(i);
+          return !!(pack && matchedPackKeys.has(pack.toLowerCase()));
+        });
+        if (siblings.length > 0) {
+          result = [...result, ...siblings];
+        }
+      }
+    }
+
     result.sort((a, b) => {
       let comparison = 0;
       const mediaA = a.movies || a.shows;

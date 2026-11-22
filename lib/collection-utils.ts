@@ -14,6 +14,10 @@ export const STACK_META_PREFIX = '__meta__:';
 export const CUSTOM_TITLE_PREFIX = '__custom_title__:';
 export const MULTIPACK_PREFIX = '__multipack__:';
 
+export function isSpecialSeason(seasonNumber: number | null | undefined): boolean {
+  return seasonNumber !== null && seasonNumber !== undefined && seasonNumber <= 0;
+}
+
 export function isReservedListEntry(entry: string): boolean {
   return (
     entry.startsWith(STACK_META_PREFIX) ||
@@ -54,6 +58,9 @@ export function getItemDisplayTitle(item: CollectionItemWithMedia | null | undef
   if (!item) return '';
   const custom = getItemCustomTitle(item);
   if (custom) return custom;
+  if (item.media_type === 'tv' && isSpecialSeason(item.season_number) && item.edition?.trim()) {
+    return item.edition.trim();
+  }
   const media = item.movies || item.shows;
   return (media as any)?.title || (media as any)?.name || '';
 }
@@ -233,37 +240,41 @@ export function getStacks(
   const filtered = filterByThriftMode(items, thriftMode);
   if (filtered.length === 0) return [];
 
-  // Group by movie_id or show_id (+ custom title override so custom-titled VHS specials / releases stand as their own title)
+  // Group by Multi-pack compilation (if tagged as part of a multi-pack), or by movie_id/show_id (+ custom title override)
   const groups = new Map<string, CollectionItemWithMedia[]>();
   const multipackGroups = new Map<string, { title: string; items: CollectionItemWithMedia[] }>();
 
   for (const item of filtered) {
+    const packName = includeMultipackStacks ? getItemMultipack(item) : null;
+    if (packName) {
+      const packKey = packName.toLowerCase();
+      const existingPack = multipackGroups.get(packKey) ?? { title: packName, items: [] };
+      existingPack.items.push(item);
+      multipackGroups.set(packKey, existingPack);
+      continue;
+    }
+
     const media = item.movies || item.shows;
     const tmdbId = media?.tmdb_id;
     const customTitle = getItemCustomTitle(item)?.toLowerCase();
+    const specialEditionFallback =
+      !customTitle && item.media_type === 'tv' && isSpecialSeason(item.season_number) && item.edition?.trim()
+        ? item.edition.trim().toLowerCase()
+        : undefined;
+    const effectiveCustomKey = customTitle || specialEditionFallback;
     let key: string;
     
     if (item.media_type === 'tv') {
       const showId = tmdbId || item.show_id || item.shows?.id || item.id;
-      key = customTitle ? `tv-${showId}-custom-${customTitle}` : `tv-${showId}`;
+      key = effectiveCustomKey ? `tv-${showId}-custom-${effectiveCustomKey}` : `tv-${showId}`;
     } else {
       const movieId = tmdbId || item.movie_id || item.movies?.id || item.id;
-      key = customTitle ? `movie-${movieId}-custom-${customTitle}` : `movie-${movieId}`;
+      key = effectiveCustomKey ? `movie-${movieId}-custom-${effectiveCustomKey}` : `movie-${movieId}`;
     }
 
     const existing = groups.get(key) ?? [];
     existing.push(item);
     groups.set(key, existing);
-
-    if (includeMultipackStacks) {
-      const packName = getItemMultipack(item);
-      if (packName) {
-        const packKey = packName.toLowerCase();
-        const existingPack = multipackGroups.get(packKey) ?? { title: packName, items: [] };
-        existingPack.items.push(item);
-        multipackGroups.set(packKey, existingPack);
-      }
-    }
   }
 
   // Sort each stack by season number (asc) then format quality (highest first)
@@ -271,8 +282,8 @@ export function getStacks(
   for (const group of groups.values()) {
     const sorted = [...group].sort((a, b) => {
       if (a.media_type === 'tv' && b.media_type === 'tv') {
-        const seasonA = a.season_number ?? 0;
-        const seasonB = b.season_number ?? 0;
+        const seasonA = isSpecialSeason(a.season_number) ? 0 : (a.season_number ?? 1);
+        const seasonB = isSpecialSeason(b.season_number) ? 0 : (b.season_number ?? 1);
         if (seasonA !== seasonB) {
           return seasonA - seasonB;
         }
@@ -282,7 +293,7 @@ export function getStacks(
     stacks.push(sorted);
   }
 
-  // Add Multi-pack compilation stacks so both the stacked multi-pack card AND individual items appear
+  // Add Multi-pack compilation stacks so items in a multi-pack stack physically on top of one another
   if (includeMultipackStacks) {
     for (const packGroup of multipackGroups.values()) {
       const sortedPackItems = [...packGroup.items].sort((a, b) => {
@@ -399,8 +410,6 @@ export function getStacks(
     let comparison = 0;
 
     switch (sortBy) {
-      case 'recent':
-        break; // If recent, it's already sorted by recent when passed in. Search ties are handled above.
       case 'title':
         const rawTitleA = getStackDisplayTitle(itemA);
         const rawTitleB = getStackDisplayTitle(itemB);

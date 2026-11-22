@@ -2,7 +2,7 @@ import { GlossyCard } from '@/components/GlossyCard';
 import { VHSCard } from '@/components/VHSCard';
 import { useSound } from '@/context/SoundContext';
 import { useUpdateCollectionItem } from '@/hooks/useCollection';
-import { getItemDisplayTitle, getItemMultipack, withItemMetadata } from '@/lib/collection-utils';
+import { getItemDisplayTitle, getItemMultipack, isSpecialSeason, withItemMetadata } from '@/lib/collection-utils';
 import { getPosterUrl } from '@/lib/dummy-data';
 import type { CollectionItemWithMedia } from '@/types/database';
 import { Ionicons } from '@expo/vector-icons';
@@ -249,7 +249,7 @@ export function MultipackModal({
                       ) : null}
                       {item.media_type === 'tv' && item.season_number !== null && item.season_number !== undefined && (
                         <Text className="text-blue-400 font-mono text-[10px] font-bold">
-                          {item.season_number === 0 ? 'Special' : `Season ${item.season_number}`}
+                          {isSpecialSeason(item.season_number) ? 'Special / Volume' : `Season ${item.season_number}`}
                         </Text>
                       )}
                       <View className={`px-1.5 py-0.5 rounded ${FORMAT_COLORS[item.format] || 'bg-neutral-700'}`}>

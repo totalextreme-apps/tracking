@@ -25,7 +25,7 @@ import { ReviewSection } from '@/components/ReviewSection';
 import { CommentSection } from '@/components/CommentSection';
 import { CelebrationOverlay } from '@/components/CelebrationOverlay';
 import { deleteFromCloudinary, uploadToCloudinary } from '@/lib/cloudinary';
-import { getCustomLists, getExistingMultipacks, getItemCustomTitle, getItemDisplayTitle, getItemMultipack, withItemMetadata } from '@/lib/collection-utils';
+import { getCustomLists, getExistingMultipacks, getItemCustomTitle, getItemDisplayTitle, getItemMultipack, isSpecialSeason, withItemMetadata } from '@/lib/collection-utils';
 import { supabase } from '@/lib/supabase';
 import { fetchEbaySoldValue, getEbaySearchUrl, isErrantShippingPrice } from '@/lib/pricing';
 import { useReactions } from '@/hooks/useReactions';
@@ -417,7 +417,7 @@ export default function ShowDetailScreen() {
     }, [showItems, activeShow?.name, isReadOnly]);
 
 
-    const seasonPosterPath = activeItem?.season_number !== null && activeItem?.season_number !== undefined && tmdbShow?.seasons 
+    const seasonPosterPath = activeItem?.season_number !== null && activeItem?.season_number !== undefined && !isSpecialSeason(activeItem.season_number) && tmdbShow?.seasons 
         ? tmdbShow.seasons.find((s: any) => s.season_number === activeItem.season_number)?.poster_path 
         : undefined;
 
@@ -676,8 +676,9 @@ export default function ShowDetailScreen() {
             
             const itemObj = showItems.find((i: any) => i.id === itemId);
             const showName = itemObj?.shows?.name || activeShow?.name || (activeShow as any)?.title || '';
-            const seasonPart = itemObj?.season_number ? `Season ${itemObj.season_number}` : '';
-            const targetTitle = `${showName} ${seasonPart}`.trim();
+            const customItemTitle = getItemCustomTitle(itemObj);
+            const seasonPart = !customItemTitle && itemObj?.season_number && !isSpecialSeason(itemObj.season_number) ? `Season ${itemObj.season_number}` : '';
+            const targetTitle = (customItemTitle || `${showName} ${seasonPart}`).trim();
 
             if (!targetTitle) {
                 Alert.alert("Error", "Could not determine show title for price lookup.");
@@ -968,11 +969,11 @@ return (
                             )}
 
                             <Text className="text-white font-bold text-xl leading-6 mb-0.5">
-                                {getItemCustomTitle(activeItem) || displayShow.name || displayShow.title} {(displayShow.first_air_date || displayShow.release_date) ? `(${(displayShow.first_air_date || displayShow.release_date).slice(0, 4)})` : ''}
+                                {getItemDisplayTitle(activeItem) || displayShow.name || displayShow.title} {(displayShow.first_air_date || displayShow.release_date) ? `(${(displayShow.first_air_date || displayShow.release_date).slice(0, 4)})` : ''}
                             </Text>
-                            {getItemCustomTitle(activeItem) && (displayShow.name || displayShow.title) && getItemCustomTitle(activeItem)?.toLowerCase() !== (displayShow.name || displayShow.title || '').toLowerCase() && (
+                            {getItemDisplayTitle(activeItem) && (displayShow.name || displayShow.title) && getItemDisplayTitle(activeItem)?.toLowerCase() !== (displayShow.name || displayShow.title || '').toLowerCase() && (
                                 <Text className="text-neutral-400 font-mono text-[10px] mb-0.5">
-                                    Series: {displayShow.name || displayShow.title} • {activeItem?.season_number === 0 ? 'Special / Volume' : `Season ${activeItem?.season_number ?? 1}`}
+                                    Series: {displayShow.name || displayShow.title} • {isSpecialSeason(activeItem?.season_number) ? 'Special / Volume' : `Season ${activeItem?.season_number ?? 1}`}
                                 </Text>
                             )}
                             {getItemMultipack(activeItem) && (
@@ -1382,9 +1383,11 @@ return (
                                     const isPackChecked = localIsMultipack[item.id] !== undefined ? localIsMultipack[item.id] : !!savedMultipack;
                                     const currentMultipackName = localMultipacks[item.id] !== undefined ? localMultipacks[item.id] : (savedMultipack || '');
                                     const currentEdition = localEditions[item.id] !== undefined ? localEditions[item.id] : (item.edition || '');
-                                    const currentSeasonStr = localSeasons[item.id] !== undefined ? localSeasons[item.id] : String(item.season_number ?? 1);
-                                    const isSpecialCopy = currentSeasonStr === '0';
-                                    const seasonLabel = item.season_number === 0 ? 'SPECIAL / VOL' : `S${item.season_number || 1}`;
+                                    const defaultSeasonStr = isSpecialSeason(item.season_number) ? '0' : String(item.season_number ?? 1);
+                                    const currentSeasonStr = localSeasons[item.id] !== undefined ? localSeasons[item.id] : defaultSeasonStr;
+                                    const parsedCurrentSeason = parseInt(currentSeasonStr, 10);
+                                    const isSpecialCopy = currentSeasonStr === '0' || (!isNaN(parsedCurrentSeason) && parsedCurrentSeason <= 0);
+                                    const seasonLabel = isSpecialSeason(item.season_number) ? 'SPECIAL / VOL' : `S${item.season_number || 1}`;
 
                                     return (
                                     <View key={item.id} className="mb-5 bg-neutral-900/40 border border-neutral-800/80 rounded-xl p-3">
@@ -1682,36 +1685,92 @@ return (
                                         <Pressable
                                             disabled={updateMutation.isPending || updateShowFranchiseMutation.isPending}
                                             onPress={async () => {
-                                                const noteToSave = localNotes[item.id] !== undefined ? localNotes[item.id] : (item.notes || '');
-                                                const editionToSave = localEditions[item.id] !== undefined ? localEditions[item.id] : (item.edition || '');
-                                                const customTitleToSave = (localCustomTitles[item.id] !== undefined ? localCustomTitles[item.id] : (getItemCustomTitle(item) || '')).trim();
-                                                const multipackToSave = isPackChecked
-                                                    ? (localMultipacks[item.id] !== undefined ? localMultipacks[item.id] : (savedMultipack || '')).trim()
-                                                    : '';
-                                                const parsedSeason = parseInt(currentSeasonStr, 10);
-                                                const seasonToSave = !isNaN(parsedSeason) ? parsedSeason : (item.season_number ?? 1);
-                                                const bootToSave = localBootlegs[item.id] !== undefined ? localBootlegs[item.id] : (item.is_bootleg || false);
-                                                const valRaw = localValues[item.id] !== undefined ? localValues[item.id] : (item.value_estimate?.toString() || '');
-                                                const valToSave = valRaw.trim() === '' ? null : parseFloat(valRaw);
-                                                const updatedLists = withItemMetadata(item.custom_lists, {
-                                                    customTitle: customTitleToSave || null,
-                                                    multipack: multipackToSave || null,
-                                                });
-                                                // Save copy specific updates
-                                                await updateMutation.mutateAsync({
-                                                    itemId: item.id,
-                                                    updates: {
-                                                        notes: noteToSave,
-                                                        edition: editionToSave || null,
-                                                        season_number: seasonToSave,
-                                                        is_bootleg: bootToSave,
-                                                        value_estimate: isNaN(valToSave as any) ? null : valToSave,
-                                                        custom_lists: updatedLists,
+                                                try {
+                                                    // Track used season numbers per format across all copies so multiple Specials/VHS Volumes never collide
+                                                    const usedSpecialSeasonsByFormat = new Map<string, Set<number>>();
+                                                    for (const copy of showItems) {
+                                                        const fmt = copy.format;
+                                                        if (!usedSpecialSeasonsByFormat.has(fmt)) {
+                                                            usedSpecialSeasonsByFormat.set(fmt, new Set());
+                                                        }
                                                     }
-                                                });
 
-                                                playSound('click');
-                                                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                                                    for (const copy of showItems) {
+                                                        const copyNote = localNotes[copy.id] !== undefined ? localNotes[copy.id] : (copy.notes || '');
+                                                        const copyEdition = localEditions[copy.id] !== undefined ? localEditions[copy.id] : (copy.edition || '');
+                                                        const copyCustomTitle = (localCustomTitles[copy.id] !== undefined ? localCustomTitles[copy.id] : (getItemCustomTitle(copy) || '')).trim();
+                                                        const copySavedMultipack = getItemMultipack(copy);
+                                                        const copyPackChecked = localIsMultipack[copy.id] !== undefined ? localIsMultipack[copy.id] : !!copySavedMultipack;
+                                                        const copyMultipack = copyPackChecked
+                                                            ? (localMultipacks[copy.id] !== undefined ? localMultipacks[copy.id] : (copySavedMultipack || '')).trim()
+                                                            : '';
+                                                        const copyDefaultSeasonStr = isSpecialSeason(copy.season_number) ? '0' : String(copy.season_number ?? 1);
+                                                        const copySeasonStr = localSeasons[copy.id] !== undefined ? localSeasons[copy.id] : copyDefaultSeasonStr;
+                                                        const parsedCopySeason = parseInt(copySeasonStr, 10);
+                                                        const wantSpecial = copySeasonStr === '0' || (!isNaN(parsedCopySeason) && parsedCopySeason <= 0);
+
+                                                        let seasonToSave: number;
+                                                        if (wantSpecial) {
+                                                            const fmtSet = usedSpecialSeasonsByFormat.get(copy.format)!;
+                                                            // Prefer keeping its existing non-positive season_number if unused
+                                                            if (isSpecialSeason(copy.season_number) && !fmtSet.has(Number(copy.season_number))) {
+                                                                seasonToSave = Number(copy.season_number);
+                                                            } else {
+                                                                let candidate = 0;
+                                                                while (fmtSet.has(candidate)) {
+                                                                    candidate -= 1;
+                                                                }
+                                                                seasonToSave = candidate;
+                                                            }
+                                                            fmtSet.add(seasonToSave);
+                                                        } else {
+                                                            seasonToSave = !isNaN(parsedCopySeason) && parsedCopySeason > 0
+                                                                ? parsedCopySeason
+                                                                : (!isSpecialSeason(copy.season_number) ? (copy.season_number ?? 1) : 1);
+                                                        }
+
+                                                        const bootToSave = localBootlegs[copy.id] !== undefined ? localBootlegs[copy.id] : (copy.is_bootleg || false);
+                                                        const valRaw = localValues[copy.id] !== undefined ? localValues[copy.id] : (copy.value_estimate?.toString() || '');
+                                                        const valToSave = valRaw.trim() === '' ? null : parseFloat(valRaw);
+                                                        const updatedLists = withItemMetadata(copy.custom_lists, {
+                                                            customTitle: copyCustomTitle || null,
+                                                            multipack: copyMultipack || null,
+                                                        });
+
+                                                        const isTargetCopy = copy.id === item.id;
+                                                        const hasUnsavedChanges =
+                                                            localNotes[copy.id] !== undefined ||
+                                                            localEditions[copy.id] !== undefined ||
+                                                            localCustomTitles[copy.id] !== undefined ||
+                                                            localIsMultipack[copy.id] !== undefined ||
+                                                            localMultipacks[copy.id] !== undefined ||
+                                                            localSeasons[copy.id] !== undefined ||
+                                                            localBootlegs[copy.id] !== undefined ||
+                                                            localValues[copy.id] !== undefined ||
+                                                            seasonToSave !== copy.season_number;
+
+                                                        if (isTargetCopy || hasUnsavedChanges) {
+                                                            await updateMutation.mutateAsync({
+                                                                itemId: copy.id,
+                                                                updates: {
+                                                                    notes: copyNote,
+                                                                    edition: copyEdition || null,
+                                                                    season_number: seasonToSave,
+                                                                    is_bootleg: bootToSave,
+                                                                    value_estimate: isNaN(valToSave as any) ? null : valToSave,
+                                                                    custom_lists: updatedLists,
+                                                                }
+                                                            });
+                                                        }
+                                                    }
+
+                                                    if (refetch) await refetch();
+                                                    playSound('click');
+                                                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                                                } catch (e: any) {
+                                                    console.error('Failed to save release details:', e);
+                                                    Alert.alert('Save Error', e?.message || 'Could not save release details.');
+                                                }
                                             }}
                                             className={`mt-2 self-end px-4 py-2 rounded-lg border flex-row items-center ${updateMutation.isPending ? 'bg-neutral-800 border-neutral-700' : 'bg-amber-600/10 border-amber-600/50'}`}
                                         >
@@ -1806,7 +1865,7 @@ return (
                                 <View className="gap-2">
                                     {showItems.map((item: any) => {
                                         const isLoaded = activeItem?.id === item.id;
-                                        const seasonBadge = item.season_number === 0 ? 'SPECIAL / VOL' : `S${item.season_number || 1}`;
+                                        const seasonBadge = isSpecialSeason(item.season_number) ? 'SPECIAL / VOL' : `S${item.season_number || 1}`;
                                         return (
                                             <View key={item.id} className={`flex-row items-center justify-between p-3 rounded-lg border ${isLoaded ? 'border-amber-500 bg-neutral-900' : 'border-neutral-800 bg-neutral-900'}`}>
                                                 <View className="flex-1 flex-row items-center flex-wrap gap-2 mr-2">

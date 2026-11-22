@@ -1,4 +1,4 @@
-import { CuratedStackMeta, isStackMetaEntry, serializeStackMeta, STACK_META_PREFIX, withItemMetadata } from '@/lib/collection-utils';
+import { CuratedStackMeta, isSpecialSeason, isStackMetaEntry, serializeStackMeta, STACK_META_PREFIX, withItemMetadata } from '@/lib/collection-utils';
 import { supabase } from '@/lib/supabase';
 import { getMovieById, getTvShowById, type TmdbMediaResult } from '@/lib/tmdb';
 import type { CollectionItemWithMedia, MovieFormat } from '@/types/database';
@@ -228,10 +228,11 @@ export function useAddToCollection(userId: string | undefined) {
       let inheritedFranchise: string | null = null;
       let inheritedFranchiseOrder: number | null = null;
 
+      let existingShowItems: any[] = [];
       try {
         let existingQuery = supabase
           .from('collection_items')
-          .select('franchise, franchise_order, season_number')
+          .select('id, format, edition, franchise, franchise_order, season_number')
           .eq('user_id', userId)
           .eq('media_type', mediaType);
 
@@ -242,6 +243,7 @@ export function useAddToCollection(userId: string | undefined) {
         }
 
         const { data: existingItems } = await existingQuery;
+        existingShowItems = existingItems || [];
         if (existingItems && existingItems.length > 0) {
           if (mediaType === 'tv') {
             const exactMatch = existingItems.find((item: any) => item.season_number === seasonNumber);
@@ -268,35 +270,55 @@ export function useAddToCollection(userId: string | undefined) {
 
       const metaLists = withItemMetadata([], { customTitle, multipack });
 
-      const itemsToInsert = formats.map((format) => ({
-        user_id: userId,
-        media_type: mediaType,
-        movie_id: mediaType === 'movie' ? internalId : null,
-        show_id: mediaType === 'tv' ? internalId : null,
-        season_number: seasonNumber,
-        format,
-        status,
-        edition: edition || null,
-        is_bootleg: !!isBootleg,
-        franchise: inheritedFranchise,
-        franchise_order: inheritedFranchiseOrder,
-        ...(metaLists.length > 0 ? { custom_lists: metaLists } : {}),
-        ...(customPosterUrl ? { custom_poster_url: customPosterUrl } : {}),
-        ...(customBackdropUrl ? { custom_backdrop_url: customBackdropUrl } : {}),
-      }));
+      const itemsToInsert = formats.map((format) => {
+        let resolvedSeasonForFormat = seasonNumber;
+        if (mediaType === 'tv' && isSpecialSeason(seasonNumber)) {
+          const usedSeasons = new Set(
+            existingShowItems
+              .filter((i: any) => i.format === format && isSpecialSeason(i.season_number))
+              .map((i: any) => Number(i.season_number))
+          );
+          let candidate = 0;
+          while (usedSeasons.has(candidate)) {
+            candidate -= 1;
+          }
+          resolvedSeasonForFormat = candidate;
+        }
+        return {
+          user_id: userId,
+          media_type: mediaType,
+          movie_id: mediaType === 'movie' ? internalId : null,
+          show_id: mediaType === 'tv' ? internalId : null,
+          season_number: resolvedSeasonForFormat,
+          format,
+          status,
+          edition: edition || null,
+          is_bootleg: !!isBootleg,
+          franchise: inheritedFranchise,
+          franchise_order: inheritedFranchiseOrder,
+          ...(metaLists.length > 0 ? { custom_lists: metaLists } : {}),
+          ...(customPosterUrl ? { custom_poster_url: customPosterUrl } : {}),
+          ...(customBackdropUrl ? { custom_backdrop_url: customBackdropUrl } : {}),
+        };
+      });
 
       let { data: insertedItems, error: itemError } = await supabase
         .from('collection_items')
         .insert(itemsToInsert as any)
         .select('id');
 
-      if (itemError && itemError.code === '23505' && !edition && (customTitle || multipack)) {
-        // Auto-disambiguate edition using customTitle or multipack so multiple Specials/Volumes in the same format never collide
-        const fallbackEdition = (customTitle || multipack || '').trim();
-        if (fallbackEdition) {
+      if (itemError && itemError.code === '23505') {
+        if (mediaType === 'tv') {
+          const usedSeasons = new Set(
+            existingShowItems.map((i: any) => Number(i.season_number ?? 0))
+          );
+          let candidate = -1;
+          while (usedSeasons.has(candidate)) {
+            candidate -= 1;
+          }
           const retryPayload = itemsToInsert.map((item) => ({
             ...item,
-            edition: fallbackEdition,
+            season_number: candidate,
           }));
           const retryRes = await supabase
             .from('collection_items')
@@ -304,6 +326,21 @@ export function useAddToCollection(userId: string | undefined) {
             .select('id');
           insertedItems = retryRes.data;
           itemError = retryRes.error;
+        } else if (!edition && (customTitle || multipack)) {
+          // Auto-disambiguate movie edition using customTitle or multipack so multiple copies in the same format never collide
+          const fallbackEdition = (customTitle || multipack || '').trim();
+          if (fallbackEdition) {
+            const retryPayload = itemsToInsert.map((item) => ({
+              ...item,
+              edition: fallbackEdition,
+            }));
+            const retryRes = await supabase
+              .from('collection_items')
+              .insert(retryPayload as any)
+              .select('id');
+            insertedItems = retryRes.data;
+            itemError = retryRes.error;
+          }
         }
       }
 
@@ -351,12 +388,51 @@ export function useUpdateCollectionItem(userId: string | undefined) {
     }) => {
       if (!userId) throw new Error('Not authenticated');
 
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from('collection_items')
         .update(updates)
         .eq('id', itemId)
         .eq('user_id', userId)
         .select() as any;
+
+      if (error && error.code === '23505') {
+        // Unique constraint collision (e.g. multiple TV Specials/VHS Volumes with season_number <= 0 on the same show and format)
+        const { data: targetRow } = await supabase
+          .from('collection_items')
+          .select('id, media_type, show_id, movie_id, format, season_number, edition')
+          .eq('id', itemId)
+          .eq('user_id', userId)
+          .single() as any;
+
+        if (targetRow && targetRow.media_type === 'tv' && targetRow.show_id) {
+          const { data: siblingRows } = await supabase
+            .from('collection_items')
+            .select('id, season_number')
+            .eq('user_id', userId)
+            .eq('show_id', targetRow.show_id)
+            .eq('format', updates.format || targetRow.format) as any;
+
+          const usedSeasons = new Set(
+            (siblingRows || [])
+              .filter((r: any) => r.id !== itemId)
+              .map((r: any) => Number(r.season_number ?? 0))
+          );
+
+          let candidate = isSpecialSeason(updates.season_number ?? targetRow.season_number) ? 0 : -1;
+          while (usedSeasons.has(candidate)) {
+            candidate -= 1;
+          }
+
+          const retryRes = await supabase
+            .from('collection_items')
+            .update({ ...updates, season_number: candidate })
+            .eq('id', itemId)
+            .eq('user_id', userId)
+            .select() as any;
+          data = retryRes.data;
+          error = retryRes.error;
+        }
+      }
 
       if (error) throw error;
       return data[0];

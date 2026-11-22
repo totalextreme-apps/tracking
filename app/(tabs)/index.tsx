@@ -483,6 +483,27 @@ export default function HomeScreen() {
     if (genreFilter) items = items.filter((item: any) => (item.movies || item.shows)?.genres?.some((g: any) => g?.name === genreFilter));
     if (mediaTypeFilter) items = items.filter((item: any) => item.media_type === mediaTypeFilter);
 
+    // If any item in a Multi-pack matched the search/filter, include all sibling items from that Multi-pack so the stack stays complete
+    if (items.length > 0 && collection) {
+      const matchedPackKeys = new Set<string>();
+      for (const item of items) {
+        const pack = getItemMultipack(item);
+        if (pack) matchedPackKeys.add(pack.toLowerCase());
+      }
+      if (matchedPackKeys.size > 0) {
+        const includedIds = new Set(items.map((i: any) => i.id));
+        const siblings = collection.filter((i: any) => {
+          if (includedIds.has(i.id)) return false;
+          if ((thriftMode ? i.status === 'wishlist' : i.status === 'owned') === false) return false;
+          const pack = getItemMultipack(i);
+          return !!(pack && matchedPackKeys.has(pack.toLowerCase()));
+        });
+        if (siblings.length > 0) {
+          items = [...items, ...siblings];
+        }
+      }
+    }
+
     return items;
   }, [collection, thriftMode, formatFilter, hasEditionFilter, multipackFilter, searchQuery, genreFilter, mediaTypeFilter, searchMode, creditTmdbIds]);
 
