@@ -295,8 +295,35 @@ export function getStacks(
 
   // Add Multi-pack compilation stacks so items in a multi-pack stack physically on top of one another
   if (includeMultipackStacks) {
+    const q = searchQuery ? searchQuery.toLowerCase().trim() : '';
+    const getItemRelevance = (item: CollectionItemWithMedia) => {
+      if (!q) return 0;
+      const t = getItemDisplayTitle(item).toLowerCase();
+      const media = item.movies || item.shows;
+      const orig = ((media as any)?.title || (media as any)?.name || '').toLowerCase();
+      const ed = (item.edition || '').toLowerCase();
+      let s = 0;
+      for (const candidate of [t, orig, ed]) {
+        if (!candidate) continue;
+        if (candidate === q) s = Math.max(s, 100);
+        else if (candidate.startsWith(q + ' ') || candidate.startsWith(q + ':')) s = Math.max(s, 80);
+        else if (candidate.includes(' ' + q + ' ') || candidate.includes(' ' + q)) s = Math.max(s, 60);
+        else if (candidate.includes(q)) s = Math.max(s, 40);
+      }
+      return s;
+    };
+
     for (const packGroup of multipackGroups.values()) {
       const sortedPackItems = [...packGroup.items].sort((a, b) => {
+        if (q) {
+          const relDiff = getItemRelevance(b) - getItemRelevance(a);
+          if (relDiff !== 0) return relDiff;
+        }
+        const orderA = a.franchise_order !== null && a.franchise_order !== undefined ? Number(a.franchise_order) : Infinity;
+        const orderB = b.franchise_order !== null && b.franchise_order !== undefined ? Number(b.franchise_order) : Infinity;
+        if (!isNaN(orderA) && !isNaN(orderB) && orderA !== orderB) {
+          return orderA - orderB;
+        }
         const titleA = getItemDisplayTitle(a);
         const titleB = getItemDisplayTitle(b);
         return titleA.localeCompare(titleB);
@@ -380,8 +407,20 @@ export function getStacks(
         return 0;
       };
 
-      let scoreA = Math.max(getScore(titleA), getScore(origTitleA));
-      let scoreB = Math.max(getScore(titleB), getScore(origTitleB));
+      const getStackMaxSearchScore = (stack: CollectionItemWithMedia[]) => {
+        let max = getScore(getStackDisplayTitle(stack[0]).toLowerCase());
+        for (const it of stack) {
+          const m = it.movies || it.shows;
+          const dTitle = getItemDisplayTitle(it).toLowerCase();
+          const oTitle = ((m as any)?.title || (m as any)?.name || '').toLowerCase();
+          const ed = (it.edition || '').toLowerCase();
+          max = Math.max(max, getScore(dTitle), getScore(oTitle), getScore(ed));
+        }
+        return max;
+      };
+
+      let scoreA = getStackMaxSearchScore(a);
+      let scoreB = getStackMaxSearchScore(b);
 
       // If Franchise Sort is on, boost the item's score to its franchise's max score
       if (useFranchiseSort) {
@@ -408,20 +447,26 @@ export function getStacks(
     }
 
     let comparison = 0;
+    const getStackFranchiseOrder = (stack: CollectionItemWithMedia[]) => {
+      const orders = stack
+        .map((i) => (i.franchise_order !== null && i.franchise_order !== undefined ? Number(i.franchise_order) : Infinity))
+        .filter((n) => !isNaN(n) && n !== Infinity);
+      return orders.length > 0 ? Math.min(...orders) : Infinity;
+    };
 
     switch (sortBy) {
       case 'title':
         const rawTitleA = getStackDisplayTitle(itemA);
         const rawTitleB = getStackDisplayTitle(itemB);
 
-        if (useFranchiseSort && !isPackA && !isPackB) {
-          const franchiseA = itemA.franchise?.trim();
-          const franchiseB = itemB.franchise?.trim();
+        if (useFranchiseSort) {
+          const franchiseA = isPackA ? (a.find((i) => i.franchise?.trim())?.franchise?.trim()) : itemA.franchise?.trim();
+          const franchiseB = isPackB ? (b.find((i) => i.franchise?.trim())?.franchise?.trim()) : itemB.franchise?.trim();
 
           if (franchiseA && franchiseB) {
             if (franchiseA.toLowerCase() === franchiseB.toLowerCase()) {
-              const orderA = itemA.franchise_order !== null && itemA.franchise_order !== undefined ? Number(itemA.franchise_order) : Infinity;
-              const orderB = itemB.franchise_order !== null && itemB.franchise_order !== undefined ? Number(itemB.franchise_order) : Infinity;
+              const orderA = getStackFranchiseOrder(a);
+              const orderB = getStackFranchiseOrder(b);
               if (orderA !== orderB) {
                 comparison = orderA - orderB;
               } else {

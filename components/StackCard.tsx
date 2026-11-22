@@ -74,12 +74,18 @@ type StackCardProps = {
 const DEFAULT_CARD_WIDTH = 100;
 const DEFAULT_CARD_HEIGHT = 150;
 
-const getStackTransforms = (idx: number) => {
+const getStackTransforms = (idx: number, isMultipack = false) => {
   if (idx === 0) return { rotate: '0deg', left: 0, top: 0 };
   
-  const rotations = ['-3deg', '3deg', '-2deg', '4deg', '-3deg', '2deg'];
-  const shiftsX = [-3, 3, -2, 3, -3, 2];
-  const shiftsY = [5, 10, 15, 20, 25, 30];
+  const rotations = isMultipack
+    ? ['-4.5deg', '4.5deg', '-3deg', '5.5deg', '-4deg', '3.5deg']
+    : ['-3deg', '3deg', '-2deg', '4deg', '-3deg', '2deg'];
+  const shiftsX = isMultipack
+    ? [-6, 6, -4, 7, -6, 5]
+    : [-3, 3, -2, 3, -3, 2];
+  const shiftsY = isMultipack
+    ? [8, 16, 24, 32, 40, 48]
+    : [5, 10, 15, 20, 25, 30];
   
   const r = rotations[(idx - 1) % rotations.length];
   const x = shiftsX[(idx - 1) % shiftsX.length];
@@ -275,7 +281,7 @@ export function StackCard({
     ? (topItem.format === 'VHS' ? 0.57 : isBluRay ? 0.78 : 0.71)
     : (topItem.format === 'Digital' ? 2 / 3 : 2 / 3); // Digital is already 2/3
 
-  const maxShiftY = sorted.length > 1 ? getStackTransforms(sorted.length - 1).top : 0;
+  const maxShiftY = sorted.length > 1 ? getStackTransforms(sorted.length - 1, isMultipack).top : 0;
   const paddingBuffer = sorted.length > 1 ? 15 : 0;
   const posterContainerHeight = (width / aspectRatio) + maxShiftY + paddingBuffer;
 
@@ -661,7 +667,7 @@ export function StackCard({
   if (isPhysical) {
     // Physical stack: cards peeking out from behind ONLY if multiple items exist
     if (sorted.length > 1) {
-      const maxShiftY = getStackTransforms(sorted.length - 1).top;
+      const maxShiftY = getStackTransforms(sorted.length - 1, isMultipack).top;
       const paddingBuffer = 15;
       const containerHeight = (width / aspectRatio) + maxShiftY + paddingBuffer;
 
@@ -689,7 +695,7 @@ export function StackCard({
                 {isGrail && isWishlist && <GrailSticker visible={true} size={40} />}
 
                 {sorted.map((item, idx) => {
-                  const transforms = getStackTransforms(idx);
+                  const transforms = getStackTransforms(idx, isMultipack);
                   const itemMedia = item.movies || item.shows;
                   const url = item.custom_poster_url || (itemMedia ? getPosterUrl(itemMedia.poster_path) : null);
                   
