@@ -18,9 +18,11 @@ import { StackCard } from '@/components/StackCard';
 import { RouletteModal } from '@/components/RouletteModal';
 import { ShareModal } from '@/components/ShareModal';
 import { WatchLogModal } from '@/components/WatchLogModal';
+import { TipsAndTricksModal } from '@/components/TipsAndTricksModal';
 import { DesktopContainer } from '@/components/DesktopContainer';
 import { useResponsiveColumns } from '@/hooks/useResponsiveColumns';
 import { useAuth } from '@/context/AuthContext';
+import { useSettings } from '@/context/SettingsContext';
 import { useSound } from '@/context/SoundContext';
 import { useThriftMode } from '@/context/ThriftModeContext';
 import { useCollection, useUpdateCollectionItem } from '@/hooks/useCollection';
@@ -328,6 +330,15 @@ export default function HomeScreen() {
   const [shareLinkMessage, setShareLinkMessage] = useState('');
   const [shareTextMessage, setShareTextMessage] = useState('');
   const [showWatchLogModal, setShowWatchLogModal] = useState(false);
+  const [showTipsModal, setShowTipsModal] = useState(false);
+  const [tipsBannerDismissed, setTipsBannerDismissed] = usePersistedState<boolean>('tips_banner_dismissed', false);
+  const { onboardingKey } = useSettings();
+
+  useEffect(() => {
+    if (onboardingKey > 0) {
+      setTipsBannerDismissed(false);
+    }
+  }, [onboardingKey]);
 
   useFocusEffect(
     useCallback(() => {
@@ -801,6 +812,42 @@ export default function HomeScreen() {
           >
         <DesktopContainer>
           <View>
+          {/* COMPACT NON-INTRUSIVE TIPS & TRICKS BANNER */}
+          {!tipsBannerDismissed && (
+            <View className="px-4 md:px-8 mt-3 max-w-7xl mx-auto w-full">
+              <View className="bg-amber-500/10 border border-amber-500/30 rounded-xl px-3 py-2 flex-row items-center justify-between">
+                <Pressable
+                  onPress={() => {
+                    playSound('click');
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setShowTipsModal(true);
+                  }}
+                  className="flex-row items-center gap-2 flex-1 pr-2 active:opacity-75"
+                >
+                  <View className="bg-amber-500/20 p-1.5 rounded-lg border border-amber-500/40">
+                    <Ionicons name="bulb-outline" size={13} color="#f59e0b" />
+                  </View>
+                  <Text className="text-neutral-200 font-mono text-[10px] sm:text-xs flex-1 leading-4">
+                    New to Tracking?{' '}
+                    <Text className="text-amber-400 font-bold underline">
+                      Check out some helpful tips &amp; tricks ›
+                    </Text>
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    playSound('click');
+                    setTipsBannerDismissed(true);
+                  }}
+                  hitSlop={8}
+                  className="p-1 rounded-full bg-neutral-900/80 border border-neutral-800"
+                >
+                  <Ionicons name="close" size={12} color="#737373" />
+                </Pressable>
+              </View>
+            </View>
+          )}
+
           {/* ON DISPLAY SECTION (OWNED) - ONLY IN STACKS MODE */}
           {onDisplay.length > 0 && !thriftMode && (
             <View className="mb-8 mt-6">
@@ -1153,6 +1200,12 @@ export default function HomeScreen() {
                   >
                     <Ionicons name="dice-outline" size={14} color="#f59e0b" />
                   </Pressable>
+                  <Pressable
+                    onPress={() => { setShowTipsModal(true); playSound('click'); }}
+                    className="flex-row items-center justify-center p-2 rounded-full bg-neutral-900 border border-neutral-800"
+                  >
+                    <Ionicons name="help-circle-outline" size={14} color="#f59e0b" />
+                  </Pressable>
                 </View>
               </View>
 
@@ -1469,6 +1522,11 @@ export default function HomeScreen() {
         isReadOnly={isGuest}
         onClose={() => setActiveMultipackName(null)}
         onSelectItem={(item) => navigateToDetail(item)}
+      />
+
+      <TipsAndTricksModal
+        visible={showTipsModal}
+        onClose={() => setShowTipsModal(false)}
       />
 
       {showRewind && (

@@ -24,6 +24,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, Switch, Text, TextInput, View, Linking, useWindowDimensions } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PreferenceQuizModal } from '@/components/PreferenceQuizModal';
+import { TipsAndTricksModal } from '@/components/TipsAndTricksModal';
 import { useQueryClient } from '@tanstack/react-query';
 
 const logoSource = Platform.OS === 'web'
@@ -212,6 +213,7 @@ export default function SettingsScreen() {
   const { soundEnabled, setSoundEnabled, staticEnabled, setStaticEnabled, genreStickersEnabled, setGenreStickersEnabled, resetOnboarding } = useSettings();
   const [showQuiz, setShowQuiz] = useState(false);
   const [showTagManager, setShowTagManager] = useState(false);
+  const [showTipsModal, setShowTipsModal] = useState(false);
 
   const router = useRouter();
 
@@ -1153,6 +1155,19 @@ export default function SettingsScreen() {
         {/* INFO / ABOUT */}
         <View className="bg-neutral-900 rounded-lg overflow-hidden mt-6">
           <Pressable
+            onPress={() => {
+              playSound('click');
+              setShowTipsModal(true);
+            }}
+            className="p-4 flex-row items-center justify-between active:bg-neutral-800 border-t border-neutral-800"
+          >
+            <View className="flex-row items-center">
+              <View className="w-8 items-center"><Ionicons name="bulb-outline" size={15} color="#f59e0b" /></View>
+              <Text className="text-amber-500 font-mono text-sm font-bold">Tips, Tricks &amp; Tutorials</Text>
+            </View>
+            <FontAwesome name="chevron-right" size={10} color="#525252" />
+          </Pressable>
+          <Pressable
             onPress={() => setShowQuiz(true)}
             className="p-4 flex-row items-center justify-between active:bg-neutral-800 border-t border-neutral-800"
           >
@@ -1175,13 +1190,13 @@ export default function SettingsScreen() {
           <Pressable
             onPress={async () => {
               await resetOnboarding();
-              Alert.alert('Reset', 'Tutorial will show immediately.');
+              setShowTipsModal(true);
             }}
             className="p-4 flex-row items-center justify-between active:bg-neutral-800 border-t border-neutral-800"
           >
             <View className="flex-row items-center">
               <View className="w-8 items-center"><FontAwesome name="question-circle" size={14} color="#525252" /></View>
-              <Text className="text-neutral-500 font-mono text-xs">Reset Tutorial</Text>
+              <Text className="text-neutral-500 font-mono text-xs">Reset Tutorial Banner</Text>
             </View>
           </Pressable>
 
@@ -1233,6 +1248,7 @@ export default function SettingsScreen() {
           </View>
         </View>
       </ScrollView>
+      <TipsAndTricksModal visible={showTipsModal} onClose={() => setShowTipsModal(false)} />
     </View>
   );
 }

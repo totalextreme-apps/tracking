@@ -74,18 +74,12 @@ type StackCardProps = {
 const DEFAULT_CARD_WIDTH = 100;
 const DEFAULT_CARD_HEIGHT = 150;
 
-const getStackTransforms = (idx: number, isMultipack = false) => {
+const getStackTransforms = (idx: number, _isMultipack = false) => {
   if (idx === 0) return { rotate: '0deg', left: 0, top: 0 };
   
-  const rotations = isMultipack
-    ? ['-4.5deg', '4.5deg', '-3deg', '5.5deg', '-4deg', '3.5deg']
-    : ['-3deg', '3deg', '-2deg', '4deg', '-3deg', '2deg'];
-  const shiftsX = isMultipack
-    ? [-6, 6, -4, 7, -6, 5]
-    : [-3, 3, -2, 3, -3, 2];
-  const shiftsY = isMultipack
-    ? [8, 16, 24, 32, 40, 48]
-    : [5, 10, 15, 20, 25, 30];
+  const rotations = ['-3deg', '3deg', '-2deg', '4deg', '-3deg', '2deg'];
+  const shiftsX = [-3, 3, -2, 3, -3, 2];
+  const shiftsY = [5, 10, 15, 20, 25, 30];
   
   const r = rotations[(idx - 1) % rotations.length];
   const x = shiftsX[(idx - 1) % shiftsX.length];
@@ -291,40 +285,57 @@ export function StackCard({
         className={`border rounded-xl p-2 mt-1.5 w-full ${isMultipack ? 'bg-amber-950/30 border-amber-500/40' : 'bg-neutral-900/60 border-neutral-800/60'}`}
         style={{ minHeight: 52, justifyContent: 'space-between', alignItems: 'center' }}
       >
-        {isMultipack && (
-          <View className="bg-amber-500/20 border border-amber-500/40 px-1.5 py-0.5 rounded mb-1 flex-row items-center gap-1">
-            <FontAwesome name="archive" size={7} color="#f59e0b" />
-            <Text className="text-amber-400 font-mono text-[7px] font-bold uppercase tracking-wider">
-              {sorted.length}-TITLE MULTI-PACK
-            </Text>
-          </View>
-        )}
-
         {/* Title */}
         <Text 
           className={`font-mono text-[9px] font-bold text-center ${isMultipack ? 'text-amber-300' : 'text-white'}`} 
           numberOfLines={2} 
-          style={{ minHeight: isMultipack && activeItemTitle ? 14 : 20, width: '100%', lineHeight: 11 }}
+          style={{ minHeight: 20, width: '100%', lineHeight: 11 }}
         >
           {displayTitle}
         </Text>
 
-        {isMultipack && activeItemTitle && activeItemTitle.toLowerCase() !== displayTitle.toLowerCase() && (
-          <Text className="text-white font-mono text-[8px] font-bold text-center mt-0.5" numberOfLines={1}>
-            ▶ {activeItemTitle}
-          </Text>
-        )}
-
-        {itemMultipackName && (
-          <Text className="text-amber-500/80 font-mono text-[7px] text-center mt-0.5" numberOfLines={1}>
-            📦 {itemMultipackName}
-          </Text>
-        )}
-
         {/* Format & Rating row */}
         <View className="flex-row w-full justify-center items-center mt-1 gap-1 flex-wrap">
           {(() => {
-            const maxCoins = isMultipack ? 4 : 3;
+            if (isMultipack) {
+              const fmtLabel = topItem.format === 'BluRay' ? 'Blu-ray' : topItem.format;
+              return (
+                <>
+                  <View
+                    className={`px-1.5 py-0.5 rounded flex-row items-center gap-1 ${FORMAT_COLORS[topItem.format] || 'bg-neutral-700'}`}
+                    style={{
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.3,
+                      shadowRadius: 1,
+                    }}
+                  >
+                    <Text className="text-white font-mono text-[8px] font-bold" numberOfLines={1}>
+                      {`${sorted.length}x ${fmtLabel}`}
+                    </Text>
+                    {topItem.is_bootleg && (
+                      <Image source={require('@/assets/images/overlays/boot_sticker.png')} style={{ width: 10, height: 10 }} contentFit="contain" />
+                    )}
+                  </View>
+                  {sorted.length > 1 && (
+                    <Pressable
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        if (!isReadOnly) playSound('click');
+                        const currentIdx = defaultSorted.findIndex((i) => i.id === topItem.id);
+                        const nextItem = defaultSorted[(currentIdx + 1) % defaultSorted.length];
+                        if (nextItem) setActiveId(nextItem.id);
+                      }}
+                      className="px-1.5 py-0.5 rounded bg-amber-500/20 border border-amber-500/40 flex-row items-center"
+                    >
+                      <FontAwesome name="refresh" size={7} color="#f59e0b" />
+                    </Pressable>
+                  )}
+                </>
+              );
+            }
+
+            const maxCoins = 3;
             const showMore = sorted.length > maxCoins + 1;
             const displayCoins = showMore ? sorted.slice(0, maxCoins) : sorted;
             const remaining = sorted.length - maxCoins;
@@ -338,13 +349,7 @@ export function StackCard({
                         ? 'SP '
                         : `S${item.season_number} `
                       : '';
-                  const rawItemTitle = getItemDisplayTitle(item);
-                  const shortPackItemTitle = rawItemTitle.includes(':')
-                    ? rawItemTitle.split(':').slice(1).join(':').trim()
-                    : rawItemTitle;
-                  const coinText = isMultipack
-                    ? `#${coinIdx + 1} ${(shortPackItemTitle || rawItemTitle).slice(0, 10)}`
-                    : `${seasonLabel}${item.format === 'BluRay' ? 'Blu-ray' : item.format}`;
+                  const coinText = `${seasonLabel}${item.format === 'BluRay' ? 'Blu-ray' : item.format}`;
 
                   return (
                     <Pressable

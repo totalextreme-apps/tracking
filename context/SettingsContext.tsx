@@ -70,6 +70,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         await AsyncStorage.removeItem('has_seen_tour_v2');
         await AsyncStorage.removeItem('has_seen_onboarding_v1'); // clear legacy too
         await AsyncStorage.removeItem('has_seen_tour_v1'); // clear legacy too
+        await AsyncStorage.removeItem('tips_banner_dismissed');
         setOnboardingKey(prev => prev + 1);
     };
 
