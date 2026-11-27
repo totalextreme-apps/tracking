@@ -138,6 +138,16 @@ export function serializeStackMeta(listName: string, meta: CuratedStackMeta): st
   return `${STACK_META_PREFIX}${listName}:${JSON.stringify(payload)}`;
 }
 
+const fastCollator =
+  typeof Intl !== 'undefined' && typeof Intl.Collator === 'function'
+    ? new Intl.Collator(undefined, { sensitivity: 'base' })
+    : null;
+
+export function fastCompareStrings(a: string, b: string): number {
+  if (fastCollator) return fastCollator.compare(a, b);
+  return a.localeCompare(b);
+}
+
 export function getStackMeta(
   collection: CollectionItemWithMedia[] | undefined,
   listName: string
@@ -164,6 +174,61 @@ export function getStackMeta(
   return best || {};
 }
 
+export interface IndexedCuratedStack {
+  listName: string;
+  items: CollectionItemWithMedia[];
+  meta: CuratedStackMeta;
+}
+
+/**
+ * Single-pass O(N) indexer for all Curated Stacks in a collection.
+ * Replaces O(L * N) repeated filtering and metadata scanning when rendering Curated Stacks.
+ */
+export function buildCuratedStacksIndex(
+  collection: CollectionItemWithMedia[] | undefined
+): Map<string, IndexedCuratedStack> {
+  const index = new Map<string, IndexedCuratedStack>();
+  if (!collection || collection.length === 0) return index;
+
+  for (let i = 0; i < collection.length; i++) {
+    const item = collection[i];
+    if (!item?.custom_lists) continue;
+    for (let j = 0; j < item.custom_lists.length; j++) {
+      const entry = item.custom_lists[j];
+      if (!entry) continue;
+      if (entry.startsWith(STACK_META_PREFIX)) {
+        const rest = entry.slice(STACK_META_PREFIX.length);
+        const colonIdx = rest.indexOf(':');
+        if (colonIdx > 0) {
+          const listName = rest.slice(0, colonIdx);
+          const jsonStr = rest.slice(colonIdx + 1);
+          try {
+            const parsed = JSON.parse(jsonStr) as CuratedStackMeta;
+            let bucket = index.get(listName);
+            if (!bucket) {
+              bucket = { listName, items: [], meta: parsed };
+              index.set(listName, bucket);
+            } else if ((parsed.updatedAt || 0) >= (bucket.meta.updatedAt || 0)) {
+              bucket.meta = parsed;
+            }
+          } catch {
+            // ignore malformed
+          }
+        }
+      } else if (!isReservedListEntry(entry)) {
+        let bucket = index.get(entry);
+        if (!bucket) {
+          bucket = { listName: entry, items: [], meta: {} };
+          index.set(entry, bucket);
+        }
+        bucket.items.push(item);
+      }
+    }
+  }
+
+  return index;
+}
+
 export function getCustomLists(collection: CollectionItemWithMedia[] | undefined): string[] {
   if (!collection) return [];
   const lists = new Set<string>();
@@ -174,7 +239,7 @@ export function getCustomLists(collection: CollectionItemWithMedia[] | undefined
       }
     });
   });
-  return Array.from(lists).sort();
+  return Array.from(lists).sort(fastCompareStrings);
 }
 
 const FORMAT_ORDER: Record<string, number> = {
@@ -366,22 +431,38 @@ export function getStacks(
     }
   }
 
+  // Precompute per-stack timestamps & franchise orders once before sorting (O(N) instead of O(N log N))
+  const stackLatestTs = new WeakMap<CollectionItemWithMedia[], number>();
+  const stackMinFranchiseOrder = new WeakMap<CollectionItemWithMedia[], number>();
+  const stackDisplayTitles = new WeakMap<CollectionItemWithMedia[], string>();
+
+  for (let i = 0; i < stacks.length; i++) {
+    const s = stacks[i];
+    let maxTs = 0;
+    let minOrder = Infinity;
+    for (let j = 0; j < s.length; j++) {
+      const it = s[j];
+      const ts = Date.parse(it.created_at);
+      if (ts > maxTs) maxTs = ts;
+      if (it.franchise_order !== null && it.franchise_order !== undefined) {
+        const n = Number(it.franchise_order);
+        if (!isNaN(n) && n < minOrder) minOrder = n;
+      }
+    }
+    stackLatestTs.set(s, maxTs);
+    stackMinFranchiseOrder.set(s, minOrder);
+    stackDisplayTitles.set(s, getStackDisplayTitle(s[0]));
+  }
+
   // Sort stacks
   stacks.sort((a, b) => {
     const itemA = a[0];
     const itemB = b[0];
 
-    const mediaA = itemA.movies || itemA.shows;
-    const mediaB = itemB.movies || itemB.shows;
     const isPackA = !!(itemA as any).__isMultipackStack;
     const isPackB = !!(itemB as any).__isMultipackStack;
 
     if (searchQuery && sortBy === 'recent') {
-      const titleA = getStackDisplayTitle(itemA).toLowerCase();
-      const titleB = getStackDisplayTitle(itemB).toLowerCase();
-      const origTitleA = ((mediaA as any)?.title || (mediaA as any)?.name || '').toLowerCase();
-      const origTitleB = ((mediaB as any)?.title || (mediaB as any)?.name || '').toLowerCase();
-      
       // 1. If Franchise Sort is on and they are in the same franchise, franchise order ALWAYS wins
       if (useFranchiseSort && !isPackA && !isPackB) {
         const franchiseA = itemA.franchise?.trim();
@@ -408,7 +489,7 @@ export function getStacks(
       };
 
       const getStackMaxSearchScore = (stack: CollectionItemWithMedia[]) => {
-        let max = getScore(getStackDisplayTitle(stack[0]).toLowerCase());
+        let max = getScore((stackDisplayTitles.get(stack) || '').toLowerCase());
         for (const it of stack) {
           const m = it.movies || it.shows;
           const dTitle = getItemDisplayTitle(it).toLowerCase();
@@ -441,23 +522,17 @@ export function getStacks(
         if (franchiseA !== franchiseB) {
           if (franchiseA && !franchiseB) return -1;
           if (!franchiseA && franchiseB) return 1;
-          return franchiseA.localeCompare(franchiseB);
+          return fastCompareStrings(franchiseA, franchiseB);
         }
       }
     }
 
     let comparison = 0;
-    const getStackFranchiseOrder = (stack: CollectionItemWithMedia[]) => {
-      const orders = stack
-        .map((i) => (i.franchise_order !== null && i.franchise_order !== undefined ? Number(i.franchise_order) : Infinity))
-        .filter((n) => !isNaN(n) && n !== Infinity);
-      return orders.length > 0 ? Math.min(...orders) : Infinity;
-    };
 
     switch (sortBy) {
       case 'title':
-        const rawTitleA = getStackDisplayTitle(itemA);
-        const rawTitleB = getStackDisplayTitle(itemB);
+        const rawTitleA = stackDisplayTitles.get(a) ?? getStackDisplayTitle(itemA);
+        const rawTitleB = stackDisplayTitles.get(b) ?? getStackDisplayTitle(itemB);
 
         if (useFranchiseSort) {
           const franchiseA = isPackA ? (a.find((i) => i.franchise?.trim())?.franchise?.trim()) : itemA.franchise?.trim();
@@ -465,25 +540,25 @@ export function getStacks(
 
           if (franchiseA && franchiseB) {
             if (franchiseA.toLowerCase() === franchiseB.toLowerCase()) {
-              const orderA = getStackFranchiseOrder(a);
-              const orderB = getStackFranchiseOrder(b);
+              const orderA = stackMinFranchiseOrder.get(a) ?? Infinity;
+              const orderB = stackMinFranchiseOrder.get(b) ?? Infinity;
               if (orderA !== orderB) {
                 comparison = orderA - orderB;
               } else {
-                comparison = rawTitleA.localeCompare(rawTitleB);
+                comparison = fastCompareStrings(rawTitleA, rawTitleB);
               }
             } else {
-              comparison = franchiseA.localeCompare(franchiseB);
+              comparison = fastCompareStrings(franchiseA, franchiseB);
             }
           } else if (franchiseA) {
-            comparison = franchiseA.localeCompare(rawTitleB);
+            comparison = fastCompareStrings(franchiseA, rawTitleB);
           } else if (franchiseB) {
-            comparison = rawTitleA.localeCompare(franchiseB);
+            comparison = fastCompareStrings(rawTitleA, franchiseB);
           } else {
-            comparison = rawTitleA.localeCompare(rawTitleB);
+            comparison = fastCompareStrings(rawTitleA, rawTitleB);
           }
         } else {
-          comparison = rawTitleA.localeCompare(rawTitleB);
+          comparison = fastCompareStrings(rawTitleA, rawTitleB);
         }
 
         // If titles are same, sort by season
@@ -494,7 +569,7 @@ export function getStacks(
       case 'release':
         const dateA = itemA.movies?.release_date ?? itemA.shows?.first_air_date ?? '';
         const dateB = itemB.movies?.release_date ?? itemB.shows?.first_air_date ?? '';
-        comparison = dateA.localeCompare(dateB);
+        comparison = dateA < dateB ? -1 : dateA > dateB ? 1 : 0;
         break;
       case 'rating':
         const ratingA = itemA.rating ?? 0;
@@ -506,19 +581,19 @@ export function getStacks(
         const isBootB = b.some(i => i.is_bootleg) ? 1 : 0;
         comparison = isBootA - isBootB;
         if (comparison === 0) {
-          const titleAStr = getStackDisplayTitle(itemA);
-          const titleBStr = getStackDisplayTitle(itemB);
-          comparison = titleAStr.localeCompare(titleBStr);
+          const titleAStr = stackDisplayTitles.get(a) ?? getStackDisplayTitle(itemA);
+          const titleBStr = stackDisplayTitles.get(b) ?? getStackDisplayTitle(itemB);
+          comparison = fastCompareStrings(titleAStr, titleBStr);
         }
         break;
       case 'genre':
         const genreA = (itemA.movies?.genres?.[0]?.name ?? itemA.shows?.genres?.[0]?.name ?? 'ZZZ');
         const genreB = (itemB.movies?.genres?.[0]?.name ?? itemB.shows?.genres?.[0]?.name ?? 'ZZZ');
-        comparison = genreA.localeCompare(genreB);
+        comparison = fastCompareStrings(genreA, genreB);
         if (comparison === 0) {
-          const titleAStr = getStackDisplayTitle(itemA);
-          const titleBStr = getStackDisplayTitle(itemB);
-          comparison = titleAStr.localeCompare(titleBStr);
+          const titleAStr = stackDisplayTitles.get(a) ?? getStackDisplayTitle(itemA);
+          const titleBStr = stackDisplayTitles.get(b) ?? getStackDisplayTitle(itemB);
+          comparison = fastCompareStrings(titleAStr, titleBStr);
         }
         break;
       case 'value':
@@ -526,15 +601,15 @@ export function getStacks(
         const valB = itemB.value_estimate ?? -1;
         comparison = valA - valB;
         if (comparison === 0) {
-          const titleAStr = getStackDisplayTitle(itemA);
-          const titleBStr = getStackDisplayTitle(itemB);
-          comparison = titleAStr.localeCompare(titleBStr);
+          const titleAStr = stackDisplayTitles.get(a) ?? getStackDisplayTitle(itemA);
+          const titleBStr = stackDisplayTitles.get(b) ?? getStackDisplayTitle(itemB);
+          comparison = fastCompareStrings(titleAStr, titleBStr);
         }
         break;
       case 'recent':
       default:
-        const latestA = Math.max(...a.map(i => new Date(i.created_at).getTime()));
-        const latestB = Math.max(...b.map(i => new Date(i.created_at).getTime()));
+        const latestA = stackLatestTs.get(a) ?? 0;
+        const latestB = stackLatestTs.get(b) ?? 0;
         comparison = latestA - latestB;
         break;
     }

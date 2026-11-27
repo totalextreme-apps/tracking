@@ -25,7 +25,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useSettings } from '@/context/SettingsContext';
 import { useSound } from '@/context/SoundContext';
 import { useThriftMode } from '@/context/ThriftModeContext';
-import { useCollection, useUpdateCollectionItem } from '@/hooks/useCollection';
+import { useCollection, useHydrateCollectionCast, useUpdateCollectionItem } from '@/hooks/useCollection';
 import { usePersistedState } from '@/hooks/usePersistedState';
 import { getGenres, getOnDisplayItems, getGrailItems, getStacks, getItemCustomTitle, getItemDisplayTitle, getItemMultipack, getStackDisplayTitle } from '@/lib/collection-utils';
 import type { CollectionItemWithMedia } from '@/types/database';
@@ -340,10 +340,11 @@ export default function HomeScreen() {
     }
   }, [onboardingKey]);
 
-  useFocusEffect(
-    useCallback(() => {
-      if (refetch && !collectionLoading) refetch();
-    }, [refetch, collectionLoading])
+  // Lazy-hydrate cast metadata only when Actor or Director search mode is active
+  useHydrateCollectionCast(
+    userId,
+    collection,
+    searchMode !== 'title' && searchQuery.trim().length >= 2
   );
 
   const onRefresh = async () => {
@@ -410,7 +411,6 @@ export default function HomeScreen() {
       const isWishlist = item.status === 'wishlist';
       const updates = isWishlist ? { is_grail: !item.is_grail } : { is_on_display: !item.is_on_display };
       await updateMutation.mutateAsync({ itemId: item.id, updates });
-      if (refetch) refetch();
     } catch (e) {
       console.error('Failed to toggle status', e);
     }
@@ -426,8 +426,10 @@ export default function HomeScreen() {
         if (isMovie) return i.movie_id === item.movie_id;
         return i.show_id === item.show_id && i.season_number === item.season_number;
       });
-      await Promise.all(relatedItems.map((i: any) => updateMutation.mutateAsync({ itemId: i.id, updates: { rating } })));
-      if (refetch) refetch();
+      const relatedIds = relatedItems.map((i: any) => i.id);
+      if (relatedIds.length > 0) {
+        await updateMutation.mutateAsync({ itemIds: relatedIds, updates: { rating } });
+      }
     } catch (e) {
       console.error('Failed to save rating', e);
     }
@@ -642,13 +644,14 @@ export default function HomeScreen() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
     try {
-      await (supabase.rpc as any)('update_collection_order', {
+      const { error } = await (supabase.rpc as any)('update_collection_order', {
         item_ids: itemIds,
         order_type: type,
       });
-      queryClient.invalidateQueries({ queryKey: ['collection', userId] });
+      if (error) throw error;
     } catch (err) {
       console.error('Failed to save shelf order:', err);
+      queryClient.invalidateQueries({ queryKey: ['collection', userId] });
     }
   }, [userId, queryClient, playSound]);
 

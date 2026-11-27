@@ -53,9 +53,10 @@ export function ReviewSection({ movieId, showId, collectionItemId, initialRating
 
     try {
       if (itemsToUpdate.length > 0) {
-        await Promise.all(itemsToUpdate.map((i: any) =>
-          updateMutation.mutateAsync({ itemId: i.id, updates: { rating: newRating ?? null } })
-        ));
+        await updateMutation.mutateAsync({
+          itemIds: itemsToUpdate.map((i: any) => i.id),
+          updates: { rating: newRating ?? null },
+        });
       } else if (collectionItemId) {
         await updateMutation.mutateAsync({ itemId: collectionItemId, updates: { rating: newRating ?? null } });
       }

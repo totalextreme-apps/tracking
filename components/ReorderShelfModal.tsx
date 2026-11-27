@@ -317,10 +317,10 @@ export function ReorderShelfModal({
 
             playSound('click');
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            queryClient.invalidateQueries({ queryKey: ['collection', userId] });
             onClose();
         } catch (e) {
             console.error(e);
+            queryClient.invalidateQueries({ queryKey: ['collection', userId] });
             alert('Failed to save order.');
         } finally {
             setIsSaving(false);

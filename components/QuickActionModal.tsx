@@ -126,9 +126,10 @@ export function QuickActionModal({
     playSound('click');
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     try {
-      await Promise.all(relatedItems.map(i => 
-        updateMutation.mutateAsync({ itemId: i.id, updates: { rating: star } })
-      ));
+      const targetIds = relatedItems.map((i) => i.id);
+      if (targetIds.length > 0) {
+        await updateMutation.mutateAsync({ itemIds: targetIds, updates: { rating: star } });
+      }
     } catch (e) {
       Alert.alert('Error', 'Failed to save rating');
       setLocalRating(item?.rating || null); // Revert on failure
