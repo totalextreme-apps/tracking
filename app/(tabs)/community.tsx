@@ -567,7 +567,8 @@ export default function CommunityScreen() {
   const [mentionQuery, setMentionQuery] = useState('');
   const [showMentionsDropdown, setShowMentionsDropdown] = useState(false);
   const [selectedStack, setSelectedStack] = useState<string | null>(null);
-  const { data: collection } = useCollection(userId);
+  const currentTab: Tab = ['activity', 'directory', 'board', 'swap', 'inbox', 'alerts'].includes(activeTab) ? activeTab : 'activity';
+  const { data: collection } = useCollection(userId, currentTab === 'board');
   const userStacks = useMemo(() => getCustomLists(collection), [collection]);
 
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -583,10 +584,6 @@ export default function CommunityScreen() {
   const [highlightPostId, setHighlightPostId] = useState<string | null>(null);
   const [highlightCommentId, setHighlightCommentId] = useState<string | null>(null);
   const postRefs = useRef<Record<string, any>>({});
-  
-
-
-  const currentTab: Tab = ['activity', 'directory', 'board', 'swap', 'inbox', 'alerts'].includes(activeTab) ? activeTab : 'activity';
   
   // Media Search State (Bulletin)
   const [mediaQuery, setMediaQuery] = useState('');

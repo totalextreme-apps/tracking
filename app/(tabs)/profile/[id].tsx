@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useProfile, useFollowers, useFollowing, useToggleFollow, useToggleTopFive, useProfileComments, useAddProfileComment, useUpdateProfileComment, useDeleteProfileComment, useUserPosts } from '@/hooks/useSocial';
 import { useSound } from '@/context/SoundContext';
-import { useCollection, useHydrateCollectionCast } from '@/hooks/useCollection';
+import { useCollection, useCollectionStats, useHydrateCollectionCast, useProfileShowcase } from '@/hooks/useCollection';
 import { useAuth } from '@/context/AuthContext';
 import { MemberCard } from '@/components/MemberCard';
 import { StatsSection } from '@/components/StatsSection';
@@ -37,19 +37,45 @@ export default function UserProfileScreen() {
   const [numColumns, setNumColumns] = usePersistedState<number>('profile_num_columns', isDesktop ? 4 : 2);
   const [isSliderLocked, setIsSliderLocked] = usePersistedState<boolean>('profile_slider_locked', false);
 
+  const [activeTab, setActiveTab] = useState<TabType>(tab || 'on-display');
+  const isOwnProfile = currentUserId === id;
+
+  // Only download a user's full collection when viewing own profile or when the viewer explicitly opens
+  // the full COLLECTION, WANTED (wishlist), or IN COMMON tabs.
+  // For ON DISPLAY, GRAILS, STACKS, THE BIN, GUESTBOOK, and ANALYTICS, use lightweight showcase items + DB stats RPC.
+  const needsFullProfileCollection =
+    isOwnProfile ||
+    activeTab === 'collection' ||
+    activeTab === 'wishlist' ||
+    activeTab === 'in-common';
+
   const { data: profile, isLoading: profileLoading } = useProfile(id);
   const { data: followers } = useFollowers(id);
   const { data: following } = useFollowing(id);
-  const { data: collection, isLoading: collectionLoading } = useCollection(id);
-  const { data: myCollection } = useCollection(currentUserId);
+  const { data: profileStats } = useCollectionStats(id);
+  const { data: fullCollection, isLoading: fullCollectionLoading } = useCollection(
+    id,
+    needsFullProfileCollection
+  );
+  const { data: showcaseItems, isLoading: showcaseLoading } = useProfileShowcase(
+    id,
+    !needsFullProfileCollection && !fullCollection
+  );
+  const collection = fullCollection || showcaseItems;
+  const collectionLoading = needsFullProfileCollection
+    ? fullCollectionLoading && !fullCollection
+    : showcaseLoading && !collection;
+
+  const { data: myCollection } = useCollection(
+    currentUserId,
+    isOwnProfile || activeTab === 'in-common'
+  );
 
   const { data: userPosts } = useUserPosts(id);
   const { data: guestbookComments } = useProfileComments(id);
   const addProfileCommentMutation = useAddProfileComment(currentUserId);
   const updateProfileCommentMutation = useUpdateProfileComment(currentUserId);
   const deleteProfileCommentMutation = useDeleteProfileComment(currentUserId);
-  
-  const [activeTab, setActiveTab] = useState<TabType>(tab || 'on-display');
 
   React.useEffect(() => {
     if (tab) {
@@ -338,7 +364,6 @@ export default function UserProfileScreen() {
   const myFollowRecord = followers?.find((f: any) => f.follower_id === currentUserId);
   const isFollowing = !!myFollowRecord;
   const isTopFive = !!myFollowRecord?.is_top_five;
-  const isOwnProfile = currentUserId === id;
 
   const handleToggleFollow = () => {
     if (!currentUserId || !id || isOwnProfile) return;
@@ -374,9 +399,13 @@ export default function UserProfileScreen() {
     );
   }
 
-  const totalItems = collection?.length || 0;
-  const totalGrails = collection?.filter((i: any) => i.is_grail && i.status === 'wishlist').length || 0;
-  const uniqueFormats = new Set(collection?.map((i: any) => i.format)).size || 0;
+  const totalItems = profileStats?.total_items ?? fullCollection?.length ?? collection?.length ?? 0;
+  const totalGrails =
+    profileStats?.grail_count ??
+    collection?.filter((i: any) => i.is_grail && i.status === 'wishlist').length ??
+    0;
+  const uniqueFormats =
+    profileStats?.unique_formats ?? new Set(collection?.map((i: any) => i.format)).size ?? 0;
 
   return (
     <View className="flex-1 bg-neutral-950">

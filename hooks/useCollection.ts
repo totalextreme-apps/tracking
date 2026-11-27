@@ -53,7 +53,7 @@ export function normalizeCollectionItems(rawItems: any[]): CollectionItemWithMed
   });
 }
 
-export function useCollection(userId: string | undefined) {
+export function useCollection(userId: string | undefined, enabled = true) {
   return useQuery({
     queryKey: QUERY_KEYS.collection(userId),
     staleTime: STALE_TIMES.COLLECTION,
@@ -130,7 +130,81 @@ export function useCollection(userId: string | undefined) {
         throw e;
       }
     },
-    enabled: !!userId,
+    enabled: !!userId && enabled,
+  });
+}
+
+/**
+ * Fetches only the items belonging to a specific Curated Stack for a user.
+ * Used when viewing another member's shared Curated Stack so we never download their entire collection.
+ */
+export function useCuratedStackItems(
+  userId: string | undefined,
+  listName: string | undefined,
+  enabled = true
+) {
+  const queryClient = useQueryClient();
+  return useQuery({
+    queryKey: ['curated_stack_items', userId, listName],
+    staleTime: STALE_TIMES.COLLECTION,
+    enabled: !!userId && !!listName && enabled,
+    queryFn: async () => {
+      if (!userId || !listName) return [];
+      const cachedCollection = queryClient.getQueryData<CollectionItemWithMedia[]>(
+        QUERY_KEYS.collection(userId)
+      );
+      if (Array.isArray(cachedCollection) && cachedCollection.length > 0) {
+        return cachedCollection.filter(
+          (item) =>
+            item?.custom_lists?.includes(listName) ||
+            item?.custom_lists?.some((entry) => entry.startsWith(`__meta__:${listName}:`))
+        );
+      }
+
+      const { data, error } = await supabase
+        .from('collection_items')
+        .select(COLLECTION_ITEM_SELECT)
+        .eq('user_id', userId)
+        .contains('custom_lists', [listName]);
+
+      if (error) throw error;
+      return normalizeCollectionItems(data || []);
+    },
+  });
+}
+
+/**
+ * Fetches only the showcase items (On Display, Grails, The Bin, and Curated Stacks) for a user profile.
+ * Allows opening any member's profile in ~15 KB without downloading their entire 3,355+ item collection
+ * unless the viewer explicitly clicks the full COLLECTION, WANTED, or IN COMMON tabs.
+ */
+export function useProfileShowcase(userId: string | undefined, enabled = true) {
+  const queryClient = useQueryClient();
+  return useQuery({
+    queryKey: ['profile_showcase', userId],
+    staleTime: STALE_TIMES.COLLECTION,
+    enabled: !!userId && enabled,
+    queryFn: async () => {
+      if (!userId) return [];
+      const cachedCollection = queryClient.getQueryData<CollectionItemWithMedia[]>(
+        QUERY_KEYS.collection(userId)
+      );
+      if (Array.isArray(cachedCollection) && cachedCollection.length > 0) {
+        return cachedCollection;
+      }
+
+      const { data, error } = await supabase
+        .from('collection_items')
+        .select(COLLECTION_ITEM_SELECT)
+        .eq('user_id', userId)
+        .or('is_on_display.eq.true,is_grail.eq.true,for_sale.eq.true,for_trade.eq.true,custom_lists.not.is.null')
+        .order('display_order', { ascending: true })
+        .order('grail_order', { ascending: true })
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return normalizeCollectionItems(data || []);
+    },
   });
 }
 

@@ -10,6 +10,7 @@ import { useSound } from '@/context/SoundContext';
 import {
     useBulkUpdateCustomLists,
     useCollection,
+    useCuratedStackItems,
     useRenameCustomList,
     useUpdateStackMeta,
 } from '@/hooks/useCollection';
@@ -73,7 +74,14 @@ export default function CuratedStackScreen() {
     const targetUserId = ownerId && typeof ownerId === 'string' ? ownerId : userId;
     const isOwner = !ownerId || ownerId === userId;
 
-    const { data: collection, isLoading: collectionLoading } = useCollection(targetUserId);
+    const { data: ownerCollection, isLoading: ownerCollectionLoading } = useCollection(targetUserId, isOwner);
+    const { data: sharedStackItems, isLoading: sharedStackLoading } = useCuratedStackItems(
+        targetUserId,
+        decodedName,
+        !isOwner
+    );
+    const collection = isOwner ? ownerCollection : sharedStackItems;
+    const collectionLoading = isOwner ? ownerCollectionLoading : sharedStackLoading;
     const { data: ownerProfile } = useProfile(targetUserId);
     const removeMutation = useBulkUpdateCustomLists(userId);
     const renameMutation = useRenameCustomList(userId);
