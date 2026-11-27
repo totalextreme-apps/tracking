@@ -4,14 +4,40 @@ import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
 import { useNotifications, useMarkNotificationRead } from '@/hooks/useSocial';
+import { setCachedMovie, setCachedShow } from '@/lib/query-client';
+import { useQueryClient } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
 import { supabase } from '@/lib/supabase';
 
 export default function NotificationsScreen() {
   const { userId } = useAuth();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { data: notifications, isLoading } = useNotifications(userId ?? undefined);
   const markReadMutation = useMarkNotificationRead();
+
+  const navigateToCollectionItem = (colItem: any, targetCommentId?: string | null) => {
+    if (!colItem) return;
+    const ownerId = colItem.user_id;
+    queryClient.setQueryData(['collection-item-direct', colItem.id], colItem);
+    if (colItem.movies) {
+      setCachedMovie(colItem.movies);
+      const movieTargetId = colItem.movie_id || colItem.movies.id;
+      if (ownerId && movieTargetId) {
+        queryClient.setQueryData(['collection-owner-movie', ownerId, movieTargetId, colItem.id], [colItem]);
+      }
+      const commentQuery = targetCommentId ? `&commentId=${targetCommentId}` : '';
+      router.push(`/movie/${movieTargetId || colItem.id}?itemId=${colItem.id}&ownerId=${ownerId}${commentQuery}` as any);
+    } else if (colItem.shows) {
+      setCachedShow(colItem.shows);
+      const showTargetId = colItem.show_id || colItem.shows.id;
+      if (ownerId && showTargetId) {
+        queryClient.setQueryData(['collection-owner-show', ownerId, showTargetId, colItem.id], [colItem]);
+      }
+      const commentQuery = targetCommentId ? `&commentId=${targetCommentId}` : '';
+      router.push(`/show/${showTargetId || colItem.id}?itemId=${colItem.id}&ownerId=${ownerId}&season=${colItem.season_number || 1}${commentQuery}` as any);
+    }
+  };
 
   const handlePress = async (notif: any) => {
     markReadMutation.mutate(notif.id);
@@ -34,7 +60,7 @@ export default function NotificationsScreen() {
         if (postId) {
           router.push({ pathname: '/community', params: { tab: 'board', postId, commentId: notif.reference_id } } as any);
         }
-      } else if (notif.type === 'post_mention') {
+      } else if (notif.type === 'post_mention' || notif.type === 'mention') {
         router.push({ pathname: '/community', params: { tab: 'board', postId: notif.reference_id } } as any);
       } else if (notif.type === 'item_comment') {
         let item = notif.referenceData;
@@ -46,15 +72,7 @@ export default function NotificationsScreen() {
             .single();
           item = data;
         }
-        const colItem = item?.collection_items;
-        if (colItem) {
-          const ownerId = colItem.user_id;
-          if (colItem.movies) {
-            router.push(`/movie/${colItem.id}?ownerId=${ownerId}&commentId=${notif.reference_id}` as any);
-          } else if (colItem.shows) {
-            router.push(`/show/${colItem.id}?ownerId=${ownerId}&season=${colItem.season_number || 1}&commentId=${notif.reference_id}` as any);
-          }
-        }
+        navigateToCollectionItem(item?.collection_items, notif.reference_id);
       } else if (notif.type === 'reaction') {
         let rx = notif.referenceData;
         if (!rx) {
@@ -91,14 +109,7 @@ export default function NotificationsScreen() {
                 .single();
               colItem = data;
             }
-            if (colItem) {
-              const ownerId = colItem.user_id;
-              if (colItem.movies) {
-                router.push(`/movie/${colItem.id}?ownerId=${ownerId}` as any);
-              } else if (colItem.shows) {
-                router.push(`/show/${colItem.id}?ownerId=${ownerId}&season=${colItem.season_number || 1}` as any);
-              }
-            }
+            navigateToCollectionItem(colItem);
           } else if (rx.item_comment_id) {
             let colItem = rx.item_comments?.collection_items;
             if (!colItem) {
@@ -109,18 +120,11 @@ export default function NotificationsScreen() {
                 .single();
               colItem = comment?.collection_items;
             }
-            if (colItem) {
-              const ownerId = colItem.user_id;
-              if (colItem.movies) {
-                router.push(`/movie/${colItem.id}?ownerId=${ownerId}&commentId=${rx.item_comment_id}` as any);
-              } else if (colItem.shows) {
-                router.push(`/show/${colItem.id}?ownerId=${ownerId}&season=${colItem.season_number || 1}&commentId=${rx.item_comment_id}` as any);
-              }
-            }
+            navigateToCollectionItem(colItem, rx.item_comment_id);
           }
         }
       } else if (notif.type === 'profile_comment') {
-        router.push({ pathname: `/profile/${userId}`, params: { from: 'community' } } as any);
+        router.push({ pathname: `/profile/${userId}`, params: { from: 'community', tab: 'guestbook' } } as any);
       }
     } catch (e) {
       console.error('Failed navigation in notifications:', e);

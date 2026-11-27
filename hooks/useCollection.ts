@@ -1143,7 +1143,11 @@ export function useDeepRepair(userId?: string) {
   const mutation = useMutation({
     mutationFn: async () => {
       if (!userId) return;
-      const { data: items } = await supabase.from('collection_items').select('*').eq('user_id', userId);
+      // Only select the columns needed to detect orphans; joins are required so `!i.movies && !i.shows` is meaningful
+      const { data: items } = await supabase
+        .from('collection_items')
+        .select('id, media_type, movie_id, show_id, movies(id), shows(id)')
+        .eq('user_id', userId);
       if (!items) return;
 
       const orphans = items.filter((i: any) => !i.movies && !i.shows && (i.movie_id || i.show_id));

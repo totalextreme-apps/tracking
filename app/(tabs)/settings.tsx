@@ -26,6 +26,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PreferenceQuizModal } from '@/components/PreferenceQuizModal';
 import { TipsAndTricksModal } from '@/components/TipsAndTricksModal';
 import { useQueryClient } from '@tanstack/react-query';
+import { updateCollectionCacheItems } from '@/lib/query-client';
 
 const logoSource = Platform.OS === 'web'
   ? { uri: '/logo_tracking.png' }
@@ -95,6 +96,8 @@ export default function SettingsScreen() {
     let nextIndex = 0;
     let successCount = 0;
     let failCount = 0;
+    // Track updated values locally so we can patch the cached collection in place instead of re-downloading it
+    const valuedUpdates = new Map<string, number>();
 
     const worker = async () => {
       while (nextIndex < itemsToProcess.length && !cancelAutoValuingRef.current) {
@@ -114,6 +117,7 @@ export default function SettingsScreen() {
                 .update({ value_estimate: data.value })
                 .eq('id', item.id)
                 .eq('user_id', userId);
+              valuedUpdates.set(item.id, data.value);
               successCount++;
               setAutoValuingSuccess(successCount);
             } else {
@@ -144,8 +148,13 @@ export default function SettingsScreen() {
 
     await Promise.all(workerPromises);
 
-    // Invalidate queries ONCE at the end of the entire loop
-    await queryClient.invalidateQueries({ queryKey: ['collection', userId] });
+    // Patch the cached collection in place ONCE at the end (no full collection re-download)
+    if (userId && valuedUpdates.size > 0) {
+      updateCollectionCacheItems(userId, (old) =>
+        old.map((ci: any) => (valuedUpdates.has(ci.id) ? { ...ci, value_estimate: valuedUpdates.get(ci.id) } : ci))
+      );
+      queryClient.invalidateQueries({ queryKey: ['collection-stats', userId] });
+    }
     setAutoValuingActive(false);
     playSound('click');
 
@@ -183,7 +192,11 @@ export default function SettingsScreen() {
                 .eq('user_id', userId);
 
               if (error) throw error;
-              await queryClient.invalidateQueries({ queryKey: ['collection', userId] });
+              const resetIds = new Set(ids);
+              updateCollectionCacheItems(userId, (old) =>
+                old.map((ci: any) => (resetIds.has(ci.id) ? { ...ci, value_estimate: null } : ci))
+              );
+              queryClient.invalidateQueries({ queryKey: ['collection-stats', userId] });
               playSound('peel');
               Alert.alert('Success', `Reset ${ids.length} items! You can now run Auto-Valuation to calculate their true market values.`);
             } catch (err) {
