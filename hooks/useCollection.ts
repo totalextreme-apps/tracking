@@ -1,11 +1,15 @@
 import { CuratedStackMeta, isSpecialSeason, isStackMetaEntry, serializeStackMeta, STACK_META_PREFIX, withItemMetadata } from '@/lib/collection-utils';
 import {
+  clearStoredSyncFingerprint,
   getCachedMovie,
   getCachedShow,
+  getStoredSyncFingerprint,
   QUERY_KEYS,
+  registerCollectionMutationListener,
   setCachedMovie,
   setCachedShow,
   setCollectionLastSyncedAt,
+  setStoredSyncFingerprint,
   STALE_TIMES,
   updateCollectionCacheItems,
 } from '@/lib/query-client';
@@ -53,7 +57,40 @@ export function normalizeCollectionItems(rawItems: any[]): CollectionItemWithMed
   });
 }
 
+/**
+ * Calls the lightweight ~130-byte PostgreSQL RPC `get_collection_sync_fingerprint`.
+ * Returns a stable JSON fingerprint string, or null if the RPC is not yet installed.
+ */
+async function fetchCollectionSyncFingerprint(userId: string): Promise<string | null> {
+  try {
+    const { data, error } = await (supabase.rpc as any)('get_collection_sync_fingerprint', {
+      target_user_id: userId,
+    });
+    if (error || !data) return null;
+    return JSON.stringify(data);
+  } catch {
+    return null;
+  }
+}
+
+// Keep local device's stored ~130-byte sync fingerprint in sync after local mutations (debounced 1.5s)
+const fingerprintTimers = new Map<string, ReturnType<typeof setTimeout>>();
+registerCollectionMutationListener((uid: string) => {
+  const existing = fingerprintTimers.get(uid);
+  if (existing) clearTimeout(existing);
+  const timer = setTimeout(() => {
+    fingerprintTimers.delete(uid);
+    fetchCollectionSyncFingerprint(uid)
+      .then((fp) => {
+        if (fp) setStoredSyncFingerprint(uid, fp);
+      })
+      .catch(() => {});
+  }, 1500);
+  fingerprintTimers.set(uid, timer);
+});
+
 export function useCollection(userId: string | undefined, enabled = true) {
+  const queryClient = useQueryClient();
   return useQuery({
     queryKey: QUERY_KEYS.collection(userId),
     staleTime: STALE_TIMES.COLLECTION,
@@ -87,6 +124,25 @@ export function useCollection(userId: string | undefined, enabled = true) {
             shows: null,
           },
         ] as any;
+      }
+
+      // Smart Sync Check (~130 bytes):
+      // If we already have the user's collection hydrated from IndexedDB / AsyncStorage,
+      // check whether anything changed on the server before downloading any collection rows.
+      const cachedItems = queryClient.getQueryData<CollectionItemWithMedia[]>(
+        QUERY_KEYS.collection(userId)
+      );
+      let latestServerFp: string | null = null;
+      if (Array.isArray(cachedItems) && cachedItems.length > 0) {
+        const [storedFp, serverFp] = await Promise.all([
+          getStoredSyncFingerprint(userId),
+          fetchCollectionSyncFingerprint(userId),
+        ]);
+        latestServerFp = serverFp;
+        if (storedFp && serverFp && storedFp === serverFp) {
+          setCollectionLastSyncedAt(userId, new Date().toISOString());
+          return normalizeCollectionItems(cachedItems);
+        }
       }
 
       const PAGE_SIZE = 1000;
@@ -124,6 +180,16 @@ export function useCollection(userId: string | undefined, enabled = true) {
         }
 
         setCollectionLastSyncedAt(userId, new Date().toISOString());
+        // Save the latest fingerprint in the background so future sessions skip full downloads when unchanged
+        if (latestServerFp) {
+          setStoredSyncFingerprint(userId, latestServerFp).catch(() => {});
+        } else {
+          fetchCollectionSyncFingerprint(userId)
+            .then((fp) => {
+              if (fp) setStoredSyncFingerprint(userId, fp);
+            })
+            .catch(() => {});
+        }
         return normalizeCollectionItems(allItems);
       } catch (e) {
         console.error('Fetch error:', e);
@@ -1129,6 +1195,9 @@ export function useRefreshLibrary(userId: string | undefined) {
       // 2. Refresh Movies... (keep existing)
     },
     onSuccess: async () => {
+      if (userId) {
+        await clearStoredSyncFingerprint(userId);
+      }
       await queryClient.invalidateQueries({ queryKey: ['collection'] });
     },
   });
@@ -1403,7 +1472,10 @@ export function useBatchImportMetadata(userId?: string) {
         await supabase.from('collection_items').insert(pendingInserts);
       }
     },
-    onSuccess: () => {
+    onSuccess: async () => {
+      if (userId) {
+        await clearStoredSyncFingerprint(userId);
+      }
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.collection(userId) });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.collectionStats(userId) });
     },

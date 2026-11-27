@@ -1,10 +1,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
 import { QueryClient } from '@tanstack/react-query';
+import { Platform } from 'react-native';
 import type { CollectionItemWithMedia, Movie, Show } from '@/types/database';
 
-export const CACHE_SCHEMA_VERSION = 'v2.1-slim';
+export const CACHE_SCHEMA_VERSION = 'v2.2-idb-sync';
 export const PERSIST_STORAGE_KEY_PREFIX = 'REACT_QUERY_OFFLINE_CACHE';
+const SYNC_FINGERPRINT_KEY_PREFIX = 'COLLECTION_SYNC_FP';
+const IDB_DB_NAME = 'mediatracking_cache_v1';
+const IDB_STORE_NAME = 'kv';
 
 let activeCacheUserId: string | undefined = undefined;
 
@@ -12,7 +16,7 @@ let activeCacheUserId: string | undefined = undefined;
  * Canonical stale times across the application to prevent redundant PostgREST egress.
  */
 export const STALE_TIMES = {
-    COLLECTION: 1000 * 60 * 5,       // 5 minutes (mutations update cache directly)
+    COLLECTION: 1000 * 60 * 15,      // 15 minutes (mutations update cache directly; sync fingerprint avoids full re-downloads)
     PROFILE: 1000 * 60 * 5,          // 5 minutes
     MEDIA_DETAIL: 1000 * 60 * 30,    // 30 minutes for movie/show metadata & cast
     SOCIAL_FEED: 1000 * 60 * 2,      // 2 minutes for bulletin & community feeds
@@ -118,7 +122,7 @@ export const queryClient = new QueryClient({
     defaultOptions: {
         queries: {
             staleTime: STALE_TIMES.COLLECTION,
-            gcTime: 1000 * 60 * 60 * 24,
+            gcTime: 1000 * 60 * 60 * 24 * 7, // Keep cached data for 7 days across sessions
             retry: shouldRetryQuery,
             refetchOnWindowFocus: false,
             refetchOnReconnect: true,
@@ -126,42 +130,145 @@ export const queryClient = new QueryClient({
     },
 });
 
-// User-scoped storage adapter that prevents cross-account leakage and handles Web storage quota limits
+// Zero-dependency IndexedDB key-value wrapper for Web (async, non-blocking, supports 20,000+ item collections)
+let idbPromise: Promise<IDBDatabase | null> | null = null;
+
+function openWebCacheDB(): Promise<IDBDatabase | null> {
+    if (Platform.OS !== 'web' || typeof window === 'undefined' || typeof window.indexedDB === 'undefined') {
+        return Promise.resolve(null);
+    }
+    if (!idbPromise) {
+        idbPromise = new Promise((resolve) => {
+            try {
+                const request = window.indexedDB.open(IDB_DB_NAME, 1);
+                request.onupgradeneeded = () => {
+                    const db = request.result;
+                    if (!db.objectStoreNames.contains(IDB_STORE_NAME)) {
+                        db.createObjectStore(IDB_STORE_NAME);
+                    }
+                };
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => resolve(null);
+            } catch {
+                resolve(null);
+            }
+        });
+    }
+    return idbPromise;
+}
+
+async function rawStorageGet(fullKey: string): Promise<string | null> {
+    if (Platform.OS === 'web') {
+        const db = await openWebCacheDB();
+        if (db) {
+            return new Promise((resolve) => {
+                try {
+                    const tx = db.transaction(IDB_STORE_NAME, 'readonly');
+                    const req = tx.objectStore(IDB_STORE_NAME).get(fullKey);
+                    req.onsuccess = () => resolve(typeof req.result === 'string' ? req.result : null);
+                    req.onerror = () => resolve(null);
+                } catch {
+                    resolve(null);
+                }
+            });
+        }
+    }
+    try {
+        return await AsyncStorage.getItem(fullKey);
+    } catch {
+        return null;
+    }
+}
+
+async function rawStorageSet(fullKey: string, value: string): Promise<void> {
+    if (Platform.OS === 'web') {
+        const db = await openWebCacheDB();
+        if (db) {
+            return new Promise((resolve) => {
+                try {
+                    const tx = db.transaction(IDB_STORE_NAME, 'readwrite');
+                    tx.objectStore(IDB_STORE_NAME).put(value, fullKey);
+                    tx.oncomplete = () => resolve();
+                    tx.onerror = () => resolve();
+                } catch {
+                    resolve();
+                }
+            });
+        }
+        // Fallback to localStorage only if payload fits safely under the 5MB cap
+        if (value.length > 4_200_000) return;
+    }
+    try {
+        await AsyncStorage.setItem(fullKey, value);
+    } catch {
+        // Silently skip persistence if storage quota is reached
+    }
+}
+
+async function rawStorageRemove(fullKey: string): Promise<void> {
+    if (Platform.OS === 'web') {
+        const db = await openWebCacheDB();
+        if (db) {
+            await new Promise<void>((resolve) => {
+                try {
+                    const tx = db.transaction(IDB_STORE_NAME, 'readwrite');
+                    tx.objectStore(IDB_STORE_NAME).delete(fullKey);
+                    tx.oncomplete = () => resolve();
+                    tx.onerror = () => resolve();
+                } catch {
+                    resolve();
+                }
+            });
+        }
+    }
+    try {
+        await AsyncStorage.removeItem(fullKey);
+    } catch {
+        // ignore
+    }
+}
+
+// Sync fingerprint helpers for zero-egress returning sessions
+const memorySyncFingerprints = new Map<string, string>();
+
+export async function getStoredSyncFingerprint(userId: string): Promise<string | null> {
+    const mem = memorySyncFingerprints.get(userId);
+    if (mem) return mem;
+    const stored = await rawStorageGet(`${SYNC_FINGERPRINT_KEY_PREFIX}:${userId}`);
+    if (stored) memorySyncFingerprints.set(userId, stored);
+    return stored;
+}
+
+export async function setStoredSyncFingerprint(userId: string, fingerprintJson: string): Promise<void> {
+    memorySyncFingerprints.set(userId, fingerprintJson);
+    await rawStorageSet(`${SYNC_FINGERPRINT_KEY_PREFIX}:${userId}`, fingerprintJson);
+}
+
+export async function clearStoredSyncFingerprint(userId: string): Promise<void> {
+    memorySyncFingerprints.delete(userId);
+    await rawStorageRemove(`${SYNC_FINGERPRINT_KEY_PREFIX}:${userId}`);
+}
+
+// User-scoped storage adapter using IndexedDB on Web and AsyncStorage on Native
 const SafeUserScopedStorage = {
     getItem: async (key: string): Promise<string | null> => {
-        if (typeof window === 'undefined') return null;
+        if (typeof window === 'undefined' && Platform.OS === 'web') return null;
         const scopedKey = activeCacheUserId ? `${key}:${activeCacheUserId}` : key;
-        try {
-            return await AsyncStorage.getItem(scopedKey);
-        } catch {
-            return null;
-        }
+        return rawStorageGet(scopedKey);
     },
     setItem: async (key: string, value: string): Promise<void> => {
-        if (typeof window === 'undefined') return;
-        // Guard against Web localStorage 5MB quota errors on huge collections (>10k items)
-        if (value.length > 4_200_000) {
-            return;
-        }
+        if (typeof window === 'undefined' && Platform.OS === 'web') return;
         const scopedKey = activeCacheUserId ? `${key}:${activeCacheUserId}` : key;
-        try {
-            await AsyncStorage.setItem(scopedKey, value);
-        } catch {
-            // If storage quota is reached, silently skip persistence without crashing the app
-        }
+        await rawStorageSet(scopedKey, value);
     },
     removeItem: async (key: string): Promise<void> => {
-        if (typeof window === 'undefined') return;
+        if (typeof window === 'undefined' && Platform.OS === 'web') return;
         const scopedKey = activeCacheUserId ? `${key}:${activeCacheUserId}` : key;
-        try {
-            await AsyncStorage.removeItem(scopedKey);
-        } catch {
-            // ignore
-        }
+        await rawStorageRemove(scopedKey);
     },
 };
 
-// 2. Create an AsyncStorage Persister
+// 2. Create an AsyncStorage/IndexedDB Persister
 export const asyncStoragePersister = createAsyncStoragePersister({
     storage: SafeUserScopedStorage,
     key: PERSIST_STORAGE_KEY_PREFIX,
@@ -171,7 +278,7 @@ export const asyncStoragePersister = createAsyncStoragePersister({
 // 3. Configuration for the Provider
 export const persistOptions = {
     persister: asyncStoragePersister,
-    maxAge: 1000 * 60 * 60 * 24, // 24 hours
+    maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
     buster: CACHE_SCHEMA_VERSION,
     dehydrateOptions: {
         shouldDehydrateQuery: (query: any) => {
@@ -182,8 +289,8 @@ export const persistOptions = {
                 const queryUserId = query.queryKey?.[1];
                 if (!activeCacheUserId || queryUserId !== activeCacheUserId) return false;
                 const data = query.state.data;
-                // Avoid serializing >5,000 items to AsyncStorage on every change; keep them in fast RAM cache
-                if (Array.isArray(data) && data.length > 5000) return false;
+                // IndexedDB easily supports up to 25,000 slim collection entries
+                if (Array.isArray(data) && data.length > 25000) return false;
                 return true;
             }
             return rootKey === 'profile' || rootKey === 'collection-stats' || rootKey === 'app_wide_stats';
@@ -201,12 +308,12 @@ export async function setCacheUserScope(newUserId: string | undefined): Promise<
         // User logged out or switched accounts -> purge all private in-memory and persisted caches
         queryClient.clear();
         collectionSyncTimestamps.clear();
-        try {
-            await AsyncStorage.removeItem(`${PERSIST_STORAGE_KEY_PREFIX}:${previousUserId}`);
-            await AsyncStorage.removeItem(PERSIST_STORAGE_KEY_PREFIX);
-        } catch {
-            // ignore
-        }
+        memorySyncFingerprints.delete(previousUserId);
+        await Promise.all([
+            rawStorageRemove(`${PERSIST_STORAGE_KEY_PREFIX}:${previousUserId}`),
+            rawStorageRemove(PERSIST_STORAGE_KEY_PREFIX),
+            rawStorageRemove(`${SYNC_FINGERPRINT_KEY_PREFIX}:${previousUserId}`),
+        ]);
     }
     activeCacheUserId = newUserId;
 }
@@ -216,14 +323,19 @@ export async function clearAllUserCaches(): Promise<void> {
     activeCacheUserId = undefined;
     queryClient.clear();
     collectionSyncTimestamps.clear();
-    try {
-        if (prev) {
-            await AsyncStorage.removeItem(`${PERSIST_STORAGE_KEY_PREFIX}:${prev}`);
-        }
-        await AsyncStorage.removeItem(PERSIST_STORAGE_KEY_PREFIX);
-    } catch {
-        // ignore
+    memorySyncFingerprints.clear();
+    const tasks: Promise<void>[] = [rawStorageRemove(PERSIST_STORAGE_KEY_PREFIX)];
+    if (prev) {
+        tasks.push(rawStorageRemove(`${PERSIST_STORAGE_KEY_PREFIX}:${prev}`));
+        tasks.push(rawStorageRemove(`${SYNC_FINGERPRINT_KEY_PREFIX}:${prev}`));
     }
+    await Promise.all(tasks);
+}
+
+let collectionMutationListener: ((userId: string) => void) | null = null;
+
+export function registerCollectionMutationListener(listener: (userId: string) => void): void {
+    collectionMutationListener = listener;
 }
 
 /**
@@ -238,5 +350,8 @@ export function updateCollectionCacheItems(
         if (!Array.isArray(old)) return old;
         return updater(old);
     });
+    if (collectionMutationListener) {
+        collectionMutationListener(userId);
+    }
 }
 
