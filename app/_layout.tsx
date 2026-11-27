@@ -1,4 +1,4 @@
-import { asyncStoragePersister, queryClient } from '@/lib/query-client';
+import { persistOptions, queryClient } from '@/lib/query-client';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
@@ -142,7 +142,7 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
   return (
     <PersistQueryClientProvider
       client={queryClient}
-      persistOptions={{ persister: asyncStoragePersister }}
+      persistOptions={persistOptions}
     >
       <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#0a0a0a' }}>
         <SafeAreaProvider>

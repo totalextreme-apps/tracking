@@ -1,4 +1,5 @@
 import { CaptchaModal } from '@/components/CaptchaModal';
+import { clearAllUserCaches, setCacheUserScope } from '@/lib/query-client';
 import { supabase } from '@/lib/supabase';
 import { Session } from '@supabase/supabase-js';
 import React, { createContext, useContext, useEffect, useState } from 'react';
@@ -51,6 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const sessionData = data?.session;
 
         if (sessionData?.user?.id) {
+          await setCacheUserScope(sessionData.user.id);
           setUserId(sessionData.user.id);
           setSession(sessionData);
           setAuthPhase('READY');
@@ -73,9 +75,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event: any, newSession: any) => {
-      setUserId(newSession?.user?.id);
+      const nextUserId = newSession?.user?.id;
+      if (event === 'SIGNED_OUT' || !nextUserId) {
+        clearAllUserCaches();
+      } else {
+        setCacheUserScope(nextUserId);
+      }
+      setUserId(nextUserId);
       setSession(newSession);
-      if (newSession?.user?.id) {
+      if (nextUserId) {
         setIsLoading(false);
         isFinished = true;
       }
