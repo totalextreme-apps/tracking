@@ -1,12 +1,23 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { STALE_TIMES } from '@/lib/query-client';
 import { supabase } from '@/lib/supabase';
 import type { Profile, Follow, BulletinPostWithMedia, ItemCommentWithProfile } from '@/types/database';
 import { getMovieById, getTvShowById } from '@/lib/tmdb';
+
+const SLIM_DISPLAY_ITEM_SELECT =
+  'id, user_id, media_type, movie_id, show_id, season_number, format, status, is_on_display, display_order, custom_poster_url, created_at, movies(poster_path), shows(poster_path)';
+
+const SLIM_FEED_COLLECTION_ITEM_SELECT =
+  'id, user_id, media_type, movie_id, show_id, season_number, format, status, edition, condition, is_bootleg, for_sale, for_trade, price, custom_poster_url, rating, watch_count, last_watched_at, created_at';
+
+// In-memory cache for resolved notification reference targets so 60s polls never re-query known references
+const notificationReferenceCache = new Map<string, any>();
 
 // 1. Fetch Profile
 export const useProfile = (userId?: string) => {
   return useQuery({
     queryKey: ['profile', userId],
+    staleTime: STALE_TIMES.PROFILE,
     queryFn: async () => {
       if (!userId) return null;
       const { data, error } = await supabase
@@ -29,6 +40,7 @@ export const useProfile = (userId?: string) => {
 export const useFollowing = (userId?: string) => {
   return useQuery({
     queryKey: ['following', userId],
+    staleTime: STALE_TIMES.DIRECTORY,
     queryFn: async () => {
       if (!userId) return [];
       const { data, error } = await supabase
@@ -46,7 +58,7 @@ export const useFollowing = (userId?: string) => {
       
       const { data: displayItems } = await supabase
         .from('collection_items')
-        .select('*, movies(poster_path), shows(poster_path)')
+        .select(SLIM_DISPLAY_ITEM_SELECT)
         .in('user_id', profileIds)
         .eq('is_on_display', true);
       
@@ -242,7 +254,7 @@ export const useAllUsers = (currentUserId?: string, enabledParam = true) => {
       const profileIds = data.map((d: any) => d.id);
       const { data: displayItems } = await supabase
         .from('collection_items')
-        .select('*, movies(poster_path), shows(poster_path)')
+        .select(SLIM_DISPLAY_ITEM_SELECT)
         .in('user_id', profileIds)
         .eq('is_on_display', true);
         
@@ -264,23 +276,29 @@ export const useAllUsers = (currentUserId?: string, enabledParam = true) => {
 
 // 6. Fetch Bulletin Feed (Posts from people you follow + your own)
 export const useBulletinFeed = (userId?: string, enabledParam = true) => {
+  const queryClient = useQueryClient();
   return useQuery({
     queryKey: ['bulletin', userId],
     queryFn: async () => {
       if (!userId) return [];
       
-      // Step 1: Get people the user follows
-      const { data: following } = await supabase
-        .from('follows')
-        .select('following_id')
-        .eq('follower_id', userId);
-        
-      const followingIds = following?.map((f: any) => f.following_id) || [];
+      // Step 1: Reuse cached following list if available to avoid redundant follows query
+      const cachedFollowing = queryClient.getQueryData<any[]>(['following', userId]);
+      let followingIds: string[];
+      if (cachedFollowing) {
+        followingIds = cachedFollowing.map((f: any) => f.id).filter(Boolean);
+      } else {
+        const { data: following } = await supabase
+          .from('follows')
+          .select('following_id')
+          .eq('follower_id', userId);
+        followingIds = following?.map((f: any) => f.following_id) || [];
+      }
       const interestingIds = [...followingIds, userId];
 
       if (interestingIds.length === 0) return [];
 
-      // Step 2: Fetch posts from these users, joining with profiles and movies/shows
+      // Step 2: Fetch posts from these users, joining with profiles and slim movies/shows
       const { data, error } = await supabase
         .from('bulletin_posts')
         .select(`
@@ -289,7 +307,7 @@ export const useBulletinFeed = (userId?: string, enabledParam = true) => {
           movies(id, title, poster_path, tmdb_id),
           shows(id, name, poster_path, tmdb_id),
           collection_items(
-            *,
+            ${SLIM_FEED_COLLECTION_ITEM_SELECT},
             movies(id, title, poster_path, tmdb_id),
             shows(id, name, poster_path, tmdb_id)
           ),
@@ -331,7 +349,7 @@ export const useBulletinFeed = (userId?: string, enabledParam = true) => {
       return mapped as BulletinPostWithMedia[];
     },
     enabled: enabledParam && !!userId,
-    staleTime: 1000 * 30, // Cache board posts for 30 seconds
+    staleTime: STALE_TIMES.SOCIAL_FEED,
   });
 };
 
@@ -349,7 +367,7 @@ export const useBulletinPost = (postId?: string) => {
           movies(id, title, poster_path, tmdb_id),
           shows(id, name, poster_path, tmdb_id),
           collection_items(
-            *,
+            ${SLIM_FEED_COLLECTION_ITEM_SELECT},
             movies(id, title, poster_path, tmdb_id),
             shows(id, name, poster_path, tmdb_id)
           ),
@@ -374,7 +392,7 @@ export const useBulletinPost = (postId?: string) => {
       } as BulletinPostWithMedia;
     },
     enabled: !!postId,
-    staleTime: 1000 * 30,
+    staleTime: STALE_TIMES.SOCIAL_FEED,
   });
 };
 
@@ -382,10 +400,11 @@ export const useBulletinPost = (postId?: string) => {
 export function useMarketplaceFeed() {
   return useQuery({
     queryKey: ['marketplace_feed'],
+    staleTime: STALE_TIMES.SOCIAL_FEED,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('collection_items')
-        .select(`*, movies(*), shows(*)`)
+        .select(`${SLIM_FEED_COLLECTION_ITEM_SELECT}, movies(id, tmdb_id, title, poster_path, release_date), shows(id, tmdb_id, name, poster_path, first_air_date)`)
         .or(`for_sale.eq.true,for_trade.eq.true`)
         .order('created_at', { ascending: false })
         .limit(20);
@@ -624,7 +643,7 @@ export const useCreatePost = (userId?: string) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bulletin', userId] });
       queryClient.invalidateQueries({ queryKey: ['bulletin_feed'] });
-      queryClient.invalidateQueries({ queryKey: ['collection'] });
+      queryClient.invalidateQueries({ queryKey: ['user_posts', userId] });
     },
   });
 };
@@ -657,7 +676,7 @@ export const useUpdatePost = (userId?: string) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bulletin', userId] });
       queryClient.invalidateQueries({ queryKey: ['bulletin_feed'] });
-      queryClient.invalidateQueries({ queryKey: ['collection'] });
+      queryClient.invalidateQueries({ queryKey: ['user_posts', userId] });
     },
   });
 };
@@ -830,6 +849,7 @@ export const useCreatePostComment = (userId?: string) => {
 export const useNotifications = (userId?: string) => {
   return useQuery({
     queryKey: ['notifications', userId],
+    staleTime: STALE_TIMES.NOTIFICATIONS,
     queryFn: async () => {
       if (!userId) return [];
       const { data, error } = await supabase
@@ -844,12 +864,22 @@ export const useNotifications = (userId?: string) => {
       if (error) throw error;
       if (!data || data.length === 0) return [];
 
-      // Group reference IDs by type
-      const postCommentIds = data.filter((n: any) => n.type === 'post_comment' || n.type === 'comment_mention').map((n: any) => n.reference_id);
-      const itemCommentIds = data.filter((n: any) => n.type === 'item_comment').map((n: any) => n.reference_id);
-      const postIds = data.filter((n: any) => n.type === 'post_mention').map((n: any) => n.reference_id);
-      const reactionIds = data.filter((n: any) => n.type === 'reaction').map((n: any) => n.reference_id);
-      const profileCommentIds = data.filter((n: any) => n.type === 'profile_comment').map((n: any) => n.reference_id);
+      // Group reference IDs by type, filtering out IDs already cached in notificationReferenceCache
+      const postCommentIds = data
+        .filter((n: any) => (n.type === 'post_comment' || n.type === 'comment_mention') && n.reference_id && !notificationReferenceCache.has(`pc:${n.reference_id}`))
+        .map((n: any) => n.reference_id);
+      const itemCommentIds = data
+        .filter((n: any) => n.type === 'item_comment' && n.reference_id && !notificationReferenceCache.has(`ic:${n.reference_id}`))
+        .map((n: any) => n.reference_id);
+      const postIds = data
+        .filter((n: any) => n.type === 'post_mention' && n.reference_id && !notificationReferenceCache.has(`p:${n.reference_id}`))
+        .map((n: any) => n.reference_id);
+      const reactionIds = data
+        .filter((n: any) => n.type === 'reaction' && n.reference_id && !notificationReferenceCache.has(`r:${n.reference_id}`))
+        .map((n: any) => n.reference_id);
+      const profileCommentIds = data
+        .filter((n: any) => n.type === 'profile_comment' && n.reference_id && !notificationReferenceCache.has(`prc:${n.reference_id}`))
+        .map((n: any) => n.reference_id);
 
       const [postCommentsRes, itemCommentsRes, postsRes, reactionsRes, profileCommentsRes] = await Promise.all([
         postCommentIds.length > 0
@@ -869,30 +899,31 @@ export const useNotifications = (userId?: string) => {
           : Promise.resolve([])
       ]);
 
-      const postCommentsMap = new Map(postCommentsRes.map((item: any) => [item.id, item]));
-      const itemCommentsMap = new Map(itemCommentsRes.map((item: any) => [item.id, item]));
-      const postsMap = new Map(postsRes.map((item: any) => [item.id, item]));
-      const reactionsMap = new Map(reactionsRes.map((item: any) => [item.id, item]));
-      const profileCommentsMap = new Map(profileCommentsRes.map((item: any) => [item.id, item]));
+      postCommentsRes.forEach((item: any) => notificationReferenceCache.set(`pc:${item.id}`, item));
+      itemCommentsRes.forEach((item: any) => notificationReferenceCache.set(`ic:${item.id}`, item));
+      postsRes.forEach((item: any) => notificationReferenceCache.set(`p:${item.id}`, item));
+      reactionsRes.forEach((item: any) => notificationReferenceCache.set(`r:${item.id}`, item));
+      profileCommentsRes.forEach((item: any) => notificationReferenceCache.set(`prc:${item.id}`, item));
 
       return data.map((n: any) => {
         let referenceData = null;
         if (n.type === 'post_comment' || n.type === 'comment_mention') {
-          referenceData = postCommentsMap.get(n.reference_id);
+          referenceData = notificationReferenceCache.get(`pc:${n.reference_id}`) || null;
         } else if (n.type === 'item_comment') {
-          referenceData = itemCommentsMap.get(n.reference_id);
+          referenceData = notificationReferenceCache.get(`ic:${n.reference_id}`) || null;
         } else if (n.type === 'post_mention') {
-          referenceData = postsMap.get(n.reference_id);
+          referenceData = notificationReferenceCache.get(`p:${n.reference_id}`) || null;
         } else if (n.type === 'reaction') {
-          referenceData = reactionsMap.get(n.reference_id);
+          referenceData = notificationReferenceCache.get(`r:${n.reference_id}`) || null;
         } else if (n.type === 'profile_comment') {
-          referenceData = profileCommentsMap.get(n.reference_id);
+          referenceData = notificationReferenceCache.get(`prc:${n.reference_id}`) || null;
         }
         return { ...n, referenceData };
       });
     },
     enabled: !!userId,
-    refetchInterval: 10000, // Poll every 10s
+    refetchInterval: 60000, // Poll every 60s instead of 10s
+    refetchIntervalInBackground: false,
   });
 };
 
@@ -904,29 +935,39 @@ export const useMarkNotificationRead = () => {
         .update({ is_read: true })
         .eq('id', id);
       if (error) throw error;
+      return id;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    onSuccess: (id) => {
+      queryClient.setQueriesData<any[]>({ queryKey: ['notifications'] }, (old) => {
+        if (!old) return old;
+        return old.map((n) => (n.id === id ? { ...n, is_read: true } : n));
+      });
     }
   });
 };
 
 // 10. Community Social Feed (Combined Activities)
 export const useCommunityFeed = (userId?: string) => {
+  const queryClient = useQueryClient();
   return useQuery({
     queryKey: ['community_feed', userId],
     queryFn: async () => {
       if (!userId) return [];
       
-      const { data: follows } = await supabase
-        .from('follows')
-        .select('following_id')
-        .eq('follower_id', userId);
-        
-      const followingIds = follows?.map((f: any) => f.following_id) || [];
+      const cachedFollowing = queryClient.getQueryData<any[]>(['following', userId]);
+      let followingIds: string[];
+      if (cachedFollowing) {
+        followingIds = cachedFollowing.map((f: any) => f.id).filter(Boolean);
+      } else {
+        const { data: follows } = await supabase
+          .from('follows')
+          .select('following_id')
+          .eq('follower_id', userId);
+        followingIds = follows?.map((f: any) => f.following_id) || [];
+      }
       const interestingIds = [...followingIds, userId];
 
-      // Fetch all feed segments in parallel
+      // Fetch all feed segments in parallel using purpose-specific slim column selections
       const [postsRes, updatesRes, watchesRes, listingsRes, commentsRes] = await Promise.all([
         supabase
           .from('bulletin_posts')
@@ -936,7 +977,7 @@ export const useCommunityFeed = (userId?: string) => {
             movies(id, title, poster_path, tmdb_id),
             shows(id, name, poster_path, tmdb_id),
             collection_items(
-              *,
+              ${SLIM_FEED_COLLECTION_ITEM_SELECT},
               movies(id, title, poster_path, tmdb_id),
               shows(id, name, poster_path, tmdb_id)
             ),
@@ -953,7 +994,7 @@ export const useCommunityFeed = (userId?: string) => {
         supabase
           .from('collection_items')
           .select(`
-            *,
+            ${SLIM_FEED_COLLECTION_ITEM_SELECT},
             movies(id, title, poster_path, tmdb_id),
             shows(id, name, poster_path, tmdb_id),
             item_comments(
@@ -970,7 +1011,7 @@ export const useCommunityFeed = (userId?: string) => {
         supabase
           .from('collection_items')
           .select(`
-            *,
+            ${SLIM_FEED_COLLECTION_ITEM_SELECT},
             movies(id, title, poster_path, tmdb_id),
             shows(id, name, poster_path, tmdb_id),
             item_comments(
@@ -987,7 +1028,7 @@ export const useCommunityFeed = (userId?: string) => {
         supabase
           .from('collection_items')
           .select(`
-            *,
+            ${SLIM_FEED_COLLECTION_ITEM_SELECT},
             movies(id, title, poster_path, tmdb_id),
             shows(id, name, poster_path, tmdb_id),
             item_comments(
@@ -1007,7 +1048,7 @@ export const useCommunityFeed = (userId?: string) => {
             *,
             profiles(*),
             collection_items(
-              *,
+              ${SLIM_FEED_COLLECTION_ITEM_SELECT},
               movies(id, title, poster_path, tmdb_id),
               shows(id, name, poster_path, tmdb_id)
             )
@@ -1135,7 +1176,7 @@ export const useCommunityFeed = (userId?: string) => {
       return deduplicated;
     },
     enabled: !!userId,
-    staleTime: 1000 * 30,
+    staleTime: STALE_TIMES.SOCIAL_FEED,
   });
 };
 
@@ -1143,10 +1184,11 @@ export const useCommunityFeed = (userId?: string) => {
 export const useConversations = (userId?: string) => {
   return useQuery({
     queryKey: ['conversations', userId],
+    staleTime: STALE_TIMES.NOTIFICATIONS,
     queryFn: async () => {
       if (!userId) return [];
       
-      // Get all messages where I am sender or receiver
+      // Get recent messages where I am sender or receiver
       const { data, error } = await supabase
         .from('messages')
         .select(`
@@ -1155,7 +1197,8 @@ export const useConversations = (userId?: string) => {
           receiver:receiver_id(id, username, avatar_url)
         `)
         .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(250);
 
       if (error) throw error;
 
@@ -1197,7 +1240,8 @@ export const useChat = (myId?: string, otherId?: string) => {
       return data;
     },
     enabled: !!myId && !!otherId,
-    refetchInterval: 3000,
+    refetchInterval: 15000,
+    refetchIntervalInBackground: false,
   });
 };
 
@@ -1296,9 +1340,12 @@ export const useDeleteNotification = (userId?: string) => {
         .eq('id', notificationId)
         .eq('user_id', userId);
       if (error) throw error;
+      return notificationId;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications', userId] });
+    onSuccess: (notificationId) => {
+      queryClient.setQueryData<any[]>(['notifications', userId], (old) =>
+        old ? old.filter((n) => n.id !== notificationId) : old
+      );
     }
   });
 };
@@ -1317,7 +1364,9 @@ export const useClearReadNotifications = (userId?: string) => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications', userId] });
+      queryClient.setQueryData<any[]>(['notifications', userId], (old) =>
+        old ? old.filter((n) => !n.is_read) : old
+      );
     }
   });
 };
@@ -1349,6 +1398,7 @@ export function useReorderTopFive(userId: string | undefined) {
 export function useUserPosts(profileId: string | undefined) {
   return useQuery({
     queryKey: ['user_posts', profileId],
+    staleTime: STALE_TIMES.SOCIAL_FEED,
     queryFn: async () => {
       if (!profileId) return [];
       const { data, error } = await supabase
@@ -1356,16 +1406,17 @@ export function useUserPosts(profileId: string | undefined) {
         .select(`
           *,
           profiles(*),
-          movies(*),
-          shows(*),
+          movies(id, title, poster_path, tmdb_id),
+          shows(id, name, poster_path, tmdb_id),
           collection_items(
-            *,
-            movies(*),
-            shows(*)
+            ${SLIM_FEED_COLLECTION_ITEM_SELECT},
+            movies(id, title, poster_path, tmdb_id),
+            shows(id, name, poster_path, tmdb_id)
           )
         `)
         .eq('user_id', profileId)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(50);
       if (error) throw error;
 
       const mapped = (data || []).map((p: any) => {

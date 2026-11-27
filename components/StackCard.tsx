@@ -240,7 +240,12 @@ export function StackCard({
   const primaryGenre = media?.custom_genre || media?.genres?.[0]?.name;
   const { userId } = useAuth();
   const [pickerVisible, setPickerVisible] = useState(false);
-  const { reactions, toggleReaction } = useReactions('collection_item_id', topItem?.id);
+  const { reactions, toggleReaction } = useReactions(
+    'collection_item_id',
+    topItem?.id,
+    undefined,
+    !!(userId && isReadOnly && showReactions)
+  );
   
   const isPhysical = topItem.format !== 'Digital';
   const isWishlist = topItem.status === 'wishlist';

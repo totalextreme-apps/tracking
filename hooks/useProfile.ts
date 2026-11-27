@@ -1,3 +1,4 @@
+import { QUERY_KEYS, STALE_TIMES } from '@/lib/query-client';
 import { supabase } from '@/lib/supabase';
 import type { Profile } from '@/types/database';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -8,7 +9,8 @@ export function useProfile(userId: string | null) {
     const queryClient = useQueryClient();
 
     const query = useQuery({
-        queryKey: ['profile', userId],
+        queryKey: QUERY_KEYS.profile(userId),
+        staleTime: STALE_TIMES.PROFILE,
         queryFn: async () => {
             if (!userId) return null;
             const { data, error } = await supabase
@@ -37,8 +39,12 @@ export function useProfile(userId: string | null) {
             if (error) throw error;
             return data;
         },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['profile', userId] });
+        onSuccess: (updatedProfile) => {
+            if (updatedProfile && userId) {
+                queryClient.setQueryData(QUERY_KEYS.profile(userId), updatedProfile);
+            } else {
+                queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile(userId) });
+            }
         },
     });
 
@@ -72,8 +78,12 @@ export function useProfile(userId: string | null) {
 
             return publicUrl;
         },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['profile', userId] });
+        onSuccess: (updatedProfile) => {
+            if (updatedProfile && userId) {
+                queryClient.setQueryData(QUERY_KEYS.profile(userId), updatedProfile);
+            } else {
+                queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile(userId) });
+            }
         },
     });
 

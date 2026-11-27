@@ -318,6 +318,8 @@ export default function SettingsScreen() {
 
   const performSignOut = async () => {
     setShowSignOutConfirm(false);
+    const { clearAllUserCaches } = await import('@/lib/query-client');
+    await clearAllUserCaches();
     await supabase.auth.signOut();
     router.replace('/auth');
   };
@@ -920,7 +922,7 @@ export default function SettingsScreen() {
           )}
 
         {/* DETAILED STATS */}
-        {!isEditing && <StatsSection collection={collection} />}
+        {!isEditing && <StatsSection collection={collection} userId={userId} />}
 
         {/* SETTINGS LIST */}
         <View className="mb-8">

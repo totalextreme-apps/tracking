@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
 import { useSound } from '@/context/SoundContext';
 import { useCollection, useCustomListPreview } from '@/hooks/useCollection';
+import { getCustomLists } from '@/lib/collection-utils';
 import { 
   useBulletinFeed, 
   useBulletinPost,
@@ -506,59 +507,6 @@ export default function CommunityScreen() {
   const postLayouts = useRef<Record<string, number>>({});
   const hasScrolledToPost = useRef<string | null>(null);
 
-  // Auto-repair any mismatched bulletin posts on mount
-  useEffect(() => {
-    if (!userId) return;
-    
-    const autoRepairPosts = async () => {
-      try {
-        const { data: posts } = await supabase
-          .from('bulletin_posts')
-          .select('id, collection_item_id, movie_id, show_id')
-          .eq('user_id', userId);
-
-        if (posts && posts.length > 0) {
-          let updatedCount = 0;
-          for (const post of posts) {
-            if (post.collection_item_id) {
-              const { data: colItem } = await supabase
-                .from('collection_items')
-                .select('movie_id, show_id')
-                .eq('id', post.collection_item_id)
-                .maybeSingle();
-
-              if (colItem) {
-                // If there's a mismatch between the post's movie/show ID and the collection item's movie/show ID, repair it!
-                const isMovieMismatch = colItem.movie_id && post.movie_id !== colItem.movie_id;
-                const isShowMismatch = colItem.show_id && post.show_id !== colItem.show_id;
-                
-                if (isMovieMismatch || isShowMismatch) {
-                  await supabase
-                    .from('bulletin_posts')
-                    .update({
-                      movie_id: colItem.movie_id,
-                      show_id: colItem.show_id
-                    } as any)
-                    .eq('id', post.id);
-                  updatedCount++;
-                }
-              }
-            }
-          }
-          if (updatedCount > 0) {
-            // Refresh feed cache if any updates occurred
-            queryClient.invalidateQueries({ queryKey: ['bulletin'] });
-            queryClient.invalidateQueries({ queryKey: ['community_feed'] });
-          }
-        }
-      } catch (err) {
-        console.error('Failed to auto-repair bulletin posts:', err);
-      }
-    };
-
-    autoRepairPosts();
-  }, [userId]);
-
   const [activeTab, setActiveTab] = useState<Tab>('activity');
   const [userSearch, setUserSearch] = useState('');
   
@@ -618,7 +566,7 @@ export default function CommunityScreen() {
   const [showMentionsDropdown, setShowMentionsDropdown] = useState(false);
   const [selectedStack, setSelectedStack] = useState<string | null>(null);
   const { data: collection } = useCollection(userId);
-  const userStacks = useMemo(() => Array.from(new Set(collection?.flatMap((i: any) => i.custom_lists || []))) as string[], [collection]);
+  const userStacks = useMemo(() => getCustomLists(collection), [collection]);
 
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);

@@ -4,7 +4,7 @@ import { TrackingLoader } from '@/components/TrackingLoader';
 import { VHSCard } from '@/components/VHSCard';
 import { useAuth } from '@/context/AuthContext';
 import { useSound } from '@/context/SoundContext';
-import { useBulkUpdateCustomLists, useCollection, useUpdateStackMeta } from '@/hooks/useCollection';
+import { useBulkUpdateCustomLists, useCollection, useHydrateCollectionCast, useUpdateStackMeta } from '@/hooks/useCollection';
 import { getGenres, getStackMeta } from '@/lib/collection-utils';
 import { getPosterUrl } from '@/lib/dummy-data';
 import type { CollectionItemWithMedia } from '@/types/database';
@@ -53,6 +53,7 @@ export default function CreateListScreen() {
     const [initialIds, setInitialIds] = useState<string[]>([]);
 
     const [searchQuery, setSearchQuery] = useState('');
+    useHydrateCollectionCast(userId, collection, searchQuery.trim().length >= 2);
     const [formatFilter, setFormatFilter] = useState<string | null>(null);
     const [genreFilter, setGenreFilter] = useState<string | null>(null);
     const [decadeFilter, setDecadeFilter] = useState<string>('ALL');

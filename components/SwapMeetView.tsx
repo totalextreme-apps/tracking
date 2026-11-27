@@ -16,6 +16,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
+import { STALE_TIMES } from '@/lib/query-client';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { useSound } from '@/context/SoundContext';
@@ -142,11 +143,12 @@ export function SwapMeetView({
   // Query: Fetch all listing items
   const { data: swapItems = [], isLoading, isRefetching, refetch } = useQuery<SwapItem[]>({
     queryKey: ['swap-meet-items'],
+    staleTime: STALE_TIMES.SOCIAL_FEED,
     queryFn: async () => {
       const { data: items, error: itemsError } = await supabase
         .from('collection_items')
         .select(`
-          *,
+          id, user_id, movie_id, show_id, format, status, rating, edition, condition, custom_poster_url, for_sale, for_trade, price, notes, created_at,
           movies (id, tmdb_id, title, poster_path, backdrop_path, release_date, genres),
           shows (id, tmdb_id, name, poster_path, backdrop_path, first_air_date, genres)
         `)

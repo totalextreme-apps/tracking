@@ -45,7 +45,12 @@ export function OnDisplayCard({ item, scale = 1.5, onSingleTapAction, onLongPres
   const { genreStickersEnabled } = useSettings();
   const { userId } = useAuth();
   const [pickerVisible, setPickerVisible] = useState(false);
-  const { reactions, toggleReaction } = useReactions('collection_item_id', item.id);
+  const { reactions, toggleReaction } = useReactions(
+    'collection_item_id',
+    item.id,
+    undefined,
+    !!(userId && showReactions)
+  );
   const media = item.movies || item.shows;
   if (!media) return null;
 

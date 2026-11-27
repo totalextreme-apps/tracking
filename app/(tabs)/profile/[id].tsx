@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useProfile, useFollowers, useFollowing, useToggleFollow, useToggleTopFive, useProfileComments, useAddProfileComment, useUpdateProfileComment, useDeleteProfileComment, useUserPosts } from '@/hooks/useSocial';
 import { useSound } from '@/context/SoundContext';
-import { useCollection } from '@/hooks/useCollection';
+import { useCollection, useHydrateCollectionCast } from '@/hooks/useCollection';
 import { useAuth } from '@/context/AuthContext';
 import { MemberCard } from '@/components/MemberCard';
 import { StatsSection } from '@/components/StatsSection';
@@ -59,6 +59,7 @@ export default function UserProfileScreen() {
   const [sortBy, setSortBy] = useState<SortOption>('recent');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [searchQuery, setSearchQuery] = useState('');
+  useHydrateCollectionCast(id, collection, searchQuery.trim().length >= 2);
   const [formatFilter, setFormatFilter] = useState<string | null>(null);
   const [genreFilter, setGenreFilter] = useState<string | null>(null);
   const [mediaTypeFilter, setMediaTypeFilter] = useState<'movie' | 'tv' | null>(null);
@@ -313,12 +314,18 @@ export default function UserProfileScreen() {
   
   const commonItems = useMemo(() => {
     if (!collection || !myCollection || id === currentUserId) return [];
+    const mySet = new Set<string>();
+    for (let i = 0; i < myCollection.length; i++) {
+      const myItem = myCollection[i];
+      const mediaId = myItem.movie_id || myItem.show_id;
+      if (mediaId) {
+        mySet.add(`${myItem.media_type || (myItem.show_id ? 'tv' : 'movie')}:${mediaId}:${myItem.format}`);
+      }
+    }
     return collection.filter((item: any) => {
       const mediaId = item.movie_id || item.show_id;
-      return myCollection.some((myItem: any) => 
-        (myItem.movie_id || myItem.show_id) === mediaId && 
-        myItem.format === item.format
-      );
+      if (!mediaId) return false;
+      return mySet.has(`${item.media_type || (item.show_id ? 'tv' : 'movie')}:${mediaId}:${item.format}`);
     });
   }, [collection, myCollection, id, currentUserId]);
 
@@ -1232,7 +1239,7 @@ export default function UserProfileScreen() {
                       <Text className="text-[10px] text-neutral-500 font-bold tracking-widest uppercase mt-1">Formats</Text>
                     </View>
                   </View>
-                  <StatsSection collection={collection} />
+                  <StatsSection collection={collection} userId={id} />
                 </View>
               )}
 

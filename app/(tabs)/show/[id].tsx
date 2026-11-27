@@ -19,7 +19,8 @@ import { MultipackModal } from '@/components/MultipackModal';
 import { useAuth } from '@/context/AuthContext';
 import { useSound } from '@/context/SoundContext';
 import { useThriftMode } from '@/context/ThriftModeContext';
-import { useAddToCollection, useCollection, useDeleteCollectionItem, useUpdateCollectionItem, useLogWatchEvent, useDecrementWatchEvent, useUpdateShowFranchise } from '@/hooks/useCollection';
+import { useAddToCollection, useBulkUpdateCustomLists, useCollection, useDeleteCollectionItem, useUpdateCollectionItem, useLogWatchEvent, useDecrementWatchEvent, useUpdateShowFranchise } from '@/hooks/useCollection';
+import { STALE_TIMES, setCachedShow } from '@/lib/query-client';
 import { useCreatePost } from '@/hooks/useSocial';
 import { ReviewSection } from '@/components/ReviewSection';
 import { CommentSection } from '@/components/CommentSection';
@@ -175,6 +176,7 @@ export default function ShowDetailScreen() {
     
     const { data: collection, refetch } = useCollection(targetUserId);
     const updateMutation = useUpdateCollectionItem(userId);
+    const bulkUpdateCustomLists = useBulkUpdateCustomLists(userId);
     const updateShowFranchiseMutation = useUpdateShowFranchise(userId);
     const deleteMutation = useDeleteCollectionItem(userId);
     const addMutation = useAddToCollection(userId);
@@ -206,7 +208,6 @@ export default function ShowDetailScreen() {
                 itemId: activeItem.id,
                 currentWatchCount: activeItem.watch_count || 0,
             });
-            refetch();
         } catch (e) {
             Alert.alert('Error', 'Failed to log watch event');
         }
@@ -221,7 +222,6 @@ export default function ShowDetailScreen() {
                 itemId: activeItem.id,
                 currentWatchCount: activeItem.watch_count || 0,
             });
-            refetch();
         } catch (e) {
             Alert.alert('Error', 'Failed to decrement watch event');
         }
@@ -239,7 +239,6 @@ export default function ShowDetailScreen() {
                     last_watched_at: null
                 }
             });
-            refetch();
         } catch (e) {
             Alert.alert('Error', 'Failed to reset watch info');
         }
@@ -255,7 +254,6 @@ export default function ShowDetailScreen() {
                     last_watched_at: newDate ? new Date(newDate).toISOString() : null
                 }
             });
-            refetch();
             setShowWatchDateModal(false);
         } catch (e) {
             Alert.alert('Error', 'Failed to update watch date. Make sure format is correct.');
@@ -333,6 +331,7 @@ export default function ShowDetailScreen() {
     const showFromDb = showItems[0]?.shows;
     const { data: dbShow } = useQuery({
         queryKey: ['shows-db-detail', showIdNum || showFromDb?.id],
+        staleTime: STALE_TIMES.MEDIA_DETAIL,
         queryFn: async () => {
             const targetId = showIdNum || showFromDb?.id;
             if (!targetId) return null;
@@ -342,6 +341,7 @@ export default function ShowDetailScreen() {
                 .eq('id', targetId)
                 .single();
             if (error) throw error;
+            if (data) setCachedShow(data as any);
             return data;
         },
         enabled: !!(showIdNum || showFromDb?.id) && !directItem?.shows,
@@ -350,6 +350,7 @@ export default function ShowDetailScreen() {
 
     const { data: tmdbShow, isLoading: tmdbLoading } = useQuery({
         queryKey: ['tmdb-show', resolvedShow?.tmdb_id || showIdNum],
+        staleTime: STALE_TIMES.MEDIA_DETAIL,
         queryFn: async () => {
             const tmdbId = resolvedShow?.tmdb_id || showIdNum;
             if (!tmdbId) return null;
@@ -387,34 +388,6 @@ export default function ShowDetailScreen() {
             setIsNotFound(false);
         }
     }, [show, persistedShow, collection, showItems.length]);
-
-    const checkedItemsRef = useRef<Record<string, boolean>>({});
-
-    useEffect(() => {
-        if (isReadOnly || !activeShow || !activeShow.name || showItems.length === 0) return;
-
-        showItems.forEach(async (item: any) => {
-            if (item.status !== 'owned') return;
-            if (item.value_estimate !== null && item.value_estimate !== undefined) return;
-            if (checkedItemsRef.current[item.id]) return;
-
-            checkedItemsRef.current[item.id] = true;
-            console.log(`Lazily checking eBay sold value for: ${activeShow.name} (${item.format})`);
-
-            try {
-                const res = await fetchEbaySoldValue(activeShow.name, item.format, item.edition);
-                if (res.value !== null) {
-                    await updateMutation.mutateAsync({
-                        itemId: item.id,
-                        updates: { value_estimate: res.value }
-                    });
-                    refetch();
-                }
-            } catch (err) {
-                console.error(`Failed to auto-lookup price for ${activeShow.name} (${item.format}):`, err);
-            }
-        });
-    }, [showItems, activeShow?.name, isReadOnly]);
 
 
     const seasonPosterPath = activeItem?.season_number !== null && activeItem?.season_number !== undefined && !isSpecialSeason(activeItem.season_number) && tmdbShow?.seasons 
@@ -546,11 +519,11 @@ export default function ShowDetailScreen() {
         const isInStack = showItems.some((i: any) => i.custom_lists?.includes(listName));
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         try {
-            await Promise.all(showItems.map((item: any) => {
-                const currentLists = item.custom_lists || [];
-                const updatedLists = isInStack ? currentLists.filter((l: string) => l !== listName) : [...currentLists, listName];
-                return updateMutation.mutateAsync({ itemId: item.id, updates: { custom_lists: updatedLists } });
-            }));
+            await bulkUpdateCustomLists.mutateAsync({
+                itemIds: showItems.map((i: any) => i.id),
+                listName,
+                isAdding: !isInStack,
+            });
         } catch (e) {
             Alert.alert('Error', 'Failed to update curated stack.');
         }
@@ -569,8 +542,9 @@ export default function ShowDetailScreen() {
             setEjecting(true);
             playSound('eject');
             await new Promise(resolve => setTimeout(resolve, 2000));
-            await Promise.all(showItems.map((item: any) => deleteMutation.mutateAsync(item.id)));
-            if (refetch) await refetch();
+            if (showItems.length > 0) {
+                await deleteMutation.mutateAsync(showItems.map((item: any) => item.id));
+            }
 
             setEjecting(false);
 
@@ -698,7 +672,6 @@ export default function ShowDetailScreen() {
                     itemId,
                     updates: { value_estimate: res.value }
                 });
-                refetch();
                 playSound('peel');
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                 if (Platform.OS === 'web') {
@@ -712,7 +685,6 @@ export default function ShowDetailScreen() {
                     itemId,
                     updates: { value_estimate: null }
                 });
-                refetch();
                 if (Platform.OS === 'web') {
                     window.alert(`No eBay sales found for "${targetTitle}" (${format}). Value reset.`);
                 } else {

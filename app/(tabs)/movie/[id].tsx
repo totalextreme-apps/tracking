@@ -19,7 +19,8 @@ import { ShareableCard } from '@/components/ShareableCard';
 import { useAuth } from '@/context/AuthContext';
 import { useSound } from '@/context/SoundContext';
 import { useThriftMode } from '@/context/ThriftModeContext';
-import { useAddToCollection, useCollection, useDeleteCollectionItem, useUpdateCollectionItem, useUpdateManualMovie, useLogWatchEvent, useDecrementWatchEvent, useUpdateMovieFranchise } from '@/hooks/useCollection';
+import { useAddToCollection, useBulkUpdateCustomLists, useCollection, useDeleteCollectionItem, useUpdateCollectionItem, useUpdateManualMovie, useLogWatchEvent, useDecrementWatchEvent, useUpdateMovieFranchise } from '@/hooks/useCollection';
+import { STALE_TIMES, setCachedMovie } from '@/lib/query-client';
 import { useCreatePost } from '@/hooks/useSocial';
 import { ReviewSection } from '@/components/ReviewSection';
 import { CommentSection } from '@/components/CommentSection';
@@ -185,6 +186,7 @@ export default function MovieDetailScreen() {
     
     const { data: collection, refetch } = useCollection(targetUserId);
     const updateMutation = useUpdateCollectionItem(userId);
+    const bulkUpdateCustomLists = useBulkUpdateCustomLists(userId);
     const updateMovieFranchiseMutation = useUpdateMovieFranchise(userId);
     const deleteMutation = useDeleteCollectionItem(userId);
     const addMutation = useAddToCollection(userId);
@@ -216,7 +218,6 @@ export default function MovieDetailScreen() {
                 itemId: activeItem.id,
                 currentWatchCount: activeItem.watch_count || 0,
             });
-            refetch();
         } catch (e) {
             Alert.alert('Error', 'Failed to log watch event');
         }
@@ -231,7 +232,6 @@ export default function MovieDetailScreen() {
                 itemId: activeItem.id,
                 currentWatchCount: activeItem.watch_count || 0,
             });
-            refetch();
         } catch (e) {
             Alert.alert('Error', 'Failed to decrement watch event');
         }
@@ -249,7 +249,6 @@ export default function MovieDetailScreen() {
                     last_watched_at: null
                 }
             });
-            refetch();
         } catch (e) {
             Alert.alert('Error', 'Failed to reset watch info');
         }
@@ -265,7 +264,6 @@ export default function MovieDetailScreen() {
                     last_watched_at: newDate ? new Date(newDate).toISOString() : null
                 }
             });
-            refetch();
             setShowWatchDateModal(false);
         } catch (e) {
             Alert.alert('Error', 'Failed to update watch date. Make sure format is correct.');
@@ -314,6 +312,7 @@ export default function MovieDetailScreen() {
     const internalMovie = activeItem?.movies || movieItems[0]?.movies;
     const { data: dbMovie } = useQuery({
         queryKey: ['movies-db-detail', movieId || internalMovie?.id],
+        staleTime: STALE_TIMES.MEDIA_DETAIL,
         queryFn: async () => {
             const targetId = movieId || internalMovie?.id;
             if (!targetId) return null;
@@ -323,6 +322,7 @@ export default function MovieDetailScreen() {
                 .eq('id', targetId)
                 .single();
             if (error) throw error;
+            if (data) setCachedMovie(data as any);
             return data;
         },
         enabled: !!(movieId || internalMovie?.id) && !directItem?.movies,
@@ -335,6 +335,7 @@ export default function MovieDetailScreen() {
 
     const { data: tmdbMovie, isLoading: tmdbLoading } = useQuery({
         queryKey: ['tmdb', tmdbIdToUse],
+        staleTime: STALE_TIMES.MEDIA_DETAIL,
         queryFn: async () => {
             if (!tmdbIdToUse) return null;
             return getMovieById(tmdbIdToUse);
@@ -344,8 +345,6 @@ export default function MovieDetailScreen() {
 
     // Final movie object to use for display
     const movie = resolvedInternalMovie || tmdbMovie || persistedMovie;
-
-    const checkedItemsRef = useRef<Record<string, boolean>>({});
 
     useEffect(() => {
         scrollViewRef.current?.scrollTo({ y: 0, animated: false });
@@ -357,32 +356,6 @@ export default function MovieDetailScreen() {
             setSelectedItemId(paramItemId);
         }
     }, [movieId, paramItemId]);
-
-    useEffect(() => {
-        if (isReadOnly || !movie || !movie.title || movieItems.length === 0) return;
-
-        movieItems.forEach(async (item: any) => {
-            if (item.status !== 'owned') return;
-            if (item.value_estimate !== null && item.value_estimate !== undefined) return;
-            if (checkedItemsRef.current[item.id]) return;
-
-            checkedItemsRef.current[item.id] = true;
-            console.log(`Lazily checking eBay sold value for: ${movie.title} (${item.format})`);
-
-            try {
-                const res = await fetchEbaySoldValue(movie.title, item.format, item.edition);
-                if (res.value !== null) {
-                    await updateMutation.mutateAsync({
-                        itemId: item.id,
-                        updates: { value_estimate: res.value }
-                    });
-                    refetch();
-                }
-            } catch (err) {
-                console.error(`Failed to auto-lookup price for ${movie.title} (${item.format}):`, err);
-            }
-        });
-    }, [movieItems, movie?.title, isReadOnly]);
 
     // Load custom art from only the active collection item for this movie
     const customArtUrl = activeItem?.custom_poster_url;
@@ -564,17 +537,11 @@ export default function MovieDetailScreen() {
         const isInStack = movieItems.some((i: any) => i.custom_lists?.includes(listName));
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         try {
-            await Promise.all(movieItems.map((item: any) => {
-                const currentLists = item.custom_lists || [];
-                const updatedLists = isInStack
-                    ? currentLists.filter((l: string) => l !== listName)
-                    : [...currentLists, listName];
-
-                return updateMutation.mutateAsync({
-                    itemId: item.id,
-                    updates: { custom_lists: updatedLists }
-                });
-            }));
+            await bulkUpdateCustomLists.mutateAsync({
+                itemIds: movieItems.map((i: any) => i.id),
+                listName,
+                isAdding: !isInStack,
+            });
         } catch (e) {
             Alert.alert('Error', 'Failed to update curated stack.');
         }
@@ -621,7 +588,6 @@ export default function MovieDetailScreen() {
                     itemId,
                     updates: { value_estimate: res.value }
                 });
-                refetch();
                 playSound('peel');
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                 if (Platform.OS === 'web') {
@@ -635,7 +601,6 @@ export default function MovieDetailScreen() {
                     itemId,
                     updates: { value_estimate: null }
                 });
-                refetch();
                 if (Platform.OS === 'web') {
                     window.alert(`No eBay sales found for "${targetTitle}" (${format}). Value reset.`);
                 } else {
@@ -725,8 +690,8 @@ export default function MovieDetailScreen() {
 
         try {
             if (existingItems.length > 0) {
-                // Remove format (handle duplicates)
-                await Promise.all(existingItems.map((i: any) => deleteMutation.mutateAsync(i.id)));
+                // Remove format in a single batched delete
+                await deleteMutation.mutateAsync(existingItems.map((i: any) => i.id));
             } else {
                 // Add format
                 const result = await addMutation.mutateAsync({
@@ -882,8 +847,9 @@ export default function MovieDetailScreen() {
             playSound('eject');
             await new Promise(resolve => setTimeout(resolve, 2000));
 
-            await Promise.all(movieItems.map((item: any) => deleteMutation.mutateAsync(item.id)));
-            if (refetch) refetch();
+            if (movieItems.length > 0) {
+                await deleteMutation.mutateAsync(movieItems.map((item: any) => item.id));
+            }
 
             setEjecting(false);
 

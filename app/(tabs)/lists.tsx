@@ -5,7 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useSound } from '@/context/SoundContext';
 import { useBulkUpdateCustomLists, useCollection, useRenameCustomList } from '@/hooks/useCollection';
 import { useCreatePost } from '@/hooks/useSocial';
-import { getCustomLists, getStackMeta } from '@/lib/collection-utils';
+import { buildCuratedStacksIndex, fastCompareStrings, getStackMeta } from '@/lib/collection-utils';
 import { getPosterUrl } from '@/lib/dummy-data';
 import type { CollectionItemWithMedia, MovieFormat } from '@/types/database';
 import { Ionicons } from '@expo/vector-icons';
@@ -50,7 +50,9 @@ export default function ListsScreen() {
         firstItem?: CollectionItemWithMedia;
     } | null>(null);
 
-    const customLists = useMemo(() => getCustomLists(collection), [collection]);
+    // Single O(N) pass to index all curated stacks, their items, and their metadata
+    const curatedIndex = useMemo(() => buildCuratedStacksIndex(collection), [collection]);
+    const customLists = curatedIndex.names;
 
     if (authLoading || (userId && collectionLoading)) {
         return (
@@ -277,12 +279,9 @@ export default function ListsScreen() {
                     <View style={{ gap: 16 }}>
                         {customLists.map((listName) => {
                             const rawStackItems: CollectionItemWithMedia[] =
-                                collection?.filter(
-                                    (item: CollectionItemWithMedia) =>
-                                        item && item.custom_lists?.includes(listName)
-                                ) || [];
+                                curatedIndex.itemsByList.get(listName) || [];
 
-                            const meta = getStackMeta(collection, listName);
+                            const meta = curatedIndex.metaByList.get(listName) || {};
                             const orderMap = new Map<string, number>();
                             (meta.itemOrder || []).forEach((id, idx) => orderMap.set(id, idx));
 
@@ -292,7 +291,7 @@ export default function ListsScreen() {
                                 if (idxA !== idxB) return idxA - idxB;
                                 const titleA = a.movies?.title || a.shows?.name || '';
                                 const titleB = b.movies?.title || b.shows?.name || '';
-                                return titleA.localeCompare(titleB);
+                                return fastCompareStrings(titleA, titleB);
                             });
 
                             const allIds = stackItems.map((i) => i.id);

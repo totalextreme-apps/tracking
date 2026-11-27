@@ -19,17 +19,22 @@ export interface Reaction {
   } | null;
 }
 
-export function useReactions(targetType: ReactionTargetType, targetId: string, initialData?: Reaction[]) {
+export function useReactions(
+  targetType: ReactionTargetType,
+  targetId: string,
+  initialData?: Reaction[],
+  enabled = true
+) {
   const queryClient = useQueryClient();
   const { playSound } = useSound();
 
-  // Query: Fetch reactions for target
+  // Query: Fetch reactions for target (only when enabled)
   const { data: reactions = [], refetch } = useQuery<Reaction[]>({
     queryKey: ['reactions', targetType, targetId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('reactions')
-        .select('*, profiles(username, avatar_url)')
+        .select('id, user_id, post_id, collection_item_id, post_comment_id, item_comment_id, reaction_type, created_at, profiles(username, avatar_url)')
         .eq(targetType, targetId);
       if (error) {
         // If table doesn't exist yet, return empty array to prevent crashing
@@ -41,7 +46,7 @@ export function useReactions(targetType: ReactionTargetType, targetId: string, i
       }
       return data || [];
     },
-    enabled: !!targetId,
+    enabled: !!targetId && enabled,
     initialData,
     staleTime: 1000 * 60 * 5,
   });
