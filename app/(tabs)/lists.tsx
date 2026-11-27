@@ -52,7 +52,14 @@ export default function ListsScreen() {
 
     // Single O(N) pass to index all curated stacks, their items, and their metadata
     const curatedIndex = useMemo(() => buildCuratedStacksIndex(collection), [collection]);
-    const customLists = curatedIndex.names;
+    const customLists = useMemo(
+        () =>
+            Array.from(curatedIndex.values())
+                .filter((stack) => stack.items.length > 0)
+                .map((stack) => stack.listName)
+                .sort(fastCompareStrings),
+        [curatedIndex]
+    );
 
     if (authLoading || (userId && collectionLoading)) {
         return (
@@ -278,10 +285,10 @@ export default function ListsScreen() {
                 ) : (
                     <View style={{ gap: 16 }}>
                         {customLists.map((listName) => {
-                            const rawStackItems: CollectionItemWithMedia[] =
-                                curatedIndex.itemsByList.get(listName) || [];
+                            const indexed = curatedIndex.get(listName);
+                            const rawStackItems: CollectionItemWithMedia[] = indexed?.items || [];
 
-                            const meta = curatedIndex.metaByList.get(listName) || {};
+                            const meta = indexed?.meta || {};
                             const orderMap = new Map<string, number>();
                             (meta.itemOrder || []).forEach((id, idx) => orderMap.set(id, idx));
 
