@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useSound } from '@/context/SoundContext';
 import { useCollection, useCustomListPreview } from '@/hooks/useCollection';
 import { getCustomLists } from '@/lib/collection-utils';
+import { setCachedMovie, setCachedShow } from '@/lib/query-client';
 import { 
   useBulletinFeed, 
   useBulletinPost,
@@ -254,6 +255,7 @@ function PostCommentSection({ postId, initialComments, isFocused, highlightComme
       {(comments || []).map((c: any) => (
         <View
           key={c.id}
+          id={`comment-${c.id}`}
           nativeID={`comment-${c.id}`}
           style={[
             { marginBottom: 6, borderLeftWidth: 1, borderLeftColor: 'rgba(0,0,0,0.1)', paddingLeft: 8 },
@@ -592,10 +594,11 @@ export default function CommunityScreen() {
   const [selectedMedia, setSelectedMedia] = useState<TmdbMediaResult | null>(null);
   const [isSearchingMedia, setIsSearchingMedia] = useState(false);
 
-  // Board Filters
+  // Board Filters & Pagination
   const [boardRatingFilter, setBoardRatingFilter] = useState<number | null>(null);
   const [boardTypeFilter, setBoardTypeFilter] = useState<'movie' | 'tv' | null>(null);
   const [boardSort, setBoardSort] = useState<'recent' | 'rating'>('recent');
+  const [visibleBoardCount, setVisibleBoardCount] = useState(12);
 
   // Pulse Filter & Pagination
   const [pulseFilter, setPulseFilter] = useState<'all' | 'collection' | 'notes' | 'comments'>('all');
@@ -618,22 +621,28 @@ export default function CommunityScreen() {
 
   // Data
   const { data: following } = useFollowing(userId);
+  const activeTargetPostId = highlightPostId || postId;
   const { data: bulletinFeedRaw, isLoading: bulletinLoadingRaw } = useBulletinFeed(
     userId,
-    currentTab === 'board' || currentTab === 'alerts' || !!postId
+    currentTab === 'board' || currentTab === 'alerts' || !!activeTargetPostId
   );
   const { data: deepLinkedPost } = useBulletinPost(
-    postId && !bulletinFeedRaw?.some((p: any) => p.id === postId) ? postId : undefined
+    activeTargetPostId && !bulletinFeedRaw?.some((p: any) => p.id === activeTargetPostId) ? activeTargetPostId : undefined
   );
+  const { data: communityFeed, isLoading: communityLoading, isFetching: communityFetching } = useCommunityFeed(userId);
   const bulletinFeed = useMemo(() => {
-    if (!bulletinFeedRaw && !deepLinkedPost) return undefined;
+    const communityFallbackPost = activeTargetPostId
+      ? communityFeed?.find((item: any) => item.activity_type === 'post' && item.id === activeTargetPostId)
+      : undefined;
+    const resolvedTargetPost = deepLinkedPost || communityFallbackPost;
+    if (!bulletinFeedRaw && !resolvedTargetPost) return undefined;
     const base = bulletinFeedRaw || [];
-    if (deepLinkedPost && !base.some((p: any) => p.id === deepLinkedPost.id)) {
-      return [deepLinkedPost, ...base];
+    if (resolvedTargetPost && !base.some((p: any) => p.id === resolvedTargetPost.id)) {
+      return [resolvedTargetPost, ...base];
     }
     return base;
-  }, [bulletinFeedRaw, deepLinkedPost]);
-  const bulletinLoading = bulletinLoadingRaw && !deepLinkedPost;
+  }, [bulletinFeedRaw, deepLinkedPost, communityFeed, activeTargetPostId]);
+  const bulletinLoading = bulletinLoadingRaw && !bulletinFeed?.length;
 
   React.useEffect(() => {
     if (tab && ['activity', 'directory', 'board', 'swap', 'inbox', 'alerts'].includes(tab)) {
@@ -643,38 +652,49 @@ export default function CommunityScreen() {
       setExpandedPostIds(prev => new Set(prev).add(postId));
       setHighlightPostId(postId);
       setHighlightCommentId(commentId || null);
+    }
+  }, [tab, postId, commentId]);
 
-      const targetKey = `${postId}:${commentId || ''}`;
-      if (hasScrolledToPost.current !== targetKey && bulletinFeed) {
+  React.useEffect(() => {
+    const targetPost = highlightPostId || postId;
+    const targetComment = highlightCommentId || commentId;
+    if (currentTab === 'board' && targetPost && bulletinFeed) {
+      const targetKey = `${targetPost}:${targetComment || ''}`;
+      if (hasScrolledToPost.current !== targetKey) {
         let attempts = 0;
         const tryScroll = () => {
           attempts++;
           let done = false;
           if (Platform.OS === 'web' && typeof document !== 'undefined') {
-            const el = (commentId && document.getElementById(`comment-${commentId}`)) || document.getElementById(`post-${postId}`);
+            const el = (targetComment && document.getElementById(`comment-${targetComment}`)) || document.getElementById(`post-${targetPost}`);
             if (el) {
               el.scrollIntoView({ behavior: 'smooth', block: 'center' });
               done = true;
             }
           } else {
-            const node: any = postRefs.current[postId];
+            const yOffset = postLayouts.current[targetPost];
             const scroll: any = boardScrollRef.current;
-            const inner = scroll?.getInnerViewNode?.();
-            if (node && inner) {
-              node.measureLayout(inner, (_x: number, y: number) => {
-                scroll.scrollTo({ y: Math.max(0, y - 80), animated: true });
-              }, () => {});
+            if (typeof yOffset === 'number' && scroll) {
+              scroll.scrollTo({ y: Math.max(0, yOffset - 40), animated: true });
               done = true;
+            } else {
+              const node: any = postRefs.current[targetPost];
+              const inner = scroll?.getInnerViewNode?.();
+              if (node && inner) {
+                node.measureLayout(inner, (_x: number, y: number) => {
+                  scroll.scrollTo({ y: Math.max(0, y - 80), animated: true });
+                }, () => {});
+                done = true;
+              }
             }
           }
           if (done) hasScrolledToPost.current = targetKey;
-          else if (attempts < 20) setTimeout(tryScroll, 250);
+          else if (attempts < 10) setTimeout(tryScroll, 100);
         };
-        setTimeout(tryScroll, 150);
+        setTimeout(tryScroll, 50);
       }
     }
-  }, [tab, postId, commentId, bulletinFeed]);
-  const { data: communityFeed, isLoading: communityLoading, isFetching: communityFetching } = useCommunityFeed(userId);
+  }, [currentTab, highlightPostId, highlightCommentId, postId, commentId, bulletinFeed]);
   const { data: marketplaceFeed } = useMarketplaceFeed();
   const { data: searchResults, isLoading: searchLoading } = useSearchUsers(userSearch);
   const { data: notifications, isLoading: notifLoading } = useNotifications(userId);
@@ -877,8 +897,37 @@ export default function CommunityScreen() {
 
   const goToPost = (targetPostId: string, targetCommentId?: string | null) => {
     hasScrolledToPost.current = null;
+    setBoardTypeFilter(null);
+    setBoardRatingFilter(null);
+    setExpandedPostIds(prev => new Set(prev).add(targetPostId));
+    setHighlightPostId(targetPostId);
+    setHighlightCommentId(targetCommentId || null);
     setActiveTab('board');
     router.setParams({ tab: 'board', postId: targetPostId, commentId: targetCommentId || '' } as any);
+  };
+
+  const navigateToAlertCollectionItem = (colItem: any, targetCommentId?: string | null) => {
+    if (!colItem) return;
+    const ownerId = colItem.user_id;
+    // Pre-seed React Query caches so MovieDetailScreen / ShowDetailScreen renders in 0ms without waiting on network
+    queryClient.setQueryData(['collection-item-direct', colItem.id], colItem);
+    if (colItem.movies) {
+      setCachedMovie(colItem.movies);
+      const movieTargetId = colItem.movie_id || colItem.movies.id;
+      if (ownerId && movieTargetId) {
+        queryClient.setQueryData(['collection-owner-movie', ownerId, movieTargetId, colItem.id], [colItem]);
+      }
+      const commentQuery = targetCommentId ? `&commentId=${targetCommentId}` : '';
+      router.push(`/movie/${movieTargetId || colItem.id}?itemId=${colItem.id}&ownerId=${ownerId}&from=community${commentQuery}` as any);
+    } else if (colItem.shows) {
+      setCachedShow(colItem.shows);
+      const showTargetId = colItem.show_id || colItem.shows.id;
+      if (ownerId && showTargetId) {
+        queryClient.setQueryData(['collection-owner-show', ownerId, showTargetId, colItem.id], [colItem]);
+      }
+      const commentQuery = targetCommentId ? `&commentId=${targetCommentId}` : '';
+      router.push(`/show/${showTargetId || colItem.id}?itemId=${colItem.id}&ownerId=${ownerId}&season=${colItem.season_number || 1}&from=community${commentQuery}` as any);
+    }
   };
 
   const handleNotificationPress = async (n: any) => {
@@ -901,7 +950,7 @@ export default function CommunityScreen() {
         if (postId) {
           goToPost(postId, n.reference_id);
         }
-      } else if (n.type === 'post_mention') {
+      } else if (n.type === 'post_mention' || n.type === 'mention') {
         goToPost(n.reference_id);
       } else if (n.type === 'item_comment') {
         let item = n.referenceData;
@@ -913,15 +962,7 @@ export default function CommunityScreen() {
             .single();
           item = data;
         }
-        const colItem = item?.collection_items;
-        if (colItem) {
-          const ownerId = colItem.user_id;
-          if (colItem.movies) {
-            router.push(`/movie/${colItem.id}?ownerId=${ownerId}&from=community&commentId=${n.reference_id}`);
-          } else if (colItem.shows) {
-            router.push(`/show/${colItem.id}?ownerId=${ownerId}&season=${colItem.season_number || 1}&from=community&commentId=${n.reference_id}`);
-          }
-        }
+        navigateToAlertCollectionItem(item?.collection_items, n.reference_id);
       } else if (n.type === 'reaction') {
         let rx = n.referenceData;
         if (!rx) {
@@ -958,14 +999,7 @@ export default function CommunityScreen() {
                 .single();
               colItem = data;
             }
-            if (colItem) {
-              const ownerId = colItem.user_id;
-              if (colItem.movies) {
-                router.push(`/movie/${colItem.id}?ownerId=${ownerId}&from=community`);
-              } else if (colItem.shows) {
-                router.push(`/show/${colItem.id}?ownerId=${ownerId}&season=${colItem.season_number || 1}&from=community`);
-              }
-            }
+            navigateToAlertCollectionItem(colItem);
           } else if (rx.item_comment_id) {
             let colItem = rx.item_comments?.collection_items;
             if (!colItem) {
@@ -976,18 +1010,11 @@ export default function CommunityScreen() {
                 .single();
               colItem = comment?.collection_items;
             }
-            if (colItem) {
-              const ownerId = colItem.user_id;
-              if (colItem.movies) {
-                router.push(`/movie/${colItem.id}?ownerId=${ownerId}&from=community&commentId=${rx.item_comment_id}`);
-              } else if (colItem.shows) {
-                router.push(`/show/${colItem.id}?ownerId=${ownerId}&season=${colItem.season_number || 1}&from=community&commentId=${rx.item_comment_id}`);
-              }
-            }
+            navigateToAlertCollectionItem(colItem, rx.item_comment_id);
           }
         }
       } else if (n.type === 'profile_comment') {
-        router.push({ pathname: `/profile/${userId}`, params: { from: 'community' } } as any);
+        router.push({ pathname: `/profile/${userId}`, params: { from: 'community', tab: 'guestbook' } } as any);
       }
     } catch (e) {
       console.error('Failed to handle notification click navigation:', e);
@@ -1890,41 +1917,76 @@ export default function CommunityScreen() {
                   </Text>
                 </View>
               ) : (
-                (bulletinFeed || [])
-                  .filter((post: any) => {
-                    if (boardTypeFilter === 'movie' && !post.movies) return false;
-                    if (boardTypeFilter === 'tv' && !post.shows) return false;
-                    if (boardRatingFilter && (post.rating || 0) < boardRatingFilter) return false;
-                    return true;
-                  })
-                  .sort((a: any, b: any) => {
-                    if (boardSort === 'rating') return (b.rating || 0) - (a.rating || 0);
-                    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-                  })
-                  .map((post: any, idx: number) => (
-                    <View
-                      key={post.id}
-                      nativeID={`post-${post.id}`}
-                      ref={(r) => { postRefs.current[post.id] = r; }}
-                      onLayout={(e) => { postLayouts.current[post.id] = e.nativeEvent.layout.y; }}
-                      style={highlightPostId === post.id && !highlightCommentId ? { borderWidth: 2, borderColor: '#f59e0b', borderRadius: 8 } : undefined}
-                    >
-                      <BulletinPostItem 
-                        post={post} 
-                        userId={userId} 
-                        idx={idx} 
-                        startEditing={startEditing} 
-                        setShowDeleteConfirm={setShowDeleteConfirm} 
-                        isFocused={focusedPostId === post.id}
-                        onReplyPress={() => {
-                          setFocusedPostId(null);
-                          setTimeout(() => setFocusedPostId(post.id), 50);
-                        }}
-                        CommentSectionComponent={PostCommentSection} 
-                        highlightCommentId={highlightPostId === post.id ? highlightCommentId : null}
-                      />
-                    </View>
-                  ))
+                (() => {
+                  const filteredPosts = (bulletinFeed || [])
+                    .filter((post: any) => {
+                      if (highlightPostId && post.id === highlightPostId) return true;
+                      if (boardTypeFilter === 'movie' && !post.movies) return false;
+                      if (boardTypeFilter === 'tv' && !post.shows) return false;
+                      if (boardRatingFilter && (post.rating || 0) < boardRatingFilter) return false;
+                      return true;
+                    })
+                    .sort((a: any, b: any) => {
+                      // Pin deep-linked alert post to the top of the Board so it appears immediately
+                      if (highlightPostId) {
+                        if (a.id === highlightPostId && b.id !== highlightPostId) return -1;
+                        if (b.id === highlightPostId && a.id !== highlightPostId) return 1;
+                      }
+                      if (boardSort === 'rating') return (b.rating || 0) - (a.rating || 0);
+                      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+                    });
+                  const visiblePosts = filteredPosts.slice(0, visibleBoardCount);
+                  return (
+                    <>
+                      {visiblePosts.map((post: any, idx: number) => (
+                        <View
+                          key={post.id}
+                          id={`post-${post.id}`}
+                          nativeID={`post-${post.id}`}
+                          ref={(r) => { postRefs.current[post.id] = r; }}
+                          onLayout={(e) => { postLayouts.current[post.id] = e.nativeEvent.layout.y; }}
+                          style={highlightPostId === post.id && !highlightCommentId ? { borderWidth: 2, borderColor: '#f59e0b', borderRadius: 8 } : undefined}
+                        >
+                          <BulletinPostItem 
+                            post={post} 
+                            userId={userId} 
+                            idx={idx} 
+                            startEditing={startEditing} 
+                            setShowDeleteConfirm={setShowDeleteConfirm} 
+                            isFocused={focusedPostId === post.id}
+                            onReplyPress={() => {
+                              setFocusedPostId(null);
+                              setTimeout(() => setFocusedPostId(post.id), 50);
+                            }}
+                            CommentSectionComponent={PostCommentSection} 
+                            highlightCommentId={highlightPostId === post.id ? highlightCommentId : null}
+                          />
+                        </View>
+                      ))}
+                      {visibleBoardCount < filteredPosts.length && (
+                        <Pressable
+                          onPress={() => {
+                            playSound('click');
+                            setVisibleBoardCount((prev) => prev + 12);
+                          }}
+                          style={{
+                            backgroundColor: '#2d2016',
+                            borderRadius: 6,
+                            paddingVertical: 12,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            marginTop: 8,
+                            marginBottom: 16,
+                          }}
+                        >
+                          <Text style={{ color: '#f59e0b', fontFamily: 'SpaceMono', fontSize: 10, fontWeight: 'bold', letterSpacing: 2 }}>
+                            + LOAD MORE NOTES ({filteredPosts.length - visibleBoardCount} REMAINING)
+                          </Text>
+                        </Pressable>
+                      )}
+                    </>
+                  );
+                })()
               )}
             </View>
           </ImageBackground>

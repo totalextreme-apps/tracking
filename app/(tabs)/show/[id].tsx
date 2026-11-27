@@ -174,7 +174,9 @@ export default function ShowDetailScreen() {
     const targetUserId = ownerId && typeof ownerId === 'string' ? ownerId : userId;
     const isReadOnly = !!ownerId && ownerId !== userId;
     
-    const { data: collection, refetch } = useCollection(targetUserId);
+    // Only load the full collection for the logged-in user; for read-only views of another user's show,
+    // use a lightweight single-show query below instead of downloading their entire collection.
+    const { data: collection, refetch } = useCollection(targetUserId, !isReadOnly);
     const updateMutation = useUpdateCollectionItem(userId);
     const bulkUpdateCustomLists = useBulkUpdateCustomLists(userId);
     const updateShowFranchiseMutation = useUpdateShowFranchise(userId);
@@ -269,15 +271,40 @@ export default function ShowDetailScreen() {
 
     // For TV shows, we group by show_id and season_number.
     const showIdNum = typeof id === 'string' && /^\d+$/.test(id) ? parseInt(id, 10) : undefined;
-    const itemUuid = typeof id === 'string' && !/^\d+$/.test(id) ? id : null;
+    const itemUuid = (typeof id === 'string' && !/^\d+$/.test(id) ? id : null) || (typeof paramItemId === 'string' ? paramItemId : null);
     const { season: seasonQuery } = useLocalSearchParams<{ season?: string }>();
     const seasonNumber = seasonQuery && seasonQuery !== 'undefined' && seasonQuery !== 'null' ? parseInt(seasonQuery, 10) : 1;
 
     // Find items matching this show and season locally first
     const collectionShowItems = collection?.filter((item: any) => {
         const itemShowId = item.show_id;
-        return (itemShowId === showIdNum || (item.shows?.id === showIdNum) || item.id === itemUuid);
+        return (
+            (showIdNum !== undefined && (itemShowId === showIdNum || item.shows?.id === showIdNum)) ||
+            (itemUuid !== null && item.id === itemUuid)
+        );
     }) ?? [];
+
+    const { data: ownerScopedItems } = useQuery({
+        queryKey: ['collection-owner-show', targetUserId, showIdNum, itemUuid],
+        queryFn: async () => {
+            if (!targetUserId) return [];
+            let q = supabase
+                .from('collection_items')
+                .select('*, shows(*)')
+                .eq('user_id', targetUserId);
+            if (showIdNum !== undefined) {
+                q = q.eq('show_id', showIdNum);
+            } else if (itemUuid) {
+                q = q.eq('id', itemUuid);
+            } else {
+                return [];
+            }
+            const { data } = await q;
+            return data || [];
+        },
+        enabled: isReadOnly && collectionShowItems.length === 0 && !!(showIdNum || itemUuid),
+        staleTime: STALE_TIMES.COLLECTION,
+    });
 
     const { data: directItem } = useQuery({
         queryKey: ['collection-item-direct', itemUuid],
@@ -291,13 +318,15 @@ export default function ShowDetailScreen() {
             if (error) return null;
             return data;
         },
-        enabled: !!itemUuid && collectionShowItems.length === 0,
+        enabled: !!itemUuid && collectionShowItems.length === 0 && (!ownerScopedItems || ownerScopedItems.length === 0),
         staleTime: 1000 * 60 * 5,
     });
 
     const showItems = collectionShowItems.length > 0
         ? collectionShowItems
-        : (directItem ? [directItem] : []);
+        : (ownerScopedItems && ownerScopedItems.length > 0)
+            ? ownerScopedItems
+            : (directItem ? [directItem] : []);
 
     const FORMAT_PRIORITY = ['4K', 'BluRay', 'DVD', 'VHS', 'Digital'];
 
@@ -329,7 +358,7 @@ export default function ShowDetailScreen() {
     }, [activeItem?.id]);
 
     const showFromDb = showItems[0]?.shows;
-    const { data: dbShow } = useQuery({
+    const { data: dbShow, isFetched: dbShowFetched } = useQuery({
         queryKey: ['shows-db-detail', showIdNum || showFromDb?.id],
         staleTime: STALE_TIMES.MEDIA_DETAIL,
         queryFn: async () => {
@@ -339,24 +368,25 @@ export default function ShowDetailScreen() {
                 .from('shows')
                 .select('*')
                 .eq('id', targetId)
-                .single();
+                .maybeSingle();
             if (error) throw error;
             if (data) setCachedShow(data as any);
             return data;
         },
-        enabled: !!(showIdNum || showFromDb?.id) && !directItem?.shows,
+        enabled: !!(showIdNum || showFromDb?.id) && !directItem?.shows?.show_cast,
     });
     const resolvedShow = dbShow || showFromDb;
 
+    const tmdbShowIdToUse = resolvedShow?.tmdb_id || (dbShowFetched && !resolvedShow && showIdNum ? showIdNum : null);
+
     const { data: tmdbShow, isLoading: tmdbLoading } = useQuery({
-        queryKey: ['tmdb-show', resolvedShow?.tmdb_id || showIdNum],
+        queryKey: ['tmdb-show', tmdbShowIdToUse],
         staleTime: STALE_TIMES.MEDIA_DETAIL,
         queryFn: async () => {
-            const tmdbId = resolvedShow?.tmdb_id || showIdNum;
-            if (!tmdbId) return null;
-            return getTvShowById(tmdbId);
+            if (!tmdbShowIdToUse) return null;
+            return getTvShowById(tmdbShowIdToUse);
         },
-        enabled: !!(resolvedShow?.tmdb_id || showIdNum),
+        enabled: !!tmdbShowIdToUse,
     });
 
 
@@ -579,8 +609,8 @@ export default function ShowDetailScreen() {
     }
 
     const resolvedShowId = showIdNum || showItems[0]?.show_id || showFromDb?.id;
-    const isCollectionLoading = !collection;
-    const isInitialLoading = !resolvedShowId && isCollectionLoading;
+    const isCollectionLoading = !isReadOnly && !collection && showItems.length === 0;
+    const isInitialLoading = !activeShow && ((!resolvedShowId && isCollectionLoading) || (resolvedShowId && !dbShowFetched && tmdbLoading));
 
     if (isInitialLoading || (resolvedShowId && tmdbLoading && !activeShow)) {
         return (

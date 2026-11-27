@@ -184,7 +184,9 @@ export default function MovieDetailScreen() {
     const targetUserId = ownerId && typeof ownerId === 'string' ? ownerId : userId;
     const isReadOnly = !!ownerId && ownerId !== userId;
     
-    const { data: collection, refetch } = useCollection(targetUserId);
+    // Only load the full collection for the logged-in user; for read-only views of another user's item,
+    // use a lightweight single-movie query below instead of downloading their entire collection.
+    const { data: collection, refetch } = useCollection(targetUserId, !isReadOnly);
     const updateMutation = useUpdateCollectionItem(userId);
     const bulkUpdateCustomLists = useBulkUpdateCustomLists(userId);
     const updateMovieFranchiseMutation = useUpdateMovieFranchise(userId);
@@ -271,12 +273,34 @@ export default function MovieDetailScreen() {
     };
 
     const movieId = typeof id === 'string' && /^\d+$/.test(id) ? parseInt(id, 10) : undefined;
-    const itemUuid = typeof id === 'string' && !/^\d+$/.test(id) ? id : null;
+    const itemUuid = (typeof id === 'string' && !/^\d+$/.test(id) ? id : null) || (typeof paramItemId === 'string' ? paramItemId : null);
 
     const collectionMovieItems = collection?.filter((item: any) => 
-        item.movie_id === movieId || 
-        item.id === itemUuid
+        (movieId !== undefined && item.movie_id === movieId) || 
+        (itemUuid !== null && item.id === itemUuid)
     ) ?? [];
+
+    const { data: ownerScopedItems } = useQuery({
+        queryKey: ['collection-owner-movie', targetUserId, movieId, itemUuid],
+        queryFn: async () => {
+            if (!targetUserId) return [];
+            let q = supabase
+                .from('collection_items')
+                .select('*, movies(*)')
+                .eq('user_id', targetUserId);
+            if (movieId !== undefined) {
+                q = q.eq('movie_id', movieId);
+            } else if (itemUuid) {
+                q = q.eq('id', itemUuid);
+            } else {
+                return [];
+            }
+            const { data } = await q;
+            return data || [];
+        },
+        enabled: isReadOnly && collectionMovieItems.length === 0 && !!(movieId || itemUuid),
+        staleTime: STALE_TIMES.COLLECTION,
+    });
 
     const { data: directItem } = useQuery({
         queryKey: ['collection-item-direct', itemUuid],
@@ -290,13 +314,15 @@ export default function MovieDetailScreen() {
             if (error) return null;
             return data;
         },
-        enabled: !!itemUuid && collectionMovieItems.length === 0,
+        enabled: !!itemUuid && collectionMovieItems.length === 0 && (!ownerScopedItems || ownerScopedItems.length === 0),
         staleTime: 1000 * 60 * 5,
     });
 
     const movieItems = collectionMovieItems.length > 0
         ? collectionMovieItems
-        : (directItem ? [directItem] : []);
+        : (ownerScopedItems && ownerScopedItems.length > 0)
+            ? ownerScopedItems
+            : (directItem ? [directItem] : []);
 
     const FORMAT_PRIORITY = ['4K', 'BluRay', 'DVD', 'VHS', 'Digital'];
 
@@ -310,7 +336,7 @@ export default function MovieDetailScreen() {
     const activeFormat: string | null = activeItem ? activeItem.format : null;
 
     const internalMovie = activeItem?.movies || movieItems[0]?.movies;
-    const { data: dbMovie } = useQuery({
+    const { data: dbMovie, isFetched: dbMovieFetched } = useQuery({
         queryKey: ['movies-db-detail', movieId || internalMovie?.id],
         staleTime: STALE_TIMES.MEDIA_DETAIL,
         queryFn: async () => {
@@ -320,18 +346,19 @@ export default function MovieDetailScreen() {
                 .from('movies')
                 .select('*')
                 .eq('id', targetId)
-                .single();
+                .maybeSingle();
             if (error) throw error;
             if (data) setCachedMovie(data as any);
             return data;
         },
-        enabled: !!(movieId || internalMovie?.id) && !directItem?.movies,
+        enabled: !!(movieId || internalMovie?.id) && !directItem?.movies?.movie_cast,
     });
     const resolvedInternalMovie = dbMovie || internalMovie;
     const commentActiveItem = activeItem || movieItems[0] || (itemUuid ? { id: itemUuid } : null);
 
     const activeMovie = resolvedInternalMovie || persistedMovie;
-    const tmdbIdToUse = activeMovie?.tmdb_id || (movieId && movieId > 0 ? movieId : null);
+    // Only fall back to raw movieId as a TMDB ID if the DB lookup finished and found no internal movie row
+    const tmdbIdToUse = activeMovie?.tmdb_id || (dbMovieFetched && !activeMovie && movieId && movieId > 0 ? movieId : null);
 
     const { data: tmdbMovie, isLoading: tmdbLoading } = useQuery({
         queryKey: ['tmdb', tmdbIdToUse],
@@ -625,8 +652,8 @@ export default function MovieDetailScreen() {
     }, [movieItems]);
 
     const resolvedMovieId = movieId || activeItem?.movie_id || movieItems[0]?.movie_id;
-    const isCollectionLoading = !collection;
-    const isInitialLoading = !resolvedMovieId && isCollectionLoading;
+    const isCollectionLoading = !isReadOnly && !collection && movieItems.length === 0;
+    const isInitialLoading = !activeMovie && ((!resolvedMovieId && isCollectionLoading) || (resolvedMovieId && !dbMovieFetched && tmdbLoading));
 
     if (isInitialLoading || (resolvedMovieId && tmdbLoading && !activeMovie)) {
         return (

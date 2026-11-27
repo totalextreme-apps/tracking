@@ -286,7 +286,7 @@ export const useBulletinFeed = (userId?: string, enabledParam = true) => {
       const cachedFollowing = queryClient.getQueryData<any[]>(['following', userId]);
       let followingIds: string[];
       if (cachedFollowing) {
-        followingIds = cachedFollowing.map((f: any) => f.id).filter(Boolean);
+        followingIds = cachedFollowing.map((f: any) => f.following_id || f.id).filter(Boolean);
       } else {
         const { data: following } = await supabase
           .from('follows')
@@ -730,6 +730,7 @@ export const useItemComments = (collectionItemId?: string | string[], initialDat
     },
     enabled: Array.isArray(collectionItemId) ? collectionItemId.length > 0 : !!collectionItemId,
     initialData,
+    initialDataUpdatedAt: initialData ? Date.now() : undefined,
     staleTime: 1000 * 60 * 5,
   });
 };
@@ -818,6 +819,7 @@ export const usePostComments = (postId?: string, initialData?: any[]) => {
     },
     enabled: !!postId,
     initialData,
+    initialDataUpdatedAt: initialData ? Date.now() : undefined,
     staleTime: 1000 * 60,
   });
 };
@@ -872,7 +874,7 @@ export const useNotifications = (userId?: string) => {
         .filter((n: any) => n.type === 'item_comment' && n.reference_id && !notificationReferenceCache.has(`ic:${n.reference_id}`))
         .map((n: any) => n.reference_id);
       const postIds = data
-        .filter((n: any) => n.type === 'post_mention' && n.reference_id && !notificationReferenceCache.has(`p:${n.reference_id}`))
+        .filter((n: any) => (n.type === 'post_mention' || n.type === 'mention') && n.reference_id && !notificationReferenceCache.has(`p:${n.reference_id}`))
         .map((n: any) => n.reference_id);
       const reactionIds = data
         .filter((n: any) => n.type === 'reaction' && n.reference_id && !notificationReferenceCache.has(`r:${n.reference_id}`))
@@ -881,18 +883,20 @@ export const useNotifications = (userId?: string) => {
         .filter((n: any) => n.type === 'profile_comment' && n.reference_id && !notificationReferenceCache.has(`prc:${n.reference_id}`))
         .map((n: any) => n.reference_id);
 
+      const notifItemSelect = `id, user_id, media_type, movie_id, show_id, season_number, format, status, rating, edition, condition, is_bootleg, custom_poster_url, custom_backdrop_url, notes, watch_count, last_watched_at, created_at, movies(id, tmdb_id, title, poster_path, backdrop_path, release_date, genres), shows(id, tmdb_id, name, poster_path, backdrop_path, first_air_date, genres)`;
+
       const [postCommentsRes, itemCommentsRes, postsRes, reactionsRes, profileCommentsRes] = await Promise.all([
         postCommentIds.length > 0
           ? supabase.from('post_comments').select('id, content, post_id').in('id', postCommentIds).then((res: any) => res.data || []).catch(() => [])
           : Promise.resolve([]),
         itemCommentIds.length > 0
-          ? supabase.from('item_comments').select('id, content, collection_item_id, collection_items(id, user_id, season_number, movies(title), shows(name))').in('id', itemCommentIds).then((res: any) => res.data || []).catch(() => [])
+          ? supabase.from('item_comments').select(`id, content, collection_item_id, collection_items(${notifItemSelect})`).in('id', itemCommentIds).then((res: any) => res.data || []).catch(() => [])
           : Promise.resolve([]),
         postIds.length > 0
           ? supabase.from('bulletin_posts').select('id, content').in('id', postIds).then((res: any) => res.data || []).catch(() => [])
           : Promise.resolve([]),
         reactionIds.length > 0
-          ? supabase.from('reactions').select('id, reaction_type, post_id, collection_item_id, post_comment_id, item_comment_id, post_comments(post_id), collection_items(id, user_id, season_number, movies(title), shows(name)), item_comments(id, collection_items(id, user_id, season_number, movies(title), shows(name)))').in('id', reactionIds).then((res: any) => res.data || []).catch(() => [])
+          ? supabase.from('reactions').select(`id, reaction_type, post_id, collection_item_id, post_comment_id, item_comment_id, post_comments(post_id), collection_items(${notifItemSelect}), item_comments(id, collection_items(${notifItemSelect}))`).in('id', reactionIds).then((res: any) => res.data || []).catch(() => [])
           : Promise.resolve([]),
         profileCommentIds.length > 0
           ? supabase.from('profile_comments').select('id, content').in('id', profileCommentIds).then((res: any) => res.data || []).catch(() => [])
@@ -911,7 +915,7 @@ export const useNotifications = (userId?: string) => {
           referenceData = notificationReferenceCache.get(`pc:${n.reference_id}`) || null;
         } else if (n.type === 'item_comment') {
           referenceData = notificationReferenceCache.get(`ic:${n.reference_id}`) || null;
-        } else if (n.type === 'post_mention') {
+        } else if (n.type === 'post_mention' || n.type === 'mention') {
           referenceData = notificationReferenceCache.get(`p:${n.reference_id}`) || null;
         } else if (n.type === 'reaction') {
           referenceData = notificationReferenceCache.get(`r:${n.reference_id}`) || null;
@@ -957,7 +961,7 @@ export const useCommunityFeed = (userId?: string) => {
       const cachedFollowing = queryClient.getQueryData<any[]>(['following', userId]);
       let followingIds: string[];
       if (cachedFollowing) {
-        followingIds = cachedFollowing.map((f: any) => f.id).filter(Boolean);
+        followingIds = cachedFollowing.map((f: any) => f.following_id || f.id).filter(Boolean);
       } else {
         const { data: follows } = await supabase
           .from('follows')

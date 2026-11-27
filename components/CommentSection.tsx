@@ -38,9 +38,9 @@ export function CommentSection({ collectionItemId }: CommentSectionProps) {
                     return;
                 }
             }
-            if (attempts < 20) setTimeout(tryScroll, 250);
+            if (attempts < 12) setTimeout(tryScroll, 120);
         };
-        setTimeout(tryScroll, 400);
+        setTimeout(tryScroll, 80);
     }, [highlightCommentId, comments]);
 
     const handleAdd = () => {
@@ -128,6 +128,7 @@ export function CommentSection({ collectionItemId }: CommentSectionProps) {
                 comments?.map((comment: any) => (
                     <View
                         key={comment.id}
+                        id={`item-comment-${comment.id}`}
                         nativeID={`item-comment-${comment.id}`}
                         className={`mb-6 flex-row gap-3 ${highlightCommentId === comment.id ? 'bg-amber-500/10 border-l-2 border-amber-500 rounded-md p-2 -mx-2' : ''}`}
                     >

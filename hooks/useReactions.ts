@@ -48,6 +48,7 @@ export function useReactions(
     },
     enabled: !!targetId && enabled,
     initialData,
+    initialDataUpdatedAt: initialData ? Date.now() : undefined,
     staleTime: 1000 * 60 * 5,
   });
 
