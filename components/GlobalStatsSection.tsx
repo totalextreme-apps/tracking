@@ -1,3 +1,4 @@
+import { STALE_TIMES } from '@/lib/query-client';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
 import React, { useEffect } from 'react';
@@ -23,7 +24,7 @@ export function GlobalStatsSection() {
                 most_wanted: number;
             };
         },
-        refetchInterval: 30000, // Refresh every 30 seconds
+        staleTime: STALE_TIMES.STATS, // Cache global stats for 10 minutes instead of 30s polling
     });
 
     const cursorOpacity = useSharedValue(1);

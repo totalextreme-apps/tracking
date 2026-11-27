@@ -1,3 +1,4 @@
+import { useCollectionStats, type UserCollectionStats } from '@/hooks/useCollection';
 import { CollectionItemWithMedia } from '@/types/database';
 import { useMemo } from 'react';
 import { Dimensions, Text, View } from 'react-native';
@@ -5,6 +6,8 @@ import { PieChart } from 'react-native-chart-kit';
 
 interface StatsSectionProps {
     collection: CollectionItemWithMedia[] | undefined | null;
+    userId?: string | null;
+    stats?: UserCollectionStats | null;
 }
 
 const screenWidth = Dimensions.get('window').width;
@@ -26,17 +29,27 @@ const chartConfig = {
     }
 };
 
-export function StatsSection({ collection }: StatsSectionProps) {
-    if (!collection || collection.length === 0) return null;
+export function StatsSection({ collection, userId, stats: propStats }: StatsSectionProps) {
+    const resolvedUserId = userId || collection?.[0]?.user_id;
+    const { data: rpcStats } = useCollectionStats(resolvedUserId ?? undefined, !propStats && !!resolvedUserId);
+    const dbStats = propStats ?? rpcStats;
 
     // --- Format Data ---
     const formatData = useMemo(() => {
         const counts: Record<string, number> = {};
-        collection.forEach(item => {
-            if (!item) return;
-            const fmt = item.format || 'Unknown';
-            counts[fmt] = (counts[fmt] || 0) + 1;
-        });
+        if (dbStats?.formats && Object.keys(dbStats.formats).length > 0) {
+            for (const [fmt, fStats] of Object.entries(dbStats.formats)) {
+                if (fStats.total > 0) {
+                    counts[fmt] = fStats.total;
+                }
+            }
+        } else if (collection) {
+            collection.forEach(item => {
+                if (!item) return;
+                const fmt = item.format || 'Unknown';
+                counts[fmt] = (counts[fmt] || 0) + 1;
+            });
+        }
 
         const colors: Record<string, string> = {
             'VHS': '#f59e0b', // Amber
@@ -54,22 +67,26 @@ export function StatsSection({ collection }: StatsSectionProps) {
             legendFontColor: '#d4d4d4',
             legendFontSize: 10,
         })).sort((a, b) => b.population - a.population);
-    }, [collection]);
+    }, [collection, dbStats]);
 
     // --- Genre Data ---
     const genreData = useMemo(() => {
         const counts: Record<string, number> = {};
-        collection.forEach(item => {
-            if (!item) return;
-            const genres = item.movies?.genres || item.shows?.genres || [];
-            if (genres.length === 0) {
-                counts['Uncategorized'] = (counts['Uncategorized'] || 0) + 1;
-            } else {
-                genres.forEach((g: any) => {
-                    counts[g.name] = (counts[g.name] || 0) + 1;
-                });
-            }
-        });
+        if (dbStats?.genres && Object.keys(dbStats.genres).length > 0) {
+            Object.assign(counts, dbStats.genres);
+        } else if (collection) {
+            collection.forEach(item => {
+                if (!item) return;
+                const genres = item.movies?.genres || item.shows?.genres || [];
+                if (genres.length === 0) {
+                    counts['Uncategorized'] = (counts['Uncategorized'] || 0) + 1;
+                } else {
+                    genres.forEach((g: any) => {
+                        counts[g.name] = (counts[g.name] || 0) + 1;
+                    });
+                }
+            });
+        }
 
         const palette = [
             '#f59e0b', '#ef4444', '#3b82f6', '#a855f7', '#22c55e',
@@ -83,28 +100,38 @@ export function StatsSection({ collection }: StatsSectionProps) {
             legendFontColor: '#d4d4d4',
             legendFontSize: 10,
         })).sort((a, b) => b.population - a.population).slice(0, 8); // Top 8 genres
-    }, [collection]);
+    }, [collection, dbStats]);
  
     // --- Decade/Release Date Data ---
     const decadeData = useMemo(() => {
-        const years: number[] = [];
-        collection.forEach(item => {
-            if (!item) return;
-            const dateStr = item.movies?.release_date || item.shows?.first_air_date;
-            if (dateStr) {
-                const year = parseInt(dateStr.substring(0, 4));
-                if (!isNaN(year)) {
-                    years.push(year);
+        const decadeCountsMap = new Map<number, number>();
+
+        if (dbStats?.decades && Object.keys(dbStats.decades).length > 0) {
+            for (const [decStr, cnt] of Object.entries(dbStats.decades)) {
+                const decNum = parseInt(decStr, 10);
+                if (!isNaN(decNum) && cnt > 0) {
+                    decadeCountsMap.set(decNum, cnt);
                 }
             }
-        });
+        } else if (collection) {
+            collection.forEach(item => {
+                if (!item) return;
+                const dateStr = item.movies?.release_date || item.shows?.first_air_date;
+                if (dateStr) {
+                    const year = parseInt(dateStr.substring(0, 4), 10);
+                    if (!isNaN(year)) {
+                        const d = Math.floor(year / 10) * 10;
+                        decadeCountsMap.set(d, (decadeCountsMap.get(d) || 0) + 1);
+                    }
+                }
+            });
+        }
 
-        if (years.length === 0) return null;
+        if (decadeCountsMap.size === 0) return null;
 
-        const minYear = Math.min(...years);
-        const maxYear = Math.max(...years);
-        const minDecade = Math.floor(minYear / 10) * 10;
-        const maxDecade = Math.floor(maxYear / 10) * 10;
+        const allDecades = Array.from(decadeCountsMap.keys());
+        const minDecade = Math.min(...allDecades);
+        const maxDecade = Math.max(...allDecades);
 
         const decadesList: number[] = [];
         for (let d = minDecade; d <= maxDecade; d += 10) {
@@ -131,16 +158,15 @@ export function StatsSection({ collection }: StatsSectionProps) {
             binnedCounts[label] = 0;
         });
 
-        years.forEach(year => {
-            const itemDecade = Math.floor(year / 10) * 10;
+        for (const [itemDecade, cnt] of decadeCountsMap.entries()) {
             if (preDecadeThreshold !== null && itemDecade < preDecadeThreshold) {
                 const label = `Pre-${String(preDecadeThreshold).substring(2)}s`;
-                binnedCounts[label] = (binnedCounts[label] || 0) + 1;
+                binnedCounts[label] = (binnedCounts[label] || 0) + cnt;
             } else {
                 const label = `'${String(itemDecade).substring(2)}s`;
-                binnedCounts[label] = (binnedCounts[label] || 0) + 1;
+                binnedCounts[label] = (binnedCounts[label] || 0) + cnt;
             }
-        });
+        }
 
         const entries = Object.keys(binnedCounts).map(label => ({
             label,
@@ -153,7 +179,11 @@ export function StatsSection({ collection }: StatsSectionProps) {
             entries,
             maxCount
         };
-    }, [collection]);
+    }, [collection, dbStats]);
+
+    if ((!collection || collection.length === 0) && (!dbStats || dbStats.total_items === 0)) {
+        return null;
+    }
 
     return (
         <View className="mb-8">
